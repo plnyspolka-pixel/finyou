@@ -16,6 +16,12 @@ const UI_FILES = [
   "src/components/inwestor/order-cycle.tsx",
   "src/components/inwestor/pipeline-steps.tsx",
   "src/components/marketing/investor-pricing.tsx",
+  "src/routes/inwestor.zlecenia.tsx",
+  "src/components/inwestor/external-kw-checks.tsx",
+  "src/components/inwestor/report-pdf-button.tsx",
+  "src/components/risk-assessment/investor-valuation-card.tsx",
+  "src/lib/investor-analytics/report-pdf.ts",
+  "src/lib/pdf/report-writer.ts",
 ];
 
 const code = (f: string) =>

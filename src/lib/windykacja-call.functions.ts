@@ -15,6 +15,7 @@ import {
   type WindPreviousPromise,
 } from "@/lib/windykacja-agent-prompt";
 import { windDebtSnapshot, type WindDebtEvent, type WindDebtLoan } from "@/lib/windykacja-debt";
+import { resolveCreditorByUserId, type CreditorDb } from "@/lib/windykacja-creditor.server";
 
 // ════════════════════════════════════════════════════════════════════
 // TELEFON WINDYKACYJNY Z SYSTEMU — agent ElevenLabs dzwoniący w imieniu
@@ -354,21 +355,30 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
         : windFeeForAction(normalizeWindFeeTable(loan.oplaty_windykacyjne), "telefon").fee;
 
     // Pożyczkodawca, w którego imieniu dzwoni agent: nazwa z umowy, a gdy
-    // jej brak — imię i nazwisko właściciela sprawy (inwestora), nie osoby,
-    // która zleca telefon (może to być ktoś z zespołu Finance You).
+    // jej brak — wierzyciel sprawy jak w pismach (profil inwestora —
+    // właściciela, nie osoby zlecającej telefon; sprawa personelu bez
+    // profilu — Finance You), potem imię i nazwisko z konta; bez nich —
+    // neutralne „pożyczkodawcy".
     let imieInwestora = loan.pozyczkodawca?.trim() ?? "";
     if (!imieInwestora) {
       const ownerId = (kase.investor_user_id as string | null) ?? context.userId;
-      const { data: profile } = await admin()
-        .from("profiles")
-        .select("first_name, last_name, email")
-        .eq("user_id", ownerId)
-        .maybeSingle();
-      imieInwestora =
-        [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
-        profile?.email ||
-        (ownerId === context.userId ? context.claims?.email : null) ||
-        "inwestora Finance You";
+      const adminDb = admin();
+      try {
+        const res = await resolveCreditorByUserId(ownerId, {
+          db: adminDb as unknown as CreditorDb,
+        });
+        if (res.ok) imieInwestora = res.party.shortName;
+      } catch (e) {
+        console.error("[windykacja] profil inwestora do telefonu:", (e as Error).message);
+      }
+      if (!imieInwestora) {
+        const { data: profile } = await adminDb
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("user_id", ownerId)
+          .maybeSingle();
+        imieInwestora = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+      }
     }
 
     // Poprzednia deklaracja z telefonu (zapisana przez webhook) i późniejsze wpłaty.
@@ -434,7 +444,7 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
           ? "Telefon windykacyjny (agent AI) — połączenie zainicjowane"
           : "Telefon windykacyjny (agent AI) — nie wykonano",
         tresc: res.ok
-          ? `Agent AI dzwoni w imieniu: ${imieInwestora}. Komunikowana kwota do zapłaty: ${kwotaTekst(kwota)} zł (${skladKwoty}). Etap rozmowy: ${dynamicVariables.etap}; najpóźniejszy termin wpłaty do przyjęcia: ${dynamicVariables.termin_maksymalny}.`
+          ? `Agent AI dzwoni w imieniu: ${dynamicVariables.imie_inwestora}. Komunikowana kwota do zapłaty: ${kwotaTekst(kwota)} zł (${skladKwoty}). Etap rozmowy: ${dynamicVariables.etap}; najpóźniejszy termin wpłaty do przyjęcia: ${dynamicVariables.termin_maksymalny}.`
           : `Powód: ${res.error ?? "nieznany"}`,
         status_doreczenia: null,
         metadata: {

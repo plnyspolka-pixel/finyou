@@ -41,6 +41,7 @@ import { downloadOfferPdf } from "@/lib/offer-pdf";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 import { useCreateContract } from "@/components/inwestor/use-create-contract";
+import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import {
   accent,
   CoOwnersStep,
@@ -48,6 +49,11 @@ import {
   StepCard,
   StepEmpty,
 } from "@/components/inwestor/analytics-steps";
+import {
+  RISK_STEP_COMPUTING_LABEL,
+  RISK_STEP_ETA_TEXT,
+  useRiskStepTrigger,
+} from "@/components/inwestor/use-risk-step-trigger";
 import { KwAnalysisReport, KwStatusBadge } from "@/components/kw-analysis/kw-analysis-section";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
@@ -70,8 +76,8 @@ import {
   ANALYTICS_STEPS,
   analyticsDoneCount,
   analyticsStepStatus,
+  orderReportStepSource,
   type AnalyticsStepKey,
-  type AnalyticsStepSource,
   type AnalyticsStepStatus,
 } from "@/lib/investor-analytics/types";
 import type { FindingStatus } from "@/lib/kw-analysis/types";
@@ -115,7 +121,8 @@ function MyOrdersPage() {
   const { data, isLoading } = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: () => fetchProjects(),
-    // Raporty w toku dokańcza cron — odświeżamy, gdy któryś trwa.
+    // Raporty w toku: ocenę ryzyka zleca karta Projektu od razu po krokach
+    // 1–3 (zapasowo cron co 5 min) — odświeżamy, gdy któryś trwa.
     refetchInterval: (q) =>
       q.state.data?.orders.some((o) => o.projects.some((p) => p.report.status === "running"))
         ? 20_000
@@ -260,7 +267,7 @@ function ProjectCard({
       ? { contact: p.contact, reservationExpiresAt: p.match.reservationExpiresAt }
       : null,
   );
-  // Nowe dane z serwera (np. cron dokończył ryzyko) nadpisują lokalny stan.
+  // Nowe dane z serwera (np. dokończona ocena ryzyka) nadpisują lokalny stan.
   if (p.report.finishedAt && p.report.finishedAt !== report.finishedAt) setReport(p.report);
 
   const reportMut = useMutation({
@@ -272,13 +279,31 @@ function ProjectCard({
         res.reused
           ? "Raport był już wygenerowany — pokazujemy gotowy."
           : res.report.status === "running"
-            ? "Raport w przygotowaniu — ocenę ryzyka dokończymy za chwilę."
+            ? `Raport w przygotowaniu — ${RISK_STEP_ETA_TEXT}.`
             : "Raport gotowy.",
       );
       void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
       void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
     },
     onError: (e) => toast.error(errMsg(e)),
+  });
+  // Kroki 1–3 raportu gotowe → ocena ryzyka od razu, bez czekania na cron
+  // (stan z listy Projektów — także przy zwiniętym raporcie).
+  const riskStep = useRiskStepTrigger({
+    target: { kind: "order-report", orderId: p.orderId, applicationId: p.applicationId },
+    run:
+      p.report.status === "running"
+        ? {
+            key: `${p.applicationId}:${p.report.startedAt ?? ""}`,
+            status: "running",
+            steps: p.report.steps,
+            startedAt: p.report.startedAt,
+          }
+        : null,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
+    },
   });
   const reserveMut = useMutation({
     mutationFn: () =>
@@ -374,7 +399,8 @@ function ProjectCard({
             </Button>
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> raport w przygotowaniu
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
+                {riskStep.computing ? RISK_STEP_COMPUTING_LABEL : "raport w przygotowaniu"}
               </span>
             ) : null}
             {report.status === "error" ? (
@@ -387,7 +413,13 @@ function ProjectCard({
             ) : null}
           </div>
           {showReport && (report.status === "done" || report.status === "running") ? (
-            <ReportPanel orderId={p.orderId} applicationId={p.applicationId} report={report} />
+            <ReportPanel
+              project={{ ref: p.match?.projectRef ?? null, loanAmount: p.loanAmount }}
+              orderId={p.orderId}
+              applicationId={p.applicationId}
+              report={report}
+              riskNote={riskStep.note}
+            />
           ) : null}
           {showOffer ? (
             <OfferPanel
@@ -661,33 +693,29 @@ function FilesRow({
 // osobno, dopiero po rozwinięciu raportu; przed rezerwacją serwer wysyła
 // wersję bez danych identyfikujących właściciela.
 
-function stepSource(r: OrderProjectReport): AnalyticsStepSource {
-  return {
-    results: r.results,
-    run:
-      r.status === "none"
-        ? null
-        : {
-            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
-            steps: r.steps,
-          },
-  };
-}
-
 function ReportPanel({
+  project,
   orderId,
   applicationId,
   report,
+  riskNote,
 }: {
+  /** Numer Projektu i kwota z karty — do nagłówka i nazwy pliku PDF. */
+  project: { ref: string | null; loanAmount: number | null };
   orderId: string;
   applicationId: string;
   report: OrderProjectReport;
+  /**
+   * Notka o ocenie ryzyka z karty Projektu: właśnie się liczy (zlecona przez
+   * kartę albo cron) albo trwa dłużej niż zwykle; null = domyślny tekst.
+   */
+  riskNote: string | null;
 }) {
   const detailFn = useServerFn(getOrderProjectReportDetail);
   const q = useQuery({
     queryKey: reportKey(orderId, applicationId),
     queryFn: () => detailFn({ data: { orderId, applicationId } }),
-    // Ocenę ryzyka dokańcza cron — dopytujemy, dopóki przebieg trwa.
+    // Odczyt popycha kroki 1–3 (księga z EKW) — dopytujemy, dopóki przebieg trwa.
     refetchInterval: (query) =>
       (query.state.data?.report.status ?? report.status) === "running" ? 20_000 : false,
   });
@@ -712,7 +740,7 @@ function ReportPanel({
 
   const d = q.data;
   const r = d.report;
-  const src = stepSource(r);
+  const src = orderReportStepSource(r);
   const status = (k: AnalyticsStepKey): AnalyticsStepStatus => analyticsStepStatus(src, k);
   const done = analyticsDoneCount(src);
   const progress = Math.round((done / ANALYTICS_STEPS.length) * 100);
@@ -740,17 +768,23 @@ function ReportPanel({
                   : "Wyniki z analiz zespołu Finance You."}
             </p>
           </div>
-          {d.disclosed ? (
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/inwestor/analityka" search={{ app: applicationId }}>
-                <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
-              </Link>
-            </Button>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
-              <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <ReportPdfButton
+              source={{ kind: "zlecenie", detail: d, project }}
+              disabled={done === 0}
+            />
+            {d.disclosed ? (
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/inwestor/analityka" search={{ app: applicationId }}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
+                </Link>
+              </Button>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
+                <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -856,7 +890,10 @@ function ReportPanel({
         ) : (
           <StepEmpty
             status={status("risk")}
-            text="Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka (kilka–kilkanaście minut)."
+            text={
+              riskNote ??
+              "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po ocenie ryzyka — w ciągu ok. 15 minut od uruchomienia analizy (pobranie księgi wieczystej zwykle trwa kilka minut)."
+            }
           />
         )}
       </StepCard>

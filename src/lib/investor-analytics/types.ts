@@ -32,7 +32,7 @@ export interface AnalyticsRun {
 export type AnalyticsSource = "okazja" | "oferta" | "przekazany";
 
 export const ANALYTICS_SOURCE_LABELS: Record<AnalyticsSource, string> = {
-  okazja: "Okazja z Twojego Zlecenia",
+  okazja: "Projekt z Twojego Zlecenia",
   oferta: "Twoja oferta",
   przekazany: "Wniosek przekazany przez Finance You",
 };
@@ -219,6 +219,27 @@ export function analyticsStepStatus(
 
 export function analyticsDoneCount(item: AnalyticsStepSource): number {
   return ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) === "done").length;
+}
+
+/**
+ * Raport Projektu w „Moich zleceniach" (OrderProjectReport) jako źródło stanu
+ * kroków — jedno mapowanie dla widoku i raportu PDF.
+ */
+export function orderReportStepSource(r: {
+  status: "none" | "running" | "done" | "error";
+  steps: AnalyticsRun["steps"];
+  results: AnalyticsResultFlags;
+}): AnalyticsStepSource {
+  return {
+    results: r.results,
+    run:
+      r.status === "none"
+        ? null
+        : {
+            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
+            steps: r.steps,
+          },
+  };
 }
 
 // ── Szybka analiza KW (wniosek spoza Finance You) ───────────────────────────

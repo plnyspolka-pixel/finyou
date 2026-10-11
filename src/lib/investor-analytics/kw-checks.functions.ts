@@ -3,7 +3,8 @@
 // Inwestor może użyć Analityki do własnego tematu z zewnątrz: podaje numer
 // KW i rodzaj nieruchomości (opcjonalnie nazwę, kwotę, wartość i okres), a
 // automat wykonuje cztery kroki pipeline'u z pełną oceną ryzyka
-// (kw-checks.server.ts). Sprawdzenie jest prywatne — widzi je
+// (kw-checks.server.ts; krok 4 zleca panel — risk-step.functions.ts).
+// Sprawdzenie jest prywatne — widzi je
 // tylko jego autor, nie powstaje z niego wniosek w CRM ani dostęp do
 // jakichkolwiek wniosków Finance You.
 //
@@ -13,6 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { compactKwNumber, validateKwNumber } from "@/lib/kw";
+import { INTERACTIVE_KW_POLL_MS, shouldAdvanceOnRead } from "@/lib/analysis-pipeline/step-timing";
 import type { CoOwnersAnalysis } from "@/lib/coowners/types";
 import type { KwAnalysisResult } from "@/lib/kw-analysis/types";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
@@ -25,11 +27,6 @@ import {
   type KwCheckStepKey,
   type AnalyticsStepState,
 } from "./types";
-
-/** Po jakim czasie od ostatniego kroku odczyt szczegółów sam popycha przebieg. */
-const ADVANCE_ON_READ_AFTER_MS = 45_000;
-/** Limit oczekiwania na EKW w żądaniu inwestora (dłużej czeka cron tick). */
-const INTERACTIVE_POLL_MS = 20_000;
 
 const LIST_SELECT =
   "id, user_id, kw_number, label, property_type, loan_amount, property_value, period_months, status, steps, kw_analysis_json, error, last_advanced_at, created_at, finished_at";
@@ -74,7 +71,8 @@ async function assertInvestorOrStaff(userId: string): Promise<void> {
   }
 }
 
-async function loadOwnRow(db: any, userId: string, id: string): Promise<any> {
+/** Sprawdzenie autora albo błąd — wspólna bramka szczegółów i oceny ryzyka na żądanie. */
+export async function loadOwnRow(db: any, userId: string, id: string): Promise<any> {
   const { data, error } = await db
     .from("investor_kw_checks")
     .select(ROW_SELECT)
@@ -168,15 +166,16 @@ export const startMyKwCheck = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     // Kroki 1–3 od razu (przy KW z cache kończą się w tym żądaniu); ocenę
-    // ryzyka — minuty pracy — wykonuje w tle cron tick.
-    await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS, skipRisk: true });
+    // ryzyka (30–50 s) panel zleca zaraz potem osobnym żądaniem
+    // (runMyRiskStep), a cron tick jest siatką bezpieczeństwa.
+    await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_KW_POLL_MS, skipRisk: true });
     return { id: String(row.id), reused: false };
   });
 
 /**
- * Szczegóły sprawdzenia. Gdy przebieg trwa, a ostatni krok był dawno,
- * odczyt popycha go o krok (EKW udostępnia dokument z opóźnieniem) — nie
- * trzeba czekać na cron tick.
+ * Szczegóły sprawdzenia. Gdy kroki 1–3 trwają, a ostatni ruch był dawno,
+ * odczyt popycha przebieg o krok (EKW udostępnia dokument z opóźnieniem) —
+ * nie trzeba czekać na cron tick. Ocenę ryzyka panel zleca osobno.
  */
 export const getMyKwCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -187,9 +186,9 @@ export const getMyKwCheck = createServerFn({ method: "POST" })
     let row = await loadOwnRow(db, userId, data.id);
 
     const last = Date.parse(row.last_advanced_at ?? row.created_at);
-    if (row.status === "running" && Date.now() - last >= ADVANCE_ON_READ_AFTER_MS) {
+    if (shouldAdvanceOnRead(row.status, row.steps, last)) {
       const { advanceKwCheckSafe } = await import("./kw-checks.server");
-      await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_POLL_MS, skipRisk: true });
+      await advanceKwCheckSafe(row, { pollMaxMs: INTERACTIVE_KW_POLL_MS, skipRisk: true });
       row = await loadOwnRow(db, userId, data.id);
     }
 

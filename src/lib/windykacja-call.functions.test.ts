@@ -22,11 +22,15 @@ vi.mock("@tanstack/react-start", () => ({
 }));
 vi.mock("@/lib/investor-plan/pro-middleware", () => ({ requireInvestorPro: {} }));
 
-// Klient z rolą serwisową: ustawienia agenta, profile, dziennik automatyzacji.
+// Klient z rolą serwisową: ustawienia agenta, profile inwestorów (investors),
+// konta (profiles), dziennik automatyzacji.
 const profiles: Record<
   string,
   { first_name: string | null; last_name: string | null; email: string | null }
 > = {};
+const investors: Record<string, Record<string, unknown>> = {};
+// Role kont (user_roles) — personel wewnętrzny.
+const roles: Record<string, string[]> = {};
 const profileLookups: string[] = [];
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
@@ -38,6 +42,8 @@ vi.mock("@supabase/supabase-js", () => ({
           if (c === "user_id") userId = v;
           return q;
         },
+        order: () => q,
+        limit: () => q,
         update: () => q,
         insert: async () => ({ error: null }),
         maybeSingle: async () => {
@@ -53,7 +59,18 @@ vi.mock("@supabase/supabase-js", () => ({
           }
           return { data: null, error: null };
         },
-        then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }),
+        then: (resolve: (v: unknown) => void) =>
+          resolve({
+            data:
+              table === "investors"
+                ? userId && investors[userId]
+                  ? [investors[userId]]
+                  : []
+                : table === "user_roles"
+                  ? (roles[userId ?? ""] ?? []).map((role) => ({ role }))
+                  : null,
+            error: null,
+          }),
       };
       return q;
     },
@@ -176,6 +193,8 @@ beforeEach(() => {
   placeCall.mockClear();
   profileLookups.length = 0;
   for (const k of Object.keys(profiles)) delete profiles[k];
+  for (const k of Object.keys(investors)) delete investors[k];
+  for (const k of Object.keys(roles)) delete roles[k];
   state = {
     kase: {
       id: CASE_ID,
@@ -258,6 +277,38 @@ describe("placeWindCollectionCall — kwota i opóźnienie z harmonogramu rat", 
     await call();
     expect(profileLookups).toEqual([OWNER]);
     expect(vars().imie_inwestora).toBe("Anna Nowak");
+  });
+
+  it("bez nazwy pożyczkodawcy — nazwa z profilu inwestora właściciela (przed kontem)", async () => {
+    investors[OWNER] = {
+      entity_variant: "osoba_prawna",
+      entity_type: "osoba_fizyczna",
+      company_name: "Kapitał Plus spółka z ograniczoną odpowiedzialnością",
+      krs: "0000123456",
+    };
+    profiles[OWNER] = { first_name: "Anna", last_name: "Nowak", email: "anna@example.com" };
+    state.kase.loan = baseLoan({ pozyczkodawca: null });
+    await call();
+    expect(profileLookups).toEqual([]);
+    expect(vars().imie_inwestora).toBe("Kapitał Plus sp. z o.o.");
+    expect(state.inserted[0].tresc).toMatch(/w imieniu: Kapitał Plus sp\. z o\.o\./);
+  });
+
+  it("sprawa personelu bez profilu inwestora — Finance You, jak w pismach (nie imię operatora)", async () => {
+    roles[OWNER] = ["operator"];
+    profiles[OWNER] = { first_name: "Jan", last_name: "Operator", email: null };
+    state.kase.loan = baseLoan({ pozyczkodawca: null });
+    await call();
+    expect(profileLookups).toEqual([]);
+    expect(vars().imie_inwestora).toBe("Finance You");
+  });
+
+  it("właściciel bez profilu i bez imienia — neutralnie „pożyczkodawcy”, nigdy Finance You", async () => {
+    profiles[OWNER] = { first_name: null, last_name: null, email: "anna@example.com" };
+    state.kase.loan = baseLoan({ pozyczkodawca: null });
+    await call();
+    expect(vars().imie_inwestora).toBe("pożyczkodawcy");
+    expect(String(state.inserted[0].tresc)).not.toMatch(/Finance You|anna@example/);
   });
 
   it("egzekucja komornicza bez wypowiedzenia — zaległość, nie całe saldo; ton ostatniego wezwania", async () => {

@@ -209,7 +209,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     {
       cecha: "Zaawansowany moduł analizy nieruchomości",
       zaleta:
-        "Ocena ryzyka w skali A–E i wycena — skanujemy i oceniamy ponad 400 punktów danych: księgę wieczystą, właścicieli, obciążenia, wartość i LTV.",
+        "Ocena ryzyka w skali A–E i wycena w 15 minut — w tym czasie skanujemy i oceniamy ponad 400 punktów danych: księgę wieczystą, właścicieli, obciążenia, wartość i LTV. Raport pobierasz w PDF.",
       korzysc: "Masz własnego, profesjonalnego analityka AI, zanim wyłożysz pieniądze.",
     },
     {
@@ -233,7 +233,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     {
       cecha: "Windykator AI",
       zaleta:
-        "Wszystkie procedury uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika.",
+        "Wszystkie procedury uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika — z pismami w Twoim imieniu.",
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
   ],

@@ -458,7 +458,9 @@ function PipelineRunsCard() {
                 {Object.entries(STEP_LABELS)
                   .map(([k, label]) => {
                     const st = r.steps?.[k]?.status ?? "pending";
-                    const mark = st === "done" ? "✓" : st === "error" ? "✗" : "…";
+                    // ⟳ = w toku (czekanie na EKW, zajęta ocena ryzyka), … = czeka w kolejce.
+                    const mark =
+                      st === "done" ? "✓" : st === "error" ? "✗" : st === "running" ? "⟳" : "…";
                     return `${label} ${mark}`;
                   })
                   .join(" · ")}

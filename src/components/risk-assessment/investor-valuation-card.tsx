@@ -23,6 +23,9 @@ import {
   buyerPoolLabel,
   valuationBasisLabel,
 } from "@/lib/risk-assessment/plot-buildability";
+import { GRADE_BANDS, gradeBand, gradeRangeLabel } from "@/lib/risk-assessment/grade-bands";
+import type { RiskGrade } from "@/lib/risk-assessment/types";
+import { cn } from "@/lib/utils";
 import { ValuationLadderChart } from "./risk-charts";
 import { RiskDisclaimer } from "./risk-disclaimer";
 
@@ -40,6 +43,72 @@ function fmtPln(v: number | null | undefined): string {
     currency: "PLN",
     maximumFractionDigits: 0,
   }).format(v);
+}
+
+/** Tekst na pełnym kolorze klasy — biały ma na zieleni/bursztynie kontrast < 3:1. */
+const GRADE_INK = "#111827";
+
+/**
+ * Ocena inwestycyjna w skali A–E (GRADE_BANDS): pięć klas z zakresami punktów,
+ * aktywna klasa wyróżniona, wynik /100 oraz opis klasy. Kolor zawsze z literą
+ * i opisem obok (nie polegamy na samym kolorze). Bez profilu ryzyka
+ * (recommendationLabel) — ma inne progi i obok klasy dawałby sprzeczny werdykt.
+ */
+function InvestmentGradeScale({ grade, score }: { grade: RiskGrade; score: number | null }) {
+  const band = gradeBand(grade);
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="text-xs font-semibold">Ocena inwestycyjna A–E</div>
+        {score != null && (
+          <div className="text-xs text-muted-foreground">
+            wynik <b className="text-base text-foreground tabular-nums">{score}</b>/100
+          </div>
+        )}
+      </div>
+      <ol className="mt-2 grid grid-cols-5 gap-1" aria-label="Skala A–E">
+        {GRADE_BANDS.map((b) => {
+          const active = b.grade === grade;
+          return (
+            <li
+              key={b.grade}
+              aria-current={active ? "true" : undefined}
+              title={`${b.grade}: ${b.label} (${gradeRangeLabel(b)} pkt)`}
+              className={cn(
+                "rounded-md border px-1 py-1.5 text-center",
+                active &&
+                  "shadow-sm ring-2 ring-foreground/70 ring-offset-1 ring-offset-background",
+              )}
+              style={
+                active
+                  ? { backgroundColor: b.color, borderColor: b.color, color: GRADE_INK }
+                  : { backgroundColor: `${b.color}1a`, borderColor: `${b.color}59`, color: b.color }
+              }
+            >
+              <div className="text-sm font-black leading-none">{b.grade}</div>
+              <div
+                className={cn(
+                  "mt-0.5 text-[10px] leading-none tabular-nums",
+                  !active && "text-muted-foreground",
+                )}
+              >
+                {gradeRangeLabel(b)}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 text-sm">
+        <b style={{ color: band.color }}>Klasa {grade}</b> — {band.label}.{" "}
+        <span className="text-muted-foreground">{band.description}</span>
+      </p>
+      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+        Neutralna klasyfikacja ryzyka liczona automatycznie z ocen cząstkowych — m.in.
+        zabezpieczenia, stanu prawnego KW, pewności wyceny, łatwości sprzedaży i weryfikacji
+        właściciela — nie jest rekomendacją inwestycyjną.
+      </p>
+    </div>
+  );
 }
 
 /**
@@ -90,11 +159,16 @@ export function InvestorValuationCard({
           <TrendingUp className="h-5 w-5" /> Prognoza wartości i sprzedaży
         </CardTitle>
         <CardDescription>
-          Automatyczna prognoza dla tego tematu inwestycyjnego (dane rynkowe, bez danych osobowych
-          klienta).
+          Automatyczna prognoza dla tego tematu inwestycyjnego (dane rynkowe, bez ujawniania danych
+          osobowych klienta).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
+        {/* Ocena inwestycyjna A–E (starsze oceny bez klasy — blok pomijamy) */}
+        {data.riskGrade && (
+          <InvestmentGradeScale grade={data.riskGrade} score={data.investmentScore ?? null} />
+        )}
+
         {/* Prognozowana wartość nieruchomości */}
         <div>
           <div className="text-xs text-muted-foreground mb-1">

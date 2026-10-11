@@ -1,7 +1,25 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
-import { buildWindDocument, type DocContext } from "@/lib/windykacja-documents";
+import {
+  buildWindDocument,
+  windCreditorPurpose,
+  type DocContext,
+} from "@/lib/windykacja-documents";
+import {
+  creditorMissing,
+  creditorMissingMessage,
+  creditorNoSenderMessage,
+  type CreditorParty,
+  type WindCreditorView,
+} from "@/lib/investor-party";
+import {
+  creditorSnapshot,
+  investorShortName,
+  resolveCreditorByUserId,
+  windCreditorNames,
+  windCreditorView,
+} from "@/lib/windykacja-creditor.server";
 import { normalizeWindFeeTable, windFeeForAction, type WindFeeTable } from "@/lib/windykacja-fees";
 import { defaultDelayRate } from "@/lib/windykacja-debt";
 import {
@@ -101,6 +119,8 @@ export type WindCaseResult =
 export type WindCase = {
   id: string;
   loan_id: string;
+  /** Właściciel sprawy (inwestor) — wierzyciel w pismach, SMS-ach i e-mailach. */
+  investor_user_id: string;
   sciezka: WindPath;
   etap: string;
   opoznienie_dni: number;
@@ -200,7 +220,7 @@ async function resolveActionFee(
 const BORROWER_COLS =
   "id, imie_nazwisko, typ, pesel, nip, dowod_osobisty, adres_zamieszkania, adres_do_doreczen, email, telefon, email_zgoda_doreczenia, notatki";
 const CASE_COLS =
-  "id, loan_id, sciezka, etap, opoznienie_dni, kwota_zalegla, data_otwarcia, data_zamkniecia, wynik, priorytet, osoba_prowadzaca";
+  "id, loan_id, investor_user_id, sciezka, etap, opoznienie_dni, kwota_zalegla, data_otwarcia, data_zamkniecia, wynik, priorytet, osoba_prowadzaca";
 const EVENT_COLS =
   "id, case_id, typ, kategoria, tytul, tresc, data_zdarzenia, data_doreczenia, status_doreczenia, zalacznik_url, metadata, oplata, autor, created_at";
 const DOC_COLS =
@@ -271,7 +291,13 @@ export const listWindDashboard = createServerFn({ method: "GET" })
       }
     }
 
-    return { cases: list, events };
+    // Podpis SMS-a z panelu: krótka nazwa wierzyciela (profil właściciela sprawy).
+    const names = await windCreditorNames(list.map((c) => c.investor_user_id));
+    const creditorNames: Record<string, string> = {};
+    for (const c of list)
+      if (names[c.investor_user_id]) creditorNames[c.id] = names[c.investor_user_id];
+
+    return { cases: list, events, creditorNames };
   });
 
 // ── Pełna sprawa ─────────────────────────────────────────────────────
@@ -304,12 +330,19 @@ export const getWindCase = createServerFn({ method: "POST" })
     ]);
 
     const loan = withHarmonogram(c.loan as (WindLoan & { borrower: WindBorrower }) | null);
+    // Wierzyciel = właściciel sprawy (profil inwestora), nie osoba przeglądająca.
+    const creditor: WindCreditorView = await windCreditorView(
+      (c as WindCase).investor_user_id,
+      loan?.pozyczkodawca,
+      context.userId,
+    );
     return {
       case: c as WindCase,
       loan,
       borrower: loan?.borrower ?? null,
       events: (events ?? []) as WindEvent[],
       documents: (documents ?? []) as WindDocument[],
+      creditor,
     };
   });
 
@@ -562,6 +595,16 @@ const createSchema = z.object({
     .default([]),
 });
 
+/** Krótka nazwa z profilu inwestora; błąd odczytu nie blokuje zapisu sprawy. */
+async function defaultLenderName(userId: string | null | undefined): Promise<string | null> {
+  try {
+    return await investorShortName(userId);
+  } catch (e) {
+    console.error("[windykacja] pożyczkodawca z profilu:", (e as Error).message);
+    return null;
+  }
+}
+
 export const createWindCase = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((d: Record<string, unknown>) => parseInput(createSchema, d))
@@ -625,6 +668,10 @@ export const createWindCase = createServerFn({ method: "POST" })
       opoznienie = daysSinceDue(terminSplaty, asOf);
     }
 
+    // Pożyczkodawca niepodany — domyślnie wierzyciel z profilu inwestora
+    // zakładającego sprawę (to on jest jej właścicielem).
+    const pozyczkodawca = data.pozyczkodawca ?? (await defaultLenderName(context.userId));
+
     const { data: borrower, error: bErr } = await db
       .from("wind_borrowers")
       .insert({
@@ -661,7 +708,7 @@ export const createWindCase = createServerFn({ method: "POST" })
         stopa_odsetek_max: stopa,
         oplaty_windykacyjne: normalizeWindFeeTable(data.oplaty_windykacyjne) ?? null,
         harmonogram,
-        pozyczkodawca: data.pozyczkodawca,
+        pozyczkodawca,
         status: plan?.loanPatch.status ?? "w_zwloce",
         saldo_pozostale: saldo,
         data_ostatniej_wplaty: wplaty.length ? wplaty[wplaty.length - 1].data : null,
@@ -1132,6 +1179,57 @@ export const setWindTermination = createServerFn({ method: "POST" })
     return ev as WindEvent;
   });
 
+/**
+ * Wierzyciel sprawy (profil właściciela; party null, gdy nie da się go
+ * ustalić — `error` mówi dlaczego) i pożyczkodawca wpisany z umowy.
+ */
+async function caseCreditor(
+  db: LooseDb,
+  caseId: string,
+  viewerId?: string | null,
+): Promise<{ party: CreditorParty | null; pozyczkodawca: string | null; error: string | null }> {
+  let pozyczkodawca: string | null = null;
+  try {
+    const { data: kase } = await db
+      .from("wind_collection_cases")
+      .select("investor_user_id, loan:wind_loans(pozyczkodawca)")
+      .eq("id", caseId)
+      .maybeSingle();
+    pozyczkodawca = String(kase?.loan?.pozyczkodawca ?? "").trim() || null;
+    const res = await resolveCreditorByUserId(kase?.investor_user_id, { viewerId });
+    if (!res.ok) {
+      const own = !viewerId || viewerId === res.ownerId;
+      return { party: null, pozyczkodawca, error: creditorNoSenderMessage(own) };
+    }
+    return { party: res.party, pozyczkodawca, error: null };
+  } catch (e) {
+    console.error("[windykacja] wierzyciel sprawy:", (e as Error).message);
+    return {
+      party: null,
+      pozyczkodawca,
+      error: "Nie udało się odczytać danych wierzyciela z profilu inwestora — spróbuj ponownie.",
+    };
+  }
+}
+
+/**
+ * Nazwa nadawcy e-maila: wierzyciel „(przez Finance You)" — wysyłka idzie
+ * z domeny Finance You; bez profilu — pożyczkodawca z umowy. Sprawa
+ * personelu (Finance You) — domyślny nadawca. Cudzysłów: nawias w nazwie
+ * to w RFC 5322 komentarz.
+ */
+function emailFromName(party: CreditorParty | null, pozyczkodawca: string | null) {
+  if (party?.source === "finance_you") return undefined;
+  const name = (party?.shortName || pozyczkodawca || "").replace(/["\\\r\n]/g, "").trim();
+  return name ? `"${name} (przez Finance You)"` : undefined;
+}
+
+/** Adres odpowiedzi tylko poprawny — błędny odrzuciłby całą wysyłkę. */
+const replyToAddress = (email: string | null | undefined) =>
+  email && /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]{2,}$/.test(email.trim())
+    ? email.trim()
+    : undefined;
+
 // ── Działanie kontaktowe: SMS / e-mail / telefon ─────────────────────
 export const performWindContact = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
@@ -1155,6 +1253,16 @@ export const performWindContact = createServerFn({ method: "POST" })
     let tytul = "";
     // Opłata za czynność — zgodnie z umową pożyczki tej sprawy.
     const oplata = await resolveActionFee(db, data.caseId, data.typ, data.oplata);
+    // SMS i e-mail wychodzą w imieniu wierzyciela (profil właściciela sprawy),
+    // a bez profilu — pożyczkodawcy z umowy; bez żadnego z nich nie wysyłamy
+    // (nadawcą nie może być Finance You w cudzej sprawie).
+    const kredytor =
+      data.typ === "telefon" ? null : await caseCreditor(db, data.caseId, context.userId);
+    const wierzyciel = kredytor?.party ?? null;
+    if (kredytor && !wierzyciel && !kredytor.pozyczkodawca)
+      throw new Error(kredytor.error ?? creditorNoSenderMessage());
+    const snapshot = wierzyciel ? { wierzyciel: creditorSnapshot(wierzyciel) } : {};
+    const nadawca = wierzyciel?.shortName || kredytor?.pozyczkodawca || null;
 
     if (data.typ === "sms") {
       tytul = "SMS wysłany";
@@ -1168,7 +1276,13 @@ export const performWindContact = createServerFn({ method: "POST" })
         category: "critical",
       });
       status = res.ok ? "doreczone" : null;
-      extra = { ok: res.ok, sid: res.sid ?? null, error: res.error ?? null, numer: data.target };
+      extra = {
+        ok: res.ok,
+        sid: res.sid ?? null,
+        error: res.error ?? null,
+        numer: data.target,
+        ...snapshot,
+      };
       if (!res.ok) tytul = "SMS — błąd wysyłki";
     } else if (data.typ === "email") {
       tytul = `E-mail: ${data.subject || "Wiadomość"}`;
@@ -1176,12 +1290,21 @@ export const performWindContact = createServerFn({ method: "POST" })
       const { sendResendEmail } = await import("@/lib/resend-send.server");
       const res = await sendResendEmail({
         to: data.target,
-        subject: data.subject || "Finance You — windykacja",
+        subject: data.subject || `Zaległość w spłacie pożyczki${nadawca ? ` — ${nadawca}` : ""}`,
         category: "transactional",
         text: data.tresc,
+        fromName: emailFromName(wierzyciel, kredytor?.pozyczkodawca ?? null),
+        // Odpowiedź dłużnika trafia do wierzyciela (gdy ma e-mail w profilu).
+        replyTo: replyToAddress(wierzyciel?.email),
       });
       status = res.ok ? "doreczone" : null;
-      extra = { ok: res.ok, id: res.id ?? null, error: res.error ?? null, email: data.target };
+      extra = {
+        ok: res.ok,
+        id: res.id ?? null,
+        error: res.error ?? null,
+        email: data.target,
+        ...snapshot,
+      };
       if (!res.ok) tytul = "E-mail — błąd wysyłki";
     } else {
       tytul = "Rozmowa telefoniczna";
@@ -1452,13 +1575,24 @@ export const generateWindDocument = createServerFn({ method: "POST" })
     const { data: c } = await db
       .from("wind_collection_cases")
       .select(
-        `kwota_zalegla, loan:wind_loans(${LOAN_COLS}, borrower:wind_borrowers(${BORROWER_COLS}))`,
+        `investor_user_id, kwota_zalegla, loan:wind_loans(${LOAN_COLS}, borrower:wind_borrowers(${BORROWER_COLS}))`,
       )
       .eq("id", data.caseId)
       .maybeSingle();
     if (!c) throw new Error("Sprawa nie znaleziona");
     const loan = c.loan as (WindLoan & { borrower: WindBorrower }) | null;
     const b = loan?.borrower;
+
+    // Wierzyciel = właściciel sprawy (profil inwestora) — nie osoba, która
+    // generuje pismo. Niekompletny profil blokuje pismo z listą braków.
+    const ownerId = c.investor_user_id as string | null;
+    const resolved = await resolveCreditorByUserId(ownerId, { viewerId: context.userId });
+    if (!resolved.ok) throw new Error(resolved.error);
+    const wierzyciel = resolved.party;
+    const purpose = windCreditorPurpose(data.typ as WindDocumentType);
+    const braki = purpose ? creditorMissing(wierzyciel, purpose) : [];
+    if (braki.length)
+      throw new Error(creditorMissingMessage(braki, !ownerId || ownerId === context.userId));
 
     // Pożyczka z harmonogramem: kwoty w piśmie z rat wymagalnych na dziś,
     // a nie z ostatniego zapisu (od niego mogły zapaść kolejne raty).
@@ -1473,6 +1607,7 @@ export const generateWindDocument = createServerFn({ method: "POST" })
     }
 
     const ctx: DocContext = {
+      wierzyciel,
       dluznik: b?.imie_nazwisko ?? "…",
       adres: b?.adres_do_doreczen || b?.adres_zamieszkania || "…",
       pesel: b?.pesel,
@@ -1483,7 +1618,8 @@ export const generateWindDocument = createServerFn({ method: "POST" })
       saldo_pozostale: saldoPozostale,
       numer_kw: loan?.numer_kw,
       akt_777: loan?.akt_notarialny_777,
-      rachunek: loan?.rachunek_splaty,
+      // Rachunek do spłaty z umowy, a gdy go brak — z profilu wierzyciela.
+      rachunek: loan?.rachunek_splaty || wierzyciel.bankAccount,
       data: new Date().toISOString(),
     };
     const built = buildWindDocument(data.typ as WindDocumentType, ctx);
@@ -1496,6 +1632,8 @@ export const generateWindDocument = createServerFn({ method: "POST" })
         kategoria: "systemowe",
         tytul: `Wygenerowano: ${built.tytul}`,
         tresc: built.tresc,
+        // Migawka wierzyciela — profil może się później zmienić.
+        metadata: { wierzyciel: creditorSnapshot(wierzyciel) },
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)
@@ -1547,6 +1685,10 @@ export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
+    // Migawka wierzyciela, którego dane wpisano we wzór (profil właściciela
+    // sprawy) — z listą braków, jeśli profil był niekompletny.
+    const wierzyciel = (await caseCreditor(db, data.caseId, context.userId)).party;
+    const purpose = windCreditorPurpose(data.typ);
     const { data: ev, error: eErr } = await db
       .from("wind_events")
       .insert({
@@ -1556,6 +1698,12 @@ export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
         tytul: `Wygenerowano (DOCX): ${data.tytul}`,
         tresc: "Dokument utworzony z gotowego szablonu Kreatora dokumentów.",
         zalacznik_url: data.plik_url,
+        metadata: wierzyciel
+          ? {
+              wierzyciel: creditorSnapshot(wierzyciel),
+              braki: purpose ? creditorMissing(wierzyciel, purpose) : [],
+            }
+          : { wierzyciel: null },
         autor: context.claims?.email ?? null,
       })
       .select(EVENT_COLS)
@@ -1656,6 +1804,8 @@ export const seedWindDemo = createServerFn({ method: "POST" })
     const author = context.claims?.email ?? null;
     const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
     const dateOnly = (daysAgo: number) => iso(daysAgo).slice(0, 10);
+    // Pożyczkodawca demonstracyjny = inwestor z profilu (nigdy Finance You).
+    const demoLender = await defaultLenderName(context.userId);
 
     async function makeCase(args: {
       name: string;
@@ -1817,7 +1967,7 @@ export const seedWindDemo = createServerFn({ method: "POST" })
       status: "w_zwloce",
       zalegla: 4000,
       saldo: 72000,
-      pozyczkodawca: "Finance You sp. z o.o.",
+      pozyczkodawca: demoLender ?? undefined,
       harmonogram: harmonogramDemo,
       wplaty: harmonogramDemo.slice(0, 6).map((r) => ({ data: r.termin, kwota: r.kwota })),
       events: [

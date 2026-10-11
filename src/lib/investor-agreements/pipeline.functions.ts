@@ -141,6 +141,9 @@ export const saveLenderData = createServerFn({ method: "POST" })
     const patch = {
       user_id: context.userId,
       entity_variant: data.entityVariant,
+      // entity_type ma DEFAULT 'osoba_fizyczna' — zapisujemy go zgodnie z
+      // wariantem, żeby profil nie wziął spółki za osobę fizyczną.
+      entity_type: isCompany ? "firma" : "osoba_fizyczna",
       is_consumer: data.isConsumer,
       first_name: data.firstName?.trim() || null,
       last_name: data.lastName?.trim() || null,

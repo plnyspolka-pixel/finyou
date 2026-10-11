@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatKwNumber } from "@/lib/kw";
+import { maskPeselInText } from "@/lib/kw-analysis/pesel-mask";
 import { runKwLandRegisterAnalysis } from "@/lib/kw-analysis.functions";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import type {
@@ -79,11 +80,6 @@ export function KwStatusBadge({
       {m.label}
     </span>
   );
-}
-
-// RODO: maskuj ciągi 11 cyfr (PESEL) w prezentowanej treści źródłowej.
-function maskPeselInText(s: string): string {
-  return s.replace(/\b(\d{2})\d{7}(\d{2})\b/g, "$1*******$2");
 }
 
 async function copy(text: string, label: string) {

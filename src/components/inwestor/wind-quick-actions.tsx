@@ -8,6 +8,9 @@
 //      umowa milczy — domyślna podpowiedź; umowa bez opłat — 0 zł). Opłata
 //      jest edytowalna przed wysyłką i dolicza się do zadłużenia jako koszt.
 //
+// SMS i telefon idą w imieniu wierzyciela — inwestora, właściciela sprawy
+// (nazwa z jego profilu), a nie Finance You.
+//
 // Kwota komunikowana dłużnikowi (SMS, telefon AI) to „do zapłaty teraz":
 // zaległe raty + odsetki za opóźnienie + koszty windykacyjne — NIE całe
 // saldo pożyczki z ratami przyszłymi. Po wypowiedzeniu umowy „do zapłaty
@@ -54,25 +57,29 @@ const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 /**
  * Treść SMS-a windykacyjnego z kwotą do zapłaty teraz (zaległe raty
  * z odsetkami za opóźnienie i kosztami). Po wypowiedzeniu umowy — całe
- * zadłużenie, które stało się wymagalne.
+ * zadłużenie, które stało się wymagalne. Podpis: wierzyciel (`nadawca` —
+ * krótka nazwa z profilu właściciela sprawy), a gdy go brak — pożyczkodawca
+ * z umowy; bez żadnego z nich SMS idzie bez podpisu.
  */
 export function buildWindSmsText(
-  loan: Pick<WindLoan, "numer_umowy">,
+  loan: Pick<WindLoan, "numer_umowy"> & { pozyczkodawca?: string | null },
   amountDueNow: number,
-  opts: { wypowiedziana?: boolean } = {},
+  opts: { wypowiedziana?: boolean; nadawca?: string | null } = {},
 ): string {
   const nr = loan.numer_umowy ?? "";
+  const podpis = opts.nadawca?.trim() || loan.pozyczkodawca?.trim() || "";
+  const sign = podpis ? ` ${podpis}` : "";
   if (opts.wypowiedziana) {
     return (
       `Umowa ${nr} została wypowiedziana. Całe zadłużenie wynosi ${formatZl(amountDueNow)} ` +
       `(z odsetkami za opóźnienie i kosztami) i jest wymagalne. Prosimy o niezwłoczną spłatę. ` +
-      `Brak wpłaty oznacza dalsze czynności windykacyjne i koszty. Finance You`
+      `Brak wpłaty oznacza dalsze czynności windykacyjne i koszty.${sign}`
     );
   }
   return (
     `Przypomnienie: do zapłaty z umowy ${nr} jest teraz ${formatZl(amountDueNow)} ` +
     `(zaległe raty z odsetkami za opóźnienie i kosztami). Prosimy o pilną spłatę. Brak wpłaty oznacza ` +
-    `dalsze czynności windykacyjne i koszty. Finance You`
+    `dalsze czynności windykacyjne i koszty.${sign}`
   );
 }
 
@@ -83,6 +90,7 @@ export function WindQuickContactDialog({
   borrower,
   amountDueNow,
   wholeDebt,
+  creditorName,
   onClose,
   onDone,
 }: {
@@ -98,6 +106,8 @@ export function WindQuickContactDialog({
   amountDueNow: number;
   /** Całe zadłużenie z ratami przyszłymi — tylko informacyjnie. */
   wholeDebt?: number | null;
+  /** Krótka nazwa wierzyciela (profil właściciela sprawy) — podpis SMS-a. */
+  creditorName?: string | null;
   onClose: () => void;
   onDone: (ev?: WindEvent) => void;
 }) {
@@ -115,12 +125,14 @@ export function WindQuickContactDialog({
 
   const wypowiedziana = windLoanIsTerminated(loan);
   const dueNow = Math.max(0, round2(amountDueNow));
-  const pozyczkodawca = loan.pozyczkodawca?.trim() || null;
+  const pozyczkodawca = loan.pozyczkodawca?.trim() || creditorName?.trim() || null;
 
   const [phone, setPhone] = useState(borrower.telefon ?? "");
   // Kwota z groszami — agent AI wypowiada ją dokładnie (nie zaokrąglamy w górę).
   const [amount, setAmount] = useState(String(dueNow));
-  const [text, setText] = useState(() => buildWindSmsText(loan, dueNow, { wypowiedziana }));
+  const [text, setText] = useState(() =>
+    buildWindSmsText(loan, dueNow, { wypowiedziana, nadawca: creditorName }),
+  );
   const [fee, setFee] = useState(String(feeInfo.fee));
   const [busy, setBusy] = useState(false);
 
@@ -194,7 +206,9 @@ export function WindQuickContactDialog({
             {kind === "sms"
               ? "SMS zostanie wysłany do dłużnika, a czynność trafi do rejestru czynności windykacyjnych z opłatą naliczoną zgodnie z umową."
               : `Agent AI zadzwoni do dłużnika ${
-                  pozyczkodawca ? `w imieniu pożyczkodawcy (${pozyczkodawca})` : "w Twoim imieniu"
+                  pozyczkodawca
+                    ? `w imieniu pożyczkodawcy (${pozyczkodawca})`
+                    : "w imieniu wierzyciela"
                 }, poinformuje o kwocie do zapłaty i zapyta o termin wpłaty. Połączenie trafi do rejestru czynności windykacyjnych z opłatą naliczoną zgodnie z umową.`}
           </DialogDescription>
         </DialogHeader>

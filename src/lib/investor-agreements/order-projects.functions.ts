@@ -23,6 +23,7 @@ import type {
   AnalyticsStepState,
 } from "@/lib/investor-analytics/types";
 import { compactKwNumber, formatKwNumber } from "@/lib/kw";
+import { INTERACTIVE_KW_POLL_MS } from "@/lib/analysis-pipeline/step-timing";
 import {
   sanitizeCoOwnersForTeaser,
   sanitizeCollateralForTeaser,
@@ -637,8 +638,12 @@ export const orderProjectReport = createServerFn({ method: "POST" })
         `inwestor: raport do Zlecenia FY-Z-${order.order_seq}`,
       );
       try {
-        // Kroki KW → właściciele → analiza KW od razu; ocenę ryzyka dokańcza cron.
-        await advanceAnalysisPipelineRunById(run.id, { pollMaxMs: 20_000, skipRisk: true });
+        // Kroki KW → właściciele → analiza KW od razu; ocenę ryzyka (30–50 s)
+        // karta Projektu zleca zaraz potem (runMyRiskStep), cron jest zapasem.
+        await advanceAnalysisPipelineRunById(run.id, {
+          pollMaxMs: INTERACTIVE_KW_POLL_MS,
+          skipRisk: true,
+        });
       } catch (e) {
         console.error("[order-projects] advance failed", e);
       }
@@ -655,6 +660,22 @@ export const orderProjectReport = createServerFn({ method: "POST" })
     }
     return { report: await loadProjectReport(supabaseAdmin, app), reused };
   });
+
+/**
+ * Bramka raportu Projektu (przyjęte Zlecenie inwestora + Projekt w jego
+ * zakresie) — ta sama co w szczegółach raportu; dla oceny ryzyka na żądanie
+ * (investor-analytics/risk-step.functions). Zwraca id wniosku.
+ */
+export async function assertOrderReportAccess(
+  db: any,
+  userId: string,
+  orderId: string,
+  applicationId: string,
+): Promise<string> {
+  const order = await myAcceptedOrder(db, userId, orderId);
+  const { app } = await eligibleApp(db, order, applicationId);
+  return String(app.id);
+}
 
 /**
  * Pełny raport analityczny Projektu — treść czterech kroków pipeline'u w tych
@@ -676,6 +697,11 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
     const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
     const kwRaw = String(propertyOf(app)?.land_register_number ?? "").trim();
     const compact = compactKwNumber(kwRaw);
+
+    // Advance-on-read: kroki 1–3 trwającego przebiegu stoją ≥ 45 s (księga
+    // z EKW) — popychamy je w tym żądaniu, bez czekania na cron.
+    const { advanceLatestRunOnRead } = await import("@/lib/analysis-pipeline/engine.server");
+    await advanceLatestRunOnRead(String(app.id));
 
     const { loadKwDocumentView, reduceCoOwners } =
       await import("@/lib/investor-analytics/analytics.functions");
