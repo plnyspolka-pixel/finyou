@@ -33,6 +33,7 @@ export function agentDb(): SupabaseClient {
   return supabaseAdmin as unknown as SupabaseClient;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const clip = (s: string | null | undefined, n = 500) => (s ? String(s).slice(0, n) : null);
 
 export async function logAgentAction(row: {
@@ -54,7 +55,9 @@ export async function logAgentAction(row: {
         summary: clip(row.summary),
         payload: row.payload ?? null,
         cost_pln: row.costPln ?? null,
-        actor: row.actor ?? "agent",
+        // Kolumna actor jest typu uuid (id użytkownika panelu) — wpisy agentów
+        // zostawiają ją pustą, a autora trzymają w module/payload.
+        actor: row.actor && UUID_RE.test(row.actor) ? row.actor : null,
       })
       .select("id")
       .maybeSingle();

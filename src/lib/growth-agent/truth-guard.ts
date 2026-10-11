@@ -76,9 +76,16 @@ const BANNED: Array<{ code: string; re: RegExp; message: string }> = [
   {
     code: "bez_ryzyka",
     re: w(
-      `bez\\s+(?:żadnego\\s+)?ryzyka|zero\\s+ryzyka|brak\\s+ryzyka|minimaln\\p{L}*\\s+ryzyk|ryzyko\\s+(?:jest\\s+)?(?:zerowe|żadne)|100\\s?%\\s+bezpieczn|bezpieczn\\p{L}*\\s+(?:lokat|inwestycj|zysk|zwrot)`,
+      `bez\\s+(?:żadnego\\s+)?ryzyka|zero\\s+ryzyka|brak\\s+ryzyka|minimaln\\p{L}*\\s+ryzyk|ryzyko\\s+(?:jest\\s+)?(?:zerowe|żadne)|100\\s?%\\s+bezpieczn|bezpieczn\\p{L}*\\s+(?:lok|ulok|inwest|zysk|zwrot|pomnaż)|skutecznie\\s+i\\s+bezpiecznie`,
     ),
     message: "Każda inwestycja i pożyczka niesie ryzyko — nie piszemy, że go nie ma.",
+  },
+  {
+    code: "stabilny_zwrot",
+    re: w(
+      `stabiln\\p{L}*\\s+(?:zwrot|zysk|dochód|dochod|zarob|stop\\p{L}*\\s+zwrotu)|stał\\p{L}*\\s+(?:zysk|dochód|zwrot)|przewidywaln\\p{L}*\\s+(?:zysk|zwrot|dochód)`,
+    ),
+    message: "Zwrot nie jest stały ani przewidywalny z góry — zależy od konkretnej transakcji.",
   },
   {
     code: "bez_weryfikacji",
@@ -210,6 +217,22 @@ export function xWeightedLength(text: string): number {
   return text.replace(/https?:\/\/\S+/g, "x".repeat(23)).length;
 }
 
+/**
+ * Czy tuż przed dopasowaniem (w tym samym członie zdania) stoi zaprzeczenie:
+ * „nie" (+ do dwóch słów), „≠", „żaden/żadnej…", „nikt nie…".
+ */
+export function negatedBefore(text: string, index: number): boolean {
+  const clause =
+    text
+      .slice(Math.max(0, index - 60), index)
+      .split(/[.,!?;:\n—–(]/)
+      .pop() ?? "";
+  return (
+    /(?:^|\s)(?:nie|≠|żadn\p{L}*|nikt|nigdy)(?:\s+\p{L}+){0,2}\s*$/iu.test(clause) ||
+    /≠\s*$/u.test(clause)
+  );
+}
+
 export interface GuardInput {
   text: string;
   audience: GuardAudience;
@@ -231,8 +254,13 @@ export function guardContent(input: GuardInput): GuardResult {
   }
 
   for (const b of BANNED) {
-    const m = text.match(b.re);
-    if (m) violations.push({ code: b.code, severity: "block", match: m[0], message: b.message });
+    // Zdanie, które ZAPRZECZA obietnicy („nie oznacza pewnego zwrotu",
+    // „≠ gwarancja zwrotu", „nie gwarantujemy finansowania"), to prawda podana
+    // uczciwie — blokujemy tylko wystąpienia bez zaprzeczenia.
+    const re = new RegExp(b.re.source, b.re.flags.includes("g") ? b.re.flags : `${b.re.flags}g`);
+    const hit = [...text.matchAll(re)].find((m) => !negatedBefore(text, m.index ?? 0));
+    if (hit)
+      violations.push({ code: b.code, severity: "block", match: hit[0], message: b.message });
   }
   violations.push(...numericViolations(text, date));
 

@@ -39,6 +39,22 @@ describe("strażnik prawdy", () => {
     expect(codes(g("Zarobisz nawet 20 tysięcy w miesiąc."))).toContain("pewny_zysk");
   });
 
+  it("zaprzeczenie obietnicy to prawda — nie blokuje (przypadki z prawdziwych postów)", () => {
+    expect(codes(g("Pierwsze miejsce w kolejce nie oznacza pewnego zwrotu. Pytania?"))).toEqual([]);
+    expect(codes(g("Pierwsze miejsce ≠ gwarancja zwrotu. Co o tym sądzisz?"))).toEqual([]);
+    expect(codes(g("Nie gwarantujemy finansowania — decyduje inwestor. Pytania?"))).toEqual([]);
+    expect(codes(g("To nie jest inwestycja bez ryzyka. Napisz, co myślisz."))).toEqual([]);
+    // …ale zaprzeczenie w innym członie zdania nie ratuje obietnicy.
+    expect(codes(g("Nie martw się — zero ryzyka!"))).toContain("bez_ryzyka");
+  });
+
+  it("łapie „stabilny zwrot” i „bezpiecznie lokować” (przypadki z prawdziwych postów)", () => {
+    expect(codes(g("Zainteresowany stabilnym zwrotem z inwestycji?"))).toContain("stabilny_zwrot");
+    expect(codes(g("Dowiedz się, jak skutecznie i bezpiecznie lokować kapitał."))).toContain(
+      "bez_ryzyka",
+    );
+  });
+
   it("blokuje liczby sprzeczne z umowami i cennikiem", () => {
     expect(codes(g("Prowizja Finance You to tylko 3% kwoty."))).toContain("prowizja_niezgodna");
     expect(codes(g("Finansujemy do 80% wartości nieruchomości."))).toContain("ltv_ponad_limit");
