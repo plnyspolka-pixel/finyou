@@ -33,11 +33,7 @@ import {
   listMyKwChecks,
   startMyKwCheck,
 } from "@/lib/investor-analytics/kw-checks.functions";
-import {
-  RISK_STEP_COMPUTING_TEXT,
-  RISK_STEP_ETA_TEXT,
-  useRiskStepTrigger,
-} from "./use-risk-step-trigger";
+import { RISK_STEP_ETA_TEXT, useRiskStepTrigger } from "./use-risk-step-trigger";
 import {
   ANALYTICS_STEP_STATUS_LABELS,
   KW_CHECK_DAILY_LIMIT,
@@ -355,7 +351,9 @@ function CheckDetail({ id }: { id: string }) {
   const live = detailQ.data?.item;
   const riskStep = useRiskStepTrigger({
     target: { kind: "kw-check", id },
-    run: live ? { key: live.id, status: live.status, steps: live.steps } : null,
+    run: live
+      ? { key: live.id, status: live.status, steps: live.steps, startedAt: live.createdAt }
+      : null,
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["investor-kw-check", id] });
       void qc.invalidateQueries({ queryKey: ["investor-kw-checks"] });
@@ -468,10 +466,8 @@ function CheckDetail({ id }: { id: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
             <AlertTitle>Automat pracuje</AlertTitle>
             <AlertDescription>
-              {riskStep.computing
-                ? RISK_STEP_COMPUTING_TEXT
-                : `Kroki wykonują się po kolei — pełna ${RISK_STEP_ETA_TEXT}.`}{" "}
-              Ten widok odświeża się sam.
+              {riskStep.note ?? `Kroki wykonują się po kolei — pełna ${RISK_STEP_ETA_TEXT}.`} Ten
+              widok odświeża się sam.
             </AlertDescription>
           </Alert>
         )}
@@ -533,9 +529,8 @@ function CheckDetail({ id }: { id: string }) {
           <StepEmpty
             status={riskStatus}
             text={
-              riskStep.computing
-                ? RISK_STEP_COMPUTING_TEXT
-                : "Pełną ocenę ryzyka (wycena rynkowa, sprzedaż wymuszona, zbywalność, klasa ryzyka) automat liczy zaraz po analizie księgi — w ciągu ok. 15 minut od uruchomienia analizy (pobranie księgi wieczystej zwykle trwa kilka minut)."
+              riskStep.note ??
+              "Pełną ocenę ryzyka (wycena rynkowa, sprzedaż wymuszona, zbywalność, klasa ryzyka) automat liczy zaraz po analizie księgi — w ciągu ok. 15 minut od uruchomienia analizy (pobranie księgi wieczystej zwykle trwa kilka minut)."
             }
           />
         )}

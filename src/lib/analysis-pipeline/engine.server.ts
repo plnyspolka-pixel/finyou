@@ -22,9 +22,9 @@ import {
   shouldAdvanceOnRead,
   TICK_BUDGET_MS,
   withRiskClaimConditions,
-  withRiskSaveGuard,
-  type RiskSaveGuard,
+  withStepSaveGuard,
   type RiskStepRequestStatus,
+  type StepSaveGuard,
 } from "./step-timing";
 
 /** Minimalny potencjał lokalizacyjny uruchamiający pipeline (0–100). */
@@ -158,7 +158,8 @@ export interface PipelineProcessResult {
  * budżecie czasu cron ticku: po `deadline` nie zaczynamy kolejnego
  * przebiegu ani oceny ryzyka (reszta w następnym ticku, za 5 min). Najpierw
  * przebiegi czekające tylko na ocenę ryzyka, potem pozostałe — w grupie
- * najstarsze najpierw.
+ * najstarsze najpierw. Każdy przebieg czytamy świeżo tuż przed krokiem —
+ * lista z początku ticku bywa sprzed minut (odczyt szczegółów, panel).
  */
 export async function processAnalysisPipelineRuns(
   opts: { deadline?: number } = {},
@@ -174,8 +175,14 @@ export async function processAnalysisPipelineRuns(
     .limit(25);
   if (error) throw new Error(error.message);
 
-  for (const run of orderForTick((runs ?? []) as any[])) {
+  for (const listed of orderForTick((runs ?? []) as any[])) {
     if (pastDeadline(deadline)) break;
+    // null = przebieg zamknięty w międzyczasie (albo błąd odczytu — następny tick).
+    const run = await loadRunningRun(listed.id).catch((e: any) => {
+      console.error("[analysis-pipeline] run reload", listed.id, e?.message);
+      return null;
+    });
+    if (!run) continue;
     result.processed += 1;
     try {
       const outcome = await advanceRun(run, { riskDeadline: deadline });
@@ -184,17 +191,30 @@ export async function processAnalysisPipelineRuns(
     } catch (e: any) {
       console.error("[analysis-pipeline] run error", run.id, e?.message);
       result.errors += 1;
-      await (supabaseAdmin as any)
-        .from("analysis_pipeline_runs")
-        .update({
-          status: "error",
-          error: e?.message ?? "błąd",
-          finished_at: new Date().toISOString(),
-        })
-        .eq("id", run.id);
+      await failRun(run.id, e?.message ?? "błąd");
     }
   }
   return result;
+}
+
+/** Trwający przebieg w świeżym stanie (null = nie istnieje albo już zamknięty). */
+async function loadRunningRun(runId: string): Promise<any | null> {
+  const { data: run, error } = await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .select("id, loan_application_id, kw_number, steps, status")
+    .eq("id", runId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return run && run.status === "running" ? run : null;
+}
+
+/** Błąd kroku zamyka trwający przebieg (zamkniętego — np. ponowionego ręcznie — nie ruszamy). */
+async function failRun(runId: string, message: string): Promise<void> {
+  await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .update({ status: "error", error: message, finished_at: new Date().toISOString() })
+    .eq("id", runId)
+    .eq("status", "running");
 }
 
 /**
@@ -249,24 +269,12 @@ export async function advanceAnalysisPipelineRunById(
   runId: string,
   opts: AdvanceRunOpts = {},
 ): Promise<"finished" | "waiting" | "not_running"> {
-  const { data: run, error } = await (supabaseAdmin as any)
-    .from("analysis_pipeline_runs")
-    .select("id, loan_application_id, kw_number, steps, status")
-    .eq("id", runId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!run || run.status !== "running") return "not_running";
+  const run = await loadRunningRun(runId);
+  if (!run) return "not_running";
   try {
     return await advanceRun(run, opts);
   } catch (e: any) {
-    await (supabaseAdmin as any)
-      .from("analysis_pipeline_runs")
-      .update({
-        status: "error",
-        error: e?.message ?? "błąd",
-        finished_at: new Date().toISOString(),
-      })
-      .eq("id", run.id);
+    await failRun(run.id, e?.message ?? "błąd");
     throw e;
   }
 }
@@ -335,13 +343,14 @@ export async function runRiskStepForApplication(
 }
 
 /**
- * Zapis kroków ze strażnikiem kroku 4 (step-timing: withRiskSaveGuard).
- * false = stan w bazie poszedł dalej (ktoś zajął albo rozstrzygnął ocenę
- * ryzyka, zajęcie przejęto) — wołający przerywa, nie nadpisuje cudzej pracy.
+ * Zapis kroków ze strażnikiem (step-timing: withStepSaveGuard — compare-and-set
+ * na poprzednim stanie zapisywanego kroku i na kroku 4). false = stan w bazie
+ * poszedł dalej (ktoś domknął ten krok, zajął albo rozstrzygnął ocenę ryzyka,
+ * przebieg zamknięto) — wołający przerywa, nie nadpisuje cudzej pracy.
  */
-async function saveSteps(runId: string, steps: RunSteps, guard: RiskSaveGuard): Promise<boolean> {
+async function saveSteps(runId: string, steps: RunSteps, guard: StepSaveGuard): Promise<boolean> {
   const q = (supabaseAdmin as any).from("analysis_pipeline_runs").update({ steps }).eq("id", runId);
-  const { data, error } = await withRiskSaveGuard(q, guard).select("id");
+  const { data, error } = await withStepSaveGuard(q, guard).select("id");
   if (error) {
     console.error("[analysis-pipeline] save steps", runId, error.message);
     return false;
@@ -457,6 +466,13 @@ async function advanceRun(
   opts: AdvanceRunOpts = {},
 ): Promise<"finished" | "waiting"> {
   const steps: RunSteps = { ...freshSteps(), ...(run.steps ?? {}) };
+  // Stan w bazie, który widzieliśmy — każdy zapis kroku to compare-and-set na nim.
+  let stored: Partial<RunSteps> = { ...(run.steps ?? {}) };
+  const save = async (step: StepKey): Promise<boolean> => {
+    if (!(await saveSteps(run.id, steps, { step, was: stored[step]?.status }))) return false;
+    stored = { ...steps };
+    return true;
+  };
 
   // ── Krok 1: pobranie treści KW ─────────────────────────────────────────────
   if (steps.kw.status === "pending" || steps.kw.status === "running") {
@@ -471,13 +487,13 @@ async function advanceRun(
         markStep(steps, "kw", "error", "Pobieranie KW nie zakończyło się w rozsądnym czasie.");
       } else {
         steps.kw = wait.state;
-        await saveSteps(run.id, steps, "risk_pending");
+        await save("kw");
         return "waiting";
       }
     } else {
       markStep(steps, "kw", "error", outcome.error ?? `status: ${outcome.status}`);
     }
-    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
+    if (!(await save("kw"))) return "waiting";
   }
 
   const kwAvailable = steps.kw.status === "done";
@@ -538,7 +554,7 @@ async function advanceRun(
         markStep(steps, "coowners", "error", e?.message ?? "błąd sprawdzenia właścicieli");
       }
     }
-    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
+    if (!(await save("coowners"))) return "waiting";
   }
 
   // ── Krok 3: analiza KW (silnik reguł) ──────────────────────────────────────
@@ -553,7 +569,7 @@ async function advanceRun(
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
       }
     }
-    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
+    if (!(await save("kw_analysis"))) return "waiting";
   }
 
   // ── Krok 4: analiza ryzyka ─────────────────────────────────────────────────
@@ -594,7 +610,8 @@ async function advanceRun(
     } catch (e: any) {
       markStep(steps, "risk", "error", e?.message ?? "błąd analizy ryzyka");
     }
-    // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze przejmujący.
+    // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze
+    // przejmujący; przebieg zamknięty w międzyczasie (ręczne ponowienie) zostaje zamknięty.
     if (!(await saveSteps(run.id, steps, { claimedAt }))) return "waiting";
   }
 
@@ -605,6 +622,7 @@ async function advanceRun(
   if (unresolved) return "waiting";
 
   const hasErrors = STEP_ORDER.some((k) => steps[k].status === "error");
+  // Tylko trwający przebieg — zamknięty w międzyczasie (ręczne ponowienie) zostaje zamknięty.
   await (supabaseAdmin as any)
     .from("analysis_pipeline_runs")
     .update({
@@ -616,6 +634,7 @@ async function advanceRun(
             .join("; ")
         : null,
     })
-    .eq("id", run.id);
+    .eq("id", run.id)
+    .eq("status", "running");
   return "finished";
 }

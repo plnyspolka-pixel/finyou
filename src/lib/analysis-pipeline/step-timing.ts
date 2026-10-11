@@ -10,6 +10,8 @@
 //    UPDATE-em (compare-and-set na stanie kroku) — dwa wywołania nie liczą
 //    tej samej oceny; zajęcie starsze niż RISK_CLAIM_STALE_MS (przerwana
 //    praca) wolno przejąć;
+//  • każdy zapis kroku to compare-and-set na jego poprzednim stanie — spóźniony
+//    wołający ze starym odczytem nie cofa kroków domkniętych przez innych;
 //  • odczyt szczegółów popycha kroki 1–3, gdy ostatni ruch był ≥ 45 s temu;
 //  • czekanie na KW z EKW liczymy czasem, nie liczbą prób — próby są teraz
 //    częstsze (odczyt szczegółów, cron co 5 min).
@@ -33,8 +35,12 @@ export interface StepTiming {
 
 export type StepsLike = Partial<Record<PipelineStepKey, StepTiming | undefined>> | null | undefined;
 
-/** Zajęcie oceny ryzyka starsze niż to uznajemy za porzucone (przerwane żądanie). */
-export const RISK_CLAIM_STALE_MS = 10 * 60 * 1000;
+/**
+ * Zajęcie oceny ryzyka starsze niż to uznajemy za porzucone (przerwane
+ * żądanie, zamknięta karta) — 3 min, ponad 3× najdłuższa zmierzona ocena
+ * (29–52 s). Dłuższe okno zjadałoby obietnicę 15 minut.
+ */
+export const RISK_CLAIM_STALE_MS = 3 * 60 * 1000;
 /** Po jakim czasie od ostatniego ruchu odczyt szczegółów sam popycha kroki 1–3. */
 export const ADVANCE_ON_READ_AFTER_MS = 45_000;
 /** Limit czekania na EKW w żądaniu z przeglądarki (cron czeka dłużej). */
@@ -50,8 +56,8 @@ export const MAX_KW_WAIT_MS = 5 * 60 * 60 * 1000;
  * budżetem musi się zmieścić: KW do 45 s, ocena ryzyka 30–60 s).
  */
 export const TICK_BUDGET_MS = 150_000;
-/** Kwalifikacja nowych wniosków (sync) — jak dotąd co 15 minut, choć tick jest co 5. */
-export const PIPELINE_SYNC_EVERY_MINUTES = 15;
+/** Obietnica dla inwestora: ocena ryzyka i wycena w ciągu ok. 15 minut od uruchomienia. */
+export const RISK_STEP_PROMISE_MS = 15 * 60 * 1000;
 
 const PRE_RISK_STEPS: PipelineStepKey[] = ["kw", "coowners", "kw_analysis"];
 
@@ -131,16 +137,27 @@ export function withRiskClaimConditions<T extends JsonFilterBuilder<T>>(
 }
 
 /**
- * Strażnik zapisu kroków: kroki 1–3 zapisujemy tylko, gdy ocena ryzyka jest
- * w bazie wciąż wolna (`pending` — nikt jej nie zajął, więc nie nadpiszemy
- * cudzego zajęcia ani wyniku), a wynik oceny — tylko z własnym zajęciem.
+ * Strażnik zapisu kroków (compare-and-set) — zapis trafia tylko w trwający
+ * przebieg i tylko wtedy, gdy stan w bazie jest tym, który widzieliśmy:
+ *  • krok 1–3 (`step`): zapisywany krok ma w bazie wciąż status `was` (stan
+ *    przed jego wykonaniem), a ocena ryzyka jest wolna (`pending` — nie
+ *    nadpiszemy cudzego zajęcia ani wyniku). Spóźniony wołający ze starym
+ *    odczytem (np. cron z listą sprzed minut, równoległy odczyt) nie cofa
+ *    kroków, które ktoś już domknął;
+ *  • wynik oceny (`claimedAt`): tylko z własnym zajęciem.
+ * Przebieg zamknięty w międzyczasie (np. ręczne ponowienie) nie wraca do życia.
  */
-export type RiskSaveGuard = "risk_pending" | { claimedAt: string };
+export type StepSaveGuard =
+  | { step: PipelineStepKey; was: string | null | undefined }
+  | { claimedAt: string };
 
-export function withRiskSaveGuard<T extends JsonFilterBuilder<T>>(q: T, guard: RiskSaveGuard): T {
-  return guard === "risk_pending"
-    ? q.eq("steps->risk->>status", "pending")
-    : q.eq("steps->risk->>claimed_at", guard.claimedAt);
+export function withStepSaveGuard<T extends JsonFilterBuilder<T>>(q: T, guard: StepSaveGuard): T {
+  const running = q.eq("status", "running");
+  if ("claimedAt" in guard) return running.eq("steps->risk->>claimed_at", guard.claimedAt);
+  const riskFree = running.eq("steps->risk->>status", "pending");
+  if (guard.step === "risk") return riskFree;
+  const path = `steps->${guard.step}->>status`;
+  return guard.was ? riskFree.eq(path, guard.was) : riskFree.is(path, null);
 }
 
 /** Ostatni ruch przebiegu: start, zakończenia kroków, próby pobrania KW, zajęcie oceny. */
@@ -224,11 +241,6 @@ export function pastDeadline(
   return deadline != null && now >= deadline;
 }
 
-/** Kwalifikacja nowych wniosków w tym ticku (co 15 min — ticki :00, :15, :30, :45). */
-export function shouldSyncPipelineThisTick(now: Date): boolean {
-  return now.getUTCMinutes() % PIPELINE_SYNC_EVERY_MINUTES < 5;
-}
-
 /**
  * Wynik zlecenia oceny ryzyka z panelu inwestora: `done` / `error` — krok 4
  * rozstrzygnięty; `running` — ocena się liczy (to albo inne żądanie, albo
@@ -255,4 +267,24 @@ export function shouldRequestRiskStep(
   now: number = Date.now(),
 ): boolean {
   return status === "running" && canClaimRiskStep(steps, now);
+}
+
+/**
+ * Obietnica „ok. 15 minut od uruchomienia" już nie pasuje do trwającego
+ * przebiegu (panel pokazuje wtedy inny tekst zamiast nieprawdziwego terminu):
+ *  • `kw` — minęło ≥ 15 min, a księga z EKW wciąż się pobiera,
+ *  • `late` — minęło ≥ 15 min, a ocena ryzyka nadal nie jest gotowa,
+ *  • null — mieścimy się w obietnicy (albo nie znamy startu).
+ */
+export type RiskStepOverdue = "kw" | "late" | null;
+
+export function riskStepOverdue(
+  startedAt: string | null | undefined,
+  steps: StepsLike,
+  now: number = Date.now(),
+): RiskStepOverdue {
+  const start = ms(startedAt);
+  if (!Number.isFinite(start) || now - start < RISK_STEP_PROMISE_MS) return null;
+  if (resolved(steps?.risk)) return null;
+  return resolved(steps?.kw) ? "late" : "kw";
 }

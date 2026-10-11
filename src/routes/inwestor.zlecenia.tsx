@@ -50,7 +50,7 @@ import {
   StepEmpty,
 } from "@/components/inwestor/analytics-steps";
 import {
-  RISK_STEP_COMPUTING_TEXT,
+  RISK_STEP_COMPUTING_LABEL,
   RISK_STEP_ETA_TEXT,
   useRiskStepTrigger,
 } from "@/components/inwestor/use-risk-step-trigger";
@@ -297,6 +297,7 @@ function ProjectCard({
             key: `${p.applicationId}:${p.report.startedAt ?? ""}`,
             status: "running",
             steps: p.report.steps,
+            startedAt: p.report.startedAt,
           }
         : null,
     onSettled: () => {
@@ -399,7 +400,7 @@ function ProjectCard({
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
-                {riskStep.computing ? RISK_STEP_COMPUTING_TEXT : "raport w przygotowaniu"}
+                {riskStep.computing ? RISK_STEP_COMPUTING_LABEL : "raport w przygotowaniu"}
               </span>
             ) : null}
             {report.status === "error" ? (
@@ -417,7 +418,7 @@ function ProjectCard({
               orderId={p.orderId}
               applicationId={p.applicationId}
               report={report}
-              riskComputing={riskStep.computing}
+              riskNote={riskStep.note}
             />
           ) : null}
           {showOffer ? (
@@ -697,15 +698,18 @@ function ReportPanel({
   orderId,
   applicationId,
   report,
-  riskComputing,
+  riskNote,
 }: {
   /** Numer Projektu i kwota z karty — do nagłówka i nazwy pliku PDF. */
   project: { ref: string | null; loanAmount: number | null };
   orderId: string;
   applicationId: string;
   report: OrderProjectReport;
-  /** Ocena ryzyka właśnie się liczy (zlecona przez kartę Projektu albo cron). */
-  riskComputing: boolean;
+  /**
+   * Notka o ocenie ryzyka z karty Projektu: właśnie się liczy (zlecona przez
+   * kartę albo cron) albo trwa dłużej niż zwykle; null = domyślny tekst.
+   */
+  riskNote: string | null;
 }) {
   const detailFn = useServerFn(getOrderProjectReportDetail);
   const q = useQuery({
@@ -887,9 +891,8 @@ function ReportPanel({
           <StepEmpty
             status={status("risk")}
             text={
-              riskComputing
-                ? RISK_STEP_COMPUTING_TEXT
-                : `Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka — ${RISK_STEP_ETA_TEXT}.`
+              riskNote ??
+              "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po ocenie ryzyka — w ciągu ok. 15 minut od uruchomienia analizy (pobranie księgi wieczystej zwykle trwa kilka minut)."
             }
           />
         )}

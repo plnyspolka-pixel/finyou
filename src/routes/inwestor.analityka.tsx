@@ -45,7 +45,6 @@ import { InvestorValuationCard } from "@/components/risk-assessment/investor-val
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import {
-  RISK_STEP_COMPUTING_TEXT,
   RISK_STEP_ETA_TEXT,
   useRiskStepTrigger,
 } from "@/components/inwestor/use-risk-step-trigger";
@@ -547,7 +546,7 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
       toast.success(
         r.status === "running"
           ? "Przebieg pipeline'u już trwa — wyniki pojawią się tutaj."
-          : `Analiza uruchomiona: księga, właściciele i analiza KW są liczone od razu, a ${RISK_STEP_ETA_TEXT}.`,
+          : "Analiza uruchomiona — ocena ryzyka i wycena będą gotowe w ciągu ok. 15 minut (pobranie księgi wieczystej zwykle trwa kilka minut, kolejne kroki liczymy od razu).",
       );
       refresh();
     },
@@ -557,7 +556,14 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
   const liveRun = detailQ.data?.item.run ?? null;
   const riskStep = useRiskStepTrigger({
     target: { kind: "analytics", applicationId },
-    run: liveRun ? { key: liveRun.id, status: liveRun.status, steps: liveRun.steps } : null,
+    run: liveRun
+      ? {
+          key: liveRun.id,
+          status: liveRun.status,
+          steps: liveRun.steps,
+          startedAt: liveRun.startedAt,
+        }
+      : null,
     onSettled: refresh,
   });
 
@@ -729,10 +735,8 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
             <AlertTitle>Automat pracuje</AlertTitle>
             <AlertDescription>
-              {riskStep.computing
-                ? RISK_STEP_COMPUTING_TEXT
-                : `Kroki wykonują się po kolei — ${RISK_STEP_ETA_TEXT}.`}{" "}
-              Ten widok odświeża się sam.
+              {riskStep.note ?? `Kroki wykonują się po kolei — ${RISK_STEP_ETA_TEXT}.`} Ten widok
+              odświeża się sam.
             </AlertDescription>
           </Alert>
         )}
@@ -808,9 +812,8 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
           <StepEmpty
             status={analyticsStepStatus(item, "risk")}
             text={
-              riskStep.computing
-                ? RISK_STEP_COMPUTING_TEXT
-                : "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka."
+              riskStep.note ??
+              "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka."
             }
           />
         )}

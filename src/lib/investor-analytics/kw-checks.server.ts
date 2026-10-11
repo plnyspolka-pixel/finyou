@@ -19,9 +19,9 @@ import {
   riskStepRequestStatus,
   TICK_BUDGET_MS,
   withRiskClaimConditions,
-  withRiskSaveGuard,
-  type RiskSaveGuard,
+  withStepSaveGuard,
   type RiskStepRequestStatus,
+  type StepSaveGuard,
   type StepTiming,
 } from "@/lib/analysis-pipeline/step-timing";
 import type { AnalyticsStepState, KwCheckStepKey } from "./types";
@@ -63,20 +63,24 @@ function markStep(
 }
 
 /**
- * Zapis wiersza. Z `guard` — ze strażnikiem kroku 4 (step-timing:
- * withRiskSaveGuard); false = stan w bazie poszedł dalej (ktoś zajął albo
- * rozstrzygnął ocenę ryzyka) — wołający przerywa, nie nadpisuje cudzej pracy.
+ * Zapis wiersza. Z `guard` — ze strażnikiem (step-timing: withStepSaveGuard —
+ * compare-and-set na poprzednim stanie zapisywanego kroku i na kroku 4),
+ * z "running" — tylko w trwające sprawdzenie. false = stan w bazie poszedł
+ * dalej (ktoś domknął ten krok, zajął albo rozstrzygnął ocenę ryzyka) —
+ * wołający przerywa, nie nadpisuje cudzej pracy.
  */
 async function save(
   id: string,
   patch: Record<string, unknown>,
-  guard?: RiskSaveGuard,
+  guard?: StepSaveGuard | "running",
 ): Promise<boolean> {
   const q = db
     .from("investor_kw_checks")
     .update({ ...patch, last_advanced_at: new Date().toISOString() })
     .eq("id", id);
-  const { data, error } = await (guard ? withRiskSaveGuard(q, guard) : q).select("id");
+  const guarded =
+    guard === "running" ? q.eq("status", "running") : guard ? withStepSaveGuard(q, guard) : q;
+  const { data, error } = await guarded.select("id");
   if (error) {
     console.error("[investor-kw-check] save", id, error.message);
     return false;
@@ -123,6 +127,15 @@ export async function advanceKwCheck(
   opts: AdvanceOpts = {},
 ): Promise<"finished" | "waiting"> {
   const steps: CheckSteps = { ...freshKwCheckSteps(), ...(row.steps ?? {}) };
+  // Stan w bazie, który widzieliśmy — każdy zapis kroku to compare-and-set na nim.
+  let stored: Partial<CheckSteps> = { ...(row.steps ?? {}) };
+  const saveStep = async (step: KwCheckStepKey, extra: Record<string, unknown> = {}) => {
+    if (!(await save(row.id, { ...extra, steps }, { step, was: stored[step]?.status }))) {
+      return false;
+    }
+    stored = { ...steps };
+    return true;
+  };
   const compact = compactKwNumber(row.kw_number);
   if (!compact) {
     await save(row.id, {
@@ -149,7 +162,7 @@ export async function advanceKwCheck(
         markStep(steps, "kw", "error", "Pobieranie KW nie zakończyło się w rozsądnym czasie.");
       } else {
         steps.kw = wait.state;
-        await save(row.id, { steps }, "risk_pending");
+        await saveStep("kw");
         return "waiting";
       }
     } else if (outcome.status === "not_found") {
@@ -157,7 +170,7 @@ export async function advanceKwCheck(
     } else {
       markStep(steps, "kw", "error", outcome.error ?? `status: ${outcome.status}`);
     }
-    if (!(await save(row.id, { steps }, "risk_pending"))) return "waiting";
+    if (!(await saveStep("kw"))) return "waiting";
   }
 
   const kwAvailable = steps.kw.status === "done";
@@ -176,7 +189,7 @@ export async function advanceKwCheck(
         markStep(steps, "coowners", "error", e?.message ?? "błąd sprawdzenia właścicieli");
       }
     }
-    if (!(await save(row.id, { ...patch, steps }, "risk_pending"))) return "waiting";
+    if (!(await saveStep("coowners", patch))) return "waiting";
   }
 
   // ── Krok 3: analiza KW (silnik reguł) ──────────────────────────────────────
@@ -191,7 +204,7 @@ export async function advanceKwCheck(
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
       }
     }
-    if (!(await save(row.id, { ...patch, steps }, "risk_pending"))) return "waiting";
+    if (!(await saveStep("kw_analysis", patch))) return "waiting";
   }
 
   // ── Krok 4: pełna ocena ryzyka (wycena, sprzedaż wymuszona, zbywalność) ────
@@ -200,7 +213,7 @@ export async function advanceKwCheck(
   if (steps.risk.status === "pending" || steps.risk.status === "running") {
     if (!kwAvailable && steps.risk.status === "pending") {
       markStep(steps, "risk", "error", "Brak treści KW — ocena ryzyka niemożliwa.");
-      if (!(await save(row.id, { steps }, "risk_pending"))) return "waiting";
+      if (!(await saveStep("risk"))) return "waiting";
     } else if (opts.skipRisk || pastDeadline(opts.riskDeadline) || !canClaimRiskStep(steps)) {
       return "waiting";
     } else {
@@ -249,7 +262,8 @@ export async function advanceKwCheck(
       } catch (e: any) {
         markStep(steps, "risk", "error", e?.message ?? "błąd oceny ryzyka");
       }
-      // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze przejmujący.
+      // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze
+      // przejmujący; sprawdzenie zamknięte w międzyczasie zostaje zamknięte.
       if (!(await save(row.id, { ...patch, steps }, { claimedAt }))) return "waiting";
     }
   }
@@ -260,14 +274,18 @@ export async function advanceKwCheck(
   if (unresolved) return "waiting";
 
   const failed = STEP_ORDER.filter((k) => steps[k].status === "error");
-  await save(row.id, {
-    steps,
-    // Brak treści KW = nic nie przeanalizowano → błąd; inaczej wynik jest
-    // użyteczny nawet z błędem pojedynczego kroku (opis w `error`).
-    status: kwAvailable ? "done" : "error",
-    error: failed.length ? failed.map((k) => `${k}: ${steps[k].error}`).join("; ") : null,
-    finished_at: new Date().toISOString(),
-  });
+  await save(
+    row.id,
+    {
+      steps,
+      // Brak treści KW = nic nie przeanalizowano → błąd; inaczej wynik jest
+      // użyteczny nawet z błędem pojedynczego kroku (opis w `error`).
+      status: kwAvailable ? "done" : "error",
+      error: failed.length ? failed.map((k) => `${k}: ${steps[k].error}`).join("; ") : null,
+      finished_at: new Date().toISOString(),
+    },
+    "running",
+  );
   return "finished";
 }
 
@@ -313,11 +331,11 @@ export async function advanceKwCheckSafe(row: KwCheckRow, opts: AdvanceOpts = {}
     await advanceKwCheck(row, opts);
   } catch (e: any) {
     console.error("[investor-kw-check] error", row.id, e?.message);
-    await save(row.id, {
-      status: "error",
-      error: e?.message ?? "błąd",
-      finished_at: new Date().toISOString(),
-    });
+    await save(
+      row.id,
+      { status: "error", error: e?.message ?? "błąd", finished_at: new Date().toISOString() },
+      "running",
+    );
   }
 }
 
@@ -330,6 +348,8 @@ const CHECK_ROW_SELECT =
  * w następnym ticku, za 5 min). Gotowość do oceny ryzyka każde sprawdzenie
  * ocenia samo, po krokach 1–3 w tym samym ticku. Najpierw sprawdzenia
  * czekające tylko na ocenę ryzyka, potem pozostałe — w grupie najstarsze.
+ * Każde czytamy świeżo tuż przed krokiem — lista z początku ticku bywa
+ * sprzed minut (odczyt szczegółów, panel).
  */
 export async function processInvestorKwChecks(
   opts: { deadline?: number } = {},
@@ -343,10 +363,18 @@ export async function processInvestorKwChecks(
     .limit(25);
   if (error) throw new Error(error.message);
   let processed = 0;
-  for (const row of orderForTick((data ?? []) as KwCheckRow[])) {
+  for (const listed of orderForTick((data ?? []) as KwCheckRow[])) {
     if (pastDeadline(deadline)) break;
+    const { data: row, error: rowErr } = await db
+      .from("investor_kw_checks")
+      .select(CHECK_ROW_SELECT)
+      .eq("id", listed.id)
+      .eq("status", "running")
+      .maybeSingle();
+    // Brak = zamknięte w międzyczasie (błąd odczytu — następny tick).
+    if (rowErr || !row) continue;
     processed += 1;
-    await advanceKwCheckSafe(row, { riskDeadline: deadline });
+    await advanceKwCheckSafe(row as KwCheckRow, { riskDeadline: deadline });
   }
   return { processed };
 }

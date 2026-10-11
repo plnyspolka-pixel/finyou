@@ -10,13 +10,14 @@ import {
   pastDeadline,
   preRiskStepsResolved,
   RISK_CLAIM_STALE_MS,
+  RISK_STEP_PROMISE_MS,
+  riskStepOverdue,
   riskStepPhase,
   riskStepRequestStatus,
   shouldAdvanceOnRead,
   shouldRequestRiskStep,
-  shouldSyncPipelineThisTick,
   withRiskClaimConditions,
-  withRiskSaveGuard,
+  withStepSaveGuard,
   type JsonFilterBuilder,
   type StepsLike,
   type StepTiming,
@@ -45,12 +46,12 @@ function steps(
 
 // ── Mini-baza: warunki PostgREST (eq / is) na ścieżkach jsonb `steps->…` ─────
 type Steps = Partial<Record<"kw" | "coowners" | "kw_analysis" | "risk", StepTiming>>;
-type Row = { steps: Steps };
+type Row = { status?: string; steps: Steps };
 
 function readPath(row: Row, path: string): unknown {
   // "steps->risk->>status" → row.steps.risk.status (->> jako tekst, -> jako json)
   const [col, ...rest] = path.split(/->>|->/);
-  let v: unknown = (row as unknown as Record<string, unknown>)[col];
+  let v: unknown = { status: "running", ...row }[col as "status" | "steps"];
   for (const k of rest) v = v == null ? undefined : (v as Record<string, unknown>)[k];
   return v ?? null;
 }
@@ -99,7 +100,12 @@ describe("krok 4 — faza i zajęcie (claim)", () => {
     expect(canClaimRiskStep(steps({ status: "pending" }), NOW)).toBe(true);
   });
 
-  it("świeże zajęcie blokuje, porzucone (≥ 10 min) wolno przejąć", () => {
+  it("świeże zajęcie blokuje, porzucone (≥ 3 min) wolno przejąć", () => {
+    // Ponad 3× najdłuższa zmierzona ocena (52 s), a porzucone zajęcie z
+    // następnym tickiem (co 5 min) mieści się w obietnicy 15 minut.
+    expect(RISK_CLAIM_STALE_MS).toBeGreaterThanOrEqual(3 * 52_000);
+    expect(RISK_CLAIM_STALE_MS + 5 * 60_000).toBeLessThan(RISK_STEP_PROMISE_MS);
+
     const fresh = steps({ status: "running", claimed_at: iso(RISK_CLAIM_STALE_MS - 1000) });
     expect(riskStepPhase(fresh, NOW)).toBe("running");
     expect(canClaimRiskStep(fresh, NOW)).toBe(false);
@@ -148,15 +154,18 @@ describe("krok 4 — faza i zajęcie (claim)", () => {
 
   it("strażnik zapisu: kroki 1–3 tylko przy wolnej ocenie, wynik tylko z własnym zajęciem", () => {
     const row: Row = { steps: steps({ status: "pending" }) };
-    const pendingSave = () =>
-      withRiskSaveGuard(new FakeUpdate(), "risk_pending").apply(row, row.steps);
-    expect(pendingSave()).toBe(1);
+    const kwAnalysisSave = () =>
+      withStepSaveGuard(new FakeUpdate(), { step: "kw_analysis", was: "error" }).apply(
+        row,
+        row.steps,
+      );
+    expect(kwAnalysisSave()).toBe(1);
 
     const mine = claim(row, structuredClone(row.steps), NOW)!;
     // Spóźniony zapis kroków 1–3 nie nadpisze zajęcia.
-    expect(pendingSave()).toBe(0);
+    expect(kwAnalysisSave()).toBe(0);
     expect(
-      withRiskSaveGuard(new FakeUpdate(), { claimedAt: mine }).apply(row, {
+      withStepSaveGuard(new FakeUpdate(), { claimedAt: mine }).apply(row, {
         ...row.steps,
         risk: { status: "done" },
       }),
@@ -168,10 +177,77 @@ describe("krok 4 — faza i zajęcie (claim)", () => {
     const oldClaim = row2.steps.risk?.claimed_at as string;
     claim(row2, structuredClone(row2.steps), NOW);
     expect(
-      withRiskSaveGuard(new FakeUpdate(), { claimedAt: oldClaim }).apply(row2, {
+      withStepSaveGuard(new FakeUpdate(), { claimedAt: oldClaim }).apply(row2, {
         ...row2.steps,
         risk: { status: "done" },
       }),
+    ).toBe(0);
+  });
+
+  it("stary odczyt (cron z listą sprzed minut) nie cofa kroków domkniętych przez innych", () => {
+    // Tick przeczytał przebieg, gdy KW jeszcze się pobierała…
+    const tickSnapshot: Steps = {
+      kw: { status: "running", waits: 1 },
+      coowners: { status: "pending" },
+      kw_analysis: { status: "pending" },
+      risk: { status: "pending" },
+    };
+    // …a w międzyczasie odczyt szczegółów domknął kroki 1–3.
+    const row: Row = {
+      steps: {
+        kw: { status: "done" },
+        coowners: { status: "done" },
+        kw_analysis: { status: "done" },
+        risk: { status: "pending" },
+      },
+    };
+    // Tick pobiera KW (już w cache) i zapisuje swoją kopię: kw done, 2–3 pending.
+    const regressed: Steps = { ...tickSnapshot, kw: { status: "done" } };
+    const hit = withStepSaveGuard(new FakeUpdate(), {
+      step: "kw",
+      was: tickSnapshot.kw?.status,
+    }).apply(row, regressed);
+    expect(hit).toBe(0);
+    expect(row.steps.coowners).toEqual({ status: "done" });
+
+    // Ten sam krok domknięty przez dwóch wołających — zapisuje tylko pierwszy.
+    const fresh: Row = { steps: steps({ status: "pending" }, { coowners: { status: "pending" } }) };
+    const save = () =>
+      withStepSaveGuard(new FakeUpdate(), { step: "coowners", was: "pending" }).apply(fresh, {
+        ...fresh.steps,
+        coowners: { status: "done" },
+      });
+    expect(save()).toBe(1);
+    expect(save()).toBe(0);
+
+    // Brak klucza kroku w jsonb — warunek `is null`.
+    const bare: Row = { steps: { risk: { status: "pending" } } };
+    expect(
+      withStepSaveGuard(new FakeUpdate(), { step: "kw", was: undefined }).apply(bare, {
+        ...bare.steps,
+        kw: { status: "done" },
+      }),
+    ).toBe(1);
+  });
+
+  it("zamknięty przebieg (ręczne ponowienie) nie wraca do życia", () => {
+    const row: Row = {
+      status: "error",
+      steps: steps({ status: "running", claimed_at: iso(1000) }),
+    };
+    const claimedAt = row.steps.risk?.claimed_at as string;
+    expect(
+      withStepSaveGuard(new FakeUpdate(), { claimedAt }).apply(row, {
+        ...row.steps,
+        risk: { status: "done" },
+      }),
+    ).toBe(0);
+    const row2: Row = { status: "error", steps: steps({ status: "pending" }) };
+    expect(
+      withStepSaveGuard(new FakeUpdate(), { step: "kw_analysis", was: "error" }).apply(
+        row2,
+        row2.steps,
+      ),
     ).toBe(0);
   });
 });
@@ -250,18 +326,22 @@ describe("cron tick — kolejność, budżet, kwalifikacja", () => {
     expect(pastDeadline(NOW + 1, NOW)).toBe(false);
     expect(pastDeadline(NOW, NOW)).toBe(true);
   });
+});
 
-  it("kwalifikacja nowych wniosków co 15 minut przy ticku co 5", () => {
-    const at = (m: number, s = 0) => new Date(Date.UTC(2026, 9, 11, 10, m, s));
-    expect([0, 15, 30, 45].map((m) => shouldSyncPipelineThisTick(at(m)))).toEqual([
-      true,
-      true,
-      true,
-      true,
-    ]);
-    expect([5, 10, 20, 50, 55].some((m) => shouldSyncPipelineThisTick(at(m)))).toBe(false);
-    // Spóźnione uruchomienie crona w tym samym oknie nadal kwalifikuje.
-    expect(shouldSyncPipelineThisTick(at(1, 30))).toBe(true);
+describe("obietnica 15 minut w panelu", () => {
+  const started = iso(RISK_STEP_PROMISE_MS);
+  it("w ciągu 15 minut — domyślny tekst z terminem", () => {
+    const waiting = steps({ status: "pending" }, { kw: { status: "running" } });
+    expect(riskStepOverdue(iso(RISK_STEP_PROMISE_MS - 1000), waiting, NOW)).toBeNull();
+    expect(riskStepOverdue(null, waiting, NOW)).toBeNull();
+  });
+
+  it("po 15 minutach: księga wciąż się pobiera albo ocena jeszcze niegotowa", () => {
+    const kwOpen = steps({ status: "pending" }, { kw: { status: "running", waits: 4 } });
+    expect(riskStepOverdue(started, kwOpen, NOW)).toBe("kw");
+    expect(riskStepOverdue(started, steps({ status: "pending" }), NOW)).toBe("late");
+    expect(riskStepOverdue(started, steps({ status: "done" }), NOW)).toBeNull();
+    expect(riskStepOverdue(started, steps({ status: "error" }), NOW)).toBeNull();
   });
 });
 

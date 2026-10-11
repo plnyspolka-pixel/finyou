@@ -43,12 +43,14 @@ describe("cron tick analysis-pipeline-tick", () => {
     expect(res.sync?.started).toBe(1);
   });
 
-  it("kwalifikacja co 15 minut — w pozostałych tickach tylko przesuwanie", async () => {
-    const r = recorder();
-    const res = await runAnalysisPipelineTick(r.steps, at(5));
-    expect(r.calls).toEqual(["kwChecks", "processing"]);
-    expect(res.sync).toBeNull();
-    expect(res.ok).toBe(true);
+  it("kwalifikacja w każdym ticku — niezależnie od minuty harmonogramu", async () => {
+    for (const m of [5, 7, 22, 52]) {
+      const r = recorder();
+      const res = await runAnalysisPipelineTick(r.steps, at(m));
+      expect(r.calls).toEqual(["kwChecks", "sync", "processing"]);
+      expect(res.sync?.started).toBe(1);
+      expect(res.ok).toBe(true);
+    }
   });
 
   it("błąd analiz KW inwestorów nie zatrzymuje pipeline'u wniosków", async () => {

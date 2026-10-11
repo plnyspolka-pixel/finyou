@@ -1,6 +1,6 @@
 // Cron tick pipeline'u analitycznego (co 5 min): najpierw dokańcza szybkie
 // analizy KW inwestorów (wnioski spoza Finance You — investor_kw_checks),
-// potem kwalifikuje kompletne wnioski (score > 50, co 15 min) i przesuwa
+// potem kwalifikuje kompletne wnioski (score > 50) i przesuwa
 // trwające przebiegi KW → właściciele → analiza KW → ryzyko. Wyniki lądują
 // w istniejących tabelach modułów; karta oferty składa z nich raport na
 // żywo. Ocenę ryzyka inwestorów zleca zwykle panel od razu po krokach 1–3 —
