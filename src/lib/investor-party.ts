@@ -95,8 +95,10 @@ export interface WindCreditorView {
   missing: { pismo: string[]; wniosek: string[] };
   /** Pożyczkodawca z umowy (wind_loans.pozyczkodawca) ≠ wierzyciel z profilu. */
   conflictWithContract: boolean;
-  /** Powód, dla którego nie da się ustalić wierzyciela (brak profilu). */
+  /** Powód, dla którego nie da się ustalić wierzyciela. */
   error: string | null;
+  /** Rodzaj błędu: brak profilu inwestora albo chwilowy błąd odczytu. */
+  errorKind: "no_profile" | "read_failed" | null;
 }
 
 /** Ścieżka zakładki z danymi inwestora. */
@@ -107,16 +109,32 @@ const orNull = (v?: string | null) => clean(v) || null;
 const joinSp = (...parts: Array<string | null | undefined>) =>
   parts.map(clean).filter(Boolean).join(" ");
 
-/** Wariant podmiotu z wiersza profilu: entity_variant, a gdy go brak — z danych firmy. */
+const LEGAL_FORM_IN_NAME =
+  /\b(sp\.|spółka|s\.\s?a\.|s\.k\.a\.|p\.s\.a\.|spółdzielnia|fundacja|stowarzyszenie)/i;
+/** Forma prawna JDG (także opis z GUS: „osoba fizyczna prowadząca działalność"). */
+const JDG_FORM = /jednoosobow|osob[ay] fizyczn|działalnoś/i;
+/** Forma prawna spółki / osoby prawnej. */
+const COMPANY_FORM = /spółk|s\.\s?a\.|spółdzielni|fundacj|stowarzysz|osoba prawna/i;
+
+/**
+ * Wariant podmiotu z wiersza profilu: entity_variant, a gdy go brak — z danych
+ * firmy. Starsze profile zapisywały tylko entity_type='firma' (KRS był
+ * opcjonalny), więc spółkę rozpoznajemy też po formie prawnej, nazwie
+ * i reprezentancie; JDG to firma bez żadnego z tych sygnałów.
+ */
 export function investorEntityVariant(row: InvestorPartyRow | null | undefined): EntityVariant {
   const v = clean(row?.entity_variant);
   if (v === "osoba_fizyczna" || v === "jdg" || v === "osoba_prawna") return v;
   const company = clean(row?.company_name);
-  const krs = clean(row?.krs);
-  if (company) return krs ? "osoba_prawna" : "jdg";
   // 'firma' zapisuje tylko profil (świadomy wybór); 'osoba_fizyczna' to też DEFAULT kolumny.
-  if (clean(row?.entity_type) === "firma") return krs ? "osoba_prawna" : "jdg";
-  return "osoba_fizyczna";
+  if (!company && clean(row?.entity_type) !== "firma") return "osoba_fizyczna";
+  if (clean(row?.krs)) return "osoba_prawna";
+  const form = clean(row?.legal_form);
+  if (form && JDG_FORM.test(form)) return "jdg";
+  if (COMPANY_FORM.test(form) || LEGAL_FORM_IN_NAME.test(company)) return "osoba_prawna";
+  if (clean(row?.representative_first_name) || clean(row?.representative_last_name))
+    return "osoba_prawna";
+  return "jdg";
 }
 
 /** Rodzaj wierzyciela (spółka = osoba prawna z profilu). */
@@ -157,9 +175,6 @@ function zSiedziba(city: string): string {
   const loc = MIEJSCOWNIK[city.toLowerCase()];
   return loc ? `z siedzibą w ${loc}` : `z siedzibą w miejscowości ${city}`;
 }
-
-const LEGAL_FORM_IN_NAME =
-  /\b(sp\.|spółka|s\.\s?a\.|s\.k\.a\.|p\.s\.a\.|spółdzielnia|fundacja|stowarzyszenie)/i;
 
 /** Forma prawna dopisywana do nazwy spółki, gdy nazwa jej nie zawiera. */
 function nameWithForm(name: string, legalForm: string | null): string {
@@ -309,7 +324,9 @@ export function buildCreditorParty(row: InvestorPartyRow): CreditorParty {
     source: "investor",
     companyName,
     personName: joinSp(row.first_name, row.last_name),
-    pesel: orNull(row.pesel)?.replace(/\D/g, "") || null,
+    // PESEL osoby fizycznej (także właściciela JDG) — nigdy jako dane spółki,
+    // nawet gdy w profilu został po zmianie rodzaju podmiotu.
+    pesel: kind === "spolka" ? null : orNull(row.pesel)?.replace(/\D/g, "") || null,
     nip: kind === "osoba_fizyczna" ? null : orNull(row.nip),
     regon: kind === "osoba_fizyczna" ? null : orNull(row.regon),
     krs: kind === "spolka" ? orNull(row.krs) : null,
@@ -386,19 +403,33 @@ export function creditorMissing(party: CreditorParty, purpose: CreditorPurpose):
   return missing;
 }
 
+/** „zakładce Profil (/inwestor/profil)" — ścieżka pomijana, gdy obok jest link. */
+const profilTab = (withPath: boolean) =>
+  withPath ? `zakładce Profil (${INVESTOR_PROFILE_PATH})` : "zakładce Profil";
+
 /** Komunikat o niekompletnym profilu — z odesłaniem do zakładki Profil. */
-export function creditorMissingMessage(missing: string[], own = true): string {
+export function creditorMissingMessage(missing: string[], own = true, withPath = true): string {
   const list = missing.join(", ");
   return own
-    ? `Pisma windykacyjne wystawiamy w Twoim imieniu na podstawie profilu inwestora. Brakuje danych: ${list}. Uzupełnij je w zakładce Profil (${INVESTOR_PROFILE_PATH}).`
-    : `Pisma windykacyjne wystawiamy w imieniu właściciela sprawy na podstawie jego profilu inwestora. Brakuje danych: ${list}. Właściciel sprawy musi je uzupełnić w zakładce Profil (${INVESTOR_PROFILE_PATH}).`;
+    ? `Pisma windykacyjne wystawiamy w Twoim imieniu na podstawie profilu inwestora. Brakuje danych: ${list}. Uzupełnij je w ${profilTab(withPath)}.`
+    : `Pisma windykacyjne wystawiamy w imieniu właściciela sprawy na podstawie jego profilu inwestora. Brakuje danych: ${list}. Właściciel sprawy musi je uzupełnić w ${profilTab(withPath)}.`;
 }
 
 /** Komunikat, gdy właściciel sprawy nie ma profilu inwestora. */
-export function creditorNoProfileMessage(own = true): string {
+export function creditorNoProfileMessage(own = true, withPath = true): string {
   return own
-    ? `Pisma windykacyjne wystawiamy w Twoim imieniu na podstawie profilu inwestora, a profil nie jest jeszcze uzupełniony. Uzupełnij dane w zakładce Profil (${INVESTOR_PROFILE_PATH}).`
-    : `Pisma windykacyjne wystawiamy w imieniu właściciela sprawy, a nie ma on uzupełnionego profilu inwestora. Właściciel sprawy musi uzupełnić dane w zakładce Profil (${INVESTOR_PROFILE_PATH}).`;
+    ? `Pisma windykacyjne wystawiamy w Twoim imieniu na podstawie profilu inwestora, a profil nie jest jeszcze uzupełniony. Uzupełnij dane w ${profilTab(withPath)}.`
+    : `Pisma windykacyjne wystawiamy w imieniu właściciela sprawy, a nie ma on uzupełnionego profilu inwestora. Właściciel sprawy musi uzupełnić dane w ${profilTab(withPath)}.`;
+}
+
+/**
+ * SMS / e-mail bez nadawcy: właściciel sprawy nie ma profilu inwestora,
+ * a w sprawie nie wpisano pożyczkodawcy z umowy.
+ */
+export function creditorNoSenderMessage(own = true): string {
+  return own
+    ? `SMS-y i e-maile windykacyjne wysyłamy w Twoim imieniu, a profil inwestora nie jest uzupełniony i w sprawie nie wpisano pożyczkodawcy z umowy. Uzupełnij dane w ${profilTab(true)}.`
+    : `SMS-y i e-maile windykacyjne wysyłamy w imieniu właściciela sprawy, a nie ma on profilu inwestora i w sprawie nie wpisano pożyczkodawcy z umowy. Właściciel sprawy musi uzupełnić dane w ${profilTab(true)}.`;
 }
 
 /** Nazwa do porównań: bez wielkości liter, znaków diakrytycznych, interpunkcji i form prawnych. */
@@ -417,11 +448,21 @@ function normalizeName(s: string): string {
     .trim();
 }
 
+/** Słowa nazwy w porządku alfabetycznym — „Nowak Anna" = „Anna Nowak". */
+const sortedWords = (s: string) =>
+  s
+    .split(" ")
+    .filter((w) => w.length >= 2)
+    .sort()
+    .join(" ");
+
 function namesMatch(a: string, b: string): boolean {
   const x = normalizeName(a);
   const y = normalizeName(b);
   if (!x || !y) return false;
   if (x === y) return true;
+  const sx = sortedWords(x);
+  if (sx && sx === sortedWords(y)) return true;
   const [short, long] = x.length <= y.length ? [x, y] : [y, x];
   return short.length >= 4 && ` ${long} `.includes(` ${short} `);
 }
@@ -445,7 +486,7 @@ export function creditorConflictsWithContract(
 export function creditorBundle(party: CreditorParty): CompanyBundle {
   const rep =
     party.kind === "spolka"
-      ? { name: party.representative, role: party.representativeRole }
+      ? { name: party.representative, role: shortRole(party.representativeRole) }
       : party.kind === "jdg" && party.personName
         ? { name: party.personName, role: "właściciel" }
         : { name: null, role: null };

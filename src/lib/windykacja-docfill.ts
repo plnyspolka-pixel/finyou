@@ -12,7 +12,7 @@
 
 import { COMPANY_DATA } from "@/lib/company";
 import type { DocField } from "./document-fields";
-import { amountKind } from "./document-fields";
+import { amountKind, isFinanceYouAccountField } from "./document-fields";
 import { amountToWordsPLN } from "./amount-to-words-pl";
 import { creditorFieldValue, type CreditorParty } from "./investor-party";
 
@@ -95,6 +95,12 @@ export function buildWindTemplateValues(
   const values: Record<string, string> = {};
   for (const f of fields) {
     let v = "";
+    // Rachunek prowizji Finance You to nie rachunek wierzyciela ani rachunek
+    // do spłaty — jak w kreatorze udzielenia pożyczki.
+    if (isFinanceYouAccountField(f)) {
+      values[f.id] = COMPANY_DATA.bankAccount;
+      continue;
+    }
     if (isCreditorParty(f)) {
       // Rachunek do spłaty: z umowy sprawy, a gdy go brak — z profilu wierzyciela.
       if (f.semantic === "bank" && ctx.rachunek) v = ctx.rachunek;

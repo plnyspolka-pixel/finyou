@@ -23,7 +23,8 @@ import {
 } from "@/lib/investor-party";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- luźny dostęp do klienta (jak w windykacja.functions.ts)
-type LooseDb = { from: (t: string) => any; rpc?: (fn: string, args: object) => any };
+export type CreditorDb = { from: (t: string) => any; rpc?: (fn: string, args: object) => any };
+type LooseDb = CreditorDb;
 
 export const INVESTOR_PARTY_COLS =
   "id, user_id, entity_variant, entity_type, first_name, last_name, company_name, pesel, nip, krs, regon, legal_form, street, address, postal_code, city, email, phone, bank_account, representative_first_name, representative_last_name, representative_role, lender_data_completed_at, updated_at";
@@ -47,6 +48,27 @@ export async function loadInvestorPartyRow(
     .limit(1);
   if (error) throw new Error(error.message);
   return ((data ?? []) as InvestorPartyRow[])[0] ?? null;
+}
+
+/**
+ * Najnowsze profile wielu użytkowników jednym zapytaniem — ta sama
+ * kolejność co loadInvestorPartyRow, pierwszy wiersz na user_id.
+ */
+async function loadInvestorPartyRows(
+  db: LooseDb,
+  userIds: string[],
+): Promise<Map<string, InvestorPartyRow>> {
+  const { data, error } = await db
+    .from("investors")
+    .select(INVESTOR_PARTY_COLS)
+    .in("user_id", userIds)
+    .order("lender_data_completed_at", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  const out = new Map<string, InvestorPartyRow>();
+  for (const row of (data ?? []) as Array<InvestorPartyRow & { user_id: string }>)
+    if (!out.has(row.user_id)) out.set(row.user_id, row);
+  return out;
 }
 
 /**
@@ -101,15 +123,14 @@ export async function windCreditorView(
   pozyczkodawca: string | null | undefined,
   viewerId?: string | null,
 ): Promise<WindCreditorView> {
+  const none = { party: null, missing: { pismo: [], wniosek: [] }, conflictWithContract: false };
   try {
     const res = await resolveCreditorByUserId(ownerId, { viewerId });
-    if (!res.ok)
-      return {
-        party: null,
-        missing: { pismo: [], wniosek: [] },
-        conflictWithContract: false,
-        error: res.error,
-      };
+    if (!res.ok) {
+      // Właścicielowi karta sprawy pokazuje link do Profilu — bez ścieżki w tekście.
+      const own = !viewerId || viewerId === ownerId;
+      return { ...none, error: creditorNoProfileMessage(own, !own), errorKind: "no_profile" };
+    }
     return {
       party: res.party,
       missing: {
@@ -118,21 +139,22 @@ export async function windCreditorView(
       },
       conflictWithContract: creditorConflictsWithContract(res.party, pozyczkodawca),
       error: null,
+      errorKind: null,
     };
   } catch (e) {
     console.error("[windykacja] wierzyciel sprawy:", (e as Error).message);
     return {
-      party: null,
-      missing: { pismo: [], wniosek: [] },
-      conflictWithContract: false,
+      ...none,
       error: "Nie udało się odczytać danych wierzyciela z profilu inwestora — spróbuj ponownie.",
+      errorKind: "read_failed",
     };
   }
 }
 
 /**
  * Krótkie nazwy wierzycieli wg właściciela sprawy (podpis SMS-a w panelu).
- * Właściciel bez profilu i spoza personelu — pominięty.
+ * Profile — jednym zapytaniem; personel bez profilu → Finance You;
+ * właściciel bez profilu i spoza personelu — pominięty.
  */
 export async function windCreditorNames(
   ownerIds: Array<string | null | undefined>,
@@ -142,9 +164,21 @@ export async function windCreditorNames(
   if (!ids.length) return out;
   try {
     const db = await adminDb();
-    const resolved = await Promise.all(ids.map((id) => resolveCreditorByUserId(id, { db })));
-    for (const res of resolved)
-      if (res.ok && res.party.shortName) out[res.ownerId] = res.party.shortName;
+    const rows = await loadInvestorPartyRows(db, ids);
+    const withoutProfile: string[] = [];
+    for (const id of ids) {
+      const row = rows.get(id);
+      if (!row) withoutProfile.push(id);
+      else {
+        const name = buildCreditorParty(row).shortName;
+        if (name) out[id] = name;
+      }
+    }
+    // Bez profilu zostają zwykle pojedyncze konta personelu.
+    const staff = await Promise.all(withoutProfile.map((id) => isInternalStaff(db, id)));
+    withoutProfile.forEach((id, i) => {
+      if (staff[i]) out[id] = financeYouCreditor().shortName;
+    });
   } catch (e) {
     console.error("[windykacja] nazwy wierzycieli:", (e as Error).message);
   }

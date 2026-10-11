@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildWindTemplateValues, type WindFillContext } from "./windykacja-docfill";
 import { extractOrderedFields } from "./document-fields";
 import { buildCreditorParty } from "./investor-party";
+import { COMPANY_DATA } from "@/lib/company";
 
 const TEXT =
   "WIERZYCIEL: [NAZWA], forma prawna: [FORMA PRAWNA], reprezentowana przez [IMIĘ I NAZWISKO REPREZENTANTA], " +
@@ -68,6 +69,20 @@ describe("buildWindTemplateValues — wierzyciel z profilu inwestora", () => {
   it("rachunek do spłaty z umowy sprawy ma pierwszeństwo przed profilem", () => {
     const v = filled({ ...base, wierzyciel: spolka, rachunek: "61 1090 1014 0000 0712 1981 2874" });
     expect(v.RACHUNEK).toBe("61 1090 1014 0000 0712 1981 2874");
+  });
+
+  it("rachunek prowizji Finance You — rachunek Finance You, nie rachunek do spłaty ani wierzyciela", () => {
+    const fields = extractOrderedFields(
+      "WIERZYCIEL: [NAZWA], rachunek: [RACHUNEK], prowizję przekaże na rachunek Finance You nr [RACHUNEK FINANCE YOU]",
+    );
+    const values = buildWindTemplateValues(fields, {
+      ...base,
+      wierzyciel: spolka,
+      rachunek: "61 1090 1014 0000 0712 1981 2874",
+    });
+    const byKey = Object.fromEntries(fields.map((f) => [f.key, values[f.id] ?? ""]));
+    expect(byKey.RACHUNEK).toBe("61 1090 1014 0000 0712 1981 2874");
+    expect(byKey["RACHUNEK FINANCE YOU"]).toBe(COMPANY_DATA.bankAccount);
   });
 
   it("bez wierzyciela pola strony wierzyciela zostają puste (nie Finance You)", () => {

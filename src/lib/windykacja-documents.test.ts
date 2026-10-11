@@ -79,7 +79,9 @@ describe("buildWindDocument — wierzyciel z profilu inwestora", () => {
     );
     const z286 = buildWindDocument("zawiadomienie_286", ctx()).tresc;
     expect(z286).toContain("Pokrzywdzony: Jan Kowalski, ul. Polna 5/2");
-    expect(z286).toContain("na szkodę Jan Kowalski.");
+    // Nazwisko w mianowniku nie pasuje do „na szkodę" — strona jest w linii „Pokrzywdzony".
+    expect(z286).toContain("na szkodę pokrzywdzonego.");
+    expect(z286).not.toContain("na szkodę Jan Kowalski");
   });
 
   it("spółka: „Działając w imieniu …”, podpis reprezentanta, strony ugody", () => {

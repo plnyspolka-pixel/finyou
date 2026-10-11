@@ -8,6 +8,7 @@ import {
   creditorFieldValue,
   creditorMissing,
   creditorMissingMessage,
+  creditorNoProfileMessage,
   financeYouCreditor,
   investorEntityVariant,
   type InvestorPartyRow,
@@ -134,6 +135,67 @@ describe("buildCreditorParty — rodzaj podmiotu", () => {
     );
   });
 
+  it("starszy profil firmy (entity_type 'firma', bez entity_variant i KRS) — spółka po formie, nazwie, reprezentancie", () => {
+    const legacy: InvestorPartyRow = {
+      entity_type: "firma",
+      entity_variant: null,
+      company_name: "ABC sp. z o.o.",
+      legal_form: "spółka z ograniczoną odpowiedzialnością",
+      representative_first_name: "Jan",
+      representative_last_name: "Lis",
+      representative_role: "Prezes Zarządu",
+      krs: null,
+      nip: "5250001009",
+      ...adres,
+    };
+    expect(investorEntityVariant(legacy)).toBe("osoba_prawna");
+    const p = buildCreditorParty(legacy);
+    expect(p.kind).toBe("spolka");
+    expect(p.signature).toBe("Jan Lis\nPrezes Zarządu\nABC sp. z o.o.");
+    expect(p.description).toContain("reprezentowana przez Jana Lisa");
+    // Wniosek spółki wymaga KRS.
+    expect(creditorMissing(p, "wniosek")).toEqual(["numer KRS"]);
+    // Każdy sygnał z osobna wystarcza.
+    expect(
+      investorEntityVariant({ entity_type: "firma", company_name: "Beta Invest sp. z o.o." }),
+    ).toBe("osoba_prawna");
+    expect(
+      investorEntityVariant({
+        entity_type: "firma",
+        company_name: "Beta",
+        legal_form: "spółka akcyjna",
+      }),
+    ).toBe("osoba_prawna");
+    expect(
+      investorEntityVariant({
+        entity_type: "firma",
+        company_name: "Beta",
+        representative_last_name: "Lis",
+      }),
+    ).toBe("osoba_prawna");
+    // JDG: forma prawna z GUS albo sama nazwa firmy bez sygnałów spółki.
+    expect(
+      investorEntityVariant({
+        entity_type: "firma",
+        company_name: "Usługi Lis",
+        legal_form: "Osoba fizyczna prowadząca działalność",
+        representative_first_name: "Jan",
+      }),
+    ).toBe("jdg");
+    expect(investorEntityVariant({ entity_type: "firma", company_name: "Usługi Lis" })).toBe("jdg");
+  });
+
+  it("spółka nigdy nie niesie PESEL osoby fizycznej (pozostałość po zmianie rodzaju)", () => {
+    const p = buildCreditorParty({ ...spolka, pesel: "85010112345" });
+    expect(p.pesel).toBeNull();
+    const fields = extractOrderedFields("Wierzyciel: [NAZWA WIERZYCIELA], PESEL: [PESEL]");
+    expect(fields[1].semantic).toBe("pesel");
+    expect(fields.map((f) => creditorFieldValue(f, p))).toEqual(["Kapitał Plus sp. z o.o.", null]);
+    // Właściciel JDG to osoba fizyczna — PESEL zostaje.
+    const jdgP = buildCreditorParty({ ...jdg, pesel: "85010112345" });
+    expect(creditorFieldValue(fields[1], jdgP)).toBe("85010112345");
+  });
+
   it("spółka: skrócona nazwa z pełnej formy prawnej", () => {
     const p = buildCreditorParty({
       ...spolka,
@@ -165,9 +227,13 @@ describe("creditorMissing — braki per cel", () => {
     );
   });
 
-  it("komunikat wskazuje zakładkę Profil", () => {
+  it("komunikat wskazuje zakładkę Profil (ścieżka pomijana, gdy obok jest link)", () => {
     expect(creditorMissingMessage(["kod pocztowy"])).toContain("/inwestor/profil");
     expect(creditorMissingMessage(["kod pocztowy"], false)).toContain("właściciel");
+    expect(creditorMissingMessage(["kod pocztowy"], true, false)).toMatch(
+      /Uzupełnij je w zakładce Profil\.$/,
+    );
+    expect(creditorNoProfileMessage(true, false)).not.toContain("/inwestor/profil");
   });
 });
 
@@ -191,6 +257,12 @@ describe("creditorConflictsWithContract", () => {
     expect(
       creditorConflictsWithContract(buildCreditorParty(spolka), "Kapitał Plus Spółka z o.o."),
     ).toBe(false);
+  });
+  it("odwrócona kolejność imienia i nazwiska (umowy, OCR) — ta sama strona", () => {
+    const osobaP = buildCreditorParty({ ...osoba, first_name: "Anna", last_name: "Nowak" });
+    expect(creditorConflictsWithContract(osobaP, "Nowak Anna")).toBe(false);
+    expect(creditorConflictsWithContract(osobaP, "NOWAK ANNA")).toBe(false);
+    expect(creditorConflictsWithContract(osobaP, "Nowak Jan")).toBe(true);
   });
   it("inna strona w umowie → konflikt", () => {
     expect(creditorConflictsWithContract(p, "Finance You sp. z o.o.")).toBe(true);
@@ -221,5 +293,21 @@ describe("creditorFieldValue — pola strony wierzyciela we wzorze DOCX", () => 
       "PL61109010140000071219812874",
       null,
     ]);
+  });
+});
+
+describe("creditorFieldValue — reprezentant spółki we wzorze DOCX", () => {
+  it("długi „sposób reprezentacji” z KRS nie trafia do pola reprezentanta", () => {
+    const [, rep] = extractOrderedFields(
+      "WIERZYCIEL: [NAZWA WIERZYCIELA], reprezentowana przez [IMIĘ I NAZWISKO REPREZENTANTA]",
+    );
+    const krotka = buildCreditorParty(spolka);
+    expect(creditorFieldValue(rep, krotka)).toBe("Piotr Zieliński — Prezes Zarządu");
+    const dluga = buildCreditorParty({
+      ...spolka,
+      representative_role:
+        "Do reprezentowania spółki uprawniony jest każdy członek zarządu samodzielnie",
+    });
+    expect(creditorFieldValue(rep, dluga)).toBe("Piotr Zieliński");
   });
 });

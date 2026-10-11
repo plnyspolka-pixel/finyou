@@ -106,7 +106,7 @@ export function buildWindDocument(
       body = `ANEKS DO UMOWY POŻYCZKI\n\nStrony: ${w.legalName} (pożyczkodawca) oraz ${ctx.dluznik} (pożyczkobiorca) zmieniają warunki ${umowa} w zakresie harmonogramu spłaty. Pozostałe postanowienia umowy, w tym zabezpieczenia (hipoteka, akt 777), pozostają bez zmian.`;
       break;
     case "zawiadomienie_286":
-      body = `ZAWIADOMIENIE O PODEJRZENIU POPEŁNIENIA PRZESTĘPSTWA\n\nPokrzywdzony: ${creditorDescription(w, "wniosek")}\n\nZawiadamiam o podejrzeniu popełnienia przez ${ctx.dluznik} przestępstwa oszustwa (art. 286 § 1 k.k.) na szkodę ${w.legalName}. Sprawca, zawierając ${umowa}, działał z zamiarem niewywiązania się z zobowiązania (brak jakiejkolwiek wpłaty, zerwanie kontaktu), doprowadzając pokrzywdzonego do niekorzystnego rozporządzenia mieniem w kwocie ${formatPLN(ctx.saldo_pozostale)}.`;
+      body = `ZAWIADOMIENIE O PODEJRZENIU POPEŁNIENIA PRZESTĘPSTWA\n\nPokrzywdzony: ${creditorDescription(w, "wniosek")}\n\nZawiadamiam o podejrzeniu popełnienia przez ${ctx.dluznik} przestępstwa oszustwa (art. 286 § 1 k.k.) na szkodę pokrzywdzonego. Sprawca, zawierając ${umowa}, działał z zamiarem niewywiązania się z zobowiązania (brak jakiejkolwiek wpłaty, zerwanie kontaktu), doprowadzając pokrzywdzonego do niekorzystnego rozporządzenia mieniem w kwocie ${formatPLN(ctx.saldo_pozostale)}.`;
       break;
     case "zawiadomienie_297":
       body = `ZAWIADOMIENIE O PODEJRZENIU POPEŁNIENIA PRZESTĘPSTWA\n\nPokrzywdzony: ${creditorDescription(w, "wniosek")}\n\nZawiadamiam o podejrzeniu popełnienia przez ${ctx.dluznik} przestępstwa z art. 297 § 1 k.k. (oszustwo kredytowe). W toku ubiegania się o ${umowa} sprawca przedłożył nierzetelne, pisemne oświadczenia i dokumenty mające istotne znaczenie dla jej zawarcia.`;

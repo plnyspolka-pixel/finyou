@@ -42,6 +42,10 @@ export function InwestorProfil() {
   const { user } = useAuth();
 
   const [inv, setInv] = useState<any | null>(null);
+  // Rodzaj podmiotu z wczytanego profilu — dane reprezentacji czyścimy tylko
+  // po świadomej zmianie rodzaju w tej sesji (starszy profil mógł zostać
+  // rozpoznany niedokładnie, a jego reprezentacji nie wolno zgubić).
+  const [loadedVariant, setLoadedVariant] = useState<EntityVariant | null>(null);
   const [fetching, setFetching] = useState(false);
   const [fetchingKrs, setFetchingKrs] = useState(false);
   const [krsData, setKrsData] = useState<KrsCompany | null>(null);
@@ -92,6 +96,7 @@ export function InwestorProfil() {
         .limit(1)
         .maybeSingle();
       setInv(data);
+      if (data) setLoadedVariant(investorEntityVariant(data));
       if (data)
         setF({
           entity_variant: investorEntityVariant(data),
@@ -305,10 +310,27 @@ export function InwestorProfil() {
       }
     }
     const showRepresentation = f.entity_variant === "osoba_prawna";
-    const normalizedAccount = (() => {
-      const c = detectPolishBankAccount(f.bank_account);
-      return c.success ? c.normalized : f.bank_account.replace(/[\s-]/g, "").toUpperCase() || null;
-    })();
+    const detectedAccount = detectPolishBankAccount(f.bank_account);
+    const normalizedAccount = detectedAccount.success
+      ? detectedAccount.normalized
+      : f.bank_account.replace(/[\s-]/g, "").toUpperCase() || null;
+    // Nowy numer rachunku wymaga ponownego potwierdzenia (porównanie po cyfrach: NRB = IBAN).
+    const accountChanged =
+      (normalizedAccount ?? "").replace(/\D/g, "") !==
+      String(inv?.bank_account ?? "").replace(/\D/g, "");
+    const representation = showRepresentation
+      ? {
+          representative_first_name: f.representative_first_name.trim() || null,
+          representative_last_name: f.representative_last_name.trim() || null,
+          representative_role: f.representative_role.trim() || null,
+        }
+      : f.entity_variant !== loadedVariant
+        ? {
+            representative_first_name: null,
+            representative_last_name: null,
+            representative_role: null,
+          }
+        : {};
     // Map wariant → legacy investor_type (NOT NULL column)
     const investorType = isFirma ? "instytucjonalny" : "indywidualny";
     const payload: any = {
@@ -324,13 +346,7 @@ export function InwestorProfil() {
       krs: isFirma ? f.krs.trim() || null : null,
       regon: isFirma ? f.regon.trim() || null : null,
       legal_form: isFirma ? f.legal_form.trim() || null : null,
-      representative_first_name: showRepresentation
-        ? f.representative_first_name.trim() || null
-        : null,
-      representative_last_name: showRepresentation
-        ? f.representative_last_name.trim() || null
-        : null,
-      representative_role: showRepresentation ? f.representative_role.trim() || null : null,
+      ...representation,
       phone: f.phone.trim() || null,
       email: f.email.trim() || null,
       street: f.street.trim() || null,
@@ -338,10 +354,13 @@ export function InwestorProfil() {
       city: f.city.trim() || null,
       country: f.country.trim() || null,
       bank_account: normalizedAccount,
-      // Nowy numer rachunku wymaga ponownego potwierdzenia (porównanie po cyfrach: NRB = IBAN).
-      ...((normalizedAccount ?? "").replace(/\D/g, "") !==
-      String(inv?.bank_account ?? "").replace(/\D/g, "")
-        ? { bank_account_confirmed_at: null }
+      ...(accountChanged
+        ? {
+            bank_account_confirmed_at: null,
+            bank_account_bank_name: detectedAccount.success
+              ? (detectedAccount.bankName ?? null)
+              : null,
+          }
         : {}),
     };
     // Zapisany wiersz wraca do stanu — kolejny zapis aktualizuje go zamiast
@@ -357,11 +376,19 @@ export function InwestorProfil() {
       toast.error(error.message);
       return;
     }
-    if (saved) setInv(saved);
+    if (saved) {
+      setInv(saved);
+      setLoadedVariant(f.entity_variant);
+    }
     // Bezpieczne logowanie — bez pełnego numeru rachunku.
     if (normalizedAccount)
       console.info("[profil] zapisano rachunek", logSafeAccount(normalizedAccount));
-    toast.success("Zapisano");
+    if (accountChanged && normalizedAccount && inv?.bank_account_confirmed_at)
+      toast.success("Zapisano", {
+        description:
+          "Nowy rachunek wymaga ponownego potwierdzenia w kroku „Rachunek do spłaty” w zakładce „Złóż zlecenie”.",
+      });
+    else toast.success("Zapisano");
   };
 
   const isFirma = f.entity_variant !== "osoba_fizyczna";

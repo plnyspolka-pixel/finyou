@@ -400,6 +400,7 @@ function WindykacjaCaseCard() {
           creditor={creditor}
           contractLender={loan.pozyczkodawca}
           own={!user || user.id === kase.investor_user_id}
+          path={kase.sciezka}
         />
       )}
 
@@ -966,16 +967,22 @@ function CreditorAlert({
   creditor,
   contractLender,
   own,
+  path,
 }: {
   creditor: WindCreditorView;
   contractLender: string | null;
   /** Sprawę ogląda jej właściciel (inaczej — personel w cudzej sprawie). */
   own: boolean;
+  /** Ścieżka sprawy — uwaga o wnioskach tylko, gdy ścieżka je przewiduje. */
+  path: WindPath;
 }) {
-  const { party, missing, error, conflictWithContract } = creditor;
+  const { party, missing, error, errorKind, conflictWithContract } = creditor;
+  const readFailed = errorKind === "read_failed";
+  // Właścicielowi obok komunikatu pokazujemy link do Profilu — bez ścieżki w tekście.
   const blocking =
-    error ?? (missing.pismo.length ? creditorMissingMessage(missing.pismo, own) : null);
-  const forWnioski = !blocking && missing.wniosek.length ? missing.wniosek : null;
+    error ?? (missing.pismo.length ? creditorMissingMessage(missing.pismo, own, !own) : null);
+  const pathHasWnioski = documentsForPath(path).some((t) => windCreditorPurpose(t) === "wniosek");
+  const forWnioski = !blocking && pathHasWnioski && missing.wniosek.length ? missing.wniosek : null;
   if (!blocking && !forWnioski && !conflictWithContract) return null;
   const profileLink = own ? (
     <Link to={INVESTOR_PROFILE_PATH} className="underline font-medium whitespace-nowrap">
@@ -988,9 +995,13 @@ function CreditorAlert({
         <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
-            <div className="font-semibold">Uzupełnij dane wierzyciela — pisma są zablokowane</div>
+            <div className="font-semibold">
+              {readFailed
+                ? "Nie udało się odczytać danych wierzyciela — pisma chwilowo niedostępne"
+                : "Uzupełnij dane wierzyciela — pisma są zablokowane"}
+            </div>
             <div className="text-xs mt-0.5">
-              {blocking} {profileLink}
+              {blocking} {!readFailed && profileLink}
             </div>
           </div>
         </div>
@@ -1542,18 +1553,19 @@ function ActionDialog({
   const [v, setV] = useState<Record<string, string>>(() =>
     initialValues(kind, kase, loan, borrower, initialDocType, amountDueNow, creditorName),
   );
-  // Pismo w imieniu wierzyciela: brak profilu albo braki danych blokują
-  // generowanie (szablon tekstowy i wzór DOCX) — z listą braków.
+  // Pismo w imieniu wierzyciela (szablon tekstowy i wzór DOCX): wierzyciel
+  // nieustalony (brak profilu, błąd odczytu) blokuje każdy dokument, także
+  // notatkę — jak na serwerze; braki danych wg celu pisma (notatka bez
+  // wymagań). Obok komunikatu link do Profilu — bez ścieżki w tekście.
   const ownCase = !userId || userId === kase.investor_user_id;
   const docPurpose = kind === "dokument" ? windCreditorPurpose(v.typ as WindDocumentType) : null;
-  const docBlocker = !docPurpose
-    ? null
-    : !creditor
+  const docBlocker =
+    kind !== "dokument" || !creditor
       ? null
       : creditor.error
         ? creditor.error
-        : creditor.missing[docPurpose].length
-          ? creditorMissingMessage(creditor.missing[docPurpose], ownCase)
+        : docPurpose && creditor.missing[docPurpose].length
+          ? creditorMissingMessage(creditor.missing[docPurpose], ownCase, !ownCase)
           : null;
   const [file, setFile] = useState<File | null>(null);
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
@@ -2110,7 +2122,7 @@ function ActionDialog({
                   <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                   <span>
                     {docBlocker}{" "}
-                    {ownCase && (
+                    {ownCase && creditor?.errorKind !== "read_failed" && (
                       <Link to={INVESTOR_PROFILE_PATH} className="underline font-medium">
                         Przejdź do Profilu
                       </Link>

@@ -29,6 +29,8 @@ const profiles: Record<
   { first_name: string | null; last_name: string | null; email: string | null }
 > = {};
 const investors: Record<string, Record<string, unknown>> = {};
+// Role kont (user_roles) — personel wewnętrzny.
+const roles: Record<string, string[]> = {};
 const profileLookups: string[] = [];
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
@@ -64,7 +66,9 @@ vi.mock("@supabase/supabase-js", () => ({
                 ? userId && investors[userId]
                   ? [investors[userId]]
                   : []
-                : null,
+                : table === "user_roles"
+                  ? (roles[userId ?? ""] ?? []).map((role) => ({ role }))
+                  : null,
             error: null,
           }),
       };
@@ -190,6 +194,7 @@ beforeEach(() => {
   profileLookups.length = 0;
   for (const k of Object.keys(profiles)) delete profiles[k];
   for (const k of Object.keys(investors)) delete investors[k];
+  for (const k of Object.keys(roles)) delete roles[k];
   state = {
     kase: {
       id: CASE_ID,
@@ -287,6 +292,15 @@ describe("placeWindCollectionCall — kwota i opóźnienie z harmonogramu rat", 
     expect(profileLookups).toEqual([]);
     expect(vars().imie_inwestora).toBe("Kapitał Plus sp. z o.o.");
     expect(state.inserted[0].tresc).toMatch(/w imieniu: Kapitał Plus sp\. z o\.o\./);
+  });
+
+  it("sprawa personelu bez profilu inwestora — Finance You, jak w pismach (nie imię operatora)", async () => {
+    roles[OWNER] = ["operator"];
+    profiles[OWNER] = { first_name: "Jan", last_name: "Operator", email: null };
+    state.kase.loan = baseLoan({ pozyczkodawca: null });
+    await call();
+    expect(profileLookups).toEqual([]);
+    expect(vars().imie_inwestora).toBe("Finance You");
   });
 
   it("właściciel bez profilu i bez imienia — neutralnie „pożyczkodawcy”, nigdy Finance You", async () => {

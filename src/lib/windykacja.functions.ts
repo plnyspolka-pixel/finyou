@@ -9,6 +9,7 @@ import {
 import {
   creditorMissing,
   creditorMissingMessage,
+  creditorNoSenderMessage,
   type CreditorParty,
   type WindCreditorView,
 } from "@/lib/investor-party";
@@ -1178,35 +1179,56 @@ export const setWindTermination = createServerFn({ method: "POST" })
     return ev as WindEvent;
   });
 
-/** Wierzyciel sprawy (profil właściciela); null, gdy nie da się go ustalić. */
-async function caseCreditorParty(
+/**
+ * Wierzyciel sprawy (profil właściciela; party null, gdy nie da się go
+ * ustalić — `error` mówi dlaczego) i pożyczkodawca wpisany z umowy.
+ */
+async function caseCreditor(
   db: LooseDb,
   caseId: string,
   viewerId?: string | null,
-): Promise<CreditorParty | null> {
+): Promise<{ party: CreditorParty | null; pozyczkodawca: string | null; error: string | null }> {
+  let pozyczkodawca: string | null = null;
   try {
     const { data: kase } = await db
       .from("wind_collection_cases")
-      .select("investor_user_id")
+      .select("investor_user_id, loan:wind_loans(pozyczkodawca)")
       .eq("id", caseId)
       .maybeSingle();
+    pozyczkodawca = String(kase?.loan?.pozyczkodawca ?? "").trim() || null;
     const res = await resolveCreditorByUserId(kase?.investor_user_id, { viewerId });
-    return res.ok ? res.party : null;
+    if (!res.ok) {
+      const own = !viewerId || viewerId === res.ownerId;
+      return { party: null, pozyczkodawca, error: creditorNoSenderMessage(own) };
+    }
+    return { party: res.party, pozyczkodawca, error: null };
   } catch (e) {
     console.error("[windykacja] wierzyciel sprawy:", (e as Error).message);
-    return null;
+    return {
+      party: null,
+      pozyczkodawca,
+      error: "Nie udało się odczytać danych wierzyciela z profilu inwestora — spróbuj ponownie.",
+    };
   }
 }
 
 /**
  * Nazwa nadawcy e-maila: wierzyciel „(przez Finance You)" — wysyłka idzie
- * z domeny Finance You. Cudzysłów: nawias w nazwie to w RFC 5322 komentarz.
+ * z domeny Finance You; bez profilu — pożyczkodawca z umowy. Sprawa
+ * personelu (Finance You) — domyślny nadawca. Cudzysłów: nawias w nazwie
+ * to w RFC 5322 komentarz.
  */
-function emailFromName(party: CreditorParty | null): string | undefined {
-  if (!party || party.source === "finance_you") return undefined;
-  const name = party.shortName.replace(/["\\\r\n]/g, "").trim();
+function emailFromName(party: CreditorParty | null, pozyczkodawca: string | null) {
+  if (party?.source === "finance_you") return undefined;
+  const name = (party?.shortName || pozyczkodawca || "").replace(/["\\\r\n]/g, "").trim();
   return name ? `"${name} (przez Finance You)"` : undefined;
 }
+
+/** Adres odpowiedzi tylko poprawny — błędny odrzuciłby całą wysyłkę. */
+const replyToAddress = (email: string | null | undefined) =>
+  email && /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]{2,}$/.test(email.trim())
+    ? email.trim()
+    : undefined;
 
 // ── Działanie kontaktowe: SMS / e-mail / telefon ─────────────────────
 export const performWindContact = createServerFn({ method: "POST" })
@@ -1231,10 +1253,16 @@ export const performWindContact = createServerFn({ method: "POST" })
     let tytul = "";
     // Opłata za czynność — zgodnie z umową pożyczki tej sprawy.
     const oplata = await resolveActionFee(db, data.caseId, data.typ, data.oplata);
-    // SMS i e-mail wychodzą w imieniu wierzyciela (profil właściciela sprawy).
-    const wierzyciel =
-      data.typ === "telefon" ? null : await caseCreditorParty(db, data.caseId, context.userId);
+    // SMS i e-mail wychodzą w imieniu wierzyciela (profil właściciela sprawy),
+    // a bez profilu — pożyczkodawcy z umowy; bez żadnego z nich nie wysyłamy
+    // (nadawcą nie może być Finance You w cudzej sprawie).
+    const kredytor =
+      data.typ === "telefon" ? null : await caseCreditor(db, data.caseId, context.userId);
+    const wierzyciel = kredytor?.party ?? null;
+    if (kredytor && !wierzyciel && !kredytor.pozyczkodawca)
+      throw new Error(kredytor.error ?? creditorNoSenderMessage());
     const snapshot = wierzyciel ? { wierzyciel: creditorSnapshot(wierzyciel) } : {};
+    const nadawca = wierzyciel?.shortName || kredytor?.pozyczkodawca || null;
 
     if (data.typ === "sms") {
       tytul = "SMS wysłany";
@@ -1262,14 +1290,12 @@ export const performWindContact = createServerFn({ method: "POST" })
       const { sendResendEmail } = await import("@/lib/resend-send.server");
       const res = await sendResendEmail({
         to: data.target,
-        subject:
-          data.subject ||
-          `Zaległość w spłacie pożyczki${wierzyciel ? ` — ${wierzyciel.shortName}` : ""}`,
+        subject: data.subject || `Zaległość w spłacie pożyczki${nadawca ? ` — ${nadawca}` : ""}`,
         category: "transactional",
         text: data.tresc,
-        fromName: emailFromName(wierzyciel),
+        fromName: emailFromName(wierzyciel, kredytor?.pozyczkodawca ?? null),
         // Odpowiedź dłużnika trafia do wierzyciela (gdy ma e-mail w profilu).
-        replyTo: wierzyciel?.email ?? undefined,
+        replyTo: replyToAddress(wierzyciel?.email),
       });
       status = res.ok ? "doreczone" : null;
       extra = {
@@ -1661,7 +1687,7 @@ export const recordWindGeneratedDoc = createServerFn({ method: "POST" })
     const db = loose(context.supabase);
     // Migawka wierzyciela, którego dane wpisano we wzór (profil właściciela
     // sprawy) — z listą braków, jeśli profil był niekompletny.
-    const wierzyciel = await caseCreditorParty(db, data.caseId, context.userId);
+    const wierzyciel = (await caseCreditor(db, data.caseId, context.userId)).party;
     const purpose = windCreditorPurpose(data.typ);
     const { data: ev, error: eErr } = await db
       .from("wind_events")

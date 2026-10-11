@@ -23,27 +23,60 @@ vi.mock("@tanstack/react-start", () => ({
 vi.mock("@/lib/investor-plan/pro-middleware", () => ({ requireInvestorPro: {} }));
 
 // Klient z rolą serwisową: profile inwestorów (investors) i is_internal_staff.
+// Sortuje jak Postgres (DESC domyślnie NULLS FIRST, nullsFirst: false — NULLS
+// LAST), żeby wybór najnowszego profilu był naprawdę sprawdzany.
 const admin = vi.hoisted(() => ({
   investors: [] as Array<Record<string, unknown>>,
   staff: new Set<string>(),
+  queries: 0,
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
     from: (table: string) => {
-      let userId: unknown = null;
+      let ids: unknown[] = [];
+      let limit = Infinity;
+      const orders: Array<{ col: string; asc: boolean; nullsFirst: boolean }> = [];
+      const cmp = (a: Record<string, unknown>, b: Record<string, unknown>) => {
+        for (const o of orders) {
+          const x = a[o.col] ?? null;
+          const y = b[o.col] ?? null;
+          if (x === y) continue;
+          if (x === null) return o.nullsFirst ? -1 : 1;
+          if (y === null) return o.nullsFirst ? 1 : -1;
+          return (String(x) < String(y) ? -1 : 1) * (o.asc ? 1 : -1);
+        }
+        return 0;
+      };
       const q = {
         select: () => q,
         eq: (c: string, v: unknown) => {
-          if (c === "user_id") userId = v;
+          if (c === "user_id") ids = [v];
           return q;
         },
-        order: () => q,
-        limit: () => q,
-        then: (res: (v: unknown) => unknown) =>
-          Promise.resolve({
-            data: table === "investors" ? admin.investors.filter((r) => r.user_id === userId) : [],
-            error: null,
-          }).then(res),
+        in: (c: string, vs: unknown[]) => {
+          if (c === "user_id") ids = vs;
+          return q;
+        },
+        order: (col: string, opts: { ascending?: boolean; nullsFirst?: boolean } = {}) => {
+          const asc = opts.ascending ?? true;
+          orders.push({ col, asc, nullsFirst: opts.nullsFirst ?? !asc });
+          return q;
+        },
+        limit: (n: number) => {
+          limit = n;
+          return q;
+        },
+        maybeSingle: () => {
+          throw new Error("investors.user_id nie jest unikalne — maybeSingle zabronione");
+        },
+        then: (res: (v: unknown) => unknown) => {
+          if (table === "investors") admin.queries++;
+          const rows =
+            table === "investors"
+              ? admin.investors.filter((r) => ids.includes(r.user_id)).sort(cmp)
+              : [];
+          return Promise.resolve({ data: rows.slice(0, limit), error: null }).then(res);
+        },
       };
       return q;
     },
@@ -54,10 +87,26 @@ vi.mock("@/integrations/supabase/client.server", () => ({
   },
 }));
 
+// Wysyłka SMS / e-mail (performWindContact) — bez sieci.
+const sent = vi.hoisted(() => ({ emails: [] as Array<Record<string, unknown>>, sms: 0 }));
+vi.mock("@/lib/resend-send.server", () => ({
+  sendResendEmail: async (opts: Record<string, unknown>) => {
+    sent.emails.push(opts);
+    return { ok: true, id: "em_1" };
+  },
+}));
+vi.mock("@/lib/voicebot.functions", () => ({
+  sendSmsInternal: async () => {
+    sent.sms++;
+    return { ok: true, sid: "SM1" };
+  },
+}));
+
 import {
   addWindWplata,
   createWindCase,
   generateWindDocument,
+  performWindContact,
   recordWindGeneratedDoc,
   seedWindDemo,
   updateWindBorrower,
@@ -65,6 +114,7 @@ import {
   updateWindLoan,
 } from "./windykacja.functions";
 import { generateHarmonogram } from "./windykacja-harmonogram";
+import { windCreditorNames } from "./windykacja-creditor.server";
 
 // ── Atrapa klienta Supabase (tylko to, czego używają testowane funkcje) ──
 type Row = Record<string, unknown>;
@@ -186,6 +236,9 @@ beforeEach(() => {
   userId = undefined;
   admin.investors.length = 0;
   admin.staff.clear();
+  admin.queries = 0;
+  sent.emails.length = 0;
+  sent.sms = 0;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-06T10:00:00Z"));
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -614,5 +667,83 @@ describe("createWindCase — domyślny pożyczkodawca z profilu", () => {
     expect(db.tables.wind_loans[0].pozyczkodawca).toBe("Nowak Finanse");
     await call(createWindCase, { ...baseCase, pozyczkodawca: "Jan Inwestor" });
     expect(db.tables.wind_loans[1].pozyczkodawca).toBe("Jan Inwestor");
+  });
+});
+
+describe("wybór profilu inwestora — user_id w investors nie jest unikalne", () => {
+  it("najpierw profil z ukończonym krokiem danych pożyczkodawcy (NULL na końcu), potem najnowszy", async () => {
+    // Nowszy, ale niekompletny wiersz (bez lender_data_completed_at) dodany pierwszy.
+    admin.investors.push(
+      {
+        ...jdgProfile,
+        company_name: "Szkic Nowak",
+        lender_data_completed_at: null,
+        updated_at: "2026-10-01T00:00:00Z",
+      },
+      {
+        ...jdgProfile,
+        lender_data_completed_at: "2026-05-01T00:00:00Z",
+        updated_at: "2026-05-01T00:00:00Z",
+      },
+      {
+        ...jdgProfile,
+        company_name: "Stary Nowak",
+        lender_data_completed_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-09-01T00:00:00Z",
+      },
+    );
+    const caseId = await ownedCase();
+    userId = OWNER;
+    const res = await call<{ event: Row }>(generateWindDocument, { caseId, typ: "wezwanie" });
+    expect(String(res.event.tresc)).toContain("Wierzyciel: Nowak Finanse");
+  });
+
+  it("nazwy wierzycieli do panelu: jedno zapytanie o profile, personel bez profilu → Finance You", async () => {
+    const OTHER = "33333333-3333-4333-8333-333333333333";
+    admin.investors.push(
+      { ...jdgProfile, company_name: "Szkic", lender_data_completed_at: null },
+      { ...jdgProfile, lender_data_completed_at: "2026-05-01T00:00:00Z" },
+    );
+    admin.staff.add(STAFF);
+    const names = await windCreditorNames([OWNER, STAFF, OTHER, OWNER, null]);
+    expect(names).toEqual({ [OWNER]: "Nowak Finanse", [STAFF]: "Finance You" });
+    expect(admin.queries).toBe(1);
+  });
+});
+
+describe("performWindContact — nadawca SMS-a i e-maila", () => {
+  it("e-mail w imieniu wierzyciela z profilu; błędny e-mail profilu nie trafia do reply-to", async () => {
+    admin.investors.push({ ...jdgProfile, email: "anna(at)nowak" });
+    const caseId = await ownedCase();
+    userId = OWNER;
+    await call(performWindContact, {
+      caseId,
+      typ: "email",
+      target: "dluznik@example.com",
+      tresc: "Prosimy o spłatę.",
+    });
+    expect(sent.emails[0]).toMatchObject({
+      fromName: '"Nowak Finanse (przez Finance You)"',
+      subject: "Zaległość w spłacie pożyczki — Nowak Finanse",
+      replyTo: undefined,
+    });
+  });
+
+  it("bez profilu — pożyczkodawca z umowy; bez profilu i bez pożyczkodawcy — blokada", async () => {
+    const caseId = await ownedCase({ pozyczkodawca: "Jan Inwestor" });
+    userId = OWNER;
+    await call(performWindContact, {
+      caseId,
+      typ: "email",
+      target: "dluznik@example.com",
+      tresc: "Prosimy o spłatę.",
+    });
+    expect(sent.emails[0]).toMatchObject({ fromName: '"Jan Inwestor (przez Finance You)"' });
+
+    const bez = await ownedCase();
+    await expect(
+      call(performWindContact, { caseId: bez, typ: "sms", target: "600100200", tresc: "SMS" }),
+    ).rejects.toThrow(/w Twoim imieniu.*Profil \(\/inwestor\/profil\)/);
+    expect(sent.sms).toBe(0);
   });
 });

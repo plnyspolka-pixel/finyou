@@ -513,7 +513,8 @@ function EvidenceReport() {
 
         <div className="mt-8 pt-4 border-t text-xs text-gray-500">
           Raport wygenerowany automatycznie z rejestru zdarzeń (append-only) w systemie Finance You
-          {party ? ` na zlecenie ${party.shortName}` : ""}. Dokument przeznaczony do akt sprawy.
+          {party ? ` na zlecenie wierzyciela: ${party.shortName}` : ""}. Dokument przeznaczony do
+          akt sprawy.
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ import {
   type WindPreviousPromise,
 } from "@/lib/windykacja-agent-prompt";
 import { windDebtSnapshot, type WindDebtEvent, type WindDebtLoan } from "@/lib/windykacja-debt";
-import { investorShortName } from "@/lib/windykacja-creditor.server";
+import { resolveCreditorByUserId, type CreditorDb } from "@/lib/windykacja-creditor.server";
 
 // ════════════════════════════════════════════════════════════════════
 // TELEFON WINDYKACYJNY Z SYSTEMU — agent ElevenLabs dzwoniący w imieniu
@@ -355,15 +355,19 @@ export const placeWindCollectionCall = createServerFn({ method: "POST" })
         : windFeeForAction(normalizeWindFeeTable(loan.oplaty_windykacyjne), "telefon").fee;
 
     // Pożyczkodawca, w którego imieniu dzwoni agent: nazwa z umowy, a gdy
-    // jej brak — właściciel sprawy (inwestor), nie osoba, która zleca telefon
-    // (może to być ktoś z zespołu Finance You): nazwa z profilu inwestora,
-    // potem imię i nazwisko z konta; bez nich — neutralne „pożyczkodawcy".
+    // jej brak — wierzyciel sprawy jak w pismach (profil inwestora —
+    // właściciela, nie osoby zlecającej telefon; sprawa personelu bez
+    // profilu — Finance You), potem imię i nazwisko z konta; bez nich —
+    // neutralne „pożyczkodawcy".
     let imieInwestora = loan.pozyczkodawca?.trim() ?? "";
     if (!imieInwestora) {
       const ownerId = (kase.investor_user_id as string | null) ?? context.userId;
       const adminDb = admin();
       try {
-        imieInwestora = (await investorShortName(ownerId, loose(adminDb))) ?? "";
+        const res = await resolveCreditorByUserId(ownerId, {
+          db: adminDb as unknown as CreditorDb,
+        });
+        if (res.ok) imieInwestora = res.party.shortName;
       } catch (e) {
         console.error("[windykacja] profil inwestora do telefonu:", (e as Error).message);
       }
