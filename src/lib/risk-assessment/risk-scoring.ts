@@ -21,7 +21,7 @@ import type { LongevityBand } from "./life-expectancy";
 // (exitLiquidity) — kategoria zbywalności A–E z liczby mieszkańców i typu
 // nieruchomości (mieszkanie w wielkim mieście = A, dom pod dużym miastem = B…):
 // to, jak szybko da się zabezpieczenie sprzedać, decyduje o ryzyku inwestycji.
-const WEIGHTS: Record<keyof RiskComponentScores, number> = {
+export const WEIGHTS: Record<keyof RiskComponentScores, number> = {
   exitLiquidity: 0.3,
   legal: 0.2,
   collateral: 0.18,

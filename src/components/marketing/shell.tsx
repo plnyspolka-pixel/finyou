@@ -5,6 +5,7 @@ import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { MktButton } from "./primitives";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
+import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 
 /**
  * Finance You — marketing chrome (header, footer, sticky CTA) + shell wrapper.
@@ -12,7 +13,14 @@ import { LOAN_PRODUCTS } from "@/lib/loan-products";
  * the public pages and never leaks into the authenticated app.
  */
 
-export type MarketingPage = "home" | "klient" | "inwestor" | "posrednik" | "blog" | "kalkulator";
+export type MarketingPage =
+  | "home"
+  | "klient"
+  | "inwestor"
+  | "inwestorModul"
+  | "posrednik"
+  | "blog"
+  | "kalkulator";
 
 const CONTACT = { phone: COMPANY_DATA.phone.display, email: COMPANY_DATA.email };
 
@@ -50,10 +58,14 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   home: "/",
   klient: "/dla-klienta",
   inwestor: "/dla-inwestora",
+  inwestorModul: "/dla-inwestora",
   posrednik: "/dla-posrednika",
   blog: "/blog",
   kalkulator: "/kalkulator-ltv",
 };
+
+/** Pozycja nawigacji podświetlana na danej stronie — podstrony modułów należą do „Inwestor". */
+const NAV_KEY: Partial<Record<MarketingPage, string>> = { inwestorModul: "inwestor" };
 
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
@@ -61,6 +73,8 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   // Inwestor najpierw poznaje warunki w cenniku (abonament), potem zakłada konto
   // (nagłówek z page="inwestor" renderuje się tylko na /dla-inwestora).
   inwestor: { label: "Dołącz do klubu", href: "#cennik" },
+  // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
+  inwestorModul: { label: "Dołącz do klubu", href: "/dla-inwestora#cennik" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -98,19 +112,43 @@ const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string 
   },
 ];
 
+type InvestorMenuLink = { label: string; href: string; sep?: boolean };
+
+/** Sub-menu "Inwestor": najpierw podstrony modułów (/dla-inwestora/<moduł>),
+ *  potem kotwice landingu — na samym landingu same hashe, gdzie indziej pełna ścieżka. */
+function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
+  const modules = INVESTOR_MODULES.map((m) => ({
+    label: m.menuLabel,
+    href: investorModulePath(m.slug),
+  }));
+  const anchors = INVESTOR_ANCHORS.filter((a) => !a.hidden).map((a, i) => ({
+    label: a.label,
+    href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
+    sep: i === 0,
+  }));
+  return [...modules, ...anchors];
+}
+
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const [open, setOpen] = useState(false);
+  const active = NAV_KEY[page] ?? page;
   const nav = [
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
     { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
-    { label: "FAQ", href: page === "blog" ? "/dla-klienta#faq" : "#faq", key: "faq" },
+    {
+      label: "FAQ",
+      href:
+        page === "blog"
+          ? "/dla-klienta#faq"
+          : page === "inwestorModul"
+            ? "/dla-inwestora#faq"
+            : "#faq",
+      key: "faq",
+    },
   ];
-  const investorLinks = INVESTOR_ANCHORS.filter((a) => !a.hidden).map((a) => ({
-    label: a.label,
-    href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
-  }));
+  const investorLinks = investorMenuLinks(page);
   const cta = HEADER_CTA[page];
   return (
     <header
@@ -149,8 +187,8 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                 href={n.href}
                 style={{
                   fontSize: "0.85rem",
-                  fontWeight: page === n.key ? 700 : 500,
-                  color: page === n.key ? "var(--accent)" : "var(--muted-foreground)",
+                  fontWeight: active === n.key ? 700 : 500,
+                  color: active === n.key ? "var(--accent)" : "var(--muted-foreground)",
                   textDecoration: "none",
                 }}
               >
@@ -184,7 +222,11 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                 {link}
                 <div className="fy-nav-drop-panel">
                   {investorLinks.map((l) => (
-                    <a key={l.label} href={l.href}>
+                    <a
+                      key={l.label}
+                      href={l.href}
+                      className={l.sep ? "fy-nav-drop-sep" : undefined}
+                    >
                       {l.label}
                     </a>
                   ))}

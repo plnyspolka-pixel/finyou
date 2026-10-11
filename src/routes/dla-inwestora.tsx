@@ -27,6 +27,8 @@ import {
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
+import { ModuleCards } from "@/components/marketing/investor-module-ui";
+import { INVESTOR_MODULES } from "@/components/marketing/investor-modules";
 import { faqPageLd } from "@/lib/seo/company";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
@@ -53,7 +55,8 @@ const SHOW: Record<
   | "system"
   | "akademia"
   | "ochrona"
-  | "windykacja",
+  | "windykacja"
+  | "moduly",
   boolean
 > = {
   zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
@@ -64,6 +67,7 @@ const SHOW: Record<
   akademia: false, // pokaz slajdów Akademii inwestora
   ochrona: false, // pokaz slajdów „7 warstw ochrony"
   windykacja: false, // pokaz slajdów windykacji AI
+  moduly: true, // karty modułów prowadzące do podstron /dla-inwestora/<moduł>
 };
 
 // Filmy w hero. Pierwszy (nasza prezentacja ze Storage) po prawej w rzędzie 1, drugi piętro niżej po
@@ -221,7 +225,7 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "knowledge",
     t: "Decyzja na podstawie faktów",
-    d: "Raport o nieruchomości, stanie prawnym, LTV i ryzyku przy każdym Projekcie — bez limitu raportów.",
+    d: "Wycena i ocena ryzyka przy każdym Projekcie — na ponad 400 punktach danych.",
   },
   {
     icon: "procedures",
@@ -246,12 +250,12 @@ const BENEFITS: FeatureItemData[] = [
   {
     icon: "complianceAml",
     t: "Obowiązki AML pod kontrolą",
-    d: "Klienci, transakcje, ocena ryzyka, zgłoszenia i UPO w jednym module.",
+    d: "Wsparcie raportowania do GIIF, screening list sankcyjnych i rejestr czynności ponadprogowych w jednym module.",
   },
   {
     icon: "aibrain",
     t: "Odzyskujesz należności krok po kroku",
-    d: "Windykacja AI prowadzi sześć etapów — od pierwszego kontaktu po egzekucję. Decyzje zostają po Twojej stronie.",
+    d: "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika.",
   },
   {
     icon: "training",
@@ -445,7 +449,7 @@ const COMPLIANCE: { icon: Icon3DName; t: string }[] = [
 const FAQ_ALL: FAQItem[] = [
   {
     q: "Czym jest Finance You dla inwestora?",
-    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Jeśli chcesz działać pod marką Finance You, możesz też korzystać z naszej sieci sprzedaży.",
+    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Projekty pochodzą z ogólnopolskiej sieci sprzedaży Finance You — na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego.",
   },
   {
     q: "Ile to kosztuje?",
@@ -477,11 +481,11 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Jak zacząć?",
-    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z kwotą i oczekiwanym zyskiem.",
+    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z maksymalną kwotą finansowania.",
   },
   {
     q: "Co jeśli klient nie płaci?",
-    a: "Moduł windykacji prowadzi sprawę krok po kroku — od przypomnień, przez wezwania i ugodę, po egzekucję. Każdą decyzję podejmujesz Ty.",
+    a: "Windykator AI: wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Każdą decyzję podejmujesz Ty.",
   },
 ];
 
@@ -921,6 +925,24 @@ function WindykacjaSection() {
   );
 }
 
+// Karty modułów — każda prowadzi do podstrony z opisem cecha → zaleta → korzyść
+// (/dla-inwestora/<moduł>; te same pozycje są w sub-menu "Inwestor").
+function ModulesSection() {
+  return (
+    <Section id="moduly" tint>
+      <SectionHead
+        center
+        eyebrow="Moduły klubu"
+        title="Pięć modułów w jednym abonamencie"
+        sub="Analiza zabezpieczenia, windykacja, AML, dokumenty i sieć sprzedaży. Wybierz moduł i zobacz, co dokładnie dostajesz."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <ModuleCards modules={INVESTOR_MODULES} cols={3} />
+      </div>
+    </Section>
+  );
+}
+
 function CennikSection({ products }: { products: AccessProduct[] }) {
   return (
     <Section id="cennik" tint>
@@ -1079,6 +1101,8 @@ function InvestorLanding() {
           <FeatureGrid items={BENEFITS} icon3d />
         </div>
       </Section>
+
+      {SHOW.moduly && <ModulesSection />}
 
       {!SHOW.zakladki && (
         <>
