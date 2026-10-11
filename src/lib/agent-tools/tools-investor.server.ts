@@ -16,8 +16,9 @@
 //    zamiast z nich kwalifikować;
 //  * żadnych obietnic: ani zysku, ani decyzji, ani terminu oddzwonienia —
 //    teksty `say` są napisane tak, żeby agent nie musiał ich dopowiadać.
-import type { AgentKey, ToolContext, ToolResult, ToolSpec } from "./types";
+import type { AgentKey, ToolContext, ToolResult, ToolSession, ToolSpec } from "./types";
 import {
+  hasStrongIdentity,
   maskEmail,
   maskPhone,
   normalizeEmail,
@@ -66,7 +67,8 @@ function admin(): Promise<LooseAdmin> {
 // ładujemy je leniwie i też raz na proces.
 type LeadComms = typeof import("@/lib/lead-comms.server");
 let leadCommsPromise: Promise<LeadComms> | null = null;
-const leadComms = (): Promise<LeadComms> => (leadCommsPromise ??= import("@/lib/lead-comms.server"));
+const leadComms = (): Promise<LeadComms> =>
+  (leadCommsPromise ??= import("@/lib/lead-comms.server"));
 
 type SmsSender = typeof import("@/lib/voicebot.functions");
 let smsPromise: Promise<SmsSender> | null = null;
@@ -121,7 +123,9 @@ function fold(s: unknown): string {
 
 const isObj = (v: unknown): v is Row => !!v && typeof v === "object" && !Array.isArray(v);
 
-async function rows(q: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Row[]> {
+async function rows(
+  q: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<Row[]> {
   const { data, error } = await q;
   // Brak tabeli / kolumny nie może zatrzymać rozmowy — logujemy, traktujemy jak pusto.
   if (error) {
@@ -131,7 +135,11 @@ async function rows(q: PromiseLike<{ data: unknown; error: { message: string } |
   return Array.isArray(data) ? (data as Row[]) : [];
 }
 
-async function callRpc(db: LooseAdmin, fn: string, args?: Row): Promise<{ data: unknown; error: string | null }> {
+async function callRpc(
+  db: LooseAdmin,
+  fn: string,
+  args?: Row,
+): Promise<{ data: unknown; error: string | null }> {
   try {
     const { data, error } = await (args ? db.rpc(fn, args) : db.rpc(fn));
     return { data, error: error ? String(error.message ?? "rpc error") : null };
@@ -140,11 +148,20 @@ async function callRpc(db: LooseAdmin, fn: string, args?: Row): Promise<{ data: 
   }
 }
 
-async function insertEvent(automationType: string, sent: Row, response: Row = {}): Promise<boolean> {
+async function insertEvent(
+  automationType: string,
+  sent: Row,
+  response: Row = {},
+): Promise<boolean> {
   const db = await admin();
   const { error } = await db
     .from("automation_events")
-    .insert({ automation_type: automationType, status: "ok", sent_payload: sent, response_payload: response })
+    .insert({
+      automation_type: automationType,
+      status: "ok",
+      sent_payload: sent,
+      response_payload: response,
+    })
     .then(
       (r: { error?: { message: string } | null }) => ({ error: r?.error ?? null }),
       (e: unknown) => ({ error: { message: String((e as { message?: string })?.message ?? e) } }),
@@ -154,7 +171,11 @@ async function insertEvent(automationType: string, sent: Row, response: Row = {}
 }
 
 const warsawStamp = (d: Date): string =>
-  new Intl.DateTimeFormat("pl-PL", { timeZone: "Europe/Warsaw", dateStyle: "short", timeStyle: "short" }).format(d);
+  new Intl.DateTimeFormat("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(d);
 
 // ── get_pricing ──────────────────────────────────────────────────────────────
 
@@ -210,7 +231,9 @@ export function pricingSummary(products: PricingProduct[]): {
 } {
   const byCode = (code: string) => products.find((p) => p.code === code);
   const byDays = (min: number, max: number) =>
-    products.find((p) => p.duration_days != null && p.duration_days >= min && p.duration_days <= max);
+    products.find(
+      (p) => p.duration_days != null && p.duration_days >= min && p.duration_days <= max,
+    );
   const monthly = byCode(SUBSCRIPTION_OPTIONS.miesiecznie.productCode) ?? byDays(28, 31);
   const yearly = byCode(SUBSCRIPTION_OPTIONS.rocznie.productCode) ?? byDays(360, 366);
   if (monthly && yearly) {
@@ -220,7 +243,10 @@ export function pricingSummary(products: PricingProduct[]): {
     const pct = savings > 0 ? Math.floor((savings / yearAtMonthly) * 100) : 0;
     const base = `${plnLabel(monthly.price_pln)} miesięcznie albo ${plnLabel(yearly.price_pln)} za rok`;
     return {
-      price_sentence: savings > 0 ? `${base} — przy płatności rocznej ${pct}% taniej (oszczędzasz ${plnLabel(savings)})` : base,
+      price_sentence:
+        savings > 0
+          ? `${base} — przy płatności rocznej ${pct}% taniej (oszczędzasz ${plnLabel(savings)})`
+          : base,
       yearly_discount_pct: pct,
       yearly_savings_pln: Math.max(0, savings),
     };
@@ -343,7 +369,14 @@ export function safeCity(v: unknown): string | null {
 function safePropertyType(v: unknown): string | null {
   const key = str(v, 60);
   if (!key) return null;
-  return propertyTypeLabels[key] ?? (key.replace(/[^\p{L}\s_-]/gu, "").replace(/_/g, " ").trim() || null);
+  return (
+    propertyTypeLabels[key] ??
+    (key
+      .replace(/[^\p{L}\s_-]/gu, "")
+      .replace(/_/g, " ")
+      .trim() ||
+      null)
+  );
 }
 
 /** Teaser z białej listy pól — wszystko inne (id, project_ref, adres, wartość) zostaje na serwerze. */
@@ -371,9 +404,9 @@ async function getOfferTeasers(_ctx: ToolContext): Promise<ToolResult> {
       say: "Nie mogę teraz pokazać przykładowych Projektów. Mogę za to opowiedzieć, jak działa dopasowanie Projektów do Zlecenia inwestora.",
     });
   }
-  const list = (Array.isArray(data) ? (data as Row[]) : []).slice().sort((a, b) =>
-    String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")),
-  );
+  const list = (Array.isArray(data) ? (data as Row[]) : [])
+    .slice()
+    .sort((a, b) => String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")));
   const teasers = list.slice(0, TEASERS_MAX).map(anonymizeTeaser);
   return ok(
     {
@@ -393,7 +426,8 @@ async function getOfferTeasers(_ctx: ToolContext): Promise<ToolResult> {
 /** Kolumny konta jak w safe-read (READABLE_TABLES.investors) — bez pesel, nip, bank_account, kontaktu. */
 const INVESTOR_STATE_COLS =
   "id, user_id, investor_type, entity_type, company_name, is_active, subscription_plan, subscription_status, subscription_active_until, screening_result, created_at";
-const CRITERIA_COLS = "investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until, updated_at";
+const CRITERIA_COLS =
+  "investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until, updated_at";
 
 export type InvestorNextStep =
   | "dokoncz_rejestracje"
@@ -447,8 +481,16 @@ interface AccessSummary {
   days_left: number | null;
 }
 
-async function accessSummary(db: LooseAdmin, uid: string, investor: Row | null, now: Date): Promise<AccessSummary> {
-  const { data, error } = await callRpc(db, "get_access_state", { _audience: "investor", _user_id: uid });
+async function accessSummary(
+  db: LooseAdmin,
+  uid: string,
+  investor: Row | null,
+  now: Date,
+): Promise<AccessSummary> {
+  const { data, error } = await callRpc(db, "get_access_state", {
+    _audience: "investor",
+    _user_id: uid,
+  });
   if (!error && isObj(data)) {
     // Ta sama reguła co strona /inwestor/abonament: płatny dostęp, obejście zespołu albo moduł projektów.
     return {
@@ -459,15 +501,23 @@ async function accessSummary(db: LooseAdmin, uid: string, investor: Row | null, 
     };
   }
   // RPC niedostępne → kolumny abonamentu w investors (jak identify_caller).
-  const until = investor?.subscription_active_until ? String(investor.subscription_active_until) : null;
+  const until = investor?.subscription_active_until
+    ? String(investor.subscription_active_until)
+    : null;
   const untilMs = until ? Date.parse(until) : NaN;
   const status = String(investor?.subscription_status ?? "");
   const notExpired = !until || Number.isNaN(untilMs) || untilMs > now.getTime();
   return {
     source: "investors",
-    has_access: !!investor && (status === "aktywny" || status === "probny") && investor.is_active !== false && notExpired,
+    has_access:
+      !!investor &&
+      (status === "aktywny" || status === "probny") &&
+      investor.is_active !== false &&
+      notExpired,
     active_until: until,
-    days_left: Number.isNaN(untilMs) ? null : Math.max(0, Math.ceil((untilMs - now.getTime()) / 86_400_000)),
+    days_left: Number.isNaN(untilMs)
+      ? null
+      : Math.max(0, Math.ceil((untilMs - now.getTime()) / 86_400_000)),
   };
 }
 
@@ -476,23 +526,41 @@ async function getInvestorState(ctx: ToolContext): Promise<ToolResult> {
   // Rejestr wymusza tożsamość; powtarzamy, bo konto inwestora to dane podmiotu.
   // investor_user_id bierzemy tylko, gdy POTWIERDZONYM podmiotem jest inwestor —
   // kandydat z identify_caller mógł zostać w sesji po weryfikacji jako klient.
-  const uid = s.identity_verified && s.subject_kind === "investor" ? s.investor_user_id : null;
+  // Konto inwestora tylko po silnym dowodzie (kod SMS) — sam caller-id
+  // z nazwiskiem (albo nazwą firmy z KRS) nie wystarcza.
+  const uid = hasStrongIdentity(s) && s.subject_kind === "investor" ? s.investor_user_id : null;
   if (!uid) {
     return {
       ok: false,
-      error: "Rozmowa nie jest powiązana z potwierdzonym kontem inwestora — najpierw identify_caller i verify_identity.",
+      error:
+        "Rozmowa nie jest powiązana z potwierdzonym kontem inwestora — najpierw send_verification_code i verify_identity z kodem.",
     };
   }
   const db = await admin();
-  const investor = (await rows(db.from("investors").select(INVESTOR_STATE_COLS).eq("user_id", uid).limit(1)))[0] ?? null;
+  const investor =
+    (await rows(db.from("investors").select(INVESTOR_STATE_COLS).eq("user_id", uid).limit(1)))[0] ??
+    null;
   const access = await accessSummary(db, uid, investor, ctx.now);
   const legal = await callRpc(db, "investor_legal_pack_complete", { _user_id: uid });
   const legalPackComplete = !legal.error && legal.data === true;
   const criteria = investor?.id
-    ? ((await rows(db.from("investor_distribution_criteria").select(CRITERIA_COLS).eq("investor_id", investor.id).limit(1)))[0] ?? null)
+    ? ((
+        await rows(
+          db
+            .from("investor_distribution_criteria")
+            .select(CRITERIA_COLS)
+            .eq("investor_id", investor.id)
+            .limit(1),
+        )
+      )[0] ?? null)
     : null;
   const orders = await rows(
-    db.from("investor_orders").select("id, status, expires_at").eq("user_id", uid).in("status", [...OPEN_ORDER_STATUSES]).limit(50),
+    db
+      .from("investor_orders")
+      .select("id, status, expires_at")
+      .eq("user_id", uid)
+      .in("status", [...OPEN_ORDER_STATUSES])
+      .limit(50),
   );
   // Przyjęte Zlecenie po terminie ważności panel i tak oznacza jako wygasłe — nie liczymy go.
   const openOrders = orders.filter((o) => {
@@ -500,7 +568,12 @@ async function getInvestorState(ctx: ToolContext): Promise<ToolResult> {
     return Number.isNaN(ms) || ms > ctx.now.getTime();
   }).length;
 
-  const step = deriveNextStep({ hasInvestor: !!investor, hasAccess: access.has_access, legalPackComplete, openOrders });
+  const step = deriveNextStep({
+    hasInvestor: !!investor,
+    hasAccess: access.has_access,
+    legalPackComplete,
+    openOrders,
+  });
   return ok({
     investor: investor
       ? {
@@ -563,7 +636,12 @@ export function parseSpokenNumber(v: unknown): number | null | undefined {
   const suffix = s.match(/\s*(mld|miliard\w*|mln|milion\w*|tys\w*|k)\.?$/);
   if (suffix) {
     const u = suffix[1];
-    mult = u.startsWith("mld") || u.startsWith("miliard") ? 1e9 : u.startsWith("mln") || u.startsWith("milion") ? 1e6 : 1e3;
+    mult =
+      u.startsWith("mld") || u.startsWith("miliard")
+        ? 1e9
+        : u.startsWith("mln") || u.startsWith("milion")
+          ? 1e6
+          : 1e3;
     s = s.slice(0, suffix.index).trim();
   }
   const n = parseKwota(s);
@@ -597,7 +675,9 @@ export interface InvestorNeeds {
   summary: string | null;
 }
 
-export type ParsedNeeds = { ok: true; needs: InvestorNeeds; flags: string[] } | { ok: false; errors: string[] };
+export type ParsedNeeds =
+  | { ok: true; needs: InvestorNeeds; flags: string[] }
+  | { ok: false; errors: string[] };
 
 /**
  * Walidacja argumentów: liczby niepoprawne (nie-liczba, nieskończoność,
@@ -616,7 +696,8 @@ export async function parseInvestorNeeds(args: Row, now: Date): Promise<ParsedNe
   if (ticketRaw === null) errors.push("ticket_pln: to nie jest liczba");
   else if (ticketRaw !== undefined) {
     if (ticketRaw < 0) errors.push("ticket_pln: kwota nie może być ujemna");
-    else if (ticketRaw > MAX_TICKET_PLN) errors.push("ticket_pln: kwota powyżej 1 mld zł — dopytaj rozmówcę");
+    else if (ticketRaw > MAX_TICKET_PLN)
+      errors.push("ticket_pln: kwota powyżej 1 mld zł — dopytaj rozmówcę");
     else ticket = Math.round(ticketRaw);
   }
 
@@ -684,7 +765,9 @@ const hasAnyNeed = (n: InvestorNeeds): boolean =>
  * B — ticket ≥ 50 000 zł albo bliski termin; C — reszta.
  * Brak kwoty liczy się jak 0 (nie zgadujemy).
  */
-export function qualifyInvestor(n: Pick<InvestorNeeds, "ticket_pln" | "decision_role" | "timeline">): Qualification {
+export function qualifyInvestor(
+  n: Pick<InvestorNeeds, "ticket_pln" | "decision_role" | "timeline">,
+): Qualification {
   const ticket = n.ticket_pln ?? 0;
   const soon = n.timeline === "teraz" || n.timeline === "kwartal";
   if (ticket >= 200_000 && n.decision_role === "decydent" && soon) return "A";
@@ -699,52 +782,111 @@ const QUALIFICATION_NOTE: Record<Qualification, string> = {
 };
 
 /**
- * Lead rozmowy: z sesji, istniejący po telefonie / e-mailu, albo nowy
- * (upsertLeadFromSource, typ „inwestorski”). Istniejącego NIE przepuszczamy
- * przez upsert — helper nadpisałby mu `type` i `source` (np. leadowi
- * pożyczkowemu tej samej osoby). Nowy powstaje BEZ e-maila: dla nowego leada
- * z e-mailem helper zakłada stub wniosku pożyczkowego (klient + wniosek +
- * sekwencja maili dla pożyczkobiorcy), a inwestorowi to niepotrzebne —
- * e-mail dopisuje patchLead.
+ * Lead, do którego TA rozmowa może pisać:
+ *  * lead potwierdzonego rozmówcy (verify_identity jako lead / klient), albo
+ *  * lead założony przez tę rozmowę (needs.agent_lead_id).
+ * Leada znalezionego po telefonie / e-mailu, który rozmówca tylko PODAŁ,
+ * nie ruszamy: ktoś mógł podać cudze dane, a zapis (notatki, status,
+ * application_data, puste pole e-mail) trafiłby do obcej osoby. Wtedy
+ * zakładamy nowy lead inwestorski z adnotacją „możliwy duplikat” — zespół
+ * scala ręcznie. Nowy lead powstaje bezpośrednim insertem, nie przez
+ * upsertLeadFromSource: helper dopasowałby istniejącego i nadpisał mu pola,
+ * a dla leada z e-mailem założyłby stub wniosku pożyczkowego.
  */
 async function ensureInvestorLead(
   ctx: ToolContext,
   contact: { phone: string | null; email: string | null },
-): Promise<string | null> {
-  if (ctx.session.lead_id) return ctx.session.lead_id;
+): Promise<{ id: string; created: boolean } | null> {
+  const own = ownedLeadId(ctx.session);
+  if (own) return { id: own, created: false };
   if (!contact.phone && !contact.email) return null;
   try {
     const lc = await leadComms();
-    const existing = await lc.findLeadId({ phoneNormalized: contact.phone, email: contact.email });
-    if (existing) return existing;
-    return await lc.upsertLeadFromSource({
-      type: LEAD_TYPE_INVESTOR,
-      source: LEAD_SOURCE,
-      phoneRaw: contact.phone,
-      phoneNormalized: contact.phone,
+    const duplicateOf = await lc
+      .findLeadId({ phoneNormalized: contact.phone, email: contact.email })
+      .catch(() => null);
+    const db = await admin();
+    const { data, error } = await db
+      .from("leads")
+      .insert({
+        type: LEAD_TYPE_INVESTOR,
+        source: LEAD_SOURCE,
+        email: contact.email,
+        phone_raw: contact.phone,
+        phone_normalized: contact.phone,
+        application_data: duplicateOf ? { possible_duplicate_of: duplicateOf } : {},
+      })
+      .select("id")
+      .maybeSingle();
+    if (error || !data?.id) {
+      console.error("[agent-tools/investor] lead insert", error?.message);
+      return null;
+    }
+    const id = String(data.id);
+    await saveSession({
+      conversation_id: ctx.session.conversation_id,
+      lead_id: ctx.session.identity_verified ? ctx.session.lead_id : id,
+      needs: { ...(ctx.session.needs ?? {}), agent_lead_id: id },
     });
+    ctx.session = { ...ctx.session, needs: { ...(ctx.session.needs ?? {}), agent_lead_id: id } };
+    return { id, created: true };
   } catch (e) {
     console.error("[agent-tools/investor] lead", (e as { message?: string })?.message);
     return null;
   }
 }
 
+/** Lead, który ta rozmowa „posiada” (potwierdzony albo przez nią założony). */
+function ownedLeadId(session: ToolSession): string | null {
+  const created =
+    typeof session.needs?.agent_lead_id === "string"
+      ? (session.needs.agent_lead_id as string)
+      : null;
+  if (created) return created;
+  if (
+    session.identity_verified &&
+    (session.subject_kind === "lead" || session.subject_kind === "client") &&
+    session.lead_id
+  ) {
+    return session.lead_id;
+  }
+  return null;
+}
+
 /** Dopisuje do leada bez nadpisywania: application_data scalane, kontakt tylko w puste pola. */
 async function patchLead(
   leadId: string,
-  patch: { applicationData?: Row; email?: string | null; phone?: string | null; noteLine?: string; status?: string },
+  patch: {
+    applicationData?: Row;
+    email?: string | null;
+    phone?: string | null;
+    noteLine?: string;
+    status?: string;
+    allowContact?: boolean;
+  },
 ): Promise<boolean> {
   const db = await admin();
   const lead = (
-    await rows(db.from("leads").select("id, status, notes, email, phone_normalized, application_data").eq("id", leadId).limit(1))
+    await rows(
+      db
+        .from("leads")
+        .select("id, status, notes, email, phone_normalized, application_data")
+        .eq("id", leadId)
+        .limit(1),
+    )
   )[0];
   if (!lead) return false;
   const upd: Row = {};
   if (patch.applicationData) {
-    upd.application_data = { ...(isObj(lead.application_data) ? lead.application_data : {}), ...patch.applicationData };
+    upd.application_data = {
+      ...(isObj(lead.application_data) ? lead.application_data : {}),
+      ...patch.applicationData,
+    };
   }
-  if (patch.email && !lead.email) upd.email = patch.email;
-  if (patch.phone && !lead.phone_normalized) {
+  // Kontakt dopisujemy tylko do leada założonego w tej rozmowie: e-mail
+  // w cudzym leadzie mógłby posłużyć do wysłania komuś obcemu linku do konta.
+  if (patch.allowContact && patch.email && !lead.email) upd.email = patch.email;
+  if (patch.allowContact && patch.phone && !lead.phone_normalized) {
     upd.phone_normalized = patch.phone;
     upd.phone_raw = patch.phone;
   }
@@ -752,7 +894,8 @@ async function patchLead(
     const prev = String(lead.notes ?? "").trim();
     upd.notes = (prev ? `${prev}\n${patch.noteLine}` : patch.noteLine).slice(-8000);
   }
-  if (patch.status && CALLBACK_REPLACEABLE_STATUSES.has(String(lead.status ?? ""))) upd.status = patch.status;
+  if (patch.status && CALLBACK_REPLACEABLE_STATUSES.has(String(lead.status ?? "")))
+    upd.status = patch.status;
   if (!Object.keys(upd).length) return true;
   const { error } = await db.from("leads").update(upd).eq("id", leadId);
   if (error) {
@@ -765,7 +908,10 @@ async function patchLead(
 async function saveInvestorNeeds(ctx: ToolContext): Promise<ToolResult> {
   const parsed = await parseInvestorNeeds(ctx.args, ctx.now);
   if (!parsed.ok) {
-    return { ok: false, error: `Niepoprawne wartości — dopytaj rozmówcę i wywołaj ponownie: ${parsed.errors.join("; ")}.` };
+    return {
+      ok: false,
+      error: `Niepoprawne wartości — dopytaj rozmówcę i wywołaj ponownie: ${parsed.errors.join("; ")}.`,
+    };
   }
   const { needs, flags } = parsed;
   if (!hasAnyNeed(needs)) return { ok: false, error: "Brak rozpoznanych potrzeb do zapisania." };
@@ -773,10 +919,20 @@ async function saveInvestorNeeds(ctx: ToolContext): Promise<ToolResult> {
   const qualification = qualifyInvestor(needs);
   const phone = needs.callback_phone ?? ctx.callerPhone;
   const email = needs.callback_email ?? ctx.callerEmail;
-  const leadId = await ensureInvestorLead(ctx, { phone, email });
-  const storedNeeds = { ...needs, recognized_at: ctx.now.toISOString(), conversation_id: ctx.session.conversation_id };
+  const lead = await ensureInvestorLead(ctx, { phone, email });
+  const leadId = lead?.id ?? null;
+  const storedNeeds = {
+    ...needs,
+    recognized_at: ctx.now.toISOString(),
+    conversation_id: ctx.session.conversation_id,
+  };
   const onLead = leadId
-    ? await patchLead(leadId, { applicationData: { investor_needs: storedNeeds, qualification }, email, phone })
+    ? await patchLead(leadId, {
+        applicationData: { investor_needs: storedNeeds, qualification },
+        email,
+        phone,
+        allowContact: !!lead?.created,
+      })
     : false;
 
   // Sesja: pełne potrzeby inwestora + klucze w konwencji save_needs (triage),
@@ -793,13 +949,10 @@ async function saveInvestorNeeds(ctx: ToolContext): Promise<ToolResult> {
     objections: Array.from(new Set([...prevObjections, ...needs.objections])).slice(0, 20),
     investor_needs: needs,
     investor_qualification: qualification,
+    ...(ctx.session.needs?.agent_lead_id ? { agent_lead_id: ctx.session.needs.agent_lead_id } : {}),
     updated_at: ctx.now.toISOString(),
   };
-  await saveSession({
-    conversation_id: ctx.session.conversation_id,
-    needs: merged,
-    ...(leadId && !ctx.session.lead_id ? { lead_id: leadId } : {}),
-  });
+  await saveSession({ conversation_id: ctx.session.conversation_id, needs: merged });
   await insertEvent(
     "investor_needs_recognized",
     {
@@ -808,19 +961,27 @@ async function saveInvestorNeeds(ctx: ToolContext): Promise<ToolResult> {
       lead_id: leadId,
       qualification,
       // Kontakt w zdarzeniu tylko zamaskowany — pełny jest na leadzie.
-      needs: { ...needs, callback_phone: maskPhone(needs.callback_phone), callback_email: maskEmail(needs.callback_email) },
+      needs: {
+        ...needs,
+        callback_phone: maskPhone(needs.callback_phone),
+        callback_email: maskEmail(needs.callback_email),
+      },
     },
     { saved_on_lead: onLead, flags },
   );
 
   const notes = [QUALIFICATION_NOTE[qualification]];
-  if (needs.wants_callback) notes.push("Rozmówca chce kontaktu — wywołaj request_investor_callback.");
-  if (!leadId) notes.push("Brak telefonu i e-maila — potrzeby zostały tylko w tej rozmowie; poproś o kontakt, jeśli rozmówca chce link albo kontakt.");
+  if (needs.wants_callback)
+    notes.push("Rozmówca chce kontaktu — wywołaj request_investor_callback.");
+  if (!leadId)
+    notes.push(
+      "Brak telefonu i e-maila — potrzeby zostały tylko w tej rozmowie; poproś o kontakt, jeśli rozmówca chce link albo kontakt.",
+    );
   const maxRate = maxCapitalRate(ctx.now);
+  // Bez lead_id w wyniku — identyfikator wewnętrzny nie jest dla modelu.
   return ok({
     saved: true,
     qualification,
-    lead_id: leadId,
     saved_on_lead: onLead,
     flags,
     agent_note: notes.join(" "),
@@ -836,31 +997,45 @@ export const CALLBACK_SAY =
   "Zapisuję prośbę o kontakt. Nie obiecuję terminu — jeśli opiekun inwestorów uzna, że może pomóc, odezwie się bezpośrednio.";
 
 async function requestInvestorCallback(ctx: ToolContext): Promise<ToolResult> {
-  const phone = (await normalizePhone(ctx.args.phone ?? ctx.args.callback_phone)) ?? ctx.callerPhone;
+  const phone =
+    (await normalizePhone(ctx.args.phone ?? ctx.args.callback_phone)) ?? ctx.callerPhone;
   const email = normalizeEmail(ctx.args.email ?? ctx.args.callback_email) ?? ctx.callerEmail;
   if (!phone && !email) {
     return {
       ok: false,
-      error: "Brak numeru telefonu i e-maila — poproś rozmówcę o jedno z nich i podaj w args.phone albo args.email.",
+      error:
+        "Brak numeru telefonu i e-maila — poproś rozmówcę o jedno z nich i podaj w args.phone albo args.email.",
     };
   }
   // Tekst swobodny może nieść PESEL / numer rachunku — maskujemy przed zapisem.
   const topic = redactDeep(str(ctx.args.topic ?? ctx.args.reason, MAX_STRING));
   const preferred = redactDeep(str(ctx.args.preferred_time, 100));
 
-  const leadId = await ensureInvestorLead(ctx, { phone, email });
+  const lead = await ensureInvestorLead(ctx, { phone, email });
+  const leadId = lead?.id ?? null;
   const line =
     `[AI ${warsawStamp(ctx.now)}] Prośba o kontakt opiekuna inwestorów (agent ${ctx.session.agent_key}, rozmowa ${ctx.session.conversation_id})` +
     (phone ? `, tel. ${phone}` : "") +
     (email ? `, e-mail ${email}` : "") +
     (preferred ? `, preferowana pora: ${preferred}` : "") +
     (topic ? ` — ${topic}` : "");
-  const onLead = leadId ? await patchLead(leadId, { noteLine: line, email, phone, status: CALLBACK_STATUS }) : false;
+  const onLead = leadId
+    ? await patchLead(leadId, {
+        noteLine: line,
+        email,
+        phone,
+        status: CALLBACK_STATUS,
+        allowContact: !!lead?.created,
+      })
+    : false;
 
   await saveSession({
     conversation_id: ctx.session.conversation_id,
-    needs: { ...(ctx.session.needs ?? {}), wants_callback: true, callback_requested_at: ctx.now.toISOString() },
-    ...(leadId && !ctx.session.lead_id ? { lead_id: leadId } : {}),
+    needs: {
+      ...(ctx.session.needs ?? {}),
+      wants_callback: true,
+      callback_requested_at: ctx.now.toISOString(),
+    },
   });
   const evented = await insertEvent("investor_callback_requested", {
     conversation_id: ctx.session.conversation_id,
@@ -873,11 +1048,14 @@ async function requestInvestorCallback(ctx: ToolContext): Promise<ToolResult> {
   });
   // Agent nie może powiedzieć „zapisuję”, jeśli prośba nigdzie nie trafiła.
   if (!onLead && !evented) {
-    return { ok: false, error: "Nie udało się zapisać prośby o kontakt — przeproś i podaj rozmówcy adres kontakt@financeyou.pl." };
+    return {
+      ok: false,
+      error:
+        "Nie udało się zapisać prośby o kontakt — przeproś i podaj rozmówcy adres kontakt@financeyou.pl.",
+    };
   }
   return ok({
     saved: true,
-    lead_id: leadId,
     saved_on_lead: onLead,
     phone_hint: maskPhone(phone),
     email_hint: maskEmail(email),
@@ -894,11 +1072,22 @@ async function sendInvestorRegistrationLink(ctx: ToolContext): Promise<ToolResul
   const fallbackSay = `Adres do rejestracji to ${REGISTRATION_SPOKEN} — przy rejestracji proszę wybrać konto inwestora.`;
   const phone = ctx.callerPhone;
   if (!phone) {
-    return ok({ sent: false, channel: "agent", ...link, say: `Link do rejestracji konta inwestora: ${INVESTOR_REGISTRATION_URL}` });
+    return ok({
+      sent: false,
+      channel: "agent",
+      ...link,
+      say: `Link do rejestracji konta inwestora: ${INVESTOR_REGISTRATION_URL}`,
+    });
   }
   // Sprzeciw wobec kontaktu w tej rozmowie (RODO / UKE) — bez SMS-a, link tylko słownie.
   if (ctx.session.do_not_contact) {
-    return ok({ sent: false, channel: "agent", reason: "do_not_contact", ...link, say: fallbackSay });
+    return ok({
+      sent: false,
+      channel: "agent",
+      reason: "do_not_contact",
+      ...link,
+      say: fallbackSay,
+    });
   }
   // Ten sam nadawca co SMS od agenta głosowego (elevenlabs-send-sms): hamulec
   // sendSmsInternal pilnuje STOP (do_not_sms), okna godzin i limitów.

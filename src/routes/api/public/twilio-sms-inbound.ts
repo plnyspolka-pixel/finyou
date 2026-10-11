@@ -114,7 +114,12 @@ export const Route = createFileRoute("/api/public/twilio-sms-inbound")({
                 .maybeSingle();
               if (!client?.do_not_sms) {
                 const { runAgentTurn } = await import("@/lib/elevenlabs-text-agent.server");
-                const agent = await runAgentTurn({ leadId, channel: "sms", userMessage: body });
+                const agent = await runAgentTurn({
+                  leadId,
+                  channel: "sms",
+                  userMessage: body,
+                  channelIdentity: phone ? { kind: "sms", value: phone } : null,
+                });
                 const reply = agent.reply.trim().slice(0, 450);
                 if (reply) {
                   // sendSmsInternal sam loguje wysyłkę w lead_communications.

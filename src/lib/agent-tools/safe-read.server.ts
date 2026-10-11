@@ -14,7 +14,7 @@
 //                 treści publiczne). Nowa kolumna w takiej tabeli jest od razu
 //                 dostępna — chyba że wygląda na wrażliwą.
 import type { AgentKey, SubjectKind, ToolSession } from "./types";
-import { isDeniedKey, redactDeep } from "./guard.server";
+import { hasStrongIdentity, isDeniedKey, redactDeep } from "./guard.server";
 
 export type ScopeBy =
   | { kind: "none" } // tabela publiczna — bez zawężenia
@@ -73,17 +73,33 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     agents: ALL_PROCESS,
     scope: { kind: "none" },
     requiresIdentity: false,
-    columns: { mode: "explicit", list: ["code", "package_id", "version", "title", "sort_order", "active", "updated_at"] },
+    columns: {
+      mode: "explicit",
+      list: ["code", "package_id", "version", "title", "sort_order", "active", "updated_at"],
+    },
     order: { column: "sort_order", ascending: true },
     maxRows: 30,
-    purpose: "Jakie regulaminy/umowy obowiązują (kod, pakiet, wersja, tytuł) — bez treści i plików.",
+    purpose:
+      "Jakie regulaminy/umowy obowiązują (kod, pakiet, wersja, tytuł) — bez treści i plików.",
   },
   {
     table: "training_videos",
     agents: INVEST,
     scope: { kind: "none" },
     requiresIdentity: false,
-    columns: { mode: "explicit", list: ["id", "title", "description", "category", "duration_seconds", "is_published", "free_lesson", "sort_order"] },
+    columns: {
+      mode: "explicit",
+      list: [
+        "id",
+        "title",
+        "description",
+        "category",
+        "duration_seconds",
+        "is_published",
+        "free_lesson",
+        "sort_order",
+      ],
+    },
     order: { column: "sort_order", ascending: true },
     maxRows: 30,
     purpose: "Szkolenia dla inwestorów — co jest w pakiecie.",
@@ -94,10 +110,19 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     table: "leads",
     agents: CLIENT,
     scope: { kind: "lead", column: "id" },
-    requiresIdentity: false, // lead to kontakt z tej rozmowy — nic więcej
+    requiresIdentity: true, // lead dopiero po potwierdzeniu, że to ten człowiek
     columns: {
       mode: "explicit",
-      list: ["id", "type", "status", "source", "created_at", "updated_at", "first_name", "loan_application_id"],
+      list: [
+        "id",
+        "type",
+        "status",
+        "source",
+        "created_at",
+        "updated_at",
+        "first_name",
+        "loan_application_id",
+      ],
     },
     maxRows: 1,
     purpose: "Status i typ leada rozmówcy (tylko jego).",
@@ -127,7 +152,8 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     },
     order: { column: "created_at", ascending: false },
     maxRows: 3,
-    purpose: "Wnioski klienta rozmowy: status, kwota, okres, kompletność, braki (bez oceny wewnętrznej i dokumentów).",
+    purpose:
+      "Wnioski klienta rozmowy: status, kwota, okres, kompletność, braki (bez oceny wewnętrznej i dokumentów).",
   },
 
   // ── Inwestor (zawężone do investor_user_id rozmowy) ───────────────────────
@@ -154,7 +180,8 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
       ],
     },
     maxRows: 1,
-    purpose: "Konto inwestora rozmowy: typ, aktywność, abonament (plan, status, do kiedy), wynik screeningu.",
+    purpose:
+      "Konto inwestora rozmowy: typ, aktywność, abonament (plan, status, do kiedy), wynik screeningu.",
   },
   {
     table: "investor_distribution_criteria",
@@ -163,10 +190,19 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     requiresIdentity: true,
     columns: {
       mode: "explicit",
-      list: ["investor_id", "min_amount", "max_amount", "auto_send_enabled", "accepting_applications", "paused_until", "updated_at"],
+      list: [
+        "investor_id",
+        "min_amount",
+        "max_amount",
+        "auto_send_enabled",
+        "accepting_applications",
+        "paused_until",
+        "updated_at",
+      ],
     },
     maxRows: 1,
-    purpose: "Kryteria inwestycyjne inwestora rozmowy (kwoty, LTV, lokalizacje, typy nieruchomości).",
+    purpose:
+      "Kryteria inwestycyjne inwestora rozmowy (kwoty, LTV, lokalizacje, typy nieruchomości).",
   },
   {
     table: "investor_orders",
@@ -175,7 +211,19 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     requiresIdentity: true,
     columns: {
       mode: "explicit",
-      list: ["id", "order_seq", "amount_pln", "max_period_months", "min_annual_yield", "validity_days", "status", "submitted_at", "expires_at", "rejection_reason", "created_at"],
+      list: [
+        "id",
+        "order_seq",
+        "amount_pln",
+        "max_period_months",
+        "min_annual_yield",
+        "validity_days",
+        "status",
+        "submitted_at",
+        "expires_at",
+        "rejection_reason",
+        "created_at",
+      ],
     },
     order: { column: "created_at", ascending: false },
     maxRows: 10,
@@ -188,7 +236,20 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     agents: WIND,
     scope: { kind: "case", column: "id" },
     requiresIdentity: true,
-    columns: { mode: "explicit", list: ["id", "sciezka", "etap", "opoznienie_dni", "kwota_zalegla", "data_otwarcia", "data_zamkniecia", "wynik", "priorytet"] },
+    columns: {
+      mode: "explicit",
+      list: [
+        "id",
+        "sciezka",
+        "etap",
+        "opoznienie_dni",
+        "kwota_zalegla",
+        "data_otwarcia",
+        "data_zamkniecia",
+        "wynik",
+        "priorytet",
+      ],
+    },
     maxRows: 1,
     purpose: "Sprawa windykacyjna rozmowy: etap, ścieżka, zaległość przy otwarciu.",
   },
@@ -218,14 +279,29 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
       ],
     },
     maxRows: 1,
-    purpose: "Konkretna umowa pożyczki z akt: numer, daty, kwoty, harmonogram, opłaty windykacyjne, rachunek spłaty.",
+    purpose:
+      "Konkretna umowa pożyczki z akt: numer, daty, kwoty, harmonogram, opłaty windykacyjne, rachunek spłaty.",
   },
   {
     table: "wind_events",
     agents: WIND,
     scope: { kind: "case", column: "case_id" },
     requiresIdentity: true,
-    columns: { mode: "explicit", list: ["id", "typ", "kategoria", "tytul", "tresc", "data_zdarzenia", "data_doreczenia", "status_doreczenia", "oplata"] },
+    // Bez `tresc`: to wolny tekst zespołu i inwestora (notatki, podsumowania
+    // rozmów, oceny prawne, dane osób trzecich) — nie dla rozmówcy.
+    columns: {
+      mode: "explicit",
+      list: [
+        "id",
+        "typ",
+        "kategoria",
+        "tytul",
+        "data_zdarzenia",
+        "data_doreczenia",
+        "status_doreczenia",
+        "oplata",
+      ],
+    },
     order: { column: "data_zdarzenia", ascending: false },
     maxRows: 20,
     purpose: "Historia sprawy: wezwania, wpłaty, telefony, ustalenia (bez surowych metadanych).",
@@ -235,10 +311,14 @@ export const READABLE_TABLES: readonly ReadableTable[] = [
     agents: WIND,
     scope: { kind: "case", column: "case_id" },
     requiresIdentity: true,
-    columns: { mode: "explicit", list: ["id", "typ", "tytul", "status", "created_at", "data_nadania", "data_odbioru"] },
+    columns: {
+      mode: "explicit",
+      list: ["id", "typ", "tytul", "status", "created_at", "data_nadania", "data_odbioru"],
+    },
     order: { column: "created_at", ascending: false },
     maxRows: 20,
-    purpose: "Jakie dokumenty są w aktach sprawy (typ, tytuł, status, nadanie/odbiór) — bez treści i linków.",
+    purpose:
+      "Jakie dokumenty są w aktach sprawy (typ, tytuł, status, nadanie/odbiór) — bez treści i linków.",
   },
 ];
 
@@ -246,22 +326,38 @@ export function readableFor(agent: AgentKey): ReadableTable[] {
   return READABLE_TABLES.filter((t) => t.agents.includes(agent));
 }
 
+/**
+ * Wartość zawężenia z sesji. Każdy zakres podmiotu wymaga POTWIERDZONEJ
+ * tożsamości i zgodnego rodzaju podmiotu — pole z kandydata (identify_caller)
+ * albo z innego podmiotu nie otwiera niczego. Akta sprawy i konto inwestora
+ * dodatkowo wymagają silnej metody (numer umowy z nazwiskiem, kod SMS).
+ */
 function scopeValue(scope: ScopeBy, session: ToolSession): string | null | "none" {
+  if (scope.kind === "none") return "none";
+  if (!session.identity_verified) return null;
   switch (scope.kind) {
-    case "none":
-      return "none";
     case "lead":
-      return session.lead_id;
+      return session.subject_kind === "lead" || session.subject_kind === "client"
+        ? session.lead_id
+        : null;
     case "client":
       return session.subject_kind === "client" ? session.subject_id : null;
     case "investor":
-      return session.investor_user_id;
+      return session.subject_kind === "investor" && hasStrongIdentity(session)
+        ? session.investor_user_id
+        : null;
     case "investor_row":
-      return session.subject_kind === "investor" ? session.subject_id : null;
+      return session.subject_kind === "investor" && hasStrongIdentity(session)
+        ? session.subject_id
+        : null;
     case "case":
-      return session.case_id;
+      return session.subject_kind === "borrower" && hasStrongIdentity(session)
+        ? session.case_id
+        : null;
     case "loan":
-      return session.loan_id;
+      return session.subject_kind === "borrower" && hasStrongIdentity(session)
+        ? session.loan_id
+        : null;
   }
 }
 
@@ -295,7 +391,10 @@ export async function safeLookup(input: {
   }
   const scoped = scopeValue(spec.scope, input.session);
   if (scoped === null) {
-    return { ok: false, error: `Brak podmiotu rozmowy dla „${table}” — najpierw identify_caller / verify_identity.` };
+    return {
+      ok: false,
+      error: `Brak podmiotu rozmowy dla „${table}” — najpierw identify_caller / verify_identity.`,
+    };
   }
 
   const live = await liveColumns(table);
@@ -307,9 +406,12 @@ export async function safeLookup(input: {
   }
   if (allowed.length === 0) return { ok: false, error: `Brak dostępnych kolumn w „${table}”.` };
 
-  const requested = (input.columns ?? []).map((c) => String(c).trim().toLowerCase()).filter(Boolean);
+  const requested = (input.columns ?? [])
+    .map((c) => String(c).trim().toLowerCase())
+    .filter(Boolean);
   const cols = requested.length ? allowed.filter((c) => requested.includes(c)) : allowed;
-  if (cols.length === 0) return { ok: false, error: `Żadna z żądanych kolumn nie jest dostępna w „${table}”.` };
+  if (cols.length === 0)
+    return { ok: false, error: `Żadna z żądanych kolumn nie jest dostępna w „${table}”.` };
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // Nazwa tabeli jest dynamiczna (z allow-listy), więc klient w trybie luźnym.
@@ -318,7 +420,8 @@ export async function safeLookup(input: {
   if (scoped !== "none" && spec.scope.kind !== "none") q = q.eq(spec.scope.column, scoped);
   for (const [k, v] of Object.entries(input.where ?? {})) {
     const key = String(k).toLowerCase();
-    if (!allowed.includes(key)) return { ok: false, error: `Filtr po „${key}” nie jest dozwolony.` };
+    if (!allowed.includes(key))
+      return { ok: false, error: `Filtr po „${key}” nie jest dozwolony.` };
     if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") {
       return { ok: false, error: `Filtr „${key}” ma niedozwoloną wartość.` };
     }
@@ -329,9 +432,20 @@ export async function safeLookup(input: {
   q = q.limit(limit);
 
   const { data, error } = await q;
-  if (error) return { ok: false, error: `Odczyt „${table}” nie powiódł się: ${error.message}` };
+  if (error) {
+    // Komunikat bazy zostaje w logu serwera — model dostaje ogólny.
+    console.warn("[agent-tools/safe-read]", table, error.message);
+    return {
+      ok: false,
+      error: `Odczyt „${table}” nie powiódł się — spróbuj innego pytania albo zaproponuj kontakt z zespołem.`,
+    };
+  }
   const redactions: string[] = [];
-  const rows = redactDeep((data ?? []) as Record<string, unknown>[], ["rachunek_splaty"], redactions);
+  const rows = redactDeep(
+    (data ?? []) as Record<string, unknown>[],
+    ["rachunek_splaty"],
+    redactions,
+  );
   return { ok: true, rows, columns: cols, redactions };
 }
 
@@ -355,7 +469,9 @@ export async function liveColumns(table: string): Promise<Set<string>> {
       headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: "application/openapi+json" },
     });
     if (!res.ok) return new Set();
-    const spec = (await res.json()) as { definitions?: Record<string, { properties?: Record<string, unknown> }> };
+    const spec = (await res.json()) as {
+      definitions?: Record<string, { properties?: Record<string, unknown> }>;
+    };
     const cols = new Set(Object.keys(spec.definitions?.[table]?.properties ?? {}));
     schemaCache.set(table, { at: Date.now(), cols });
     return cols;

@@ -127,7 +127,8 @@ const ROUTE_LABEL: Record<TriageRoute, string> = {
   inwestor_presale: "przełącz do asystenta dla inwestorów",
   inwestor_panel: "przełącz do asystenta panelu inwestora",
   windykacja: "przełącz do asystenta od spłaty umów",
-  notatka: "bez przełączenia — krótka notatka (save_needs) i oficjalny kontakt, jeśli rozmówca o niego prosi",
+  notatka:
+    "bez przełączenia — krótka notatka (save_needs) i oficjalny kontakt, jeśli rozmówca o niego prosi",
 };
 
 const STYLE: Record<TriageMode, string> = {
@@ -171,10 +172,10 @@ Finance You w dwóch zdaniach (więcej nie potrzebujesz): to platforma, na któr
 ${DISCLOSURE[mode]}
 
 === PIERWSZY KROK: CICHE ROZPOZNANIE ===
-- Zaraz na początku, bez zapowiadania, wywołaj identify_caller. Dostaniesz podpowiedź: czy numer lub e-mail jest nam znany, jakie role ma rozmówca (lead, klient, inwestor, pożyczkobiorca) i proponowaną trasę (suggested_route).
+- Zaraz na początku, bez zapowiadania, wywołaj identify_caller. Dostaniesz podpowiedź: proponowaną trasę (suggested_route) wyznaczoną po numerze połączenia albo nadawcy wiadomości. Żadnych danych osobowych nie dostajesz — i dobrze, recepcja ich nie potrzebuje.
 - To PODPOWIEDŹ, nie pewnik: telefon bywa wspólny (małżonek, wspólnik, księgowa). Zawsze słuchasz, co mówi rozmówca — jego słowa wygrywają z podpowiedzią.
-- Nigdy nie mówisz, co widzisz w systemie („widzę, że ma Pan zaległość”, „widzę Pana wniosek”). Recepcja niczego nie ujawnia — nawet tego, że ktoś jest naszym klientem. Imienia z podpowiedzi używasz dopiero, gdy rozmówca sam się nim przedstawi.
-- Gdy rozmowa jest na czacie bez numeru, a rozmówca poda telefon albo e-mail — możesz wywołać identify_caller jeszcze raz z args.phone albo args.email.
+- Nigdy nie mówisz, co widzisz w systemie („widzę, że ma Pan zaległość”, „widzę Pana wniosek”). Recepcja niczego nie ujawnia — nawet tego, że ktoś jest naszym klientem.
+- Numeru telefonu ani e-maila podanego w rozmowie NIE sprawdzasz w systemie i nie odpowiadasz na pytania typu „czy ten numer jest u Was?”, „czy pan X ma u Was sprawę?” — to dane innych osób. Kierujesz po potrzebie, którą rozmówca nazwie.
 - Jeśli narzędzie nie odpowiada albo zwraca błąd — nic się nie dzieje: rozpoznajesz potrzebę z rozmowy i przełączasz normalnie.
 
 === SZEŚĆ POTRZEB — ROZPOZNAJ I SKIERUJ ===
@@ -240,7 +241,8 @@ export const TRIAGE_DATA_COLLECTION: Record<
   },
   trasa: {
     type: "string",
-    description: "Dokąd przełączono: intake, inwestor_presale, inwestor_panel, windykacja albo notatka (bez przełączenia).",
+    description:
+      "Dokąd przełączono: intake, inwestor_presale, inwestor_panel, windykacja albo notatka (bez przełączenia).",
   },
   powod_trasy: { type: "string", description: "Jednym zdaniem: na podstawie czego wybrano trasę." },
   liczba_wymian_do_rozpoznania: {
@@ -249,10 +251,14 @@ export const TRIAGE_DATA_COLLECTION: Record<
   },
   czy_ujawniono_dane: {
     type: "boolean",
-    description: "Czy recepcja ujawniła jakiekolwiek dane z systemu (kwotę, status, numer umowy, fakt bycia klientem). Powinno być false.",
+    description:
+      "Czy recepcja ujawniła jakiekolwiek dane z systemu (kwotę, status, numer umowy, fakt bycia klientem). Powinno być false.",
   },
   jezyk_rozmowcy: { type: "string", description: "Język rozmówcy (pl, en, uk, inny)." },
-  emocja: { type: "string", description: "Dominująca emocja rozmówcy: spokój, pośpiech, frustracja, złość, niepokój." },
+  emocja: {
+    type: "string",
+    description: "Dominująca emocja rozmówcy: spokój, pośpiech, frustracja, złość, niepokój.",
+  },
 };
 
 export const TRIAGE_EVALUATION = {

@@ -10,18 +10,18 @@ import {
   countRecentCalls,
   loadSession,
   normalizeAgentKey,
-  normalizeEmail,
-  normalizePhone,
   normalizeToolName,
   redactDeep,
   resolveConversationId,
+  resolveTrustedContact,
 } from "./guard.server";
 
 const REGISTRY = new Map<string, ToolSpec>();
 
 export function registerTools(specs: readonly ToolSpec[]): void {
   for (const spec of specs) {
-    if (REGISTRY.has(spec.name)) throw new Error(`Narzędzie zarejestrowane dwukrotnie: ${spec.name}`);
+    if (REGISTRY.has(spec.name))
+      throw new Error(`Narzędzie zarejestrowane dwukrotnie: ${spec.name}`);
     REGISTRY.set(spec.name, spec);
   }
 }
@@ -68,7 +68,10 @@ export interface DispatchOutcome {
  * Pełny przebieg jednego wywołania. Nie rzuca — każdy błąd zamienia na
  * odpowiedź z kodem i wpisem w audycie.
  */
-export async function dispatchTool(request: Request, body: ToolRequestBody): Promise<DispatchOutcome> {
+export async function dispatchTool(
+  request: Request,
+  body: ToolRequestBody,
+): Promise<DispatchOutcome> {
   const started = Date.now();
   await ensureToolsLoaded();
 
@@ -76,10 +79,16 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
   const spec = REGISTRY.get(tool);
   const agentKey = normalizeAgentKey(body?.agent_key);
   const channel = String(body?.channel ?? "voice_phone").slice(0, 32);
-  const args = (body?.args && typeof body.args === "object" ? body.args : {}) as Record<string, unknown>;
-  const callerPhone = await normalizePhone(body?.phone ?? (args as any)?.phone);
-  const callerEmail = normalizeEmail(body?.email ?? (args as any)?.email);
-  const conversationId = resolveConversationId(body ?? {}, callerPhone);
+  const args = (body?.args && typeof body.args === "object" ? body.args : {}) as Record<
+    string,
+    unknown
+  >;
+  // Kontakt tylko z kanału (caller-id, nadawca z podpisanego wątku). Numer
+  // czy e-mail podany przez rozmówcę zostaje w `args` jako deklaracja.
+  const trusted = await resolveTrustedContact(body ?? {});
+  const callerPhone = trusted.phone;
+  const callerEmail = trusted.email;
+  const conversationId = resolveConversationId(body ?? {});
 
   const deny = async (status: number, reason: string, error: string): Promise<DispatchOutcome> => {
     await auditCall({
@@ -106,7 +115,9 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
   if (!spec) return deny(400, "unknown_tool", `Nieznane narzędzie: ${tool || "(brak)"}`);
 
   // Zapisy i dane podmiotu: sekret wyłącznie w nagłówku.
-  const auth = authorizeRequest(request, { allowQueryToken: !spec.writes && !spec.requiresIdentity });
+  const auth = authorizeRequest(request, {
+    allowQueryToken: !spec.writes && !spec.requiresIdentity,
+  });
   if (!auth.ok) return deny(401, auth.reason, "unauthorized");
 
   if (agentKey === "unknown") {
@@ -118,12 +129,20 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
 
   const session = await loadSession(conversationId, agentKey, channel);
   if (spec.requiresIdentity && !session.identity_verified) {
-    return deny(403, "identity_required", "Najpierw potwierdź tożsamość rozmówcy (verify_identity).");
+    return deny(
+      403,
+      "identity_required",
+      "Najpierw potwierdź tożsamość rozmówcy (verify_identity).",
+    );
   }
 
   const recent = await countRecentCalls(conversationId, tool, spec.rateLimit.windowMinutes);
   if (recent >= spec.rateLimit.perConversation) {
-    return deny(429, "rate_limited", "Limit wywołań tego narzędzia w tej rozmowie został wyczerpany.");
+    return deny(
+      429,
+      "rate_limited",
+      "Limit wywołań tego narzędzia w tej rozmowie został wyczerpany.",
+    );
   }
 
   const ctx: ToolContext = {
@@ -151,7 +170,13 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
       args,
       duration_ms: Date.now() - started,
     });
-    return { status: 500, body: { ok: false, error: "Narzędzie zgłosiło błąd — powiedz rozmówcy, że sprawdzisz to inaczej." } };
+    return {
+      status: 500,
+      body: {
+        ok: false,
+        error: "Narzędzie zgłosiło błąd — powiedz rozmówcy, że sprawdzisz to inaczej.",
+      },
+    };
   }
 
   if (!result.ok) {
@@ -160,7 +185,8 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
       agent_key: agentKey,
       tool,
       decision: "denied",
-      reason: result.error.slice(0, 200),
+      // Bez cytatów z wejścia modelu („…”) — audyt nie przechowuje treści rozmowy.
+      reason: result.error.replace(/„[^”]*”/g, "„…”").slice(0, 200),
       args,
       duration_ms: Date.now() - started,
     });
@@ -168,7 +194,11 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
   }
 
   // Ostatnia linia obrony: niezależnie od handlera, wynik przechodzi redakcję.
-  const safe = redactDeep(result.result, ["rachunek_splaty"], ctx.redactions);
+  const safe = redactDeep(
+    result.result,
+    ["rachunek_splaty", "rachunek_splaty_grupy"],
+    ctx.redactions,
+  );
   await auditCall({
     conversation_id: conversationId,
     agent_key: agentKey,

@@ -68,7 +68,11 @@ export const INVESTOR_OBJECTIONS: readonly InvestorObjection[] = [
   },
   {
     key: "nie_ufam_platformom",
-    trigger_phrases: ["sparzyłem się na crowdfundingu", "platformy upadają", "skąd mam wiedzieć, że to nie piramida"],
+    trigger_phrases: [
+      "sparzyłem się na crowdfundingu",
+      "platformy upadają",
+      "skąd mam wiedzieć, że to nie piramida",
+    ],
     response_outline:
       "Nazywasz obawę. Różnica w modelu: Finance You nie przechowuje pieniędzy inwestora i nie jest stroną umowy pożyczki — umowę zawiera inwestor z klientem, klient spłaca na rachunek inwestora, hipoteka jest wpisywana na rzecz inwestora. Pytasz, co konkretnie poszło źle poprzednim razem — i odpowiadasz na to, nie ogólnie.",
   },
@@ -86,7 +90,11 @@ export const INVESTOR_OBJECTIONS: readonly InvestorObjection[] = [
   },
   {
     key: "konsultacja",
-    trigger_phrases: ["muszę porozmawiać z księgową", "zapytam wspólnika", "skonsultuję z prawnikiem"],
+    trigger_phrases: [
+      "muszę porozmawiać z księgową",
+      "zapytam wspólnika",
+      "skonsultuję z prawnikiem",
+    ],
     response_outline:
       "Zachęcasz — to rozsądne. Pytasz, jakie pytania chce zadać doradcy, i proponujesz przesłanie linku z informacjami (send_investor_registration_link), żeby miał komplet. Zapisujesz rolę decyzyjną w save_investor_needs.",
   },
@@ -110,7 +118,11 @@ export const INVESTOR_OBJECTIONS: readonly InvestorObjection[] = [
   },
   {
     key: "chce_czlowieka",
-    trigger_phrases: ["chcę porozmawiać z człowiekiem", "proszę o telefon od opiekuna", "jestem z funduszu, potrzebuję warunków"],
+    trigger_phrases: [
+      "chcę porozmawiać z człowiekiem",
+      "proszę o telefon od opiekuna",
+      "jestem z funduszu, potrzebuję warunków",
+    ],
     response_outline:
       "Zapisujesz prośbę narzędziem request_investor_callback (telefon albo e-mail) i mówisz uczciwie, że nie obiecujesz terminu ani tego, że ktoś zadzwoni. Przed zakończeniem dopytujesz o to, czego opiekun będzie potrzebował (skala, horyzont, rola decyzyjna), i zapisujesz to w save_investor_needs.",
   },
@@ -118,7 +130,8 @@ export const INVESTOR_OBJECTIONS: readonly InvestorObjection[] = [
 
 const objectionsSection = (): string =>
   INVESTOR_OBJECTIONS.map(
-    (o) => `• ${o.key} (np. ${o.trigger_phrases.map((t) => `„${t}”`).join(", ")}): ${o.response_outline}`,
+    (o) =>
+      `• ${o.key} (np. ${o.trigger_phrases.map((t) => `„${t}”`).join(", ")}): ${o.response_outline}`,
   ).join("\n");
 
 const STYLE: Record<InvestorPresaleMode, string> = {
@@ -182,7 +195,7 @@ Profil rozmówcy rozpoznajesz po odpowiedziach i do niego dopasowujesz rozmowę:
 - Doświadczony pożyczkodawca prywatny: krótko o modelu, dużo o tym, co oszczędza mu czas (dopływ zweryfikowanych spraw, analiza księgi wieczystej i wycena, AML/KYC, kancelaria z wzorami umów, windykacja).
 - Instytucja (spółka, fundusz, family office): skala, powtarzalność dopływu spraw, zgodność (AML, dokumentacja, ślad audytowy), kto u nich decyduje; prośbę o rozmowę z opiekunem zapisujesz narzędziem request_investor_callback — bez obietnicy terminu.
 - Ktoś, kto tak naprawdę szuka finansowania dla siebie: grzecznie to nazywasz i przełączasz do asystenta od wniosków (transfer_to_agent).
-- Osoba z kontem inwestora, która pyta o swój panel, abonament albo umowy: najpierw verify_identity, potem get_investor_state; jeśli to sprawa obsługi panelu — przełączasz do asystenta panelu inwestora.
+- Osoba z kontem inwestora, która pyta o swój panel, abonament albo umowy: dane konta podajesz dopiero po potwierdzeniu kodem SMS — wywołujesz send_verification_code (kod idzie na numer zapisany w koncie, nigdy na numer podany w rozmowie), rozmówca podaje kod, przekazujesz go w verify_identity (args.kod), potem get_investor_state. Jeśli kod nie przychodzi albo to sprawa obsługi panelu — przełączasz do asystenta panelu inwestora albo odsyłasz do logowania w panelu.
 
 === DOPASOWANIE WARTOŚCI ===
 Mówisz o module TYLKO wtedy, gdy odpowiada na potrzebę, którą rozmówca nazwał — jednym zdaniem i z odniesieniem do jego słów („Skoro najwięcej czasu zajmuje Panu sprawdzanie księgi wieczystej, to…”):
@@ -245,22 +258,37 @@ export const INVESTOR_PRESALE_DATA_COLLECTION: Record<
   string,
   { type: "string" | "boolean" | "number"; description: string }
 > = {
-  ticket_pln: { type: "number", description: "Kwota, którą rozmówca może przeznaczyć na jedną sprawę (zł). 0, jeśli nie padła." },
-  horyzont_miesiace: { type: "number", description: "Na ile miesięcy może zamrozić środki. 0, jeśli nie padło." },
-  oczekiwany_zwrot: { type: "string", description: "Oczekiwanie zwrotu wypowiedziane przez ROZMÓWCĘ (jego słowami). Pusty, jeśli nie padło." },
+  ticket_pln: {
+    type: "number",
+    description: "Kwota, którą rozmówca może przeznaczyć na jedną sprawę (zł). 0, jeśli nie padła.",
+  },
+  horyzont_miesiace: {
+    type: "number",
+    description: "Na ile miesięcy może zamrozić środki. 0, jeśli nie padło.",
+  },
+  oczekiwany_zwrot: {
+    type: "string",
+    description:
+      "Oczekiwanie zwrotu wypowiedziane przez ROZMÓWCĘ (jego słowami). Pusty, jeśli nie padło.",
+  },
   doswiadczenie: { type: "string", description: "pierwszy_raz, kilka albo portfel." },
   rola_decyzyjna: { type: "string", description: "decydent, rekomenduje albo szuka_info." },
   typ_inwestora: { type: "string", description: "prywatny, firma albo instytucja." },
   obiekcje: { type: "string", description: "Klucze obiekcji, które padły, po przecinku." },
   kwalifikacja: { type: "string", description: "A, B albo C — według wyniku save_investor_needs." },
-  nastepny_krok: { type: "string", description: "link_rejestracji, prosba_o_kontakt, konsultacja_z_doradca, brak." },
+  nastepny_krok: {
+    type: "string",
+    description: "link_rejestracji, prosba_o_kontakt, konsultacja_z_doradca, brak.",
+  },
   obiecano_zwrot_lub_gwarancje: {
     type: "boolean",
-    description: "Czy ASYSTENT obiecał zysk, stopę zwrotu, gwarancję albo bezpieczeństwo inwestycji. Powinno być false.",
+    description:
+      "Czy ASYSTENT obiecał zysk, stopę zwrotu, gwarancję albo bezpieczeństwo inwestycji. Powinno być false.",
   },
   cena_z_narzedzia: {
     type: "boolean",
-    description: "Czy ceny abonamentu padły dopiero po wywołaniu get_pricing (albo nie padły wcale). Powinno być true.",
+    description:
+      "Czy ceny abonamentu padły dopiero po wywołaniu get_pricing (albo nie padły wcale). Powinno być true.",
   },
 };
 

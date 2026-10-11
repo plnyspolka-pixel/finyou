@@ -23,6 +23,10 @@
 //    issue_invoice). Zachowanie bez zmian:
 //      { "tool": "...", "lead_id"?, "phone"?, "email"?, "application_id"?, "args"? }
 //    Auth: nagłówek X-Agent-Tools-Secret albo ?token= — sekret AGENT_TOOLS_SECRET.
+//    Lead rozmowy: tylko `lead_id` ze zmiennej dynamicznej albo caller-id
+//    (`phone` = system__caller_id). Numer / e-mail podany w rozmowie (args,
+//    patch, body.email) nie otwiera cudzego leada ani do odczytu statusu, ani
+//    do zapisu — zakłada co najwyżej nowego.
 //    Narzędzia wołają DOKŁADNIE te same funkcje serwerowe co dotychczasowe boty
 //    (executeTool z elevenlabs-text-agent.server), więc zapisy w bazie wyglądają
 //    identycznie; do tego odczyt statusu wniosku, brief braków i issue_invoice.
@@ -71,25 +75,38 @@ function unauthorized(): Response {
   return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
 }
 
-/** Kontakt z żądania: zmienne dynamiczne (lead_id/phone/email) LUB dane
- *  zebrane przez model w args (anonimowy chat — telefon/e-mail z rozmowy). */
-function contactFromBody(body: any): { phone: string | null; email: string | null } {
+/**
+ * Kontakt POTWIERDZONY przez kanał: `phone` w body to zmienna systemowa
+ * `system__caller_id` (tak skonfigurowane są narzędzia fy_*), `lead_id` —
+ * zmienna dynamiczna ustawiana przez nasz router / widget.
+ */
+function trustedContactFromBody(body: any): { phone: string | null } {
+  const phone = typeof body?.phone === "string" && body.phone.trim() ? body.phone.trim() : null;
+  return { phone };
+}
+
+/**
+ * Kontakt, który rozmówca tylko PODAŁ (model wpisuje go do args / patch /
+ * body.email). Służy wyłącznie do założenia NOWEGO leada — nigdy do
+ * odnalezienia i odczytu ani zapisu istniejącego (każdy może podać cudzy
+ * numer).
+ */
+function claimedContactFromBody(body: any): { phone: string | null; email: string | null } {
   const args = body?.args ?? {};
   const patch = args?.patch ?? {};
   const phone =
-    [body.phone, args.phone, patch.phone, patch.telefon].find(
-      (v) => typeof v === "string" && v.trim(),
-    ) ?? null;
+    [args.phone, patch.phone, patch.telefon].find((v) => typeof v === "string" && v.trim()) ?? null;
   const email =
     [body.email, args.email, patch.email].find((v) => typeof v === "string" && v.trim()) ?? null;
   return { phone, email: email ? String(email).trim().toLowerCase() : null };
 }
 
+/** Lead rozmowy wyłącznie z pewnych źródeł: lead_id ze zmiennej, caller-id. */
 async function resolveLeadId(body: any): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   if (typeof body.lead_id === "string" && body.lead_id) return body.lead_id;
 
-  const { phone, email } = contactFromBody(body);
+  const { phone } = trustedContactFromBody(body);
   if (phone) {
     const { normalizePolishPhone } = await import("@/lib/phone");
     const { normalized } = normalizePolishPhone(phone);
@@ -104,17 +121,48 @@ async function resolveLeadId(body: any): Promise<string | null> {
       if (data?.id) return data.id;
     }
   }
-  if (email) {
-    const { data } = await supabaseAdmin
-      .from("leads")
-      .select("id")
-      .eq("email", email)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.id) return data.id;
-  }
   return null;
+}
+
+/**
+ * Nowy lead z kontaktu podanego w rozmowie. Gdy ten kontakt ma już leada,
+ * NIE dopisujemy się do niego (mógł paść cudzy numer) — zakładamy nowego
+ * z adnotacją „możliwy duplikat”, zespół scala ręcznie.
+ */
+async function createLeadFromClaimedContact(contact: { phone: string | null; email: string | null }): Promise<string | null> {
+  const { normalizePolishPhone } = await import("@/lib/phone");
+  const { normalized } = normalizePolishPhone(contact.phone ?? "");
+  const lc = await import("@/lib/lead-comms.server");
+  const existing = await lc.findLeadId({ phoneNormalized: normalized || null, email: contact.email });
+  if (!existing) {
+    return lc.upsertLeadFromSource({
+      type: "pozyczkowy",
+      source: "agent_tool",
+      phoneRaw: contact.phone,
+      phoneNormalized: normalized || null,
+      email: contact.email,
+      applicationData: {},
+    });
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("leads")
+    .insert({
+      type: "pozyczkowy",
+      source: "agent_tool",
+      phone_raw: contact.phone,
+      phone_normalized: normalized || null,
+      email: contact.email,
+      application_data: { possible_duplicate_of: existing },
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !data?.id) {
+    console.error("[agent-tools] lead z deklarowanego kontaktu", error?.message);
+    return null;
+  }
+  await lc.ensureLoanApplicationForLead(data.id).catch(() => null);
+  return data.id;
 }
 
 async function resolveApplicationId(body: any, leadId: string | null): Promise<string | null> {
@@ -187,22 +235,11 @@ export const Route = createFileRoute("/api/public/agent-tools")({
           if (WRITE_TOOLS.has(tool)) {
             let leadId = await resolveLeadId(body);
             // Anonimowy rozmówca z chatu: pierwszy zapis danych zakłada leada
-            // z kontaktu zebranego w rozmowie (jak stary chat-widget).
+            // z kontaktu zebranego w rozmowie — zawsze NOWEGO (patrz
+            // createLeadFromClaimedContact), nigdy cudzego dopasowanego po numerze.
             if (!leadId && tool === "update_lead_data") {
-              const { phone, email } = contactFromBody(body);
-              if (phone || email) {
-                const { normalizePolishPhone } = await import("@/lib/phone");
-                const { normalized } = normalizePolishPhone(phone ?? "");
-                const { upsertLeadFromSource } = await import("@/lib/lead-comms.server");
-                leadId = await upsertLeadFromSource({
-                  type: "pozyczkowy",
-                  source: "agent_tool",
-                  phoneRaw: phone,
-                  phoneNormalized: normalized,
-                  email,
-                  applicationData: {},
-                });
-              }
+              const claimed = claimedContactFromBody(body);
+              if (claimed.phone || claimed.email) leadId = await createLeadFromClaimedContact(claimed);
             }
             if (!leadId) {
               return Response.json({

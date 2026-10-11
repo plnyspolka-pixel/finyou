@@ -3,14 +3,8 @@
 // w `agent_tool_calls`. Zasada: domyślnie ODMOWA; wszystko, co nie jest
 // wprost dozwolone, jest zabronione.
 import { randomUUID, timingSafeEqual } from "node:crypto";
-import { threadSessionId, verifyThreadKey } from "./thread-key.server";
-import type {
-  AgentKey,
-  SubjectKind,
-  ToolDecision,
-  ToolRequestBody,
-  ToolSession,
-} from "./types";
+import { readThreadKey, threadSessionId } from "./thread-key.server";
+import type { AgentKey, SubjectKind, ToolDecision, ToolRequestBody, ToolSession } from "./types";
 import { AGENT_KEYS } from "./types";
 
 // Tabele `agent_tool_*` nie są jeszcze w wygenerowanym typie Database —
@@ -80,12 +74,39 @@ export function normalizeToolName(raw: unknown): string {
  * podać model, a wspólny klucz oznaczałby dziedziczenie cudzej, już
  * potwierdzonej tożsamości.
  */
-export function resolveConversationId(body: ToolRequestBody, _callerPhone: string | null): string {
-  const threadId = verifyThreadKey((body as { thread_key?: unknown }).thread_key);
-  if (threadId) return threadSessionId(threadId);
+export function resolveConversationId(body: ToolRequestBody, _callerPhone?: string | null): string {
+  const thread = readThreadKey((body as { thread_key?: unknown }).thread_key);
+  if (thread) return threadSessionId(thread.threadId);
   const raw = String(body.conversation_id ?? "").trim();
-  if (raw && raw.length <= 128 && /^[A-Za-z0-9_:-]+$/.test(raw) && !raw.startsWith("thread:")) return raw;
+  if (raw && raw.length <= 128 && /^[A-Za-z0-9_:-]+$/.test(raw) && !raw.startsWith("thread:"))
+    return raw;
   return `ephemeral:${randomUUID()}`;
+}
+
+/**
+ * Kontakt potwierdzony przez KANAŁ, nie przez rozmówcę:
+ *  * `body.phone` — zmienna systemowa `system__caller_id` (model jej nie
+ *    ustawia, klient widgetu też nie: prefiks `system__` jest zastrzeżony);
+ *  * nadawca zapisany w podpisanym kluczu wątku (SMS / e-mail).
+ * `args.phone` / `args.email` NIGDY tu nie trafiają — to tylko deklaracje.
+ * Caller-id da się podrobić w sieci PSTN, więc ten kontakt wskazuje
+ * KANDYDATA i wystarcza do danych leada, ale nie do akt sprawy ani konta
+ * inwestora (tam numer umowy z nazwiskiem albo kod SMS).
+ */
+export async function resolveTrustedContact(
+  body: ToolRequestBody,
+): Promise<{ phone: string | null; email: string | null; source: "caller_id" | "thread" | null }> {
+  const callerId = await normalizePhone(body?.phone);
+  if (callerId) return { phone: callerId, email: null, source: "caller_id" };
+  const thread = readThreadKey((body as { thread_key?: unknown })?.thread_key);
+  if (thread && (thread.phone || thread.email)) {
+    return {
+      phone: await normalizePhone(thread.phone),
+      email: normalizeEmail(thread.email),
+      source: "thread",
+    };
+  }
+  return { phone: null, email: null, source: null };
 }
 
 export async function normalizePhone(raw: unknown): Promise<string | null> {
@@ -105,7 +126,11 @@ export function normalizeEmail(raw: unknown): string | null {
 
 // ── Sesja rozmowy ────────────────────────────────────────────────────────────
 
-const EMPTY_SESSION = (conversationId: string, agentKey: AgentKey, channel: string): ToolSession => ({
+const EMPTY_SESSION = (
+  conversationId: string,
+  agentKey: AgentKey,
+  channel: string,
+): ToolSession => ({
   conversation_id: conversationId,
   agent_key: agentKey,
   channel,
@@ -139,24 +164,61 @@ export async function loadSession(
     const fresh = EMPTY_SESSION(conversationId, agentKey, channel);
     // Zapis „best effort” — brak tabeli (migracja nie zastosowana) nie może
     // zatrzymać rozmowy; wtedy sesja żyje tylko w pamięci tego wywołania.
-    await s.from("agent_tool_sessions").insert(fresh).then(
-      () => undefined,
-      () => undefined,
-    );
+    await s
+      .from("agent_tool_sessions")
+      .insert(fresh)
+      .then(
+        () => undefined,
+        () => undefined,
+      );
     return fresh;
   }
   // Sesja należy do rozmowy; agent_key może się zmienić po transferze
   // (recepcja → windykacja), ale weryfikacja tożsamości NIE przechodzi na
   // inny podmiot — zostaje przy tym samym conversation_id.
-  return {
+  const session = {
     ...EMPTY_SESSION(conversationId, agentKey, channel),
     ...(data as Partial<ToolSession>),
     agent_key: agentKey,
     needs: (data as any).needs ?? {},
   } as ToolSession;
+  return expireIdentity(session, new Date());
 }
 
-export async function saveSession(patch: Partial<ToolSession> & { conversation_id: string }): Promise<void> {
+/** Ważność potwierdzonej tożsamości: rozmowa telefoniczna vs wątek tekstowy. */
+export const IDENTITY_TTL_MINUTES = { call: 120, thread: 12 * 60 } as const;
+
+/**
+ * Potwierdzenie tożsamości wygasa. W wątku tekstowym (Messenger, SMS, czat)
+ * rozmowa ciągnie się dniami, a urządzenie może trafić w inne ręce — po
+ * czasie ważności rozmówca potwierdza się od nowa, a podmiot sesji wraca
+ * do stanu „nieznany” (kandydatów wyznaczy ponownie identify_caller).
+ */
+export function expireIdentity(session: ToolSession, now: Date): ToolSession {
+  if (!session.identity_verified) return session;
+  const ttl = session.conversation_id.startsWith("thread:")
+    ? IDENTITY_TTL_MINUTES.thread
+    : IDENTITY_TTL_MINUTES.call;
+  const at = Date.parse(String(session.identity_verified_at ?? ""));
+  if (Number.isFinite(at) && now.getTime() - at <= ttl * 60_000) return session;
+  return {
+    ...session,
+    identity_verified: false,
+    identity_method: null,
+    identity_verified_at: null,
+    identity_attempts: 0,
+    subject_kind: "unknown",
+    subject_id: null,
+    lead_id: null,
+    case_id: null,
+    loan_id: null,
+    investor_user_id: null,
+  };
+}
+
+export async function saveSession(
+  patch: Partial<ToolSession> & { conversation_id: string },
+): Promise<void> {
   const s = await admin();
   await s
     .from("agent_tool_sessions")
@@ -175,29 +237,98 @@ export async function saveSession(patch: Partial<ToolSession> & { conversation_i
 export async function markIdentityVerified(
   session: ToolSession,
   method: string,
-  subject: { kind: SubjectKind; id: string | null; lead_id?: string | null; case_id?: string | null; loan_id?: string | null; investor_user_id?: string | null },
+  subject: {
+    kind: SubjectKind;
+    id: string | null;
+    lead_id?: string | null;
+    case_id?: string | null;
+    loan_id?: string | null;
+    investor_user_id?: string | null;
+  },
 ): Promise<ToolSession> {
   const next: ToolSession = {
     ...session,
     identity_verified: true,
     identity_method: method,
     identity_verified_at: new Date().toISOString(),
+    // Podmiot w CAŁOŚCI z dowodu. Żadne pole nie zostaje z kandydata sesji:
+    // inaczej weryfikacja „jako ja” zostawiałaby sprawę / konto kogoś, kogo
+    // identify_caller podsunął wcześniej (np. po cudzym e-mailu).
     subject_kind: subject.kind,
     subject_id: subject.id,
-    lead_id: subject.lead_id ?? session.lead_id,
-    case_id: subject.case_id ?? session.case_id,
-    loan_id: subject.loan_id ?? session.loan_id,
-    investor_user_id: subject.investor_user_id ?? session.investor_user_id,
+    lead_id: subject.lead_id ?? null,
+    case_id: subject.case_id ?? null,
+    loan_id: subject.loan_id ?? null,
+    investor_user_id: subject.investor_user_id ?? null,
+    otp_hash: null,
+    otp_expires_at: null,
+    otp_attempts: 0,
+    otp_subject: null,
   };
   await saveSession(next);
   return next;
+}
+
+/** Metody, które otwierają akta sprawy i konto inwestora (nie tylko dane leada). */
+export const STRONG_IDENTITY_METHODS: readonly string[] = ["contract_number", "otp_sms"];
+
+export function hasStrongIdentity(session: ToolSession): boolean {
+  return (
+    session.identity_verified &&
+    STRONG_IDENTITY_METHODS.includes(String(session.identity_method ?? ""))
+  );
+}
+
+// ── Blokada prób per podmiot ─────────────────────────────────────────────────
+// Limit 3 prób dotyczy jednej rozmowy; nowa rozmowa zaczyna od zera. Dlatego
+// nieudane dowody wobec KONKRETNEGO podmiotu (umowa się zgadza, nazwisko nie;
+// zły kod SMS) liczymy także per podmiot, niezależnie od rozmowy.
+
+export const SUBJECT_FAILURE_LIMIT = 5;
+export const SUBJECT_FAILURE_WINDOW_HOURS = 24;
+
+export async function recordIdentityFailure(
+  subjectRef: string,
+  conversationId: string,
+  reason: string,
+): Promise<void> {
+  const s = await admin();
+  await s
+    .from("agent_identity_failures")
+    .insert({
+      subject_ref: subjectRef,
+      conversation_id: conversationId,
+      reason: reason.slice(0, 64),
+    })
+    .then(
+      () => undefined,
+      (e: unknown) => console.error("[agent-tools] identity failure insert", (e as any)?.message),
+    );
+}
+
+export async function subjectLocked(subjectRef: string): Promise<boolean> {
+  const s = await admin();
+  const since = new Date(Date.now() - SUBJECT_FAILURE_WINDOW_HOURS * 3_600_000).toISOString();
+  const { count, error } = await s
+    .from("agent_identity_failures")
+    .select("id", { count: "exact", head: true })
+    .eq("subject_ref", subjectRef)
+    .gte("created_at", since);
+  if (error) {
+    console.warn("[agent-tools] identity failure counter unavailable:", error.message);
+    return false;
+  }
+  return (count ?? 0) >= SUBJECT_FAILURE_LIMIT;
 }
 
 export const MAX_IDENTITY_ATTEMPTS = 3;
 
 export async function bumpIdentityAttempt(session: ToolSession): Promise<ToolSession> {
   const next = { ...session, identity_attempts: session.identity_attempts + 1 };
-  await saveSession({ conversation_id: session.conversation_id, identity_attempts: next.identity_attempts });
+  await saveSession({
+    conversation_id: session.conversation_id,
+    identity_attempts: next.identity_attempts,
+  });
   return next;
 }
 
@@ -240,15 +371,60 @@ export const DENY_KEY_PATTERNS: readonly RegExp[] = [
   /^metadata$/i, // surowe blobs mogą nieść cokolwiek — handler wyciąga pola jawnie
 ];
 
+/** Suma kontrolna PESEL — maskujemy tylko prawdziwe numery, nie każde 11 cyfr. */
+export function isValidPesel(digits: string): boolean {
+  if (!/^\d{11}$/.test(digits)) return false;
+  const w = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
+  const sum = w.reduce((acc, wi, i) => acc + wi * Number(digits[i]), 0);
+  return (10 - (sum % 10)) % 10 === Number(digits[10]);
+}
+
+/** Suma kontrolna NIP. */
+export function isValidNip(digits: string): boolean {
+  if (!/^\d{10}$/.test(digits)) return false;
+  const w = [6, 5, 7, 2, 3, 4, 5, 6, 7];
+  const sum = w.reduce((acc, wi, i) => acc + wi * Number(digits[i]), 0) % 11;
+  return sum !== 10 && sum === Number(digits[9]);
+}
+
+/** Suma kontrolna numeru dowodu osobistego (AAA + cyfra kontrolna + 5 cyfr). */
+export function isValidIdCard(raw: string): boolean {
+  const s = raw.replace(/\s/g, "").toUpperCase();
+  if (!/^[A-Z]{3}\d{6}$/.test(s)) return false;
+  const val = (c: string) => (/[A-Z]/.test(c) ? c.charCodeAt(0) - 55 : Number(c));
+  const w = [7, 3, 1, 0, 7, 3, 1, 7, 3];
+  const sum = s.split("").reduce((acc, c, i) => acc + w[i] * val(c), 0);
+  return sum % 10 === val(s[3]);
+}
+
+const digitsOf = (m: string) => m.replace(/\D/g, "");
+
 /** Wartości wyglądające jak dane wrażliwe — maskowane nawet pod niewinnym kluczem. */
 const VALUE_PATTERNS: Array<{ name: string; re: RegExp; mask: (m: string) => string }> = [
-  // PESEL: 11 cyfr
-  { name: "pesel", re: /\b\d{11}\b/g, mask: () => "[PESEL ukryty]" },
-  // Numer rachunku PL: 26 cyfr (z/bez spacji)
+  // Numer rachunku PL: 26 cyfr (z/bez spacji) — przed PESEL, bo zawiera ciągi 11 cyfr.
   {
     name: "iban",
-    re: /\b(?:PL)?\d{2}(?:[ \-]?\d{4}){6}\b/g,
+    re: /\b(?:PL)?\d{2}(?:[ -]?\d{4}){6}\b/g,
     mask: (m) => `…${m.replace(/\D/g, "").slice(-4)}`,
+  },
+  // PESEL: 11 cyfr, także ze spacjami / myślnikami, z poprawną sumą kontrolną.
+  // Nie po „+” (numer +48… to telefon, nie PESEL).
+  {
+    name: "pesel",
+    re: /(?<![+\d])\d(?:[ -]?\d){10}(?!\d)/g,
+    mask: (m) => (isValidPesel(digitsOf(m)) ? "[PESEL ukryty]" : m),
+  },
+  // NIP: 10 cyfr (123-456-78-90, 123-45-67-890, ciągiem), z sumą kontrolną.
+  {
+    name: "nip",
+    re: /(?<![+\d])\d{3}[ -]?\d{2,3}[ -]?\d{2}[ -]?\d{2,3}(?!\d)/g,
+    mask: (m) => (digitsOf(m).length === 10 && isValidNip(digitsOf(m)) ? "[NIP ukryty]" : m),
+  },
+  // Dowód osobisty: AAA 123456 z sumą kontrolną.
+  {
+    name: "dowod",
+    re: /\b[A-Za-z]{3}[ ]?\d{6}\b/g,
+    mask: (m) => (isValidIdCard(m) ? "[numer dowodu ukryty]" : m),
   },
   // Karta płatnicza 13–19 cyfr
   { name: "card", re: /\b(?:\d[ -]?){13,19}\b/g, mask: () => "[numer karty ukryty]" },
@@ -270,8 +446,10 @@ export function redactDeep<T>(value: T, allow: readonly string[] = [], trail: st
     if (typeof v === "string") {
       let out = v;
       for (const p of VALUE_PATTERNS) {
-        if (p.re.test(out)) {
-          out = out.replace(p.re, (m) => p.mask(m));
+        p.re.lastIndex = 0;
+        const next = out.replace(p.re, (m) => p.mask(m));
+        if (next !== out) {
+          out = next;
           trail.push(`${p.name}@${path || "$"}`);
         }
         p.re.lastIndex = 0;
@@ -288,7 +466,9 @@ export function redactDeep<T>(value: T, allow: readonly string[] = [], trail: st
         trail.push(`key:${k}@${path || "$"}`);
         continue;
       }
-      out[k] = walk(val, path ? `${path}.${k}` : k);
+      // Klucz przepuszczony wprost (np. rachunek_splaty z umowy) nie przechodzi
+      // też maskowania wartości — inaczej numer rachunku zamieniałby się w „…1234”.
+      out[k] = allow.includes(k) ? val : walk(val, path ? `${path}.${k}` : k);
     }
     return out;
   };

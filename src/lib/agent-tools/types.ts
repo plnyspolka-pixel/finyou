@@ -43,9 +43,24 @@ export interface ToolSession {
   identity_method: string | null;
   identity_verified_at: string | null;
   identity_attempts: number;
+  /** Kod jednorazowy (SMS na numer z akt): skrót HMAC, ważność, próby, podmiot. */
+  otp_hash?: string | null;
+  otp_expires_at?: string | null;
+  otp_attempts?: number;
+  otp_subject?: OtpSubject | null;
   recording_consent: boolean | null;
   do_not_contact: boolean;
   needs: Record<string, unknown>;
+}
+
+/** Podmiot, do którego wysłano kod — weryfikacja kodem potwierdza właśnie jego. */
+export interface OtpSubject {
+  kind: SubjectKind;
+  id: string;
+  lead_id?: string | null;
+  case_id?: string | null;
+  loan_id?: string | null;
+  investor_user_id?: string | null;
 }
 
 /** Surowe body z webhooka ElevenLabs. Wszystko opcjonalne, nic nie zaufane. */
@@ -70,7 +85,11 @@ export interface ToolContext {
   body: ToolRequestBody;
   args: Record<string, unknown>;
   session: ToolSession;
-  /** Telefon z caller-id / zmiennych dynamicznych, znormalizowany (E.164) albo null. */
+  /**
+   * Kontakt POTWIERDZONY przez kanał (caller-id rozmowy albo nadawca z
+   * podpisanego klucza wątku), znormalizowany. Nigdy z `args` — to, co
+   * rozmówca powiedział lub napisał, jest tylko deklaracją.
+   */
   callerPhone: string | null;
   callerEmail: string | null;
   now: Date;

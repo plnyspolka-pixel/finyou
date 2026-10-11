@@ -174,7 +174,9 @@ let convSeq = 0;
 /** Unikalny, poprawny (A-Za-z0-9_:-) identyfikator rozmowy na wywołanie testu. */
 const conv = () => `conv_reg_${++convSeq}`;
 
-function req(opts: { header?: string | null; token?: string; body?: unknown; raw?: string } = {}): Request {
+function req(
+  opts: { header?: string | null; token?: string; body?: unknown; raw?: string } = {},
+): Request {
   const headers: Record<string, string> = { "content-type": "application/json" };
   const header = opts.header === undefined ? SECRET : opts.header;
   if (header) headers["x-agent-tools-secret"] = header;
@@ -209,15 +211,27 @@ afterEach(() => {
 
 describe("dispatchTool — bramki", () => {
   it("nieznane narzędzie → 400 i wpis w audycie", async () => {
-    const out = await dispatchTool(req(), { tool: "nie_ma_takiego", agent_key: "recepcja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "nie_ma_takiego",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(400);
     expect(out.body.ok).toBe(false);
     expect(out.body.error).toContain("Nieznane narzędzie");
-    expect(lastCall()).toMatchObject({ tool: "nie_ma_takiego", decision: "denied", reason: "unknown_tool" });
+    expect(lastCall()).toMatchObject({
+      tool: "nie_ma_takiego",
+      decision: "denied",
+      reason: "unknown_tool",
+    });
   });
 
   it("prefiks fy_ jest zdejmowany — fy_test_read trafia do test_read", async () => {
-    const out = await dispatchTool(req(), { tool: "fy_test_read", agent_key: "recepcja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "fy_test_read",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(200);
     expect(handled.test_read).toBe(1);
   });
@@ -251,7 +265,11 @@ describe("dispatchTool — bramki", () => {
 
   it("sekret nieskonfigurowany na serwerze → 401 nawet z nagłówkiem (fail-closed)", async () => {
     delete process.env.AGENT_TOOLS_SECRET;
-    const out = await dispatchTool(req(), { tool: "test_read", agent_key: "recepcja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_read",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(401);
     expect(calls()).toHaveLength(0);
     expect(handled.test_read).toBeUndefined();
@@ -265,9 +283,17 @@ describe("dispatchTool — bramki", () => {
     });
     expect(out.status).toBe(401);
     expect(handled.test_write).toBeUndefined();
-    expect(lastCall()).toMatchObject({ tool: "test_write", decision: "denied", reason: "missing_secret" });
+    expect(lastCall()).toMatchObject({
+      tool: "test_write",
+      decision: "denied",
+      reason: "missing_secret",
+    });
 
-    const viaHeader = await dispatchTool(req(), { tool: "test_write", agent_key: "intake", conversation_id: conv() });
+    const viaHeader = await dispatchTool(req(), {
+      tool: "test_write",
+      agent_key: "intake",
+      conversation_id: conv(),
+    });
     expect(viaHeader.status).toBe(200);
     expect(handled.test_write).toBe(1);
   });
@@ -297,27 +323,47 @@ describe("dispatchTool — bramki", () => {
     expect(out.status).toBe(403);
     expect(out.body.error).toContain("agent_key");
     expect(handled.test_read).toBeUndefined();
-    expect(lastCall()).toMatchObject({ agent_key: "unknown", decision: "denied", reason: "unknown_agent" });
+    expect(lastCall()).toMatchObject({
+      agent_key: "unknown",
+      decision: "denied",
+      reason: "unknown_agent",
+    });
   });
 
   it("nieznany agent_key traktowany jak brak → 403", async () => {
-    const out = await dispatchTool(req(), { tool: "test_write", agent_key: "admin", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_write",
+      agent_key: "admin",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(403);
     expect(lastCall()).toMatchObject({ reason: "unknown_agent" });
     expect(handled.test_write).toBeUndefined();
   });
 
   it("agent spoza listy narzędzia → 403", async () => {
-    const out = await dispatchTool(req(), { tool: "test_read", agent_key: "windykacja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_read",
+      agent_key: "windykacja",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(403);
     expect(out.body.error).toContain("windykacja");
     expect(handled.test_read).toBeUndefined();
-    expect(lastCall()).toMatchObject({ agent_key: "windykacja", decision: "denied", reason: "agent_not_allowed" });
+    expect(lastCall()).toMatchObject({
+      agent_key: "windykacja",
+      decision: "denied",
+      reason: "agent_not_allowed",
+    });
   });
 
   it("requiresIdentity przy niezweryfikowanej sesji → 403; po weryfikacji w sesji → 200", async () => {
     const id = conv();
-    const out = await dispatchTool(req(), { tool: "test_identity", agent_key: "windykacja", conversation_id: id });
+    const out = await dispatchTool(req(), {
+      tool: "test_identity",
+      agent_key: "windykacja",
+      conversation_id: id,
+    });
     expect(out.status).toBe(403);
     expect(out.body.error).toContain("verify_identity");
     expect(handled.test_identity).toBeUndefined();
@@ -325,11 +371,64 @@ describe("dispatchTool — bramki", () => {
 
     // Weryfikacja żyje w sesji rozmowy (zapisuje ją tylko handler verify_identity).
     const session = db.tables.agent_tool_sessions.find((s) => s.conversation_id === id)!;
-    Object.assign(session, { identity_verified: true, identity_method: "contract_number", case_id: "case-1" });
+    Object.assign(session, {
+      identity_verified: true,
+      identity_method: "contract_number",
+      identity_verified_at: new Date().toISOString(),
+      subject_kind: "borrower",
+      case_id: "case-1",
+    });
 
-    const ok = await dispatchTool(req(), { tool: "test_identity", agent_key: "windykacja", conversation_id: id });
+    const ok = await dispatchTool(req(), {
+      tool: "test_identity",
+      agent_key: "windykacja",
+      conversation_id: id,
+    });
     expect(ok.status).toBe(200);
     expect(ok.body.result).toEqual({ case_id: "case-1" });
+
+    // Potwierdzenie wygasa (rozmowa: 2 h) — potem znowu 403, a sprawa znika z sesji.
+    Object.assign(session, {
+      identity_verified_at: new Date(Date.now() - 3 * 3_600_000).toISOString(),
+    });
+    const expired = await dispatchTool(req(), {
+      tool: "test_identity",
+      agent_key: "windykacja",
+      conversation_id: id,
+    });
+    expect(expired.status).toBe(403);
+  });
+
+  it("numer / e-mail z args nie staje się kontaktem z kanału (callerPhone / callerEmail)", async () => {
+    let seen: { phone: string | null; email: string | null } | null = null;
+    registerTools([
+      {
+        name: "test_contact",
+        agents: ["recepcja"],
+        requiresIdentity: false,
+        writes: false,
+        rateLimit: { perConversation: 5, windowMinutes: 10 },
+        description: "",
+        handler: async (ctx) => {
+          seen = { phone: ctx.callerPhone, email: ctx.callerEmail };
+          return { ok: true, result: {} };
+        },
+      },
+    ]);
+    await dispatchTool(req(), {
+      tool: "test_contact",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+      args: { phone: "+48600100200", email: "x@y.pl" },
+    });
+    expect(seen).toEqual({ phone: null, email: null });
+    await dispatchTool(req(), {
+      tool: "test_contact",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+      phone: "+48600100200",
+    });
+    expect(seen).toEqual({ phone: "+48600100200", email: null });
   });
 
   it("twierdzenia z body nie zastępują sesji — case_id z body nie odblokowuje danych", async () => {
@@ -371,7 +470,11 @@ describe("dispatchTool — bramki", () => {
 describe("dispatchTool — wynik i błędy", () => {
   it("redakcja: klucz pesel i iban usunięte, PESEL w tekście zamaskowany", async () => {
     readResult = { pesel: PESEL, note: `PESEL ${PESEL}`, iban: IBAN, ok: "x" };
-    const out = await dispatchTool(req(), { tool: "test_read", agent_key: "recepcja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_read",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(200);
     const result = out.body.result as Row;
     expect(result).not.toHaveProperty("pesel");
@@ -385,12 +488,18 @@ describe("dispatchTool — wynik i błędy", () => {
 
     const row = lastCall();
     expect(row.decision).toBe("ok");
-    expect(row.redactions).toEqual(expect.arrayContaining(["key:pesel@$", "pesel@note", "key:iban@$"]));
+    expect(row.redactions).toEqual(
+      expect.arrayContaining(["key:pesel@$", "pesel@note", "key:iban@$"]),
+    );
   });
 
   it("redakcja: numer rachunku pod niewinnym kluczem maskowany do ostatnich 4 cyfr", async () => {
     readResult = { opis: `Wpłać na ${IBAN}`, lista: [{ konto: IBAN }] };
-    const out = await dispatchTool(req(), { tool: "test_read", agent_key: "recepcja", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_read",
+      agent_key: "recepcja",
+      conversation_id: conv(),
+    });
     const result = out.body.result as Row;
     expect(result.opis).toBe("Wpłać na …2874");
     expect(result.lista[0].konto).toBe("…2874");
@@ -399,7 +508,11 @@ describe("dispatchTool — wynik i błędy", () => {
 
   it("handler rzuca → 500 z ogólnym komunikatem po polsku, bez treści wyjątku", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const out = await dispatchTool(req(), { tool: "test_boom", agent_key: "intake", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_boom",
+      agent_key: "intake",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(500);
     expect(out.body).toEqual({
       ok: false,
@@ -412,10 +525,17 @@ describe("dispatchTool — wynik i błędy", () => {
   });
 
   it("odmowa merytoryczna handlera → status handlera i wpis denied", async () => {
-    const out = await dispatchTool(req(), { tool: "test_refuse", agent_key: "intake", conversation_id: conv() });
+    const out = await dispatchTool(req(), {
+      tool: "test_refuse",
+      agent_key: "intake",
+      conversation_id: conv(),
+    });
     expect(out.status).toBe(404);
     expect(out.body).toEqual({ ok: false, error: "Brak sprawy dla tego rozmówcy." });
-    expect(lastCall()).toMatchObject({ decision: "denied", reason: "Brak sprawy dla tego rozmówcy." });
+    expect(lastCall()).toMatchObject({
+      decision: "denied",
+      reason: "Brak sprawy dla tego rozmówcy.",
+    });
   });
 
   it("każda decyzja uwierzytelnionego żądania zostawia wiersz w agent_tool_calls; odmowy i błędy także w automation_events", async () => {
@@ -426,7 +546,16 @@ describe("dispatchTool — wynik i błędy", () => {
       [req(), { tool: "test_read", conversation_id: id }, 403],
       [req(), { tool: "test_read", agent_key: "windykacja", conversation_id: id }, 403],
       [req(), { tool: "test_identity", agent_key: "windykacja", conversation_id: id }, 403],
-      [req(), { tool: "test_read", agent_key: "recepcja", conversation_id: id, args: { pesel: PESEL, kwota: 5 } }, 200],
+      [
+        req(),
+        {
+          tool: "test_read",
+          agent_key: "recepcja",
+          conversation_id: id,
+          args: { pesel: PESEL, kwota: 5 },
+        },
+        200,
+      ],
       [req(), { tool: "test_read", agent_key: "recepcja", conversation_id: id }, 200],
       [req(), { tool: "test_read", agent_key: "recepcja", conversation_id: id }, 429],
       [req(), { tool: "test_boom", agent_key: "recepcja", conversation_id: id }, 500],
@@ -461,7 +590,9 @@ describe("dispatchTool — wynik i błędy", () => {
 
 // ── Trasa publiczna: dwie ścieżki ────────────────────────────────────────────
 
-const POST = (Route as any).options.server.handlers.POST as (a: { request: Request }) => Promise<Response>;
+const POST = (Route as any).options.server.handlers.POST as (a: {
+  request: Request;
+}) => Promise<Response>;
 
 async function post(r: Request): Promise<{ status: number; body: any }> {
   const res = await POST({ request: r });
@@ -470,7 +601,12 @@ async function post(r: Request): Promise<{ status: number; body: any }> {
 
 describe("POST /api/public/agent-tools", () => {
   it("nowe narzędzie bez sekretu → 401 z rejestru, handler nietknięty", async () => {
-    const out = await post(req({ header: null, body: { tool: "test_write", agent_key: "intake", conversation_id: conv() } }));
+    const out = await post(
+      req({
+        header: null,
+        body: { tool: "test_write", agent_key: "intake", conversation_id: conv() },
+      }),
+    );
     expect(out.status).toBe(401);
     expect(out.body).toEqual({ ok: false, error: "unauthorized" });
     expect(handled.test_write).toBeUndefined();
@@ -489,7 +625,9 @@ describe("POST /api/public/agent-tools", () => {
 
   it("wynik przez trasę też jest zredagowany", async () => {
     readResult = { pesel: PESEL, note: `PESEL ${PESEL}`, iban: IBAN, ok: "x" };
-    const out = await post(req({ body: { tool: "test_read", agent_key: "recepcja", conversation_id: conv() } }));
+    const out = await post(
+      req({ body: { tool: "test_read", agent_key: "recepcja", conversation_id: conv() } }),
+    );
     expect(out.status).toBe(200);
     expect(out.body.result).toEqual({ note: "PESEL [PESEL ukryty]", ok: "x" });
   });
@@ -501,7 +639,9 @@ describe("POST /api/public/agent-tools", () => {
   });
 
   it("narzędzie legacy z ?token= idzie starą ścieżką (bez rejestru i audytu)", async () => {
-    const out = await post(req({ header: null, token: SECRET, body: { tool: "get_application_status" } }));
+    const out = await post(
+      req({ header: null, token: SECRET, body: { tool: "get_application_status" } }),
+    );
     expect(out.status).toBe(200);
     expect(out.body).toEqual({ ok: true, result: { has_application: false } });
     expect(calls()).toHaveLength(0);
@@ -516,7 +656,11 @@ describe("POST /api/public/agent-tools", () => {
 
   it("agent_key przy nazwie legacy kieruje do rejestru — brak zejścia do ?token=", async () => {
     const out = await post(
-      req({ header: null, token: SECRET, body: { tool: "update_lead_data", agent_key: "intake", lead_id: "cudzy" } }),
+      req({
+        header: null,
+        token: SECRET,
+        body: { tool: "update_lead_data", agent_key: "intake", lead_id: "cudzy" },
+      }),
     );
     expect(out.status).toBe(400);
     expect(out.body.error).toContain("Nieznane narzędzie");
@@ -568,7 +712,11 @@ describe("ensureToolsLoaded — zimny start", () => {
       const fresh = await import("./registry.server");
       const outs = await Promise.all(
         [conv(), conv(), conv()].map((id) =>
-          fresh.dispatchTool(req(), { tool: "slow_tool", agent_key: "recepcja", conversation_id: id }),
+          fresh.dispatchTool(req(), {
+            tool: "slow_tool",
+            agent_key: "recepcja",
+            conversation_id: id,
+          }),
         ),
       );
       expect(outs.map((o) => o.status)).toEqual([200, 200, 200]);

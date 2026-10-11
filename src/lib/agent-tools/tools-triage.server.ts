@@ -6,29 +6,42 @@
 // z recepcji (ta sama rozmowa, inny agent).
 //
 // Zasady (docs/boty-elevenlabs.md, docs/windykacja-agent-glosowy.md):
-//  * `identify_caller` zwraca WYŁĄCZNIE profil niewrażliwy: role, imię, czy
-//    jest otwarty wniosek / sprawa. Żadnych kwot, numerów umów ani danych
-//    sprawy przed potwierdzeniem tożsamości. Kandydatów podmiotu zapisuje
-//    do sesji, ale NIE podnosi `identity_verified`.
-//  * `verify_identity` to dowód sprawdzany W KODZIE (numer umowy, telefon +
-//    nazwisko, e-mail + nazwisko) — model niczego nie „uznaje”. PESEL nie
-//    jest metodą: nie chcemy, by padał na nagrywanej linii.
+//  * `identify_caller` patrzy WYŁĄCZNIE na kontakt z kanału (caller-id,
+//    nadawca z podpisanego wątku) — numeru czy e-maila, który rozmówca
+//    tylko podał, nie sprawdza w bazie (inaczej każdy mógłby pytać „czyj to
+//    numer i czy ma długi”). Zwraca trasę bez danych osobowych; kandydata
+//    podmiotu zapisuje do sesji, ale NIE podnosi `identity_verified`.
+//  * `verify_identity` to dowód sprawdzany W KODZIE — model niczego nie
+//    „uznaje”. Akta sprawy i konto inwestora otwiera tylko SILNY dowód:
+//    numer umowy RAZEM z imieniem i nazwiskiem pożyczkobiorcy albo kod SMS
+//    wysłany na numer zapisany w aktach (`send_verification_code`). Kontakt
+//    z kanału + nazwisko wystarcza tylko do danych leada / klienta (caller-id
+//    da się podrobić, a nazwa firmy jest jawna w KRS). PESEL nie jest
+//    metodą: nie chcemy, by padał na nagrywanej linii.
 //  * Każdy tekst, który agent ma wypowiedzieć, leży pod kluczem `say`
 //    i jest po polsku; odmowa nie zdradza, KTÓRA część dowodu się nie zgadza.
-import type { AgentKey, SubjectKind, ToolContext, ToolResult, ToolSession, ToolSpec } from "./types";
+import type {
+  AgentKey,
+  OtpSubject,
+  SubjectKind,
+  ToolContext,
+  ToolResult,
+  ToolSession,
+  ToolSpec,
+} from "./types";
+import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import {
   MAX_IDENTITY_ATTEMPTS,
   bumpIdentityAttempt,
   markIdentityVerified,
-  maskEmail,
   maskPhone,
-  normalizeEmail,
   normalizePhone,
+  recordIdentityFailure,
   redactDeep,
   saveSession,
+  subjectLocked,
 } from "./guard.server";
 import { describeReadable, safeLookup } from "./safe-read.server";
-import { clientLoanStatusView, isTerminalStatus } from "@/lib/loan-status";
 
 // Tabele wind_* i agent_tool_* nie są w wygenerowanym typie Database —
 // klient w trybie luźnym, jak w guard.server / safe-read.server.
@@ -83,7 +96,12 @@ interface CallerProfile {
   entitlements: Row[];
 }
 
-export type SuggestedRoute = "intake" | "inwestor_presale" | "inwestor_panel" | "windykacja" | "unknown";
+export type SuggestedRoute =
+  | "intake"
+  | "inwestor_presale"
+  | "inwestor_panel"
+  | "windykacja"
+  | "unknown";
 
 // ── Pomocnicze: tekst, nazwiska, telefony ───────────────────────────────────
 
@@ -158,7 +176,11 @@ function tokenEq(a: string, b: string): boolean {
  * jeden człon nazwiska (nazwiska dwuczłonowe, drugie imię). Firma: co najmniej
  * dwa znaczące słowa nazwy (albo wszystkie, gdy nazwa jest krótsza).
  */
-export function namesMatch(provided: unknown, stored: unknown, opts: { company?: boolean } = {}): boolean {
+export function namesMatch(
+  provided: unknown,
+  stored: unknown,
+  opts: { company?: boolean } = {},
+): boolean {
   const p = nameTokens(provided);
   const s = nameTokens(stored);
   if (!p.length || !s.length) return false;
@@ -182,7 +204,19 @@ function firstNameOf(full: unknown): string | null {
 }
 
 /** Męskie imiona kończące się na -a — wyjątki od reguły „-a ⇒ Pani”. */
-const MALE_ENDING_A = new Set(["kuba", "barnaba", "bonawentura", "jarema", "kosma", "sasza", "nikita", "ilia", "mustafa", "luka", "dyzma"]);
+const MALE_ENDING_A = new Set([
+  "kuba",
+  "barnaba",
+  "bonawentura",
+  "jarema",
+  "kosma",
+  "sasza",
+  "nikita",
+  "ilia",
+  "mustafa",
+  "luka",
+  "dyzma",
+]);
 
 export function formaOf(firstName: string | null | undefined): "Pan" | "Pani" | "brak" {
   const f = fold(firstName);
@@ -260,14 +294,20 @@ const uniqueById = (rows: Row[]): Row[] => {
 };
 
 const ids = (rows: Row[], key = "id"): string[] =>
-  Array.from(new Set(rows.map((r) => r[key]).filter((v): v is string => typeof v === "string" && v.length > 0)));
+  Array.from(
+    new Set(
+      rows.map((r) => r[key]).filter((v): v is string => typeof v === "string" && v.length > 0),
+    ),
+  );
 
 const byCreatedDesc = (a: Row, b: Row, key = "created_at") =>
   String(b[key] ?? "").localeCompare(String(a[key] ?? ""));
 
 // ── Odczyt profilu rozmówcy ──────────────────────────────────────────────────
 
-async function rows(q: PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<Row[]> {
+async function rows(
+  q: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+): Promise<Row[]> {
   const { data, error } = await q;
   // Brak tabeli / kolumny nie może zatrzymać rozmowy — logujemy, traktujemy jak pusto.
   if (error) {
@@ -280,67 +320,113 @@ async function rows(q: PromiseLike<{ data: unknown; error: { message: string } |
 /** Dopasowanie e-maila po pobraniu — `ilike` bez znaków specjalnych to równość bez wielkości liter, ale `_` w adresie jest wildcardem. */
 const emailEq = (row: Row, email: string) => String(row.email ?? "").toLowerCase() === email;
 
-async function findLeads(db: LooseAdmin, phone: string | null, email: string | null): Promise<Row[]> {
+async function findLeads(
+  db: LooseAdmin,
+  phone: string | null,
+  email: string | null,
+): Promise<Row[]> {
   const out: Row[] = [];
   if (phone) {
     out.push(
       ...(await rows(
-        db.from("leads").select(LEAD_COLS).eq("phone_normalized", phone).order("created_at", { ascending: false }).limit(5),
+        db
+          .from("leads")
+          .select(LEAD_COLS)
+          .eq("phone_normalized", phone)
+          .order("created_at", { ascending: false })
+          .limit(5),
       )),
     );
   }
   if (email) {
     const found = await rows(
-      db.from("leads").select(LEAD_COLS).ilike("email", email).order("created_at", { ascending: false }).limit(5),
+      db
+        .from("leads")
+        .select(LEAD_COLS)
+        .ilike("email", email)
+        .order("created_at", { ascending: false })
+        .limit(5),
     );
     out.push(...found.filter((r) => emailEq(r, email)));
   }
   return uniqueById(out).sort((a, b) => byCreatedDesc(a, b));
 }
 
-async function findClients(db: LooseAdmin, phone: string | null, email: string | null, extraIds: string[]): Promise<Row[]> {
+async function findClients(
+  db: LooseAdmin,
+  phone: string | null,
+  email: string | null,
+  extraIds: string[],
+): Promise<Row[]> {
   const out: Row[] = [];
-  if (phone) out.push(...(await rows(db.from("clients").select(CLIENT_COLS).eq("phone_normalized", phone).limit(5))));
+  if (phone)
+    out.push(
+      ...(await rows(
+        db.from("clients").select(CLIENT_COLS).eq("phone_normalized", phone).limit(5),
+      )),
+    );
   if (email) {
     const found = await rows(db.from("clients").select(CLIENT_COLS).ilike("email", email).limit(5));
     out.push(...found.filter((r) => emailEq(r, email)));
   }
   // Klient leada (lead ma client_id) mógł podać inny numer niż ten, z którego dzwoni.
   const missing = extraIds.filter((id) => !out.some((r) => r.id === id));
-  if (missing.length) out.push(...(await rows(db.from("clients").select(CLIENT_COLS).in("id", missing).limit(5))));
+  if (missing.length)
+    out.push(...(await rows(db.from("clients").select(CLIENT_COLS).in("id", missing).limit(5))));
   return uniqueById(out);
 }
 
-async function findInvestors(db: LooseAdmin, phone: string | null, email: string | null): Promise<Row[]> {
+async function findInvestors(
+  db: LooseAdmin,
+  phone: string | null,
+  email: string | null,
+): Promise<Row[]> {
   const out: Row[] = [];
   if (phone) {
-    const found = await rows(db.from("investors").select(INVESTOR_COLS).in("phone", phoneVariants(phone)).limit(5));
+    const found = await rows(
+      db.from("investors").select(INVESTOR_COLS).in("phone", phoneVariants(phone)).limit(5),
+    );
     out.push(...found.filter((r) => samePhone(r.phone, phone)));
   }
   if (email) {
-    const found = await rows(db.from("investors").select(INVESTOR_COLS).ilike("email", email).limit(5));
+    const found = await rows(
+      db.from("investors").select(INVESTOR_COLS).ilike("email", email).limit(5),
+    );
     out.push(...found.filter((r) => emailEq(r, email)));
   }
   return uniqueById(out);
 }
 
-async function findBorrowers(db: LooseAdmin, phone: string | null, email: string | null): Promise<Row[]> {
+async function findBorrowers(
+  db: LooseAdmin,
+  phone: string | null,
+  email: string | null,
+): Promise<Row[]> {
   const out: Row[] = [];
   if (phone) {
-    const found = await rows(db.from("wind_borrowers").select(BORROWER_COLS).in("telefon", phoneVariants(phone)).limit(10));
+    const found = await rows(
+      db.from("wind_borrowers").select(BORROWER_COLS).in("telefon", phoneVariants(phone)).limit(10),
+    );
     out.push(...found.filter((r) => samePhone(r.telefon, phone)));
   }
   if (email) {
-    const found = await rows(db.from("wind_borrowers").select(BORROWER_COLS).ilike("email", email).limit(10));
+    const found = await rows(
+      db.from("wind_borrowers").select(BORROWER_COLS).ilike("email", email).limit(10),
+    );
     out.push(...found.filter((r) => emailEq(r, email)));
   }
   return uniqueById(out);
 }
 
 /** Pożyczki pożyczkobiorców + ich OTWARTE sprawy (data_zamkniecia IS NULL). */
-async function loansAndOpenCases(db: LooseAdmin, borrowerIds: string[]): Promise<{ loans: Row[]; openCases: Row[] }> {
+async function loansAndOpenCases(
+  db: LooseAdmin,
+  borrowerIds: string[],
+): Promise<{ loans: Row[]; openCases: Row[] }> {
   if (!borrowerIds.length) return { loans: [], openCases: [] };
-  const loans = await rows(db.from("wind_loans").select(LOAN_COLS).in("borrower_id", borrowerIds).limit(20));
+  const loans = await rows(
+    db.from("wind_loans").select(LOAN_COLS).in("borrower_id", borrowerIds).limit(20),
+  );
   const loanIds = ids(loans);
   if (!loanIds.length) return { loans, openCases: [] };
   const openCases = await rows(
@@ -355,23 +441,42 @@ async function loansAndOpenCases(db: LooseAdmin, borrowerIds: string[]): Promise
   return { loans, openCases };
 }
 
-async function findApplications(db: LooseAdmin, clientIds: string[], appIds: string[]): Promise<Row[]> {
+async function findApplications(
+  db: LooseAdmin,
+  clientIds: string[],
+  appIds: string[],
+): Promise<Row[]> {
   const out: Row[] = [];
   if (clientIds.length) {
     out.push(
       ...(await rows(
-        db.from("loan_applications").select(APP_COLS).in("client_id", clientIds).order("created_at", { ascending: false }).limit(5),
+        db
+          .from("loan_applications")
+          .select(APP_COLS)
+          .in("client_id", clientIds)
+          .order("created_at", { ascending: false })
+          .limit(5),
       )),
     );
   }
   const missing = appIds.filter((id) => !out.some((r) => r.id === id));
-  if (missing.length) out.push(...(await rows(db.from("loan_applications").select(APP_COLS).in("id", missing).limit(5))));
+  if (missing.length)
+    out.push(
+      ...(await rows(db.from("loan_applications").select(APP_COLS).in("id", missing).limit(5))),
+    );
   return uniqueById(out).sort((a, b) => byCreatedDesc(a, b));
 }
 
 async function findEntitlements(db: LooseAdmin, userIds: string[]): Promise<Row[]> {
   if (!userIds.length) return [];
-  return rows(db.from("access_entitlements").select(ENTITLEMENT_COLS).in("user_id", userIds).eq("audience", "investor").limit(10));
+  return rows(
+    db
+      .from("access_entitlements")
+      .select(ENTITLEMENT_COLS)
+      .in("user_id", userIds)
+      .eq("audience", "investor")
+      .limit(10),
+  );
 }
 
 /** Jeden przebieg po wszystkich źródłach — używany przez identify_caller i verify_identity. */
@@ -413,7 +518,11 @@ function investorSubscriptionActive(p: CallerProfile, now: Date): boolean {
   };
   const fromInvestors = p.investors.some((inv) => {
     const st = String(inv.subscription_status ?? "");
-    return (st === "aktywny" || st === "probny") && inv.is_active !== false && notExpired(inv.subscription_active_until);
+    return (
+      (st === "aktywny" || st === "probny") &&
+      inv.is_active !== false &&
+      notExpired(inv.subscription_active_until)
+    );
   });
   // Dostęp kupiony przez Tpay (access_entitlements) jest nowszym źródłem prawdy niż kolumny w investors.
   const fromEntitlements = p.entitlements.some((e) => {
@@ -440,20 +549,37 @@ function borrowersWithOpenCase(p: CallerProfile): Array<{ borrower: Row; loan: R
  * Intencja z rozmowy (args.intent) → trasa. Przyjmujemy klucze z promptu
  * recepcji (1–6 / nazwy) oraz swobodny tekst po polsku.
  */
-function routeFromIntent(intent: unknown, isInvestor: boolean, investorActive: boolean): SuggestedRoute | null {
+function routeFromIntent(
+  intent: unknown,
+  isInvestor: boolean,
+  investorActive: boolean,
+): SuggestedRoute | null {
   const s = fold(intent);
   if (!s) return null;
-  const investorRoute: SuggestedRoute = isInvestor && investorActive ? "inwestor_panel" : "inwestor_presale";
-  if (/^(5|inwestor_windykacja|inwestor_panel|panel)$/.test(s) || (/inwest/.test(s) && /windyk|sprawa|panel|zalegl/.test(s))) {
+  const investorRoute: SuggestedRoute =
+    isInvestor && investorActive ? "inwestor_panel" : "inwestor_presale";
+  if (
+    /^(5|inwestor_windykacja|inwestor_panel|panel)$/.test(s) ||
+    (/inwest/.test(s) && /windyk|sprawa|panel|zalegl/.test(s))
+  ) {
     return isInvestor ? "inwestor_panel" : investorRoute;
   }
-  if (/^(4|zaleglosc|windykacja|pozyczkobiorca)$/.test(s) || /zaleg|windyk|wezwan|splat|komorni|opozni|monit/.test(s)) {
+  if (
+    /^(4|zaleglosc|windykacja|pozyczkobiorca)$/.test(s) ||
+    /zaleg|windyk|wezwan|splat|komorni|opozni|monit/.test(s)
+  ) {
     return "windykacja";
   }
-  if (/^(2|inwestor|inwestycja)$/.test(s) || /inwest|kapita|lokow|zainwest|abonament|subskryp/.test(s)) {
+  if (
+    /^(2|inwestor|inwestycja)$/.test(s) ||
+    /inwest|kapita|lokow|zainwest|abonament|subskryp/.test(s)
+  ) {
     return investorRoute;
   }
-  if (/^(1|3|pozyczka|finansowanie|status_wniosku|wniosek|intake)$/.test(s) || /pozycz|finans|kredyt|wniosek|status|brak|dokument|hipotek/.test(s)) {
+  if (
+    /^(1|3|pozyczka|finansowanie|status_wniosku|wniosek|intake)$/.test(s) ||
+    /pozycz|finans|kredyt|wniosek|status|brak|dokument|hipotek/.test(s)
+  ) {
     return "intake";
   }
   if (/^(6|inne|reklamacja|media|dostawca|pomylka)$/.test(s)) return "unknown";
@@ -480,23 +606,45 @@ function decideRoute(p: CallerProfile, intent: unknown, now: Date): RouteDecisio
   if (openCase) {
     return {
       route: "windykacja",
-      reason: "Numer rozmówcy jest przypisany do pożyczkobiorcy z otwartą sprawą windykacyjną — najpierw tożsamość, potem sprawa.",
+      reason:
+        "Kontakt z kanału jest powiązany z umową pożyczki — najpierw potwierdzenie tożsamości, potem sprawa.",
       alternatives,
     };
   }
   const fromIntent = routeFromIntent(intent, isInvestor, investorActive);
   if (fromIntent) {
-    return { route: fromIntent, reason: "Trasa według zadeklarowanej intencji rozmówcy.", alternatives };
+    return {
+      route: fromIntent,
+      reason: "Trasa według zadeklarowanej intencji rozmówcy.",
+      alternatives,
+    };
   }
   if (isInvestor) {
     return investorActive
-      ? { route: "inwestor_panel", reason: "Rozmówca ma konto inwestora z aktywnym dostępem.", alternatives }
-      : { route: "inwestor_presale", reason: "Rozmówca ma konto inwestora bez aktywnego dostępu — przedsprzedaż / odnowienie.", alternatives };
+      ? {
+          route: "inwestor_panel",
+          reason: "Kontakt z kanału jest powiązany z kontem inwestora.",
+          alternatives,
+        }
+      : {
+          route: "inwestor_presale",
+          reason:
+            "Kontakt z kanału jest powiązany z kontem inwestora — przedsprzedaż / odnowienie.",
+          alternatives,
+        };
   }
   if (hasLeadOrClient) {
-    return { route: "intake", reason: "Rozmówca jest w systemie jako klient pożyczkowy / lead.", alternatives };
+    return {
+      route: "intake",
+      reason: "Kontakt z kanału jest w systemie jako klient pożyczkowy.",
+      alternatives,
+    };
   }
-  return { route: "unknown", reason: "Numer i e-mail nieznane — zapytaj, czego dotyczy sprawa.", alternatives };
+  return {
+    route: "unknown",
+    reason: "Brak rozpoznania po kanale — zapytaj, czego dotyczy sprawa.",
+    alternatives,
+  };
 }
 
 /** Kandydat podmiotu do sesji, zgodny z trasą. Bez identity_verified. */
@@ -508,12 +656,24 @@ function candidateFor(route: SuggestedRoute, p: CallerProfile): Partial<ToolSess
     if (hit) {
       // investor_user_id w sesji to konto INWESTORA-rozmówcy, nie wierzyciela
       // sprawy — dla pożyczkobiorcy zostaje puste.
-      return { ...base, subject_kind: "borrower", subject_id: hit.borrower.id as string, case_id: hit.kase.id as string, loan_id: hit.loan.id as string };
+      return {
+        ...base,
+        subject_kind: "borrower",
+        subject_id: hit.borrower.id as string,
+        case_id: hit.kase.id as string,
+        loan_id: hit.loan.id as string,
+      };
     }
   }
   if (route === "inwestor_panel" || route === "inwestor_presale") {
     const inv = p.investors[0];
-    if (inv) return { ...base, subject_kind: "investor", subject_id: inv.id as string, investor_user_id: (inv.user_id as string) ?? null };
+    if (inv)
+      return {
+        ...base,
+        subject_kind: "investor",
+        subject_id: inv.id as string,
+        investor_user_id: (inv.user_id as string) ?? null,
+      };
   }
   const client = p.clients[0];
   if (client) return { ...base, subject_kind: "client", subject_id: client.id as string };
@@ -521,38 +681,12 @@ function candidateFor(route: SuggestedRoute, p: CallerProfile): Partial<ToolSess
   return base;
 }
 
-function firstNameForRoute(route: SuggestedRoute, p: CallerProfile): string | null {
-  const hit = borrowersWithOpenCase(p)[0];
-  if (route === "windykacja" && hit) return isCompanyBorrower(hit.borrower) ? null : firstNameOf(hit.borrower.imie_nazwisko);
-  const inv = p.investors[0];
-  if ((route === "inwestor_panel" || route === "inwestor_presale") && inv) {
-    return firstNameOf(inv.first_name) ?? firstNameOf(inv.representative_first_name);
+/** Tekst do powiedzenia po rozpoznaniu — neutralny: nie zdradza, co jest w bazie. */
+function sayForRoute(route: SuggestedRoute): string {
+  if (route === "windykacja") {
+    return "Zanim przejdę do szczegółów, muszę potwierdzić tożsamość. Proszę podać imię i nazwisko oraz numer umowy pożyczki.";
   }
-  return (
-    firstNameOf(p.clients[0]?.first_name) ??
-    firstNameOf(p.leads[0]?.first_name) ??
-    firstNameOf(inv?.first_name) ??
-    (hit && !isCompanyBorrower(hit.borrower) ? firstNameOf(hit.borrower.imie_nazwisko) : null)
-  );
-}
-
-function sayForRoute(route: SuggestedRoute, found: boolean, hasApplication: boolean): string {
-  switch (route) {
-    case "windykacja":
-      return "Zanim przejdę do szczegółów, muszę potwierdzić tożsamość rozmówcy. Proszę podać imię i nazwisko oraz numer umowy pożyczki.";
-    case "inwestor_panel":
-      return "Ten numer jest przypisany do konta inwestora. Żeby przejść do szczegółów konta, poproszę o imię i nazwisko.";
-    case "inwestor_presale":
-      return "W czym mogę pomóc? Chętnie opowiem, jak wygląda współpraca inwestorska w Finance You i dopytam, czego Pan lub Pani szuka.";
-    case "intake":
-      return hasApplication
-        ? "Ten numer mamy już w systemie. Żeby sprawdzić szczegóły wniosku, poproszę o imię i nazwisko."
-        : "Ten numer mamy w systemie. W czym mogę pomóc?";
-    default:
-      return found
-        ? "W czym mogę pomóc?"
-        : "W czym mogę pomóc? Proszę powiedzieć, czego dotyczy sprawa — pożyczki, inwestycji czy istniejącej umowy.";
-  }
+  return "W czym mogę pomóc? Proszę powiedzieć, czego dotyczy sprawa — pożyczki, inwestycji czy istniejącej umowy.";
 }
 
 const ok = (result: unknown, rowsCount?: number): ToolResult =>
@@ -561,23 +695,13 @@ const ok = (result: unknown, rowsCount?: number): ToolResult =>
 // ── identify_caller ──────────────────────────────────────────────────────────
 
 async function identifyCaller(ctx: ToolContext): Promise<ToolResult> {
-  const phone = ctx.callerPhone ?? (await normalizePhone(ctx.args.phone));
-  const email = ctx.callerEmail ?? normalizeEmail(ctx.args.email);
+  // Tylko kontakt z KANAŁU. Numer / e-mail podany w rozmowie (args) nie jest
+  // sprawdzany w bazie — to byłaby wyszukiwarka cudzych danych dla każdego.
+  const phone = ctx.callerPhone;
+  const email = ctx.callerEmail;
   const p = await resolveCaller(phone, email);
-
-  const roles: SubjectKind[] = [];
-  if (p.leads.length) roles.push("lead");
-  if (p.clients.length) roles.push("client");
-  if (p.investors.length) roles.push("investor");
-  if (p.borrowers.length) roles.push("borrower");
-  const found = roles.length > 0;
-
+  const found = p.leads.length + p.clients.length + p.investors.length + p.borrowers.length > 0;
   const decision = decideRoute(p, ctx.args.intent, ctx.now);
-  const latestApp = p.applications[0];
-  const hasOpenApplication = !!latestApp && !isTerminalStatus(String(latestApp.status ?? ""));
-  const isInvestor = p.investors.length > 0;
-  const investorActive = isInvestor && investorSubscriptionActive(p, ctx.now);
-  const hasOpenCase = borrowersWithOpenCase(p).length > 0;
 
   // Kanał rozmowy decyduje, który sprzeciw klienta ma znaczenie (RODO / UKE).
   const client = p.clients[0];
@@ -599,23 +723,22 @@ async function identifyCaller(ctx: ToolContext): Promise<ToolResult> {
     });
   }
 
+  // Wynik bez danych osobowych: ani imienia, ani ról, etapu wniosku czy
+  // informacji o sprawie — tylko trasa. Szczegóły dopiero po verify_identity.
   return ok({
-    found,
-    roles,
-    first_name: firstNameForRoute(decision.route, p),
-    has_open_application: hasOpenApplication,
-    application_stage: latestApp ? clientLoanStatusView(String(latestApp.status ?? "")).label : null,
-    is_investor: isInvestor,
-    investor_subscription_active: investorActive,
-    has_open_collection_case: hasOpenCase,
+    known_contact: found,
     suggested_route: decision.route,
     route_reason: decision.reason,
     alternatives: decision.alternatives,
     identity_verified: ctx.session.identity_verified,
     do_not_contact: doNotContact,
-    phone_hint: maskPhone(phone),
-    email_hint: maskEmail(email),
-    say: sayForRoute(decision.route, found, hasOpenApplication),
+    contact_source: phone || email ? "kanal" : "brak",
+    ...(ctx.args.phone || ctx.args.email
+      ? {
+          note: "Numer / e-mail podany w rozmowie nie jest sprawdzany w bazie — nie mów, czy go znasz.",
+        }
+      : {}),
+    say: sayForRoute(decision.route),
   });
 }
 
@@ -633,77 +756,122 @@ interface VerifiedSubject {
   company: boolean;
 }
 
-/** Kolejność sprawdzania podmiotów: najpierw kandydat z sesji, potem wg agenta. */
+/** Kolejność sprawdzania podmiotów „kontakt + nazwisko”: kandydat z sesji, potem wg agenta. */
 function subjectOrder(session: ToolSession): SubjectKind[] {
   const byAgent: Record<AgentKey, SubjectKind[]> = {
-    windykacja: ["borrower", "client", "investor", "lead"],
-    windykacja_tekst: ["borrower", "client", "investor", "lead"],
-    inwestor_panel: ["investor", "borrower", "client", "lead"],
-    inwestor_presale: ["investor", "borrower", "client", "lead"],
-    intake: ["client", "lead", "borrower", "investor"],
-    recepcja: ["borrower", "investor", "client", "lead"],
-    unknown: ["borrower", "investor", "client", "lead"],
+    windykacja: ["client", "lead"],
+    windykacja_tekst: ["client", "lead"],
+    inwestor_panel: ["client", "lead"],
+    inwestor_presale: ["client", "lead"],
+    intake: ["client", "lead"],
+    recepcja: ["client", "lead"],
+    unknown: ["client", "lead"],
   };
   const order = byAgent[session.agent_key] ?? byAgent.unknown;
-  if (session.subject_kind !== "unknown") {
+  if (order.includes(session.subject_kind))
     return [session.subject_kind, ...order.filter((k) => k !== session.subject_kind)];
-  }
   return order;
 }
 
-/** Sprawa do sesji pożyczkobiorcy: otwarta z sesji / najnowsza otwarta dla pożyczki. */
-function caseForLoan(p: CallerProfile, loanId: string, session: ToolSession): string | null {
-  const open = p.openCases.find((c) => c.loan_id === loanId);
-  if (open) return open.id as string;
-  if (session.loan_id === loanId && session.case_id) return session.case_id;
-  return null;
-}
-
-async function verifyByContract(
-  p: CallerProfile,
-  session: ToolSession,
-  contract: string,
-  trustedPhone: string | null,
-): Promise<VerifiedSubject | null> {
-  // Zbiór pożyczek, wobec których numer umowy jest dowodem: kandydat z sesji
-  // (identify_caller) albo pożyczki pożyczkobiorców z numeru, z którego dzwoni.
-  // Sam numer umowy z obcego telefonu NIE wystarcza — mógł go zobaczyć ktoś
-  // trzeci na kopercie.
-  const candidates: Row[] = trustedPhone ? [...p.loans] : [];
-  const db = await admin();
-  const sessionLoanIds = new Set<string>();
-  if (session.loan_id) sessionLoanIds.add(session.loan_id);
-  if (session.case_id && !session.loan_id) {
-    const kase = (await rows(db.from("wind_collection_cases").select(CASE_COLS).eq("id", session.case_id).limit(1)))[0];
-    if (kase?.loan_id) sessionLoanIds.add(String(kase.loan_id));
-  }
-  const missing = Array.from(sessionLoanIds).filter((id) => !candidates.some((l) => l.id === id));
-  if (missing.length) candidates.push(...(await rows(db.from("wind_loans").select(LOAN_COLS).in("id", missing).limit(5))));
-
-  const loan = candidates.find((l) => contractsMatch(contract, l.numer_umowy));
-  if (!loan) return null;
-
-  let borrower = p.borrowers.find((b) => b.id === loan.borrower_id);
-  if (!borrower && loan.borrower_id) {
-    borrower = (await rows(db.from("wind_borrowers").select(BORROWER_COLS).eq("id", loan.borrower_id).limit(1)))[0];
-  }
-  if (!borrower) return null;
-  const company = isCompanyBorrower(borrower);
-  return {
-    method: "contract_number",
-    kind: "borrower",
-    id: borrower.id as string,
-    case_id: caseForLoan(p, loan.id as string, session),
-    loan_id: loan.id as string,
-    first_name: company ? null : firstNameOf(borrower.imie_nazwisko),
-    company,
-  };
+/** Najnowsza otwarta sprawa pożyczki (albo null, gdy sprawa zamknięta / brak). */
+async function openCaseForLoan(db: LooseAdmin, loanId: string): Promise<string | null> {
+  const kase = (
+    await rows(
+      db
+        .from("wind_collection_cases")
+        .select("id")
+        .eq("loan_id", loanId)
+        .is("data_zamkniecia", null)
+        .order("data_otwarcia", { ascending: false })
+        .limit(1),
+    )
+  )[0];
+  return (kase?.id as string | undefined) ?? null;
 }
 
 /**
- * Dowód „kanał + nazwisko”: numer / e-mail, z którego przychodzi rozmowa,
- * jest zapisany przy podmiocie I podane imię i nazwisko zgadza się z aktami.
- * `via` decyduje o nazwie metody w audycie.
+ * Pożyczki o podanym numerze umowy — w całej bazie, nie tylko u kandydata:
+ * pożyczkobiorca może dzwonić z innego telefonu. Numer sam niczego nie
+ * otwiera; dowodem jest dopiero para „numer + imię i nazwisko z umowy”.
+ */
+async function loansByContract(db: LooseAdmin, contract: string): Promise<Row[]> {
+  const exact = await rows(
+    db.from("wind_loans").select(LOAN_COLS).eq("numer_umowy", contract.trim()).limit(5),
+  );
+  const alnum = contract.replace(/[^A-Za-z0-9]/g, "");
+  const loose =
+    alnum.length >= 4
+      ? await rows(
+          db
+            .from("wind_loans")
+            .select(LOAN_COLS)
+            .ilike("numer_umowy", `%${alnum.split("").join("%")}%`)
+            .limit(20),
+        )
+      : [];
+  return uniqueById([...exact, ...loose]).filter((l) => contractsMatch(contract, l.numer_umowy));
+}
+
+async function borrowerById(db: LooseAdmin, id: unknown): Promise<Row | undefined> {
+  if (typeof id !== "string" || !id) return undefined;
+  return (await rows(db.from("wind_borrowers").select(BORROWER_COLS).eq("id", id).limit(1)))[0];
+}
+
+type ContractOutcome =
+  | { kind: "verified"; subject: VerifiedSubject }
+  | { kind: "need_otp"; loanId: string }
+  | { kind: "locked" }
+  | { kind: "mismatch"; loanIds: string[] }
+  | { kind: "not_found" };
+
+/**
+ * Dowód „numer umowy + imię i nazwisko”. Firma (nazwa jest jawna w KRS):
+ * dodatkowo kontakt z kanału zapisany przy pożyczkobiorcy, inaczej kod SMS.
+ */
+async function verifyByContract(
+  contract: string,
+  fullName: string,
+  trusted: { phone: string | null; email: string | null },
+): Promise<ContractOutcome> {
+  const db = await admin();
+  const loans = await loansByContract(db, contract);
+  if (!loans.length) return { kind: "not_found" };
+  for (const loan of loans) {
+    const borrower = await borrowerById(db, loan.borrower_id);
+    if (!borrower) continue;
+    const company = isCompanyBorrower(borrower);
+    if (!fullName || !namesMatch(fullName, borrower.imie_nazwisko, { company })) continue;
+    if (
+      (await subjectLocked(`loan:${loan.id}`)) ||
+      (await subjectLocked(`borrower:${borrower.id}`))
+    )
+      return { kind: "locked" };
+    if (company) {
+      const channelMatch =
+        (trusted.phone && samePhone(borrower.telefon, trusted.phone)) ||
+        (trusted.email && String(borrower.email ?? "").toLowerCase() === trusted.email);
+      if (!channelMatch) return { kind: "need_otp", loanId: loan.id as string };
+    }
+    return {
+      kind: "verified",
+      subject: {
+        method: "contract_number",
+        kind: "borrower",
+        id: borrower.id as string,
+        loan_id: loan.id as string,
+        case_id: await openCaseForLoan(db, loan.id as string),
+        first_name: company ? null : firstNameOf(borrower.imie_nazwisko),
+        company,
+      },
+    };
+  }
+  return { kind: "mismatch", loanIds: ids(loans) };
+}
+
+/**
+ * Dowód „kontakt z kanału + nazwisko” — tylko dla leada / klienta (dane
+ * wniosku). Pożyczkobiorca i inwestor tą drogą się nie potwierdzają:
+ * caller-id da się podrobić, a nazwisko bywa znane osobom trzecim.
  */
 function verifyByContactAndName(
   p: CallerProfile,
@@ -713,80 +881,175 @@ function verifyByContactAndName(
   contact: string,
 ): VerifiedSubject | null {
   const matchesContact = (row: Row, phoneKey: string, emailKey = "email") =>
-    via === "phone" ? samePhone(row[phoneKey], contact) : String(row[emailKey] ?? "").toLowerCase() === contact;
+    via === "phone"
+      ? samePhone(row[phoneKey], contact)
+      : String(row[emailKey] ?? "").toLowerCase() === contact;
   const method = via === "phone" ? "phone_match" : "email_link";
+  // Co najmniej dwa człony zapisanego nazwiska — jedno słowo to za mało na dowód.
+  const strongName = (stored: string) =>
+    nameTokens(stored).length >= 2 && namesMatch(fullName, stored);
 
   for (const kind of subjectOrder(session)) {
-    if (kind === "borrower") {
-      // Najpierw pożyczkobiorcy z otwartą sprawą — to o nich najpewniej chodzi.
-      const ordered = [
-        ...borrowersWithOpenCase(p).map((h) => h.borrower),
-        ...p.borrowers.filter((b) => !p.openCases.some((c) => p.loans.find((l) => l.id === c.loan_id)?.borrower_id === b.id)),
-      ];
-      for (const b of uniqueById(ordered)) {
-        if (!matchesContact(b, "telefon")) continue;
-        const company = isCompanyBorrower(b);
-        if (!namesMatch(fullName, b.imie_nazwisko, { company })) continue;
-        const hit = borrowersWithOpenCase(p).find((h) => h.borrower.id === b.id);
-        const loan = hit?.loan ?? p.loans.find((l) => l.borrower_id === b.id);
-        return {
-          method,
-          kind: "borrower",
-          id: b.id as string,
-          case_id: (hit?.kase.id as string) ?? (loan ? caseForLoan(p, loan.id as string, session) : null),
-          loan_id: (loan?.id as string) ?? null,
-          first_name: company ? null : firstNameOf(b.imie_nazwisko),
-          company,
-        };
-      }
-    }
     if (kind === "client") {
       for (const c of p.clients) {
         if (!matchesContact(c, "phone_normalized")) continue;
-        if (!namesMatch(fullName, `${c.first_name ?? ""} ${c.last_name ?? ""}`)) continue;
-        const lead = p.leads.find((l) => l.client_id === c.id) ?? p.leads[0];
-        return { method, kind: "client", id: c.id as string, lead_id: (lead?.id as string) ?? null, first_name: firstNameOf(c.first_name), company: false };
-      }
-    }
-    if (kind === "investor") {
-      for (const inv of p.investors) {
-        if (!matchesContact(inv, "phone")) continue;
-        const person = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim();
-        const representative = `${inv.representative_first_name ?? ""} ${inv.representative_last_name ?? ""}`.trim();
-        const asPerson = (person && namesMatch(fullName, person)) || (representative && namesMatch(fullName, representative));
-        const asCompany = !!inv.company_name && namesMatch(fullName, inv.company_name, { company: true });
-        if (!asPerson && !asCompany) continue;
+        if (!strongName(`${c.first_name ?? ""} ${c.last_name ?? ""}`)) continue;
+        const lead = p.leads.find((l) => l.client_id === c.id) ?? null;
         return {
-          method: via === "phone" ? "investor_phone" : method,
-          kind: "investor",
-          id: inv.id as string,
-          investor_user_id: (inv.user_id as string) ?? null,
-          first_name: firstNameOf(inv.first_name) ?? firstNameOf(inv.representative_first_name),
-          company: !asPerson,
+          method,
+          kind: "client",
+          id: c.id as string,
+          lead_id: (lead?.id as string) ?? null,
+          first_name: firstNameOf(c.first_name),
+          company: false,
         };
       }
     }
     if (kind === "lead") {
       for (const l of p.leads) {
         if (!matchesContact(l, "phone_normalized")) continue;
-        if (!namesMatch(fullName, `${l.first_name ?? ""} ${l.last_name ?? ""}`)) continue;
+        if (!strongName(`${l.first_name ?? ""} ${l.last_name ?? ""}`)) continue;
         // Lead z klientem = klient (wnioski są zawężane po client_id).
         if (l.client_id) {
-          return { method, kind: "client", id: l.client_id as string, lead_id: l.id as string, first_name: firstNameOf(l.first_name), company: false };
+          return {
+            method,
+            kind: "client",
+            id: l.client_id as string,
+            lead_id: l.id as string,
+            first_name: firstNameOf(l.first_name),
+            company: false,
+          };
         }
-        return { method, kind: "lead", id: l.id as string, lead_id: l.id as string, first_name: firstNameOf(l.first_name), company: false };
+        return {
+          method,
+          kind: "lead",
+          id: l.id as string,
+          lead_id: l.id as string,
+          first_name: firstNameOf(l.first_name),
+          company: false,
+        };
       }
     }
   }
   return null;
 }
 
+/** Czy kontakt z kanału + nazwisko pasują do pożyczkobiorcy / inwestora (podpowiedź: kod SMS). */
+function strongSubjectHint(
+  p: CallerProfile,
+  fullName: string,
+  trusted: { phone: string | null; email: string | null },
+): boolean {
+  const viaContact = (phone: unknown, email: unknown) =>
+    (!!trusted.phone && samePhone(phone, trusted.phone)) ||
+    (!!trusted.email && String(email ?? "").toLowerCase() === trusted.email);
+  const borrower = p.borrowers.some(
+    (b) =>
+      viaContact(b.telefon, b.email) &&
+      namesMatch(fullName, b.imie_nazwisko, { company: isCompanyBorrower(b) }),
+  );
+  const investor = p.investors.some((inv) => {
+    if (!viaContact(inv.phone, inv.email)) return false;
+    const person = `${inv.first_name ?? ""} ${inv.last_name ?? ""}`.trim();
+    const representative =
+      `${inv.representative_first_name ?? ""} ${inv.representative_last_name ?? ""}`.trim();
+    return (
+      (!!person && namesMatch(fullName, person)) ||
+      (!!representative && namesMatch(fullName, representative))
+    );
+  });
+  return borrower || investor;
+}
+
 const SAY_LOCKED =
   "Nie udało się potwierdzić tożsamości. Ze względów bezpieczeństwa nie mogę dziś rozmawiać o szczegółach sprawy. Zapraszam do kontaktu pisemnego lub przez panel.";
 const SAY_RETRY =
-  "Podane dane nie zgadzają się z tym, co mam w systemie. Spróbujmy jeszcze raz — proszę podać imię i nazwisko dokładnie tak, jak w umowie.";
+  "Podane dane nie zgadzają się z tym, co mam w systemie. Spróbujmy jeszcze raz — proszę podać imię i nazwisko dokładnie tak, jak w umowie, i numer umowy.";
 const SAY_NEED_PROOF =
-  "Żeby przejść do szczegółów, muszę potwierdzić tożsamość. Proszę podać imię i nazwisko, a jeśli chodzi o umowę pożyczki — także jej numer.";
+  "Żeby przejść do szczegółów, muszę potwierdzić tożsamość. Proszę podać imię i nazwisko oraz numer umowy pożyczki — albo mogę wysłać kod SMS na numer zapisany w umowie.";
+const SAY_NEED_OTP =
+  "Dla bezpieczeństwa potwierdzę to jeszcze kodem. Wyślę SMS z sześciocyfrowym kodem na numer zapisany w umowie — proszę go podać, gdy przyjdzie.";
+const SAY_OTP_BAD = "Ten kod się nie zgadza. Proszę sprawdzić SMS i podać kod jeszcze raz.";
+const SAY_OTP_EXPIRED = "Kod stracił ważność. Mogę wysłać nowy.";
+
+const OTP_TTL_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 3;
+const OTP_MAX_SENDS_PER_SUBJECT_24H = 3;
+
+function otpHash(conversationId: string, code: string): string {
+  const secret = process.env.AGENT_TOOLS_SECRET ?? "";
+  return createHmac("sha256", secret).update(`otp:${conversationId}:${code}`).digest("hex");
+}
+
+function otpRef(subject: OtpSubject): string {
+  return `${subject.kind}:${subject.id}`;
+}
+
+async function verifyWithCode(
+  ctx: ToolContext,
+  session: ToolSession,
+  code: string,
+): Promise<ToolResult> {
+  const subject = session.otp_subject ?? null;
+  const expires = Date.parse(String(session.otp_expires_at ?? ""));
+  if (!session.otp_hash || !subject) {
+    return ok({
+      verified: false,
+      locked: false,
+      need_code: true,
+      say: "Najpierw wyślę kod — wywołaj send_verification_code.",
+    });
+  }
+  if (!Number.isFinite(expires) || expires < ctx.now.getTime()) {
+    await saveSession({
+      conversation_id: session.conversation_id,
+      otp_hash: null,
+      otp_expires_at: null,
+      otp_subject: null,
+      otp_attempts: 0,
+    });
+    return ok({ verified: false, locked: false, expired: true, say: SAY_OTP_EXPIRED });
+  }
+  if (await subjectLocked(otpRef(subject)))
+    return ok({ verified: false, locked: true, attempts_left: 0, say: SAY_LOCKED });
+  const digits = code.replace(/\D/g, "");
+  const expected = Buffer.from(session.otp_hash);
+  const got = Buffer.from(otpHash(session.conversation_id, digits));
+  const match =
+    digits.length === 6 && expected.length === got.length && timingSafeEqual(expected, got);
+  if (!match) {
+    const attempts = (session.otp_attempts ?? 0) + 1;
+    const burned = attempts >= OTP_MAX_ATTEMPTS;
+    await saveSession({
+      conversation_id: session.conversation_id,
+      otp_attempts: attempts,
+      ...(burned ? { otp_hash: null, otp_expires_at: null, otp_subject: null } : {}),
+    });
+    await recordIdentityFailure(otpRef(subject), session.conversation_id, "otp_mismatch");
+    return ok({
+      verified: false,
+      locked: false,
+      attempts_left: Math.max(0, OTP_MAX_ATTEMPTS - attempts),
+      say: burned
+        ? "Kod został zablokowany po kilku błędnych próbach. Mogę wysłać nowy."
+        : SAY_OTP_BAD,
+    });
+  }
+  await markIdentityVerified(session, "otp_sms", subject);
+  const first = await subjectFirstName({
+    ...session,
+    subject_kind: subject.kind,
+    subject_id: subject.id,
+  });
+  return ok({
+    verified: true,
+    method: "otp_sms",
+    subject_kind: subject.kind,
+    first_name: first,
+    forma: formaOf(first),
+    say: "Dziękuję, tożsamość potwierdzona. Przechodzę do sprawy.",
+  });
+}
 
 async function verifyIdentity(ctx: ToolContext): Promise<ToolResult> {
   let session = ctx.session;
@@ -795,7 +1058,10 @@ async function verifyIdentity(ctx: ToolContext): Promise<ToolResult> {
   // Zgoda na nagrywanie zbierana przy okazji — niezależnie od wyniku dowodu.
   if (typeof args.recording_consent === "boolean") {
     session = { ...session, recording_consent: args.recording_consent };
-    await saveSession({ conversation_id: session.conversation_id, recording_consent: args.recording_consent });
+    await saveSession({
+      conversation_id: session.conversation_id,
+      recording_consent: args.recording_consent,
+    });
   }
 
   if (session.identity_verified) {
@@ -809,29 +1075,65 @@ async function verifyIdentity(ctx: ToolContext): Promise<ToolResult> {
       say: "Tożsamość została już potwierdzona w tej rozmowie.",
     });
   }
+
+  const code = str(args.kod ?? args.code, 20);
+  if (code) return verifyWithCode(ctx, session, code);
+
   if (session.identity_attempts >= MAX_IDENTITY_ATTEMPTS) {
     return ok({ verified: false, locked: true, attempts_left: 0, say: SAY_LOCKED });
   }
 
   const fullName = str(args.full_name ?? args.imie_nazwisko ?? args.name, 160);
   const contract = str(args.numer_umowy ?? args.contract_number, 80);
-  if (!fullName && !contract) {
-    // Nic do sprawdzenia — nie liczymy jako nieudanej próby.
-    return ok({ verified: false, locked: false, attempts_left: MAX_IDENTITY_ATTEMPTS - session.identity_attempts, say: SAY_NEED_PROOF });
+  if (!fullName) {
+    // Sam numer umowy nie jest dowodem (mógł go zobaczyć ktoś na kopercie) —
+    // nie liczymy jako nieudanej próby, prosimy o komplet.
+    return ok({
+      verified: false,
+      locked: false,
+      attempts_left: MAX_IDENTITY_ATTEMPTS - session.identity_attempts,
+      say: SAY_NEED_PROOF,
+    });
   }
 
-  // Telefon jest dowodem tylko, gdy przyszedł z systemu (caller-id w `phone`
-  // body), nie z `args` — tam model wpisuje to, co rozmówca POWIEDZIAŁ.
-  const trustedPhone = str(ctx.body.phone) ? ctx.callerPhone : null;
-  const email = ctx.callerEmail;
-  const p = await resolveCaller(trustedPhone, email);
-
+  const trusted = { phone: ctx.callerPhone, email: ctx.callerEmail };
   let subject: VerifiedSubject | null = null;
-  if (contract) subject = await verifyByContract(p, session, contract, trustedPhone);
-  if (!subject && fullName && trustedPhone) subject = verifyByContactAndName(p, session, fullName, "phone", trustedPhone);
-  if (!subject && fullName && email) subject = verifyByContactAndName(p, session, fullName, "email", email);
+
+  if (contract) {
+    const outcome = await verifyByContract(contract, fullName, trusted);
+    if (outcome.kind === "locked")
+      return ok({ verified: false, locked: true, attempts_left: 0, say: SAY_LOCKED });
+    if (outcome.kind === "need_otp") {
+      return ok({
+        verified: false,
+        locked: false,
+        need_code: true,
+        numer_umowy_ok: true,
+        say: SAY_NEED_OTP,
+      });
+    }
+    if (outcome.kind === "verified") subject = outcome.subject;
+    if (outcome.kind === "mismatch") {
+      // Umowa istnieje, nazwisko nie pasuje — licznik per pożyczka (nowa
+      // rozmowa nie zeruje go, więc zgadywanie nazwisk ma twardy limit).
+      for (const loanId of outcome.loanIds)
+        await recordIdentityFailure(`loan:${loanId}`, session.conversation_id, "name_mismatch");
+    }
+  }
+
+  const p =
+    trusted.phone || trusted.email ? await resolveCaller(trusted.phone, trusted.email) : null;
+  if (!subject && p && trusted.phone)
+    subject = verifyByContactAndName(p, session, fullName, "phone", trusted.phone);
+  if (!subject && p && trusted.email)
+    subject = verifyByContactAndName(p, session, fullName, "email", trusted.email);
 
   if (!subject) {
+    // Kontakt z kanału i nazwisko wskazują pożyczkobiorcę / inwestora, ale
+    // to za mało na akta — proponujemy kod SMS zamiast liczyć porażkę.
+    if (!contract && p && strongSubjectHint(p, fullName, trusted)) {
+      return ok({ verified: false, locked: false, need_code: true, say: SAY_NEED_OTP });
+    }
     const bumped = await bumpIdentityAttempt(session);
     const locked = bumped.identity_attempts >= MAX_IDENTITY_ATTEMPTS;
     return ok({
@@ -845,21 +1147,167 @@ async function verifyIdentity(ctx: ToolContext): Promise<ToolResult> {
   await markIdentityVerified(session, subject.method, {
     kind: subject.kind,
     id: subject.id,
-    lead_id: subject.lead_id ?? undefined,
-    case_id: subject.case_id ?? undefined,
-    loan_id: subject.loan_id ?? undefined,
-    investor_user_id: subject.investor_user_id ?? undefined,
+    lead_id: subject.lead_id ?? null,
+    case_id: subject.case_id ?? null,
+    loan_id: subject.loan_id ?? null,
+    investor_user_id: subject.investor_user_id ?? null,
   });
   const forma = subject.company ? "brak" : formaOf(subject.first_name);
   return ok({
     verified: true,
     method: subject.method,
     subject_kind: subject.kind,
+    // Czy ten dowód otwiera akta sprawy / konto inwestora.
+    strong: subject.method === "contract_number",
     first_name: subject.first_name,
     forma,
     // Bez wołacza z imieniem („Panie Jan” to błąd, a odmiana imion w kodzie
     // jest zawodna) — forma grzecznościowa idzie osobno w `forma`.
     say: "Dziękuję, tożsamość potwierdzona. Przechodzę do sprawy.",
+  });
+}
+
+// ── send_verification_code ───────────────────────────────────────────────────
+
+/**
+ * Podmiot, do którego wysyłamy kod, i numer Z AKT (nigdy numer podany w
+ * rozmowie): po numerze umowy, a bez niego — kandydat z kanału (caller-id /
+ * wątek) wyznaczony przez identify_caller.
+ */
+async function otpTarget(
+  ctx: ToolContext,
+): Promise<{ subject: OtpSubject; phone: string | null } | { error: string }> {
+  const db = await admin();
+  const contract = str(ctx.args.numer_umowy ?? ctx.args.contract_number, 80);
+  if (contract) {
+    const loans = await loansByContract(db, contract);
+    if (loans.length !== 1) {
+      return {
+        error:
+          "Nie mogę wysłać kodu dla tego numeru umowy — poproś o numer dokładnie jak w umowie albo zaproponuj kontakt pisemny.",
+      };
+    }
+    const loan = loans[0];
+    const borrower = await borrowerById(db, loan.borrower_id);
+    if (!borrower)
+      return { error: "Nie mogę wysłać kodu dla tego numeru umowy — zaproponuj kontakt pisemny." };
+    return {
+      subject: {
+        kind: "borrower",
+        id: borrower.id as string,
+        loan_id: loan.id as string,
+        case_id: await openCaseForLoan(db, loan.id as string),
+      },
+      phone: await normalizePhone(borrower.telefon),
+    };
+  }
+  const s = ctx.session;
+  if (s.subject_kind === "borrower" && s.subject_id) {
+    const borrower = await borrowerById(db, s.subject_id);
+    return {
+      subject: { kind: "borrower", id: s.subject_id, loan_id: s.loan_id, case_id: s.case_id },
+      phone: await normalizePhone(borrower?.telefon),
+    };
+  }
+  if (s.subject_kind === "investor" && s.subject_id) {
+    const inv = (
+      await rows(db.from("investors").select("id, user_id, phone").eq("id", s.subject_id).limit(1))
+    )[0];
+    if (!inv) return { error: "Nie mogę wysłać kodu — zaproponuj logowanie do panelu inwestora." };
+    return {
+      subject: {
+        kind: "investor",
+        id: inv.id as string,
+        investor_user_id: (inv.user_id as string) ?? null,
+      },
+      phone: await normalizePhone(inv.phone),
+    };
+  }
+  return {
+    error:
+      "Nie wiem, na który numer z akt wysłać kod — poproś o numer umowy (kod pójdzie na telefon zapisany w umowie).",
+  };
+}
+
+async function sendVerificationCode(ctx: ToolContext): Promise<ToolResult> {
+  const session = ctx.session;
+  if (session.identity_verified)
+    return ok({ sent: false, already_verified: true, say: "Tożsamość jest już potwierdzona." });
+  const target = await otpTarget(ctx);
+  if ("error" in target) return { ok: false, error: target.error };
+  const ref = otpRef(target.subject);
+  if (await subjectLocked(ref)) return ok({ sent: false, locked: true, say: SAY_LOCKED });
+  if (!target.phone) {
+    return ok({
+      sent: false,
+      reason: "brak_numeru_w_aktach",
+      say: "W aktach nie ma numeru, na który mogę wysłać kod. Zapraszam do kontaktu pisemnego.",
+    });
+  }
+
+  const db = await admin();
+  const since = new Date(ctx.now.getTime() - 24 * 3_600_000).toISOString();
+  const { count } = await db
+    .from("automation_events")
+    .select("id", { count: "exact", head: true })
+    .eq("automation_type", "agent_otp_sent")
+    .eq("sent_payload->>subject_ref", ref)
+    .gte("created_at", since);
+  if ((count ?? 0) >= OTP_MAX_SENDS_PER_SUBJECT_24H) {
+    return ok({
+      sent: false,
+      reason: "limit",
+      say: "Dziś wysłałem już kilka kodów na ten numer. Zapraszam do kontaktu pisemnego albo jutro.",
+    });
+  }
+
+  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+  const res = await sendSmsInternal({
+    phone: target.phone,
+    body: `Finance You: kod potwierdzenia rozmowy: ${code}. Nikomu go nie przekazuj poza tą rozmową. Ważny ${OTP_TTL_MINUTES} min.`,
+    source: "phone_verification",
+    metadata: {
+      conversation_id: session.conversation_id,
+      agent_key: session.agent_key,
+      tool: "send_verification_code",
+    },
+  });
+  if (!res.ok) {
+    console.warn("[agent-tools/triage] OTP SMS nie wyszedł:", res.reason ?? res.error);
+    return ok({
+      sent: false,
+      reason: "sms_failed",
+      say: "Nie udało się wysłać SMS-a z kodem. Zapraszam do kontaktu pisemnego.",
+    });
+  }
+  await saveSession({
+    conversation_id: session.conversation_id,
+    otp_hash: otpHash(session.conversation_id, code),
+    otp_expires_at: new Date(ctx.now.getTime() + OTP_TTL_MINUTES * 60_000).toISOString(),
+    otp_attempts: 0,
+    otp_subject: target.subject,
+  });
+  await db
+    .from("automation_events")
+    .insert({
+      automation_type: "agent_otp_sent",
+      status: "sent",
+      sent_payload: {
+        subject_ref: ref,
+        conversation_id: session.conversation_id,
+        agent_key: session.agent_key,
+      },
+      response_payload: { phone_hint: maskPhone(target.phone) },
+    })
+    .then(
+      () => undefined,
+      () => undefined,
+    );
+  return ok({
+    sent: true,
+    expires_minutes: OTP_TTL_MINUTES,
+    say: "Wysłałem SMS z sześciocyfrowym kodem na numer zapisany w umowie. Proszę podać kod, gdy przyjdzie.",
   });
 }
 
@@ -869,19 +1317,41 @@ async function subjectFirstName(session: ToolSession): Promise<string | null> {
   const db = await admin();
   switch (session.subject_kind) {
     case "borrower": {
-      const b = (await rows(db.from("wind_borrowers").select("id, imie_nazwisko, typ").eq("id", session.subject_id).limit(1)))[0];
+      const b = (
+        await rows(
+          db
+            .from("wind_borrowers")
+            .select("id, imie_nazwisko, typ")
+            .eq("id", session.subject_id)
+            .limit(1),
+        )
+      )[0];
       return b && !isCompanyBorrower(b) ? firstNameOf(b.imie_nazwisko) : null;
     }
     case "client": {
-      const c = (await rows(db.from("clients").select("id, first_name").eq("id", session.subject_id).limit(1)))[0];
+      const c = (
+        await rows(
+          db.from("clients").select("id, first_name").eq("id", session.subject_id).limit(1),
+        )
+      )[0];
       return firstNameOf(c?.first_name);
     }
     case "investor": {
-      const i = (await rows(db.from("investors").select("id, first_name, representative_first_name").eq("id", session.subject_id).limit(1)))[0];
+      const i = (
+        await rows(
+          db
+            .from("investors")
+            .select("id, first_name, representative_first_name")
+            .eq("id", session.subject_id)
+            .limit(1),
+        )
+      )[0];
       return firstNameOf(i?.first_name) ?? firstNameOf(i?.representative_first_name);
     }
     case "lead": {
-      const l = (await rows(db.from("leads").select("id, first_name").eq("id", session.subject_id).limit(1)))[0];
+      const l = (
+        await rows(db.from("leads").select("id, first_name").eq("id", session.subject_id).limit(1))
+      )[0];
       return firstNameOf(l?.first_name);
     }
     default:
@@ -914,11 +1384,21 @@ function sanitizeNeeds(raw: unknown): Record<string, unknown> {
     if (v) out[k] = v;
   }
   for (const k of NEED_NUMBER_KEYS) {
-    const n = typeof src[k] === "string" ? Number(String(src[k]).replace(/[^\d.,-]/g, "").replace(",", ".")) : Number(src[k]);
+    const n =
+      typeof src[k] === "string"
+        ? Number(
+            String(src[k])
+              .replace(/[^\d.,-]/g, "")
+              .replace(",", "."),
+          )
+        : Number(src[k]);
     if (src[k] != null && Number.isFinite(n)) out[k] = n;
   }
   if (Array.isArray(src.objections)) {
-    const list = src.objections.map((o) => str(o, 200)).filter(Boolean).slice(0, 20);
+    const list = src.objections
+      .map((o) => str(o, 200))
+      .filter(Boolean)
+      .slice(0, 20);
     if (list.length) out.objections = list;
   } else if (typeof src.objections === "string" && src.objections.trim()) {
     out.objections = [str(src.objections, 200)];
@@ -936,7 +1416,12 @@ async function saveNeeds(ctx: ToolContext): Promise<ToolResult> {
   const merged: Record<string, unknown> = { ...prev, ...incoming };
   if (Array.isArray(prev.objections) || Array.isArray(incoming.objections)) {
     merged.objections = Array.from(
-      new Set([...((prev.objections as unknown[]) ?? []), ...((incoming.objections as unknown[]) ?? [])].map(String)),
+      new Set(
+        [
+          ...((prev.objections as unknown[]) ?? []),
+          ...((incoming.objections as unknown[]) ?? []),
+        ].map(String),
+      ),
     ).slice(0, 20);
   }
   merged.updated_at = ctx.now.toISOString();
@@ -948,12 +1433,23 @@ async function saveNeeds(ctx: ToolContext): Promise<ToolResult> {
     .insert({
       automation_type: "agent_needs_recognized",
       status: "ok",
-      sent_payload: { conversation_id: ctx.session.conversation_id, agent_key: ctx.session.agent_key, needs: merged },
-      response_payload: { subject_kind: ctx.session.subject_kind, identity_verified: ctx.session.identity_verified },
+      sent_payload: {
+        conversation_id: ctx.session.conversation_id,
+        agent_key: ctx.session.agent_key,
+        needs: merged,
+      },
+      response_payload: {
+        subject_kind: ctx.session.subject_kind,
+        identity_verified: ctx.session.identity_verified,
+      },
     })
     .then(
       () => undefined,
-      (e: unknown) => console.error("[agent-tools/triage] automation_events", (e as { message?: string })?.message),
+      (e: unknown) =>
+        console.error(
+          "[agent-tools/triage] automation_events",
+          (e as { message?: string })?.message,
+        ),
     );
   return ok({ saved: true, needs: merged });
 }
@@ -961,17 +1457,27 @@ async function saveNeeds(ctx: ToolContext): Promise<ToolResult> {
 // ── describe_data / lookup ───────────────────────────────────────────────────
 
 const LOOKUP_INSTRUCTION =
-  "Czytasz bazę wyłącznie narzędziem lookup: podaj `table` z poniższej listy, opcjonalnie `columns` (podzbiór dozwolonych), `where` (równość po dozwolonej kolumnie, np. {\"typ\":\"wplata\"}) i `limit`. Serwer sam zawęża wiersze do rozmówcy tej rozmowy — nie podajesz identyfikatorów. Tabele z `requires_identity: true` otworzą się dopiero po udanym verify_identity. Danych wrażliwych (PESEL, numery dokumentów, rachunki) nie ma w wynikach i nie pytaj o nie. Liczby i daty streszczaj rozmówcy po polsku, nie czytaj surowych pól.";
+  'Czytasz bazę wyłącznie narzędziem lookup: podaj `table` z poniższej listy, opcjonalnie `columns` (podzbiór dozwolonych), `where` (równość po dozwolonej kolumnie, np. {"typ":"wplata"}) i `limit`. Serwer sam zawęża wiersze do rozmówcy tej rozmowy — nie podajesz identyfikatorów. Tabele z `requires_identity: true` otworzą się dopiero po udanym verify_identity. Danych wrażliwych (PESEL, numery dokumentów, rachunki) nie ma w wynikach i nie pytaj o nie. Liczby i daty streszczaj rozmówcy po polsku, nie czytaj surowych pól.';
 
 async function describeData(ctx: ToolContext): Promise<ToolResult> {
   const tables = await describeReadable(ctx.session.agent_key);
-  return ok({ agent_key: ctx.session.agent_key, identity_verified: ctx.session.identity_verified, tables, instruction: LOOKUP_INSTRUCTION }, tables.length);
+  return ok(
+    {
+      agent_key: ctx.session.agent_key,
+      identity_verified: ctx.session.identity_verified,
+      tables,
+      instruction: LOOKUP_INSTRUCTION,
+    },
+    tables.length,
+  );
 }
 
 async function lookup(ctx: ToolContext): Promise<ToolResult> {
   const table = str(ctx.args.table, 64);
   if (!table) return { ok: false, error: "Podaj `table` — nazwę tabeli z describe_data." };
-  const columns = Array.isArray(ctx.args.columns) ? ctx.args.columns.map((c) => str(c, 64)).filter(Boolean) : null;
+  const columns = Array.isArray(ctx.args.columns)
+    ? ctx.args.columns.map((c) => str(c, 64)).filter(Boolean)
+    : null;
   const whereRaw = ctx.args.where;
   const where =
     whereRaw && typeof whereRaw === "object" && !Array.isArray(whereRaw)
@@ -986,12 +1492,22 @@ async function lookup(ctx: ToolContext): Promise<ToolResult> {
   const whereColumn = str(ctx.args.where_column, 64);
   const whereValue = ctx.args.where_value;
   const flatWhere =
-    whereColumn && (typeof whereValue === "string" || typeof whereValue === "number" || typeof whereValue === "boolean")
+    whereColumn &&
+    (typeof whereValue === "string" ||
+      typeof whereValue === "number" ||
+      typeof whereValue === "boolean")
       ? { [whereColumn]: typeof whereValue === "string" ? whereValue.slice(0, 200) : whereValue }
       : null;
   const limit = Number.isFinite(Number(ctx.args.limit)) ? Number(ctx.args.limit) : null;
 
-  const out = await safeLookup({ agent: ctx.session.agent_key, session: ctx.session, table, columns, where: flatWhere ?? where, limit });
+  const out = await safeLookup({
+    agent: ctx.session.agent_key,
+    session: ctx.session,
+    table,
+    columns,
+    where: flatWhere ?? where,
+    limit,
+  });
   if (!out.ok) return { ok: false, error: out.error };
   ctx.redactions.push(...out.redactions);
   return ok({ table: table.toLowerCase(), rows: out.rows, columns: out.columns }, out.rows.length);
@@ -1007,7 +1523,7 @@ export const TOOLS: readonly ToolSpec[] = [
     writes: false,
     rateLimit: { perConversation: 6, windowMinutes: 10 },
     description:
-      "Rozpoznaje, KTO jest na linii (lead / klient / inwestor / pożyczkobiorca) po numerze lub e-mailu i proponuje trasę. Zwraca tylko profil niewrażliwy — bez kwot i numerów umów.",
+      "Proponuje trasę rozmowy na podstawie kontaktu z KANAŁU (caller-id, nadawca wątku) i zadeklarowanej potrzeby. Nie zwraca danych osobowych; numeru / e-maila podanego w rozmowie nie sprawdza.",
     handler: identifyCaller,
   },
   {
@@ -1017,8 +1533,18 @@ export const TOOLS: readonly ToolSpec[] = [
     writes: true,
     rateLimit: { perConversation: 5, windowMinutes: 10 },
     description:
-      "Potwierdza tożsamość rozmówcy dowodem sprawdzanym w kodzie: numer umowy (args.numer_umowy) albo imię i nazwisko (args.full_name) zgodne z numerem / e-mailem rozmowy. Maks. 3 próby. Nie przyjmuje PESEL.",
+      "Potwierdza tożsamość dowodem sprawdzanym w kodzie: imię i nazwisko (args.full_name) RAZEM z numerem umowy (args.numer_umowy) albo kod z SMS-a (args.kod). Kontakt z kanału + nazwisko potwierdza tylko leada / klienta. Maks. 3 próby. Nie przyjmuje PESEL.",
     handler: verifyIdentity,
+  },
+  {
+    name: "send_verification_code",
+    agents: ["windykacja", "windykacja_tekst", "inwestor_presale", "inwestor_panel"],
+    requiresIdentity: false,
+    writes: true,
+    rateLimit: { perConversation: 2, windowMinutes: 30 },
+    description:
+      "Wysyła SMS z 6-cyfrowym kodem na numer ZAPISANY W AKTACH (nigdy na numer podany w rozmowie): po args.numer_umowy albo dla kandydata rozpoznanego po kanale. Kod sprawdza verify_identity(kod).",
+    handler: sendVerificationCode,
   },
   {
     name: "save_needs",
@@ -1036,7 +1562,8 @@ export const TOOLS: readonly ToolSpec[] = [
     requiresIdentity: false,
     writes: false,
     rateLimit: { perConversation: 3, windowMinutes: 10 },
-    description: "Zwraca listę tabel i kolumn, które ten agent może czytać narzędziem lookup, wraz z instrukcją użycia.",
+    description:
+      "Zwraca listę tabel i kolumn, które ten agent może czytać narzędziem lookup, wraz z instrukcją użycia.",
     handler: describeData,
   },
   {

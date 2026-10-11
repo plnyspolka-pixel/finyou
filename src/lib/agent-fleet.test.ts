@@ -48,7 +48,11 @@ function emptyObjects(field: Json, path: string): string[] {
 
 describe("narzędzia floty", () => {
   const configs = FLEET_TOOLS.flatMap((spec) =>
-    spec.agentKeys.map((agentKey) => ({ spec, agentKey, cfg: buildWebhookToolConfig(spec, agentKey, { secretId: "sec_x" }) as Json })),
+    spec.agentKeys.map((agentKey) => ({
+      spec,
+      agentKey,
+      cfg: buildWebhookToolConfig(spec, agentKey, { secretId: "sec_x" }) as Json,
+    })),
   );
 
   it("nazwy ElevenLabs są unikalne i mieszczą się w limicie", () => {
@@ -71,7 +75,9 @@ describe("narzędzia floty", () => {
 
   it("sekret idzie przez magazyn sekretów ElevenLabs, nie jawnym tekstem", () => {
     for (const { cfg } of configs) {
-      expect(cfg.api_schema.request_headers["X-Agent-Tools-Secret"]).toEqual({ secret_id: "sec_x" });
+      expect(cfg.api_schema.request_headers["X-Agent-Tools-Secret"]).toEqual({
+        secret_id: "sec_x",
+      });
       expect(cfg.api_schema.url).toMatch(/^https:\/\//);
     }
   });
@@ -79,7 +85,9 @@ describe("narzędzia floty", () => {
   it("żaden argument nie jest obiektem bez wymienionych pól (ElevenLabs by go wyczyścił)", () => {
     for (const { cfg } of configs) {
       const args = bodyOf(cfg).properties.args;
-      const offenders = Object.entries(args.properties as Json).flatMap(([k, v]) => emptyObjects(v as Json, `${cfg.name}.${k}`));
+      const offenders = Object.entries(args.properties as Json).flatMap(([k, v]) =>
+        emptyObjects(v as Json, `${cfg.name}.${k}`),
+      );
       expect(offenders).toEqual([]);
     }
   });
@@ -89,8 +97,10 @@ describe("narzędzia floty", () => {
       for (const r of f.required ?? []) expect(Object.keys(f.properties ?? {}), where).toContain(r);
     };
     for (const spec of FLEET_TOOLS) {
-      for (const r of spec.requiredArgs ?? []) expect(Object.keys(spec.args), spec.tool).toContain(r);
-      for (const [k, f] of Object.entries(spec.args)) if (f.type === "object") check(f, `${spec.tool}.${k}`);
+      for (const r of spec.requiredArgs ?? [])
+        expect(Object.keys(spec.args), spec.tool).toContain(r);
+      for (const [k, f] of Object.entries(spec.args))
+        if (f.type === "object") check(f, `${spec.tool}.${k}`);
     }
   });
 
@@ -98,13 +108,16 @@ describe("narzędzia floty", () => {
     for (const spec of FLEET_TOOLS) {
       const server = serverTool(spec.tool);
       expect(server, `brak handlera dla ${spec.tool}`).toBeDefined();
-      for (const key of spec.agentKeys) expect(server!.agents, `${spec.tool} dla ${key}`).toContain(key);
+      for (const key of spec.agentKeys)
+        expect(server!.agents, `${spec.tool} dla ${key}`).toContain(key);
     }
   });
 });
 
 describe("agenty floty", () => {
-  const ALL_TOOL_NAMES = [...new Set([...FLEET_TOOLS.map((t) => t.tool), ...SERVER_TOOLS.map((t) => t.name)])];
+  const ALL_TOOL_NAMES = [
+    ...new Set([...FLEET_TOOLS.map((t) => t.tool), ...SERVER_TOOLS.map((t) => t.name)]),
+  ];
 
   it("klucze są unikalne i zgodne z listą", () => {
     expect(FLEET_AGENTS.map((a) => a.key).sort()).toEqual([...FLEET_AGENT_KEYS].sort());
@@ -113,7 +126,9 @@ describe("agenty floty", () => {
   it("agent ma każde narzędzie, które prompt każe wołać", () => {
     for (const agent of FLEET_AGENTS) {
       const attached = new Set(toolsForAgent(agent).map((t) => t.tool));
-      const mentioned = ALL_TOOL_NAMES.filter((name) => new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(agent.prompt));
+      const mentioned = ALL_TOOL_NAMES.filter((name) =>
+        new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(agent.prompt),
+      );
       const missing = mentioned.filter((name) => !attached.has(name));
       expect(missing, `${agent.key}: prompt wspomina narzędzia, których agent nie ma`).toEqual([]);
     }
@@ -135,7 +150,9 @@ describe("agenty floty", () => {
 
   it("konfiguracja: tekstowe text_only, klucz wątku w zmiennych, dane narzędzi mają placeholdery", () => {
     for (const agent of FLEET_AGENTS) {
-      const agentIds = Object.fromEntries([...FLEET_AGENT_KEYS, ...Object.keys(EXISTING_AGENTS)].map((k) => [k, `agent_${k}`]));
+      const agentIds = Object.fromEntries(
+        [...FLEET_AGENT_KEYS, ...Object.keys(EXISTING_AGENTS)].map((k) => [k, `agent_${k}`]),
+      );
       const cfg = buildAgentConfig(agent, { toolIds: ["tool_1"], agentIds }) as Json;
       const conv = cfg.conversation_config;
       expect(conv.conversation.text_only).toBe(agent.mode === "text");
@@ -151,7 +168,9 @@ describe("agenty floty", () => {
 
   it("prompt nie prosi o PESEL ani pełny numer konta", () => {
     for (const agent of FLEET_AGENTS) {
-      expect(agent.prompt, agent.key).not.toMatch(/(?<!nie\s(?:\S+\s){0,4})(podaj|poproś o|zapytaj o)\s+(swój\s+)?PESEL/i);
+      expect(agent.prompt, agent.key).not.toMatch(
+        /(?<!nie\s(?:\S+\s){0,4})(podaj|poproś o|zapytaj o)\s+(swój\s+)?PESEL/i,
+      );
     }
   });
 });

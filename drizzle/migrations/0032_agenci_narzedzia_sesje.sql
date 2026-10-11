@@ -24,9 +24,14 @@ create table if not exists public.agent_tool_sessions (
   investor_user_id uuid,
   -- potwierdzenie tożsamości (RODO: dane sprawy dopiero po nim)
   identity_verified boolean not null default false,
-  identity_method text,                    -- phone_match | contract_number | dob_last4 | email_link
-  identity_verified_at timestamptz,
+  identity_method text,                    -- contract_number | otp_sms (silne) | phone_match | email_link (lead/klient)
+  identity_verified_at timestamptz,        -- ważność: rozmowa 2 h, wątek tekstowy 12 h (guard.server)
   identity_attempts integer not null default 0,
+  -- kod SMS na numer z akt: tylko skrót HMAC, ważność, próby i podmiot
+  otp_hash text,
+  otp_expires_at timestamptz,
+  otp_attempts integer not null default 0,
+  otp_subject jsonb,
   -- zgody i ograniczenia zebrane w rozmowie
   recording_consent boolean,
   do_not_contact boolean not null default false,
@@ -59,10 +64,26 @@ create index if not exists agent_tool_calls_conv_time_idx
 create index if not exists agent_tool_calls_tool_time_idx
   on public.agent_tool_calls (tool, created_at desc);
 
+-- Nieudane dowody tożsamości wobec KONKRETNEGO podmiotu (umowa się zgadza,
+-- nazwisko nie; zły kod SMS). Limit prób w rozmowie zeruje się z nową
+-- rozmową — ten licznik nie, więc zgadywanie ma twardy sufit per podmiot.
+create table if not exists public.agent_identity_failures (
+  id uuid primary key default gen_random_uuid(),
+  subject_ref text not null,               -- borrower:<id> | loan:<id> | investor:<id>
+  conversation_id text,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists agent_identity_failures_subject_time_idx
+  on public.agent_identity_failures (subject_ref, created_at desc);
+
 alter table public.agent_tool_sessions enable row level security;
 alter table public.agent_tool_calls enable row level security;
+alter table public.agent_identity_failures enable row level security;
 revoke all on public.agent_tool_sessions from public, anon, authenticated;
 revoke all on public.agent_tool_calls from public, anon, authenticated;
+revoke all on public.agent_identity_failures from public, anon, authenticated;
 
 -- Wynik rozmowy windykacyjnej wyszukuje się po `metadata.conversation_id`
 -- (tak działa webhook post-call). Indeks wyrażeniowy zamiast nowej kolumny —

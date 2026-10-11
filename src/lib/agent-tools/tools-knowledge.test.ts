@@ -102,11 +102,21 @@ describe("deklaracje narzędzi", () => {
       expect(t.requiresIdentity).toBe(false);
     }
     expect(tool("search_knowledge").rateLimit).toEqual({ perConversation: 10, windowMinutes: 10 });
-    expect(tool("get_loan_calculator").rateLimit).toEqual({ perConversation: 10, windowMinutes: 10 });
-    expect(tool("get_process_overview").rateLimit).toEqual({ perConversation: 5, windowMinutes: 10 });
+    expect(tool("get_loan_calculator").rateLimit).toEqual({
+      perConversation: 10,
+      windowMinutes: 10,
+    });
+    expect(tool("get_process_overview").rateLimit).toEqual({
+      perConversation: 5,
+      windowMinutes: 10,
+    });
     expect(tool("search_knowledge").agents).toHaveLength(6);
     expect(tool("get_process_overview").agents).toHaveLength(6);
-    expect([...tool("get_loan_calculator").agents].sort()).toEqual(["intake", "inwestor_presale", "recepcja"]);
+    expect([...tool("get_loan_calculator").agents].sort()).toEqual([
+      "intake",
+      "inwestor_presale",
+      "recepcja",
+    ]);
   });
 });
 
@@ -134,22 +144,38 @@ describe("search_knowledge — odbiorca z roli agenta", () => {
   });
 
   it("recepcja może wskazać odbiorcę (także z polskimi znakami i wielką literą)", async () => {
-    okResult(await run("search_knowledge", { query: "cena abonamentu", audience: "Inwestor" }, "recepcja"));
+    okResult(
+      await run("search_knowledge", { query: "cena abonamentu", audience: "Inwestor" }, "recepcja"),
+    );
     expect(rag.calls[0].audience).toBe("inwestor");
   });
 
   it("recepcja z nieznanym odbiorcą → odmowa bez zapytania do RAG", async () => {
-    const r = await run("search_knowledge", { query: "cena abonamentu", audience: "admin" }, "recepcja");
+    const r = await run(
+      "search_knowledge",
+      { query: "cena abonamentu", audience: "admin" },
+      "recepcja",
+    );
     expect(r.ok).toBe(false);
     expect(rag.calls).toHaveLength(0);
   });
 
   it("agent spoza recepcji nie poszerza zakresu argumentem audience", async () => {
-    const r1 = okResult(await run("search_knowledge", { query: "cena abonamentu", audience: "inwestor" }, "intake"));
+    const r1 = okResult(
+      await run("search_knowledge", { query: "cena abonamentu", audience: "inwestor" }, "intake"),
+    );
     expect(r1.audience).toBe("klient");
-    const r2 = okResult(await run("search_knowledge", { query: "prowizja klienta", audience: "klient" }, "inwestor_panel"));
+    const r2 = okResult(
+      await run(
+        "search_knowledge",
+        { query: "prowizja klienta", audience: "klient" },
+        "inwestor_panel",
+      ),
+    );
     expect(r2.audience).toBe("inwestor");
-    const r3 = okResult(await run("search_knowledge", { query: "jak spłacić", audience: "inwestor" }, "windykacja"));
+    const r3 = okResult(
+      await run("search_knowledge", { query: "jak spłacić", audience: "inwestor" }, "windykacja"),
+    );
     expect(r3.audience).toBe("klient");
     expect(rag.calls.map((c) => c.audience)).toEqual(["klient", "inwestor", "klient"]);
   });
@@ -190,7 +216,12 @@ describe("get_loan_calculator", () => {
   it("100 000 zł, 12 mies., 14,5% — rata annuitetowa jak ze wzoru (≈ 9 002 zł)", async () => {
     const expected = annuity(100_000, 14.5, 12);
     const r = okResult(
-      await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12, oprocentowanie_roczne: 14.5, typ: "rowne" }),
+      await run("get_loan_calculator", {
+        kwota_pln: 100_000,
+        okres_miesiace: 12,
+        oprocentowanie_roczne: 14.5,
+        typ: "rowne",
+      }),
     );
     expect(r.typ).toBe("rowne");
     expect(r.oprocentowanie_roczne).toBe(14.5);
@@ -211,18 +242,30 @@ describe("get_loan_calculator", () => {
 
   it("bez oprocentowania i typu → odsetki maksymalne (14,5%) i raty równe", async () => {
     const withRate = okResult(
-      await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12, oprocentowanie_roczne: 14.5 }),
+      await run("get_loan_calculator", {
+        kwota_pln: 100_000,
+        okres_miesiace: 12,
+        oprocentowanie_roczne: 14.5,
+      }),
     );
-    const r = okResult(await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12 }));
+    const r = okResult(
+      await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12 }),
+    );
     expect(r.oprocentowanie_roczne).toBe(14.5);
     expect(r.typ).toBe("rowne");
     expect(r.rata_miesieczna).toBe(withRate.rata_miesieczna);
   });
 
   it("stopa powyżej 14,5% jest przycinana — wynik jak przy 14,5% i uwaga do powiedzenia", async () => {
-    const base = okResult(await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12 }));
+    const base = okResult(
+      await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12 }),
+    );
     const r = okResult(
-      await run("get_loan_calculator", { kwota_pln: 100_000, okres_miesiace: 12, oprocentowanie_roczne: 24 }),
+      await run("get_loan_calculator", {
+        kwota_pln: 100_000,
+        okres_miesiace: 12,
+        oprocentowanie_roczne: 24,
+      }),
     );
     expect(r.oprocentowanie_roczne).toBe(14.5);
     expect(r.oprocentowanie_przyciete).toBe(true);
@@ -233,7 +276,11 @@ describe("get_loan_calculator", () => {
 
   it("stopa ujemna → 0% (rata = kapitał / liczba rat); „12,5%” jako tekst jest liczbą", async () => {
     const zero = okResult(
-      await run("get_loan_calculator", { kwota_pln: 12_000, okres_miesiace: 12, oprocentowanie_roczne: -3 }),
+      await run("get_loan_calculator", {
+        kwota_pln: 12_000,
+        okres_miesiace: 12,
+        oprocentowanie_roczne: -3,
+      }),
     );
     expect(zero.oprocentowanie_roczne).toBe(0);
     expect(zero.oprocentowanie_przyciete).toBe(true);
@@ -241,7 +288,11 @@ describe("get_loan_calculator", () => {
     expect(zero.odsetki_lacznie).toBe(0);
 
     const txt = okResult(
-      await run("get_loan_calculator", { kwota_pln: "100 000 zł", okres_miesiace: "24", oprocentowanie_roczne: "12,5%" }),
+      await run("get_loan_calculator", {
+        kwota_pln: "100 000 zł",
+        okres_miesiace: "24",
+        oprocentowanie_roczne: "12,5%",
+      }),
     );
     expect(txt.kwota_pln).toBe(100_000);
     expect(txt.okres_miesiace).toBe(24);
@@ -269,14 +320,22 @@ describe("get_loan_calculator", () => {
 
   it("wartość nieruchomości → maks. kwota przy LTV 60% i LTV wnioskowanej kwoty", async () => {
     const ok = okResult(
-      await run("get_loan_calculator", { kwota_pln: 200_000, okres_miesiace: 24, wartosc_nieruchomosci: 500_000 }),
+      await run("get_loan_calculator", {
+        kwota_pln: 200_000,
+        okres_miesiace: 24,
+        wartosc_nieruchomosci: 500_000,
+      }),
     );
     expect(ok.max_kwota_przy_ltv_60).toBe(300_000);
     expect(ok.ltv_proc).toBe(40);
     expect(ok.ltv_w_limicie).toBe(true);
 
     const over = okResult(
-      await run("get_loan_calculator", { kwota_pln: 400_000, okres_miesiace: 24, wartosc_nieruchomosci: 500_000 }),
+      await run("get_loan_calculator", {
+        kwota_pln: 400_000,
+        okres_miesiace: 24,
+        wartosc_nieruchomosci: 500_000,
+      }),
     );
     expect(over.ltv_proc).toBe(80);
     expect(over.ltv_w_limicie).toBe(false);
@@ -301,9 +360,15 @@ describe("get_loan_calculator", () => {
     [{ kwota_pln: 100_000, okres_miesiace: 121 }, "okres > 120"],
     [{ kwota_pln: 100_000, okres_miesiace: 12.5 }, "okres niecałkowity"],
     [{ kwota_pln: 100_000, okres_miesiace: 12, typ: "balonowy" }, "nieznany typ"],
-    [{ kwota_pln: 100_000, okres_miesiace: 12, oprocentowanie_roczne: "sporo" }, "stopa nieliczbowa"],
+    [
+      { kwota_pln: 100_000, okres_miesiace: 12, oprocentowanie_roczne: "sporo" },
+      "stopa nieliczbowa",
+    ],
     [{ kwota_pln: 100_000, okres_miesiace: 12, wartosc_nieruchomosci: -1 }, "wartość ujemna"],
-    [{ kwota_pln: 100_000, okres_miesiace: 12, wartosc_nieruchomosci: "brak" }, "wartość nieliczbowa"],
+    [
+      { kwota_pln: 100_000, okres_miesiace: 12, wartosc_nieruchomosci: "brak" },
+      "wartość nieliczbowa",
+    ],
   ] as Array<[Record<string, unknown>, string]>)("odmowa: %o (%s)", async (args) => {
     const r = await run("get_loan_calculator", args);
     expect(r.ok).toBe(false);
@@ -312,7 +377,9 @@ describe("get_loan_calculator", () => {
 
   it("granice zakresu są dozwolone (1 zł, 10 mln zł, 1 i 120 miesięcy)", async () => {
     expect((await run("get_loan_calculator", { kwota_pln: 1, okres_miesiace: 1 })).ok).toBe(true);
-    expect((await run("get_loan_calculator", { kwota_pln: 10_000_000, okres_miesiace: 120 })).ok).toBe(true);
+    expect(
+      (await run("get_loan_calculator", { kwota_pln: 10_000_000, okres_miesiace: 120 })).ok,
+    ).toBe(true);
   });
 });
 
@@ -320,7 +387,9 @@ describe("get_process_overview", () => {
   it("domyślny odbiorca wg roli agenta", async () => {
     expect(okResult(await run("get_process_overview", {}, "intake")).audience).toBe("klient");
     expect(okResult(await run("get_process_overview", {}, "recepcja")).audience).toBe("klient");
-    expect(okResult(await run("get_process_overview", {}, "inwestor_presale")).audience).toBe("inwestor");
+    expect(okResult(await run("get_process_overview", {}, "inwestor_presale")).audience).toBe(
+      "inwestor",
+    );
     expect(okResult(await run("get_process_overview", {}, "windykacja_tekst")).audience).toBe(
       "pozyczkobiorca_windykacja",
     );
@@ -340,14 +409,16 @@ describe("get_process_overview", () => {
   });
 
   it("inwestor: abonament → umowy → moduł ofert, ceny z cennika, zakaz obiecywania zysków", async () => {
-    const r = okResult(await run("get_process_overview", { audience: "inwestor" }, "inwestor_presale"));
+    const r = okResult(
+      await run("get_process_overview", { audience: "inwestor" }, "inwestor_presale"),
+    );
     expect(r.kroki.map((k: Row) => k.krok)).toEqual([
       "Abonament",
       "Umowy",
       "Moduł ofert i zlecenia",
       "Decyzja i umowa pożyczki",
     ]);
-    const abonament = r.kroki[0].opis.replace(/ /g, " ");
+    const abonament = r.kroki[0].opis.replace(/\u00a0/g, " ");
     expect(abonament).toContain("1 500 zł");
     expect(abonament).toContain("7 000 zł");
     expect(abonament).toContain("61%");

@@ -355,6 +355,12 @@ export async function runAgentTurn(opts: {
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
+  /**
+   * Tożsamość nadawcy uwierzytelniona przez PLATFORMĘ kanału (sesja czatu,
+   * PSID / IGSID, numer nadawcy SMS, adres nadawcy e-maila). Wiąże wątek
+   * floty agentów z tym nadawcą — bez niej flota się nie włącza (A1).
+   */
+  channelIdentity?: { kind: "chat" | "messenger" | "instagram" | "sms" | "email"; value: string } | null;
 }): Promise<AgentReply> {
   const variant: AgentVariant = opts.variant ?? "klient";
   const s = admin();
@@ -438,6 +444,7 @@ export async function runAgentTurn(opts: {
         const fleet = await fleetTextTurn({
           leadId: lead.id,
           channel: opts.channel,
+          channelIdentity: opts.channelIdentity ?? null,
           message: elMessage,
           dynamicVariables,
         }).catch((e) => ({ ok: false as const, error: String(e?.message ?? e) }));
@@ -800,9 +807,14 @@ export async function executeTool(
     };
   }
   if (name === "mark_ready_for_human") {
+    // Dopisujemy do notatek zamiast je nadpisywać — to, co zespół zapisał
+    // wcześniej, nie może zniknąć po jednej eskalacji bota.
+    const { data: current } = await s.from("leads").select("notes").eq("id", leadId).maybeSingle();
+    const prev = String((current as { notes?: string | null } | null)?.notes ?? "").trim();
+    const line = `[AI ${new Date().toISOString().slice(0, 16).replace("T", " ")}] ${String(args?.reason ?? "eskalacja").slice(0, 500)}`;
     await s
       .from("leads")
-      .update({ status: "wymaga_kontaktu", notes: `[AI] ${args?.reason ?? "eskalacja"}` })
+      .update({ status: "wymaga_kontaktu", notes: (prev ? `${prev}\n${line}` : line).slice(-8000) })
       .eq("id", leadId);
     return { ok: true };
   }

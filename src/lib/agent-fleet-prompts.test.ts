@@ -60,7 +60,13 @@ describe("prompty floty — wspólne bezpieczniki", () => {
       const lower = prompt.toLowerCase();
       // Słowa mogą paść wyłącznie w zakazie („nie używasz słów …”) — sprawdzamy,
       // że żadne nie stoi w zdaniu twierdzącym o naszej ofercie.
-      for (const phrase of ["gwarantujemy", "zarobisz", "pewny zysk", "bez ryzyka dla", "na pewno dostanie"]) {
+      for (const phrase of [
+        "gwarantujemy",
+        "zarobisz",
+        "pewny zysk",
+        "bez ryzyka dla",
+        "na pewno dostanie",
+      ]) {
         expect(lower).not.toContain(phrase);
       }
     });
@@ -160,7 +166,9 @@ describe("windykacja tekstowa (A4T) i rozmowa przychodząca (A4)", () => {
     // groźby wymienione wyłącznie w sekcji „CZEGO NIE ROBISZ”
     const forbiddenSection = p.slice(p.indexOf("=== CZEGO NIE ROBISZ NIGDY ==="));
     for (const word of ["policji", "prokuratury", "więzienia"]) {
-      expect(p.indexOf(word)).toBe(p.length - forbiddenSection.length + forbiddenSection.indexOf(word));
+      expect(p.indexOf(word)).toBe(
+        p.length - forbiddenSection.length + forbiddenSection.indexOf(word),
+      );
     }
   });
 
@@ -173,7 +181,9 @@ describe("windykacja tekstowa (A4T) i rozmowa przychodząca (A4)", () => {
   });
 
   it("dodatek przychodzący: tożsamość → akta → zapis deklaracji, bez PESEL", () => {
-    expect(WIND_INBOUND_APPENDIX).toMatch(/verify_identity[\s\S]*get_collection_case[\s\S]*record_payment_promise/);
+    expect(WIND_INBOUND_APPENDIX).toMatch(
+      /verify_identity[\s\S]*get_collection_case[\s\S]*record_payment_promise/,
+    );
     expect(WIND_INBOUND_APPENDIX).toContain("Nigdy nie prosisz o PESEL");
   });
 });

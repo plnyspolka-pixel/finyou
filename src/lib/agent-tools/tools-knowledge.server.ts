@@ -146,7 +146,8 @@ export const LOAN_CALC_MAX_PLN = 10_000_000;
 export const LOAN_CALC_MAX_MONTHS = 120;
 /** Górna granica wartości nieruchomości — chroni przed literówką rzędu wielkości. */
 const PROPERTY_MAX_PLN = 1_000_000_000;
-export const LOAN_CALC_DISCLAIMER = "Orientacyjnie; warunki ustala inwestor przy konkretnej sprawie.";
+export const LOAN_CALC_DISCLAIMER =
+  "Orientacyjnie; warunki ustala inwestor przy konkretnej sprawie.";
 
 type InstallmentType = "rowne" | "malejace";
 
@@ -263,7 +264,10 @@ async function getLoanCalculator(ctx: ToolContext): Promise<ToolResult> {
   if (!isMissing(a.oprocentowanie_roczne)) {
     const podana = parseNumberArg(a.oprocentowanie_roczne);
     if (podana == null) {
-      return { ok: false, error: "Oprocentowanie roczne podaj jako liczbę w procentach, np. 12,5." };
+      return {
+        ok: false,
+        error: "Oprocentowanie roczne podaj jako liczbę w procentach, np. 12,5.",
+      };
     }
     stopa = clampAnnualRate(podana, ctx.now);
     if (stopa !== podana) {
@@ -280,7 +284,10 @@ async function getLoanCalculator(ctx: ToolContext): Promise<ToolResult> {
   if (!isMissing(a.wartosc_nieruchomosci)) {
     wartosc = parseNumberArg(a.wartosc_nieruchomosci);
     if (wartosc == null || wartosc <= 0 || wartosc > PROPERTY_MAX_PLN) {
-      return { ok: false, error: "Wartość nieruchomości podaj w złotych jako liczbę większą od zera." };
+      return {
+        ok: false,
+        error: "Wartość nieruchomości podaj w złotych jako liczbę większą od zera.",
+      };
     }
   }
 
@@ -342,7 +349,11 @@ async function getLoanCalculator(ctx: ToolContext): Promise<ToolResult> {
 // ── get_process_overview ─────────────────────────────────────────────────────
 
 export type ProcessAudience = "klient" | "inwestor" | "pozyczkobiorca_windykacja";
-const PROCESS_AUDIENCES: readonly ProcessAudience[] = ["klient", "inwestor", "pozyczkobiorca_windykacja"];
+const PROCESS_AUDIENCES: readonly ProcessAudience[] = [
+  "klient",
+  "inwestor",
+  "pozyczkobiorca_windykacja",
+];
 
 interface ProcessStep {
   nr: number;
@@ -380,7 +391,10 @@ export function processOverview(audience: ProcessAudience, now: Date): ProcessOv
           "Komplet wniosku",
           "Dane i dokumenty muszą być kompletne — bez kompletu inwestor nie może w ogóle pochylić się nad sprawą.",
         ],
-        ["Wniosek trafia do inwestorów", "Kompletny wniosek jest przedstawiany inwestorom współpracującym z Finance You."],
+        [
+          "Wniosek trafia do inwestorów",
+          "Kompletny wniosek jest przedstawiany inwestorom współpracującym z Finance You.",
+        ],
         [
           "Kontakt inwestora — tylko jeśli jest zainteresowany",
           "Jeśli sprawa zainteresuje inwestora, to inwestor sam kontaktuje się z klientem z konkretną ofertą. Kwotę, oprocentowanie i okres ustala inwestor.",

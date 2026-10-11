@@ -15,7 +15,7 @@
 //    co zapisy z telefonu z panelu (metadata.deklarowana_data / _kwota,
 //    metadata.conversation_id) — kolejny kontakt widzi „poprzednią deklarację”.
 import type { AgentKey, ToolContext, ToolResult, ToolSession, ToolSpec } from "./types";
-import { saveSession } from "./guard.server";
+import { hasStrongIdentity, saveSession } from "./guard.server";
 import {
   windDebtSnapshot,
   type WindDebtEvent,
@@ -68,7 +68,7 @@ function admin(): Promise<LooseAdmin> {
  * middleware Pro). Zmiana tam = zmiana tu.
  */
 const LOAN_COLS =
-  "numer_umowy, data_umowy, termin_splaty, status, data_wypowiedzenia, rachunek_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, oplaty_windykacyjne, pozyczkodawca, kwota_pozyczki, kwota_calkowita, prowizja, oprocentowanie_roczne, stopa_odsetek_max, kwota_doplat, harmonogram";
+  "borrower_id, numer_umowy, data_umowy, termin_splaty, status, data_wypowiedzenia, rachunek_splaty, numer_kw, kwota_hipoteki, akt_notarialny_777, kwota_777, oplaty_windykacyjne, pozyczkodawca, kwota_pozyczki, kwota_calkowita, prowizja, oprocentowanie_roczne, stopa_odsetek_max, kwota_doplat, harmonogram";
 
 interface CaseBorrower {
   imie_nazwisko: string | null;
@@ -79,6 +79,7 @@ interface CaseBorrower {
 }
 
 interface CaseLoan extends WindDebtLoan {
+  borrower_id?: string | null;
   numer_umowy: string | null;
   data_umowy: string | null;
   termin_splaty: string | null;
@@ -124,9 +125,11 @@ type LoadedCase = { ok: true; kase: CaseRow; loan: CaseLoan } | { ok: false; err
 
 /**
  * Sprawa rozmowy: z sesji (case_id), a gdy sesja zna tylko pożyczkę —
- * jej otwarta sprawa (najnowsza). Nigdy z body.
+ * jej otwarta sprawa (najnowsza). Nigdy z body. Tylko dla podmiotu
+ * „pożyczkobiorca” — sprawa nie może zostać w sesji po kimś innym.
  */
 async function resolveCaseId(session: ToolSession): Promise<string | null> {
+  if (session.subject_kind !== "borrower") return null;
   if (session.case_id) return session.case_id;
   if (!session.loan_id) return null;
   const s = await admin();
@@ -142,6 +145,15 @@ async function resolveCaseId(session: ToolSession): Promise<string | null> {
 }
 
 async function loadCase(session: ToolSession): Promise<LoadedCase> {
+  // Akta tylko po SILNYM dowodzie (numer umowy z nazwiskiem albo kod SMS) —
+  // sam caller-id z nazwiskiem nie wystarcza, bo numer da się podrobić.
+  if (!hasStrongIdentity(session) || session.subject_kind !== "borrower") {
+    return {
+      ok: false,
+      error:
+        "Akta sprawy dopiero po potwierdzeniu tożsamości numerem umowy z imieniem i nazwiskiem albo kodem SMS (verify_identity).",
+    };
+  }
   const caseId = await resolveCaseId(session);
   if (!caseId) {
     return {
@@ -161,6 +173,11 @@ async function loadCase(session: ToolSession): Promise<LoadedCase> {
   if (!data) return { ok: false, error: "Sprawa z sesji nie istnieje." };
   const kase = data as CaseRow;
   if (!kase.loan) return { ok: false, error: "Sprawa nie ma przypisanej umowy pożyczki." };
+  // Druga linia obrony: umowa sprawy należy do potwierdzonego pożyczkobiorcy.
+  if (kase.loan.borrower_id && session.subject_id && kase.loan.borrower_id !== session.subject_id) {
+    console.error("[agent-tools] sprawa z sesji nie należy do potwierdzonego podmiotu", kase.id);
+    return { ok: false, error: "Sprawa z sesji nie należy do potwierdzonego rozmówcy." };
+  }
   return { ok: true, kase, loan: kase.loan };
 }
 
@@ -380,7 +397,9 @@ function buildBrief(
  * (tak szuka go webhook i poprzednia deklaracja), tekstowy — SMS / e-mail,
  * a czat i inne kanały jako notatka (wind_event_type nie ma „czat”).
  */
-export function eventTypeFor(session: Pick<ToolSession, "agent_key" | "channel">): "telefon" | "sms" | "email" | "notatka" {
+export function eventTypeFor(
+  session: Pick<ToolSession, "agent_key" | "channel">,
+): "telefon" | "sms" | "email" | "notatka" {
   if (session.agent_key === "windykacja") return "telefon";
   const ch = String(session.channel ?? "").toLowerCase();
   if (ch === "sms") return "sms";
@@ -404,7 +423,7 @@ function zlTekst(n: number): string {
       minimumFractionDigits: grosze ? 2 : 0,
       maximumFractionDigits: 2,
     })
-    .replace(/ /g, " ")} zł`;
+    .replace(/\u00a0/g, " ")} zł`;
 }
 
 function isoToUtcNoon(iso: string): Date {
@@ -477,10 +496,14 @@ const SMALL_NUMBERS: Record<string, number> = {
 /** Dzień/miesiąc bez roku: ten rok, a gdy już minął — przyszły. */
 function dayMonthToISO(day: number, month: number, todayISO: string, year?: number): string | null {
   const y = year ?? Number(todayISO.slice(0, 4));
-  const candidate = parseDataISO(`${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+  const candidate = parseDataISO(
+    `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+  );
   if (!candidate) return null;
   if (year == null && candidate < todayISO) {
-    return parseDataISO(`${y + 1}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`);
+    return parseDataISO(
+      `${y + 1}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+    );
   }
   return candidate;
 }
@@ -536,7 +559,12 @@ export function parsePromiseDate(raw: unknown, todayISO: string): string | null 
   if (dMonth) {
     const idx = MONTH_STEMS.findIndex((re) => re.test(dMonth[2]));
     if (idx >= 0) {
-      return dayMonthToISO(Number(dMonth[1]), idx + 1, todayISO, dMonth[3] ? Number(dMonth[3]) : undefined);
+      return dayMonthToISO(
+        Number(dMonth[1]),
+        idx + 1,
+        todayISO,
+        dMonth[3] ? Number(dMonth[3]) : undefined,
+      );
     }
   }
 
@@ -598,7 +626,9 @@ function parsePropozycja(raw: unknown, todayISO: string): PropozycjaReszty | nul
 function propozycjaTekst(p: PropozycjaReszty): string {
   return [
     p.kwota_miesiecznie ? `${zlTekst(p.kwota_miesiecznie)} miesięcznie` : null,
-    p.od_kiedy ? `od ${parseDataISO(p.od_kiedy) ? formatDatePl(p.od_kiedy, false) : p.od_kiedy}` : null,
+    p.od_kiedy
+      ? `od ${parseDataISO(p.od_kiedy) ? formatDatePl(p.od_kiedy, false) : p.od_kiedy}`
+      : null,
     p.ile_rat ? `${p.ile_rat} rat` : null,
   ]
     .filter(Boolean)
@@ -662,7 +692,9 @@ async function recordPaymentPromise(ctx: ToolContext): Promise<ToolResult> {
     `Deklaracja wpłaty złożona agentowi AI (${eventTypeFor(ctx.session)}, kanał: ${ctx.session.channel}).`,
     `Kwota: ${zlTekst(kwota)}${czesciowa ? ` (część z ${zlTekst(st.snapshot.doZaplatyTeraz)} do zapłaty na ${st.today})` : ""}. Termin: ${dataSlownie} (${dataISO}).${sposob ? ` Sposób: ${sposob}.` : ""}`,
     przeszkody ? `Możliwe przeszkody: ${przeszkody}` : null,
-    propozycja ? `Propozycja spłaty reszty (do decyzji pożyczkodawcy): ${propozycjaTekst(propozycja)}.` : null,
+    propozycja
+      ? `Propozycja spłaty reszty (do decyzji pożyczkodawcy): ${propozycjaTekst(propozycja)}.`
+      : null,
     `Etap rozmowy: ${st.stage}; najpóźniejszy dopuszczalny termin: ${st.deadlineISO}.`,
   ]
     .filter(Boolean)
@@ -723,6 +755,19 @@ const NOTE_KINDS: Record<string, string> = {
   inne: "Notatka z rozmowy",
 };
 
+/** Rodzaje dozwolone przed potwierdzeniem tożsamości (oznaczane „Niezweryfikowane”). */
+// Prośbę „nie dzwońcie” szanujemy od każdego, kto odbiera — ale bez
+// potwierdzenia zostaje notatką do decyzji zespołu (bez automatu).
+const UNVERIFIED_KINDS = new Set([
+  "osoba_trzecia",
+  "poczta_glosowa",
+  "brak_zgody_na_nagrywanie",
+  "prosba_o_kontakt",
+  "prosba_nie_dzwonic",
+  "zgon",
+  "inne",
+]);
+
 /** Sprawy, których zespół nie może przeoczyć w osi czasu. */
 const URGENT_KINDS = new Set(["zgon", "upadlosc_restrukturyzacja"]);
 
@@ -737,20 +782,47 @@ async function recordCallNote(ctx: ToolContext): Promise<ToolResult> {
       error: `Nieznany rodzaj notatki „${rodzaj}”. Dozwolone: ${Object.keys(NOTE_KINDS).join(", ")}.`,
     };
   }
-  // Notatka bez tożsamości (osoba trzecia, poczta głosowa) jest dozwolona,
-  // ale musi dotyczyć sprawy wskazanej w sesji przez identify_caller.
-  const caseId = await resolveCaseId(ctx.session);
-  if (!caseId) {
+  const verified = hasStrongIdentity(ctx.session) && ctx.session.subject_kind === "borrower";
+  // Przed potwierdzeniem tożsamości wolno tylko to, co nie zmienia sprawy
+  // pożyczkobiorcy: kto odebrał, poczta głosowa, brak zgody, informacja
+  // osoby trzeciej. Twierdzenia o spłacie, sporze, upadłości czy odmowie
+  // zapisujemy dopiero od potwierdzonego rozmówcy.
+  if (!verified && !UNVERIFIED_KINDS.has(rodzaj)) {
     return {
       ok: false,
-      error: "Brak sprawy w sesji rozmowy — najpierw identify_caller.",
+      error: `Notatkę „${rodzaj}” zapisuję dopiero po potwierdzeniu tożsamości (verify_identity). Bez tego użyj rodzaju „inne” i zaproponuj kontakt pisemny.`,
     };
   }
   const tresc = cleanText(ctx.args.tresc, 1000);
   const pilne = URGENT_KINDS.has(rodzaj);
-  const tytul = `${pilne ? "PILNE: " : ""}${label} (agent AI)`;
-
+  const tytul = `${pilne ? "PILNE: " : ""}${verified ? "" : "Niezweryfikowane: "}${label} (agent AI)`;
   const s = await admin();
+
+  // Sprawa: potwierdzona albo kandydat z kanału (caller-id / wątek — nigdy
+  // z numeru podanego w rozmowie). Bez sprawy notatka trafia do skrzynki
+  // zespołu, nie do cudzych akt.
+  const caseId = await resolveCaseId(ctx.session);
+  if (!caseId) {
+    const { error: uErr } = await s.from("automation_events").insert({
+      automation_type: "wind_note_unassigned",
+      status: "received",
+      sent_payload: {
+        conversation_id: ctx.session.conversation_id,
+        agent_key: ctx.session.agent_key,
+        channel: ctx.session.channel,
+        rodzaj,
+        tresc: tresc ?? label,
+      },
+      response_payload: { identity_verified: ctx.session.identity_verified },
+    });
+    if (uErr) return { ok: false, error: "Nie udało się zapisać notatki." };
+    return {
+      ok: true,
+      rows: 1,
+      result: { saved: true, przypisana_do_sprawy: false, tytul, pilne },
+    };
+  }
+
   const { data: ev, error } = await s
     .from("wind_events")
     .insert({
@@ -773,12 +845,18 @@ async function recordCallNote(ctx: ToolContext): Promise<ToolResult> {
     })
     .select("id")
     .single();
-  if (error) return { ok: false, error: `Nie udało się zapisać notatki: ${error.message}` };
+  if (error) {
+    console.error("[agent-tools] record_call_note", error.message);
+    return { ok: false, error: "Nie udało się zapisać notatki." };
+  }
 
   if (rodzaj === "prosba_nie_dzwonic") {
-    // Sesja: dalsze narzędzia tej rozmowy widzą sprzeciw. Dziennik automatyzacji:
-    // zespół widzi, że kontakt ma iść pisemnie — bez czekania na przegląd akt.
+    // Sesja: dalsze narzędzia tej rozmowy widzą sprzeciw.
     await saveSession({ conversation_id: ctx.session.conversation_id, do_not_contact: true });
+  }
+  if (rodzaj === "prosba_nie_dzwonic" && verified) {
+    // Dziennik automatyzacji: zespół widzi, że kontakt ma iść pisemnie —
+    // bez czekania na przegląd akt. Tylko od potwierdzonego rozmówcy.
     const { error: aErr } = await s.from("automation_events").insert({
       automation_type: "wind_do_not_contact",
       status: "sent",
@@ -838,7 +916,9 @@ async function getPaymentInstructions(ctx: ToolContext): Promise<ToolResult> {
       rachunek_splaty_grupy: grupy,
       tytul_przelewu: tytulPrzelewu,
       odbiorca,
-      say: `Przelew na rachunek z umowy, odbiorca ${odbiorca}, numer: ${grupy.join(", ")}. W tytule: ${tytulPrzelewu}. Proszę powtórzyć numer — potwierdzę, czy się zgadza.`,
+      // Bez cyfr w `say`: numer czyta się z `rachunek_splaty_grupy` (tylko
+      // ten klucz omija maskowanie rachunków w redakcji wyniku).
+      say: `Przelew na rachunek z umowy, odbiorca ${odbiorca}, w tytule: ${tytulPrzelewu}. Numer podaj powoli, grupami cyfr z pola rachunek_splaty_grupy, i poproś rozmówcę o powtórzenie — potwierdzisz, czy się zgadza.`,
     },
   };
 }
@@ -871,7 +951,7 @@ export const TOOLS: readonly ToolSpec[] = [
     writes: true,
     rateLimit: { perConversation: 6, windowMinutes: 30 },
     description:
-      "Notatka do akt sprawy — także przed potwierdzeniem tożsamości. args: rodzaj (osoba_trzecia | poczta_glosowa | brak_zgody_na_nagrywanie | prosba_o_kontakt | juz_zaplacil | spor_o_kwote | upadlosc_restrukturyzacja | zgon | prosba_nie_dzwonic | odmowa | inne), tresc (1–3 zdania). „prosba_nie_dzwonic” oznacza w sesji sprzeciw wobec dalszych telefonów.",
+      "Notatka do akt sprawy. args: rodzaj (osoba_trzecia | poczta_glosowa | brak_zgody_na_nagrywanie | prosba_o_kontakt | juz_zaplacil | spor_o_kwote | upadlosc_restrukturyzacja | zgon | prosba_nie_dzwonic | odmowa | inne), tresc (1–3 zdania). Przed potwierdzeniem tożsamości tylko: osoba_trzecia, poczta_glosowa, brak_zgody_na_nagrywanie, prosba_o_kontakt, prosba_nie_dzwonic, zgon, inne (zapis jako niezweryfikowany). „prosba_nie_dzwonic” oznacza w sesji sprzeciw wobec dalszych telefonów.",
     handler: recordCallNote,
   },
   {

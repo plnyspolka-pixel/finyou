@@ -51,7 +51,12 @@ vi.mock("@/integrations/supabase/client.server", () => {
     return single ? { data: rows[0] ?? null, error: null } : { data: rows, error: null };
   };
   const builder = (table: string) => {
-    const st = { table, op: "select", payload: null as Row | null, filters: [] as Array<[string, unknown]> };
+    const st = {
+      table,
+      op: "select",
+      payload: null as Row | null,
+      filters: [] as Array<[string, unknown]>,
+    };
     const api: any = {
       select: () => api,
       eq: (c: string, v: unknown) => {
@@ -120,7 +125,12 @@ function baseLoan(over: Row = {}): Row {
       { nr: 2, termin: "2026-10-10", kwota: 1000 },
       { nr: 3, termin: "2026-11-10", kwota: 1000 },
     ],
-    borrower: { imie_nazwisko: "Jan Kowalski", typ: "osoba", pesel: PESEL, telefon: "+48600100200" },
+    borrower: {
+      imie_nazwisko: "Jan Kowalski",
+      typ: "osoba",
+      pesel: PESEL,
+      telefon: "+48600100200",
+    },
     ...over,
   };
 }
@@ -195,7 +205,14 @@ beforeEach(() => {
     },
   ];
   db.documents = [
-    { typ: "wezwanie", tytul: "Wezwanie do zapłaty", status: "wyslany", data_nadania: "2026-09-25", data_odbioru: null, created_at: "2026-09-25T10:00:00Z" },
+    {
+      typ: "wezwanie",
+      tytul: "Wezwanie do zapłaty",
+      status: "wyslany",
+      data_nadania: "2026-09-25",
+      data_odbioru: null,
+      created_at: "2026-09-25T10:00:00Z",
+    },
   ];
   db.profiles = { [OWNER]: { first_name: "Ewa", last_name: "Właścicielka" } };
   db.inserted = [];
@@ -218,10 +235,41 @@ describe("rejestr narzędzi windykacyjnych", () => {
     expect(tool("record_call_note").requiresIdentity).toBe(false);
     expect(tool("record_call_note").writes).toBe(true);
     expect(tool("record_payment_promise").writes).toBe(true);
-    expect(tool("get_collection_case").rateLimit).toEqual({ perConversation: 4, windowMinutes: 10 });
-    expect(tool("record_payment_promise").rateLimit).toEqual({ perConversation: 3, windowMinutes: 30 });
+    expect(tool("get_collection_case").rateLimit).toEqual({
+      perConversation: 4,
+      windowMinutes: 10,
+    });
+    expect(tool("record_payment_promise").rateLimit).toEqual({
+      perConversation: 3,
+      windowMinutes: 30,
+    });
     expect(tool("record_call_note").rateLimit).toEqual({ perConversation: 6, windowMinutes: 30 });
-    expect(tool("get_payment_instructions").rateLimit).toEqual({ perConversation: 3, windowMinutes: 10 });
+    expect(tool("get_payment_instructions").rateLimit).toEqual({
+      perConversation: 3,
+      windowMinutes: 10,
+    });
+  });
+});
+
+describe("get_collection_case — kto może otworzyć akta", () => {
+  it("słaby dowód (caller-id + nazwisko) nie otwiera akt", async () => {
+    const r = await tool("get_collection_case").handler(
+      ctx({}, { identity_method: "phone_match" }),
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("AUTH-1: sesja potwierdzona jako lead z pozostałą sprawą → brak akt", async () => {
+    const r = await tool("get_collection_case").handler(
+      ctx({}, { subject_kind: "lead", subject_id: "lead-x" }),
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("sprawa, której umowa należy do innego pożyczkobiorcy → odmowa", async () => {
+    db.kase!.loan = { ...db.kase!.loan, borrower_id: "b-inny" } as any;
+    const r = await tool("get_collection_case").handler(ctx());
+    expect(r.ok).toBe(false);
   });
 });
 
@@ -255,7 +303,9 @@ describe("get_collection_case — brief z harmonogramu", () => {
     expect(r.zmienne.termin_maksymalny).toBe(r.termin_maksymalny);
 
     expect(r.zabezpieczenia).toEqual({ hipoteka: "tak", akt_777: "brak" });
-    expect(r.oplaty_windykacyjne).toBe("monit telefoniczny 50 zł, wezwanie listem poleconym 300 zł");
+    expect(r.oplaty_windykacyjne).toBe(
+      "monit telefoniczny 50 zł, wezwanie listem poleconym 300 zł",
+    );
     expect(r.rachunek_splaty).toBe("12 3456 7890 1234 5678 9012 3456");
     expect(r.poprzednia_deklaracja).toBe("brak");
 
@@ -270,7 +320,13 @@ describe("get_collection_case — brief z harmonogramu", () => {
       { data: "2026-09-20T09:00:00.000Z", typ: "sms", tytul: "SMS przypominający" },
     ]);
     expect(r.dokumenty).toEqual([
-      { typ: "wezwanie", tytul: "Wezwanie do zapłaty", status: "wyslany", data_nadania: "2026-09-25", data_odbioru: null },
+      {
+        typ: "wezwanie",
+        tytul: "Wezwanie do zapłaty",
+        status: "wyslany",
+        data_nadania: "2026-09-25",
+        data_odbioru: null,
+      },
     ]);
 
     // Zmienne agenta głosowego — ten sam komplet, co w telefonie z panelu.
@@ -305,7 +361,9 @@ describe("get_collection_case — brief z harmonogramu", () => {
   });
 
   it("bez sprawy i pożyczki w sesji — odmowa (id z body nic nie znaczy)", async () => {
-    const r = await tool("get_collection_case").handler(ctx({ case_id: CASE_ID }, { case_id: null, loan_id: null }));
+    const r = await tool("get_collection_case").handler(
+      ctx({ case_id: CASE_ID }, { case_id: null, loan_id: null }),
+    );
     expect(r.ok).toBe(false);
     expect(db.inserted).toHaveLength(0);
   });
@@ -314,7 +372,9 @@ describe("get_collection_case — brief z harmonogramu", () => {
 describe("record_payment_promise", () => {
   it("termin po najpóźniejszym dopuszczalnym → accepted:false z datą do zaproponowania, bez zapisu", async () => {
     const r = okResult(
-      await tool("record_payment_promise").handler(ctx({ kwota_pln: 1050, data: "2026-10-20", sposob: "przelew" })),
+      await tool("record_payment_promise").handler(
+        ctx({ kwota_pln: 1050, data: "2026-10-20", sposob: "przelew" }),
+      ),
     );
     expect(r.accepted).toBe(false);
     expect(r.powod).toBe("po_terminie_maksymalnym");
@@ -385,12 +445,16 @@ describe("record_payment_promise", () => {
 
   it("niejasny termin albo brak kwoty → accepted:false z pytaniem, bez zapisu", async () => {
     const r1 = okResult(
-      await tool("record_payment_promise").handler(ctx({ kwota_pln: 1000, data: "jak dostanę pieniądze" })),
+      await tool("record_payment_promise").handler(
+        ctx({ kwota_pln: 1000, data: "jak dostanę pieniądze" }),
+      ),
     );
     expect(r1).toMatchObject({ accepted: false, powod: "data_nieczytelna" });
     const r2 = okResult(await tool("record_payment_promise").handler(ctx({ data: "jutro" })));
     expect(r2).toMatchObject({ accepted: false, powod: "brak_kwoty" });
-    const r3 = okResult(await tool("record_payment_promise").handler(ctx({ kwota_pln: 10, data: "2026-10-01" })));
+    const r3 = okResult(
+      await tool("record_payment_promise").handler(ctx({ kwota_pln: 10, data: "2026-10-01" })),
+    );
     expect(r3).toMatchObject({ accepted: false, powod: "data_przeszla" });
     expect(db.inserted).toHaveLength(0);
   });
@@ -401,7 +465,11 @@ describe("record_payment_promise", () => {
       typ: "sms",
       tytul: "Deklaracja wpłaty (agent AI)",
       data_zdarzenia: "2026-10-02T09:00:00.000Z",
-      metadata: { conversation_id: "conv_prev", deklarowana_kwota: 1000, deklarowana_data: "2026-10-05" },
+      metadata: {
+        conversation_id: "conv_prev",
+        deklarowana_kwota: 1000,
+        deklarowana_data: "2026-10-05",
+      },
       oplata: 0,
     });
     const r = okResult(await tool("get_collection_case").handler(ctx()));
@@ -411,12 +479,17 @@ describe("record_payment_promise", () => {
 });
 
 describe("record_call_note", () => {
-  it("„prosba_nie_dzwonic” przed tożsamością: notatka, sprzeciw w sesji, wpis w automation_events", async () => {
+  it("„prosba_nie_dzwonic” przed tożsamością: notatka „Niezweryfikowane”, sprzeciw w sesji, BEZ automatu", async () => {
     const r = okResult(
       await tool("record_call_note").handler(
         ctx(
           { rodzaj: "prosba_nie_dzwonic", tresc: "Rozmówca prosi o kontakt wyłącznie pisemny." },
-          { agent_key: "windykacja_tekst", channel: "chat", identity_verified: false },
+          {
+            agent_key: "windykacja_tekst",
+            channel: "chat",
+            identity_verified: false,
+            identity_method: null,
+          },
         ),
       ),
     );
@@ -431,7 +504,7 @@ describe("record_call_note", () => {
       autor: "agent AI",
       tresc: "Rozmówca prosi o kontakt wyłącznie pisemny.",
     });
-    expect(event.tytul).toMatch(/nie dzwonić/);
+    expect(event.tytul).toMatch(/^Niezweryfikowane: .*nie dzwonić/);
     expect(event.metadata).toMatchObject({
       conversation_id: "conv_test",
       rodzaj: "prosba_nie_dzwonic",
@@ -442,14 +515,37 @@ describe("record_call_note", () => {
 
     const upsert = db.upserts.find((u) => u.table === "agent_tool_sessions")!;
     expect(upsert.row).toMatchObject({ conversation_id: "conv_test", do_not_contact: true });
+    // Automat „kontakt tylko pisemnie” dopiero od potwierdzonego rozmówcy.
+    expect(db.inserted.find((i) => i.table === "automation_events")).toBeUndefined();
+  });
 
+  it("„prosba_nie_dzwonic” od potwierdzonego rozmówcy → wpis wind_do_not_contact", async () => {
+    okResult(
+      await tool("record_call_note").handler(
+        ctx({ rodzaj: "prosba_nie_dzwonic", tresc: "Proszę o kontakt pisemny." }),
+      ),
+    );
     const auto = db.inserted.find((i) => i.table === "automation_events")!.row;
     expect(auto.automation_type).toBe("wind_do_not_contact");
     expect(auto.sent_payload).toMatchObject({ case_id: CASE_ID, conversation_id: "conv_test" });
   });
 
+  it("przed tożsamością nie da się zapisać „już zapłaciłem”, sporu ani odmowy (AUTH-5)", async () => {
+    for (const rodzaj of ["juz_zaplacil", "spor_o_kwote", "upadlosc_restrukturyzacja", "odmowa"]) {
+      const r = await tool("record_call_note").handler(
+        ctx({ rodzaj, tresc: "x" }, { identity_verified: false, identity_method: null }),
+      );
+      expect(r.ok, rodzaj).toBe(false);
+    }
+    expect(db.inserted).toHaveLength(0);
+  });
+
   it("zgon i upadłość dostają prefiks PILNE; zwykła notatka nie zmienia sesji", async () => {
-    const r = okResult(await tool("record_call_note").handler(ctx({ rodzaj: "zgon", tresc: "Żona informuje o śmierci." })));
+    const r = okResult(
+      await tool("record_call_note").handler(
+        ctx({ rodzaj: "zgon", tresc: "Żona informuje o śmierci." }),
+      ),
+    );
     expect(r.pilne).toBe(true);
     expect(db.inserted[0].row.tytul).toMatch(/^PILNE: /);
     expect(db.inserted[0].row.typ).toBe("telefon");
@@ -457,14 +553,32 @@ describe("record_call_note", () => {
     expect(db.inserted.some((i) => i.table === "automation_events")).toBe(false);
   });
 
-  it("nieznany rodzaj albo brak sprawy w sesji → błąd bez zapisu", async () => {
+  it("nieznany rodzaj → błąd bez zapisu; brak sprawy w sesji → skrzynka zespołu, nie cudze akta", async () => {
     const r1 = await tool("record_call_note").handler(ctx({ rodzaj: "cokolwiek", tresc: "x" }));
     expect(r1.ok).toBe(false);
-    const r2 = await tool("record_call_note").handler(
-      ctx({ rodzaj: "osoba_trzecia", tresc: "x" }, { case_id: null, loan_id: null }),
-    );
-    expect(r2.ok).toBe(false);
     expect(db.inserted).toHaveLength(0);
+    const r2 = okResult(
+      await tool("record_call_note").handler(
+        ctx(
+          { rodzaj: "osoba_trzecia", tresc: "x" },
+          { case_id: null, loan_id: null, subject_kind: "unknown", identity_verified: false },
+        ),
+      ),
+    );
+    expect(r2).toMatchObject({ saved: true, przypisana_do_sprawy: false });
+    expect(db.inserted.find((i) => i.table === "wind_events")).toBeUndefined();
+    expect(db.inserted.find((i) => i.table === "automation_events")!.row.automation_type).toBe(
+      "wind_note_unassigned",
+    );
+  });
+
+  it("sprawa w sesji podmiotu innego niż pożyczkobiorca nie przyjmuje notatki do akt", async () => {
+    okResult(
+      await tool("record_call_note").handler(
+        ctx({ rodzaj: "inne", tresc: "x" }, { subject_kind: "lead" }),
+      ),
+    );
+    expect(db.inserted.find((i) => i.table === "wind_events")).toBeUndefined();
   });
 });
 
@@ -519,9 +633,32 @@ describe("pomocnicze: daty, rachunek, typ zdarzenia", () => {
   });
 
   it("accountGroups — NRB 2+6×4, PL odcięte, inne czwórkami", () => {
-    expect(accountGroups("PL12345678901234567890123456")).toEqual(["12", "3456", "7890", "1234", "5678", "9012", "3456"]);
-    expect(accountGroups("12-3456-7890-1234-5678-9012-3456")).toEqual(["12", "3456", "7890", "1234", "5678", "9012", "3456"]);
-    expect(accountGroups("DE89370400440532013000")).toEqual(["DE89", "3704", "0044", "0532", "0130", "00"]);
+    expect(accountGroups("PL12345678901234567890123456")).toEqual([
+      "12",
+      "3456",
+      "7890",
+      "1234",
+      "5678",
+      "9012",
+      "3456",
+    ]);
+    expect(accountGroups("12-3456-7890-1234-5678-9012-3456")).toEqual([
+      "12",
+      "3456",
+      "7890",
+      "1234",
+      "5678",
+      "9012",
+      "3456",
+    ]);
+    expect(accountGroups("DE89370400440532013000")).toEqual([
+      "DE89",
+      "3704",
+      "0044",
+      "0532",
+      "0130",
+      "00",
+    ]);
   });
 
   it("eventTypeFor — telefon dla agenta głosowego, kanał dla tekstowego, notatka dla czatu", () => {

@@ -151,6 +151,7 @@ export const Route = createFileRoute("/api/public/chat-widget")({
             leadId,
             channel: "chat",
             userMessage: data.message,
+            channelIdentity: { kind: "chat", value: data.sessionId },
           });
 
           let replyText = agent.reply;

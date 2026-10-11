@@ -94,13 +94,23 @@ export interface FleetToolSpec {
   preToolSpeech?: "auto" | "force" | "off";
 }
 
-const S = (description: string, extra: Partial<ArgField> = {}): ArgField => ({ type: "string", description, ...extra });
+const S = (description: string, extra: Partial<ArgField> = {}): ArgField => ({
+  type: "string",
+  description,
+  ...extra,
+});
 const N = (description: string): ArgField => ({ type: "number", description });
 const B = (description: string): ArgField => ({ type: "boolean", description });
-const A = (description: string, items: "string" | "number" = "string"): ArgField => ({ type: "array", description, items });
+const A = (description: string, items: "string" | "number" = "string"): ArgField => ({
+  type: "array",
+  description,
+  items,
+});
 
 const NEEDS_FIELDS: Record<string, ArgField> = {
-  intent: S("Klucz potrzeby: nowe_finansowanie, inwestowanie, trwajacy_wniosek, splata_umowy, inwestor_z_kontem, inne."),
+  intent: S(
+    "Klucz potrzeby: nowe_finansowanie, inwestowanie, trwajacy_wniosek, splata_umowy, inwestor_z_kontem, inne.",
+  ),
   product: S("Czego dotyczy rozmowa, np. pożyczka pod mieszkanie, abonament inwestora."),
   amount_pln: N("Kwota, o której mówi rozmówca (zł)."),
   timeline: S("Na kiedy rozmówca tego potrzebuje (jego słowami)."),
@@ -114,17 +124,20 @@ const NEEDS_FIELDS: Record<string, ArgField> = {
   free_text: S("Jedno–dwa zdania o sprawie, tak żeby kolejny asystent nie pytał drugi raz."),
 };
 
-const ALL_FLEET_KEYS: readonly AgentKey[] = ["recepcja", "inwestor_presale", "windykacja", "windykacja_tekst"];
+const ALL_FLEET_KEYS: readonly AgentKey[] = [
+  "recepcja",
+  "inwestor_presale",
+  "windykacja",
+  "windykacja_tekst",
+];
 const WIND_KEYS: readonly AgentKey[] = ["windykacja", "windykacja_tekst"];
 
 export const FLEET_TOOLS: readonly FleetToolSpec[] = [
   {
     tool: "identify_caller",
     description:
-      "Rozpoznaje, kto jest po drugiej stronie (po numerze z rozmowy albo podanym telefonie / e-mailu) i proponuje trasę. Wołaj na początku rozmowy, bez zapowiadania. Wynik to podpowiedź, nie pewnik — nie mów rozmówcy, co widzisz w systemie.",
+      "Proponuje trasę rozmowy po numerze połączenia / nadawcy wiadomości i zadeklarowanej potrzebie. Wołaj na początku rozmowy, bez zapowiadania. Nie zwraca danych osobowych; numeru ani e-maila podanego w rozmowie nie sprawdza. Wynik to podpowiedź, nie pewnik — nie mów rozmówcy, co widzisz w systemie.",
     args: {
-      phone: S("Telefon podany przez rozmówcę w rozmowie (jeśli inny niż numer połączenia)."),
-      email: S("E-mail podany przez rozmówcę w rozmowie."),
       intent: S("Potrzeba, o której mówi rozmówca, jeśli już padła (klucz z listy potrzeb)."),
     },
     agentKeys: ALL_FLEET_KEYS,
@@ -133,11 +146,21 @@ export const FLEET_TOOLS: readonly FleetToolSpec[] = [
   {
     tool: "verify_identity",
     description:
-      "Potwierdza tożsamość dowodem sprawdzanym na serwerze: numer umowy ALBO imię i nazwisko (firma: nazwa) zgodne z numerem / e-mailem rozmowy. Maks. 3 próby. Nigdy nie przekazuj PESEL. Wynik `say` możesz powiedzieć rozmówcy.",
+      "Potwierdza tożsamość dowodem sprawdzanym na serwerze: imię i nazwisko RAZEM z numerem umowy, albo kod z SMS-a (po send_verification_code). Odpowiedź need_code = potrzebny kod SMS. Maks. 3 próby. Nigdy nie przekazuj PESEL. Wynik `say` możesz powiedzieć rozmówcy.",
     args: {
-      numer_umowy: S("Numer umowy pożyczki podany przez rozmówcę."),
       full_name: S("Imię i nazwisko (albo nazwa firmy) podane przez rozmówcę."),
+      numer_umowy: S("Numer umowy pożyczki podany przez rozmówcę."),
+      kod: S("Sześciocyfrowy kod z SMS-a, który rozmówca odczytał."),
       recording_consent: B("Czy rozmówca zgodził się na nagrywanie (tylko rozmowa głosowa)."),
+    },
+    agentKeys: ["inwestor_presale", "windykacja", "windykacja_tekst"],
+  },
+  {
+    tool: "send_verification_code",
+    description:
+      "Wysyła SMS z sześciocyfrowym kodem na numer ZAPISANY W UMOWIE / KONCIE (nigdy na numer podany w rozmowie). Wołaj, gdy rozmówca nie ma numeru umowy albo verify_identity zwróciło need_code. Potem poproś o kod i przekaż go w verify_identity (kod).",
+    args: {
+      numer_umowy: S("Numer umowy, jeśli rozmówca go podał (kod pójdzie na telefon z tej umowy)."),
     },
     agentKeys: ["inwestor_presale", "windykacja", "windykacja_tekst"],
   },
@@ -145,7 +168,13 @@ export const FLEET_TOOLS: readonly FleetToolSpec[] = [
     tool: "save_needs",
     description:
       "Zapisuje rozpoznane potrzeby rozmówcy, żeby kolejny asystent nie pytał drugi raz. Wołaj przed przełączeniem rozmowy i po każdej ważnej informacji.",
-    args: { needs: { type: "object", description: "Rozpoznane potrzeby (pola pomijaj, jeśli nie padły).", properties: NEEDS_FIELDS } },
+    args: {
+      needs: {
+        type: "object",
+        description: "Rozpoznane potrzeby (pola pomijaj, jeśli nie padły).",
+        properties: NEEDS_FIELDS,
+      },
+    },
     requiredArgs: ["needs"],
     agentKeys: ["recepcja", "inwestor_presale"],
     preToolSpeech: "off",
@@ -168,7 +197,8 @@ export const FLEET_TOOLS: readonly FleetToolSpec[] = [
   },
   {
     tool: "describe_data",
-    description: "Lista tabel i kolumn, które możesz czytać narzędziem lookup. Wołaj tylko, gdy nie wiesz, gdzie szukać informacji.",
+    description:
+      "Lista tabel i kolumn, które możesz czytać narzędziem lookup. Wołaj tylko, gdy nie wiesz, gdzie szukać informacji.",
     args: {},
     agentKeys: WIND_KEYS,
   },
@@ -309,8 +339,11 @@ export const FLEET_TOOLS: readonly FleetToolSpec[] = [
   },
   {
     tool: "get_process_overview",
-    description: "Krótki, pewny opis procesu dla klienta, inwestora albo pożyczkobiorcy wraz z listą rzeczy, których nie wolno mówić.",
-    args: { audience: S("Dla kogo.", { enum: ["klient", "inwestor", "pozyczkobiorca_windykacja"] }) },
+    description:
+      "Krótki, pewny opis procesu dla klienta, inwestora albo pożyczkobiorcy wraz z listą rzeczy, których nie wolno mówić.",
+    args: {
+      audience: S("Dla kogo.", { enum: ["klient", "inwestor", "pozyczkobiorca_windykacja"] }),
+    },
     requiredArgs: ["audience"],
     agentKeys: ["inwestor_presale", "windykacja", "windykacja_tekst"],
   },
@@ -366,7 +399,11 @@ const TRANSFER_TO_PANEL: FleetTransfer = {
   transferMessage: "Przełączam do asystenta panelu inwestora.",
 };
 
-const evalOf = (e: { id: string; name: string; prompt: string }) => ({ id: e.id, name: e.name, prompt: e.prompt });
+const evalOf = (e: { id: string; name: string; prompt: string }) => ({
+  id: e.id,
+  name: e.name,
+  prompt: e.prompt,
+});
 
 export const FLEET_AGENTS: readonly FleetAgentSpec[] = [
   {
@@ -411,7 +448,11 @@ export const FLEET_AGENTS: readonly FleetAgentSpec[] = [
     ttsModelId: "eleven_flash_v2_5",
     firstMessage: TRIAGE_FIRST_MESSAGE_TEXT,
     prompt: buildTriagePrompt("text"),
-    placeholders: { ...TRIAGE_DYNAMIC_VARIABLE_DEFAULTS, channel: "chat", channel_label: "czat na stronie" },
+    placeholders: {
+      ...TRIAGE_DYNAMIC_VARIABLE_DEFAULTS,
+      channel: "chat",
+      channel_label: "czat na stronie",
+    },
     transfers: [
       TRANSFER_TO_INTAKE,
       {
@@ -460,7 +501,11 @@ export const FLEET_AGENTS: readonly FleetAgentSpec[] = [
     ttsModelId: "eleven_flash_v2_5",
     firstMessage: INVESTOR_PRESALE_FIRST_MESSAGE_TEXT,
     prompt: buildInvestorPresalePrompt("text"),
-    placeholders: { ...INVESTOR_PRESALE_DYNAMIC_VARIABLE_DEFAULTS, channel: "chat", channel_label: "czat na stronie" },
+    placeholders: {
+      ...INVESTOR_PRESALE_DYNAMIC_VARIABLE_DEFAULTS,
+      channel: "chat",
+      channel_label: "czat na stronie",
+    },
     transfers: [TRANSFER_TO_INTAKE, TRANSFER_TO_PANEL],
     dataCollection: INVESTOR_PRESALE_DATA_COLLECTION,
     evaluation: evalOf(INVESTOR_PRESALE_EVALUATION),
@@ -477,7 +522,8 @@ export const FLEET_AGENTS: readonly FleetAgentSpec[] = [
     ttsModelId: "eleven_flash_v2_5",
     // Rozmowa przychodząca: przedstawienie robi recepcja albo pierwsza
     // wypowiedź poniżej — bez „Czy to …?” (to formuła telefonu wychodzącego).
-    firstMessage: "Dzień dobry, tu asystent AI Finance You, rozmowa jest nagrywana. W czym mogę pomóc w sprawie umowy?",
+    firstMessage:
+      "Dzień dobry, tu asystent AI Finance You, rozmowa jest nagrywana. W czym mogę pomóc w sprawie umowy?",
     prompt: WIND_AGENT_PROMPT + WIND_INBOUND_APPENDIX,
     // Narzędzia wysyłają {{channel}} — bez placeholdera start rozmowy by padł.
     placeholders: { ...WIND_AGENT_PLACEHOLDERS, channel: "voice_phone", channel_label: "telefon" },
@@ -523,10 +569,19 @@ function argToEl(field: ArgField): ElProp {
   if (field.type === "object") {
     const props: Record<string, ElProp> = {};
     for (const [k, v] of Object.entries(field.properties ?? {})) props[k] = argToEl(v);
-    return { type: "object", description: field.description, properties: props, required: [...(field.required ?? [])] };
+    return {
+      type: "object",
+      description: field.description,
+      properties: props,
+      required: [...(field.required ?? [])],
+    };
   }
   if (field.type === "array") {
-    return { type: "array", description: field.description, items: { type: field.items ?? "string", description: "element" } };
+    return {
+      type: "array",
+      description: field.description,
+      items: { type: field.items ?? "string", description: "element" },
+    };
   }
   const out: ElProp = { type: field.type, description: field.description };
   if (field.enum) out.enum = [...field.enum];
@@ -543,7 +598,12 @@ export function buildWebhookToolConfig(
   agentKey: AgentKey,
   opts: { url?: string; secretId: string },
 ): Record<string, unknown> {
-  const args = argToEl({ type: "object", description: "Argumenty narzędzia.", properties: spec.args, required: spec.requiredArgs });
+  const args = argToEl({
+    type: "object",
+    description: "Argumenty narzędzia.",
+    properties: spec.args,
+    required: spec.requiredArgs,
+  });
   const body: Record<string, unknown> = {
     type: "object",
     description: "Wywołanie narzędzia Finance You",
@@ -596,7 +656,12 @@ export function buildAgentConfig(
     .filter((t) => Boolean(t.agent_id));
 
   const builtIn: Record<string, unknown> = {
-    end_call: { type: "system", name: "end_call", description: "", params: { system_tool_type: "end_call" } },
+    end_call: {
+      type: "system",
+      name: "end_call",
+      description: "",
+      params: { system_tool_type: "end_call" },
+    },
   };
   if (spec.mode === "voice") {
     builtIn.voicemail_detection = {
@@ -605,7 +670,12 @@ export function buildAgentConfig(
       description: "",
       params: { system_tool_type: "voicemail_detection" },
     };
-    builtIn.skip_turn = { type: "system", name: "skip_turn", description: "", params: { system_tool_type: "skip_turn" } };
+    builtIn.skip_turn = {
+      type: "system",
+      name: "skip_turn",
+      description: "",
+      params: { system_tool_type: "skip_turn" },
+    };
   }
   if (transfers.length) {
     builtIn.transfer_to_agent = {
@@ -628,7 +698,9 @@ export function buildAgentConfig(
       agent: {
         first_message: spec.firstMessage,
         language: "pl",
-        dynamic_variables: { dynamic_variable_placeholders: { thread_key: "", ...spec.placeholders } },
+        dynamic_variables: {
+          dynamic_variable_placeholders: { thread_key: "", ...spec.placeholders },
+        },
         prompt: {
           prompt: spec.prompt,
           llm: spec.llm,
@@ -639,7 +711,10 @@ export function buildAgentConfig(
         },
       },
       tts: { voice_id: spec.voiceId, model_id: spec.ttsModelId },
-      conversation: { text_only: spec.mode === "text", max_duration_seconds: spec.maxDurationSeconds },
+      conversation: {
+        text_only: spec.mode === "text",
+        max_duration_seconds: spec.maxDurationSeconds,
+      },
     },
     platform_settings: {
       data_collection: dataCollection,

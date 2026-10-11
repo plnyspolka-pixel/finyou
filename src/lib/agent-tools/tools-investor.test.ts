@@ -16,14 +16,20 @@ type Row = Record<string, any>;
 const db: Record<string, Row[]> = {};
 const writes: Array<{ table: string; op: string; values: Row }> = [];
 /** Odpowiedzi RPC: funkcja albo błąd. */
-const rpcs: Record<string, (args: Row | undefined) => { data: unknown; error: { message: string } | null }> = {};
+const rpcs: Record<
+  string,
+  (args: Row | undefined) => { data: unknown; error: { message: string } | null }
+> = {};
 /** Tabele, których odczyt ma zwrócić błąd (np. brak tabeli). */
 const failingTables = new Set<string>();
 
 const table = (name: string): Row[] => (db[name] ??= []);
 
 function likeToRegex(pattern: string): RegExp {
-  const esc = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".");
+  const esc = pattern
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/%/g, ".*")
+    .replace(/_/g, ".");
   return new RegExp(`^${esc}$`);
 }
 
@@ -46,8 +52,10 @@ function builder(name: string) {
       if (op === "select" && c && c.trim() !== "*") cols = c.split(",").map((x) => x.trim());
     });
   api.eq = (col: string, v: unknown) => chain(() => filters.push((r) => r[col] === v));
-  api.in = (col: string, vals: unknown[]) => chain(() => filters.push((r) => vals.includes(r[col])));
-  api.like = (col: string, p: string) => chain(() => filters.push((r) => likeToRegex(p).test(String(r[col] ?? ""))));
+  api.in = (col: string, vals: unknown[]) =>
+    chain(() => filters.push((r) => vals.includes(r[col])));
+  api.like = (col: string, p: string) =>
+    chain(() => filters.push((r) => likeToRegex(p).test(String(r[col] ?? ""))));
   api.order = (col: string, o?: { ascending?: boolean }) =>
     chain(() => {
       ord = { col, asc: o?.ascending !== false };
@@ -79,14 +87,22 @@ function builder(name: string) {
   const exec = () => {
     if (op === "insert") {
       const list = Array.isArray(payload) ? payload : [payload as Row];
+      const inserted: Row[] = [];
       for (const v of list) {
-        table(name).push({ ...v });
+        const row = {
+          id: v.id ?? `${name === "leads" ? "lead_new" : name}_${table(name).length + 1}`,
+          ...v,
+        };
+        table(name).push(row);
+        inserted.push(row);
         writes.push({ table: name, op, values: v });
       }
-      return { data: null, error: null };
+      // insert(...).select("id").maybeSingle() — jak PostgREST z Prefer: return=representation.
+      return { data: single ? { ...inserted[0] } : inserted, error: null };
     }
     if (op === "update") {
-      for (const r of table(name).filter((x) => filters.every((f) => f(x)))) Object.assign(r, payload);
+      for (const r of table(name).filter((x) => filters.every((f) => f(x))))
+        Object.assign(r, payload);
       writes.push({ table: name, op, values: payload as Row });
       return { data: null, error: null };
     }
@@ -99,15 +115,19 @@ function builder(name: string) {
       writes.push({ table: name, op, values: v });
       return { data: null, error: null };
     }
-    if (failingTables.has(name)) return { data: null, error: { message: `relation "${name}" does not exist` } };
+    if (failingTables.has(name))
+      return { data: null, error: { message: `relation "${name}" does not exist` } };
     let out = table(name).filter((r) => filters.every((f) => f(r)));
     if (ord) {
       const { col, asc } = ord;
-      out = [...out].sort((a, b) => (asc ? 1 : -1) * String(a[col] ?? "").localeCompare(String(b[col] ?? "")));
+      out = [...out].sort(
+        (a, b) => (asc ? 1 : -1) * String(a[col] ?? "").localeCompare(String(b[col] ?? "")),
+      );
     }
     if (lim != null) out = out.slice(0, lim);
     // Projekcja kolumn — handler dostaje tylko to, o co poprosił (jak PostgREST).
-    const project = (r: Row) => (cols ? Object.fromEntries(cols.filter((c) => c in r).map((c) => [c, r[c]])) : { ...r });
+    const project = (r: Row) =>
+      cols ? Object.fromEntries(cols.filter((c) => c in r).map((c) => [c, r[c]])) : { ...r };
     const data = single ? (out[0] ? project(out[0]) : null) : out.map(project);
     return { data, error: null };
   };
@@ -161,7 +181,7 @@ import {
 } from "./tools-investor.server";
 
 const PHONE = "+48600100200";
-const PESEL = "80010112345";
+const PESEL = "44051401458"; // poprawna suma kontrolna
 const UID = "u-inv-1";
 const NOW = new Date("2026-10-11T10:00:00Z");
 
@@ -205,7 +225,7 @@ const verifiedInvestor = () =>
   session({
     agent_key: "inwestor_panel",
     identity_verified: true,
-    identity_method: "investor_phone",
+    identity_method: "otp_sms",
     subject_kind: "investor",
     subject_id: "i1",
     investor_user_id: UID,
@@ -224,7 +244,8 @@ const result = async (name: string, ctx: ToolContext): Promise<Row> => {
 };
 
 const sessionRow = () => table("agent_tool_sessions").find((r) => r.conversation_id === "conv_inv");
-const events = (type: string) => table("automation_events").filter((e) => e.automation_type === type);
+const events = (type: string) =>
+  table("automation_events").filter((e) => e.automation_type === type);
 
 beforeEach(() => {
   for (const k of Object.keys(db)) delete db[k];
@@ -249,12 +270,52 @@ beforeEach(() => {
   mocks.sendSmsInternal.mockReset().mockResolvedValue({ ok: true, sid: "SM1" });
 
   db.access_products = [
-    { id: "p1", code: "investor_access_30d", audience: "investor", label: "Abonament — 30 dni", duration_days: 30, amount_grosz: 150000, currency: "PLN", active: true, sort_order: 1 },
-    { id: "p2", code: "investor_access_365d", audience: "investor", label: "Abonament — 365 dni", duration_days: 365, amount_grosz: 700000, currency: "PLN", active: true, sort_order: 2 },
+    {
+      id: "p1",
+      code: "investor_access_30d",
+      audience: "investor",
+      label: "Abonament — 30 dni",
+      duration_days: 30,
+      amount_grosz: 150000,
+      currency: "PLN",
+      active: true,
+      sort_order: 1,
+    },
+    {
+      id: "p2",
+      code: "investor_access_365d",
+      audience: "investor",
+      label: "Abonament — 365 dni",
+      duration_days: 365,
+      amount_grosz: 700000,
+      currency: "PLN",
+      active: true,
+      sort_order: 2,
+    },
     // Historyczny, nieaktywny — nie może trafić do cennika.
-    { id: "p3", code: "investor_pro_180d", audience: "investor", label: "Pakiet PRO", duration_days: 180, amount_grosz: 990000, currency: "PLN", active: false, sort_order: 3 },
+    {
+      id: "p3",
+      code: "investor_pro_180d",
+      audience: "investor",
+      label: "Pakiet PRO",
+      duration_days: 180,
+      amount_grosz: 990000,
+      currency: "PLN",
+      active: false,
+      sort_order: 3,
+    },
     // Pośrednik — inna publiczność.
-    { id: "p4", code: "broker_access_30d", audience: "broker", label: "Pośrednik", duration_days: 30, amount_grosz: 50000, currency: "PLN", active: true, sort_order: 4 },
+    {
+      id: "p4",
+      code: "broker_access_30d",
+      audience: "broker",
+      label: "Pośrednik",
+      duration_days: 30,
+      amount_grosz: 50000,
+      currency: "PLN",
+      active: true,
+      sort_order: 4,
+    },
   ];
   db.investors = [
     {
@@ -279,7 +340,15 @@ beforeEach(() => {
     },
   ];
   db.investor_distribution_criteria = [
-    { investor_id: "i1", min_amount: 100000, max_amount: 500000, auto_send_enabled: true, accepting_applications: true, paused_until: null, updated_at: "2026-10-01" },
+    {
+      investor_id: "i1",
+      min_amount: 100000,
+      max_amount: 500000,
+      auto_send_enabled: true,
+      accepting_applications: true,
+      paused_until: null,
+      updated_at: "2026-10-01",
+    },
   ];
   db.investor_orders = [];
   db.leads = [];
@@ -299,18 +368,39 @@ describe("TOOLS — rejestr", () => {
       "send_investor_registration_link",
     ]);
     const invest = ["inwestor_presale", "inwestor_panel", "recepcja"];
-    for (const n of ["get_pricing", "get_offer_teasers", "get_investor_state", "save_investor_needs", "send_investor_registration_link"]) {
+    for (const n of [
+      "get_pricing",
+      "get_offer_teasers",
+      "get_investor_state",
+      "save_investor_needs",
+      "send_investor_registration_link",
+    ]) {
       expect([...by[n].agents].sort()).toEqual([...invest].sort());
     }
-    expect([...by.request_investor_callback.agents].sort()).toEqual(["inwestor_panel", "inwestor_presale"]);
+    expect([...by.request_investor_callback.agents].sort()).toEqual([
+      "inwestor_panel",
+      "inwestor_presale",
+    ]);
     expect(by.get_pricing.rateLimit).toEqual({ perConversation: 4, windowMinutes: 10 });
     expect(by.get_offer_teasers.rateLimit).toEqual({ perConversation: 4, windowMinutes: 10 });
     expect(by.get_investor_state.rateLimit).toEqual({ perConversation: 4, windowMinutes: 10 });
     expect(by.save_investor_needs.rateLimit).toEqual({ perConversation: 10, windowMinutes: 30 });
-    expect(by.request_investor_callback.rateLimit).toEqual({ perConversation: 2, windowMinutes: 30 });
-    expect(by.send_investor_registration_link.rateLimit).toEqual({ perConversation: 1, windowMinutes: 30 });
-    expect(TOOLS.filter((t) => t.requiresIdentity).map((t) => t.name)).toEqual(["get_investor_state"]);
-    expect(TOOLS.filter((t) => t.writes).map((t) => t.name).sort()).toEqual([
+    expect(by.request_investor_callback.rateLimit).toEqual({
+      perConversation: 2,
+      windowMinutes: 30,
+    });
+    expect(by.send_investor_registration_link.rateLimit).toEqual({
+      perConversation: 1,
+      windowMinutes: 30,
+    });
+    expect(TOOLS.filter((t) => t.requiresIdentity).map((t) => t.name)).toEqual([
+      "get_investor_state",
+    ]);
+    expect(
+      TOOLS.filter((t) => t.writes)
+        .map((t) => t.name)
+        .sort(),
+    ).toEqual([
       "request_investor_callback",
       "save_investor_needs",
       "send_investor_registration_link",
@@ -323,8 +413,20 @@ describe("get_pricing", () => {
     const r = await result("get_pricing", ctxFor());
     expect(r.source).toBe("access_products");
     expect(r.products).toEqual([
-      { code: "investor_access_30d", label: "Abonament — 30 dni", duration_days: 30, price_pln: 1500, price_label: plnLabel(1500) },
-      { code: "investor_access_365d", label: "Abonament — 365 dni", duration_days: 365, price_pln: 7000, price_label: plnLabel(7000) },
+      {
+        code: "investor_access_30d",
+        label: "Abonament — 30 dni",
+        duration_days: 30,
+        price_pln: 1500,
+        price_label: plnLabel(1500),
+      },
+      {
+        code: "investor_access_365d",
+        label: "Abonament — 365 dni",
+        duration_days: 365,
+        price_pln: 7000,
+        price_label: plnLabel(7000),
+      },
     ]);
     expect(r.price_sentence).toBe(SUBSCRIPTION_PRICE_SENTENCE);
     expect(r.discount).toEqual({ yearly_discount_pct: 61, yearly_savings_pln: 11000 });
@@ -381,10 +483,21 @@ describe("get_pricing", () => {
     const ps = productsFromRows([
       { code: "investorXaccess", audience: "investor", amount_grosz: 100, active: true },
       { code: "investor_access_30d", audience: "investor", amount_grosz: "abc", active: true },
-      { code: "investor_access_30d", audience: "investor", amount_grosz: 150000, duration_days: 30, active: true, label: "Miesiąc" },
+      {
+        code: "investor_access_30d",
+        audience: "investor",
+        amount_grosz: 150000,
+        duration_days: 30,
+        active: true,
+        label: "Miesiąc",
+      },
     ]);
     expect(ps).toHaveLength(1);
-    expect(pricingSummary(ps)).toEqual({ price_sentence: `${plnLabel(1500)} za 30 dni`, yearly_discount_pct: null, yearly_savings_pln: null });
+    expect(pricingSummary(ps)).toEqual({
+      price_sentence: `${plnLabel(1500)} za 30 dni`,
+      yearly_discount_pct: null,
+      yearly_savings_pln: null,
+    });
   });
 });
 
@@ -433,10 +546,30 @@ describe("get_offer_teasers", () => {
       annual_rate_pct: 13.5,
     });
     for (const t of r.teasers) {
-      expect(Object.keys(t).sort()).toEqual(["amount_pln", "annual_rate_pct", "city", "ltv_pct", "period_months", "property_type"]);
+      expect(Object.keys(t).sort()).toEqual([
+        "amount_pln",
+        "annual_rate_pct",
+        "city",
+        "ltv_pct",
+        "period_months",
+        "property_type",
+      ]);
     }
     const json = JSON.stringify(r);
-    for (const secret of ["00000000-0000", "match-", "order-", "FY-P-", "Kowalski", "Długa", "Prosta", "WA1M", "00012345", "lubelskie", "400000", "52.3"]) {
+    for (const secret of [
+      "00000000-0000",
+      "match-",
+      "order-",
+      "FY-P-",
+      "Kowalski",
+      "Długa",
+      "Prosta",
+      "WA1M",
+      "00012345",
+      "lubelskie",
+      "400000",
+      "52.3",
+    ]) {
       expect(json).not.toContain(secret);
     }
     expect(typeof r.say).toBe("string");
@@ -475,6 +608,14 @@ describe("get_offer_teasers", () => {
 });
 
 describe("get_investor_state", () => {
+  it("słaby dowód (caller-id + nazwisko / nazwa firmy) nie otwiera konta inwestora", async () => {
+    const out = await run(
+      "get_investor_state",
+      ctxFor({ session: { ...verifiedInvestor(), identity_method: "investor_phone" } }),
+    );
+    expect(out.ok).toBe(false);
+  });
+
   const access = (state: Row) => {
     rpcs.get_access_state = (args) => {
       expect(args).toEqual({ _audience: "investor", _user_id: UID });
@@ -489,15 +630,32 @@ describe("get_investor_state", () => {
   };
 
   it("bez abonamentu → wykup_abonament; bez danych wrażliwych w wyniku", async () => {
-    access({ hasPaidAccess: false, isBypass: false, hasModuleAccess: false, activeUntil: null, daysLeft: 0 });
+    access({
+      hasPaidAccess: false,
+      isBypass: false,
+      hasModuleAccess: false,
+      activeUntil: null,
+      daysLeft: 0,
+    });
     legal(false);
     const r = await result("get_investor_state", ctxFor({ session: verifiedInvestor() }));
     expect(r.next_step).toBe("wykup_abonament");
     expect(r.access).toMatchObject({ source: "get_access_state", has_access: false });
-    expect(r.criteria).toMatchObject({ min_amount: 100000, max_amount: 500000, auto_send_enabled: true });
+    expect(r.criteria).toMatchObject({
+      min_amount: 100000,
+      max_amount: 500000,
+      auto_send_enabled: true,
+    });
     expect(r.investor).toMatchObject({ subscription_status: "aktywny", screening_result: "clear" });
     const json = JSON.stringify(r);
-    for (const secret of [PESEL, "1234563218", "PL61109010140000071219812874", "anna@example.com", "Nowak", PHONE]) {
+    for (const secret of [
+      PESEL,
+      "1234563218",
+      "PL61109010140000071219812874",
+      "anna@example.com",
+      "Nowak",
+      PHONE,
+    ]) {
       expect(json).not.toContain(secret);
     }
     // Zapytanie nawet nie prosi o wrażliwe kolumny.
@@ -534,7 +692,11 @@ describe("get_investor_state", () => {
   it("RPC get_access_state niedostępne → abonament z kolumn investors", async () => {
     legal(true);
     const r = await result("get_investor_state", ctxFor({ session: verifiedInvestor() }));
-    expect(r.access).toMatchObject({ source: "investors", has_access: true, active_until: "2027-01-01T00:00:00Z" });
+    expect(r.access).toMatchObject({
+      source: "investors",
+      has_access: true,
+      active_until: "2027-01-01T00:00:00Z",
+    });
     expect(r.next_step).toBe("zloz_zlecenie");
 
     db.investors[0].subscription_active_until = "2026-10-01T00:00:00Z"; // wygasł
@@ -548,7 +710,14 @@ describe("get_investor_state", () => {
     expect(noUser.ok).toBe(false);
     const asClient = await run(
       "get_investor_state",
-      ctxFor({ session: session({ identity_verified: true, subject_kind: "client", subject_id: "k1", investor_user_id: UID }) }),
+      ctxFor({
+        session: session({
+          identity_verified: true,
+          subject_kind: "client",
+          subject_id: "k1",
+          investor_user_id: UID,
+        }),
+      }),
     );
     expect(asClient.ok).toBe(false);
   });
@@ -556,8 +725,12 @@ describe("get_investor_state", () => {
   it("deriveNextStep — kolejność bramek", () => {
     const base = { hasInvestor: true, hasAccess: true, legalPackComplete: true, openOrders: 0 };
     expect(deriveNextStep({ ...base, hasInvestor: false }).next_step).toBe("dokoncz_rejestracje");
-    expect(deriveNextStep({ ...base, hasAccess: false, legalPackComplete: true }).next_step).toBe("wykup_abonament");
-    expect(deriveNextStep({ ...base, legalPackComplete: false }).next_step).toBe("zaakceptuj_umowy");
+    expect(deriveNextStep({ ...base, hasAccess: false, legalPackComplete: true }).next_step).toBe(
+      "wykup_abonament",
+    );
+    expect(deriveNextStep({ ...base, legalPackComplete: false }).next_step).toBe(
+      "zaakceptuj_umowy",
+    );
     expect(deriveNextStep(base).next_step).toBe("zloz_zlecenie");
     expect(deriveNextStep({ ...base, openOrders: 2 }).next_step).toBe("sprawdz_oferty");
   });
@@ -585,16 +758,22 @@ describe("save_investor_needs — kwalifikacja", () => {
         },
       }),
     );
-    expect(out).toMatchObject({ saved: true, qualification: "A", lead_id: "lead_new_1", saved_on_lead: true });
+    expect(out).toMatchObject({ saved: true, qualification: "A", saved_on_lead: true });
+    // Identyfikator wewnętrzny nie wraca do modelu.
+    expect(out).not.toHaveProperty("lead_id");
     expect(out.say).toBe("Dziękuję, zanotowane.");
     expect(out.agent_note).toMatch(/request_investor_callback/);
 
-    // Lead: typ inwestorski, e-mail NIE w upsercie (helper zakładałby stub wniosku pożyczkowego).
-    expect(mocks.upsertLeadFromSource).toHaveBeenCalledTimes(1);
-    const opts = mocks.upsertLeadFromSource.mock.calls[0][0];
-    expect(opts).toMatchObject({ type: "inwestorski", phoneNormalized: PHONE });
-    expect(opts.email).toBeUndefined();
+    // Nowy lead bezpośrednim insertem — nie przez upsert, który dopasowałby
+    // cudzego leada po numerze i założył stub wniosku pożyczkowego.
+    expect(mocks.upsertLeadFromSource).not.toHaveBeenCalled();
     const lead = table("leads")[0];
+    expect(lead).toMatchObject({
+      id: "lead_new_1",
+      type: "inwestorski",
+      source: "agent_inwestor",
+      phone_normalized: PHONE,
+    });
     expect(lead.email).toBe("inwestor@example.com");
     expect(lead.application_data.qualification).toBe("A");
     expect(lead.application_data.investor_needs).toMatchObject({
@@ -609,9 +788,19 @@ describe("save_investor_needs — kwalifikacja", () => {
 
     const s = sessionRow();
     expect(s?.lead_id).toBe("lead_new_1");
-    expect(s?.needs).toMatchObject({ investor_qualification: "A", investor_ticket_pln: 250000, decision_role: "decydent", timeline: "kwartal" });
+    expect(s?.needs).toMatchObject({
+      agent_lead_id: "lead_new_1",
+      investor_qualification: "A",
+      investor_ticket_pln: 250000,
+      decision_role: "decydent",
+      timeline: "kwartal",
+    });
     expect(events("investor_needs_recognized")).toHaveLength(1);
-    expect(events("investor_needs_recognized")[0].sent_payload).toMatchObject({ qualification: "A", lead_id: "lead_new_1", agent_key: "inwestor_presale" });
+    expect(events("investor_needs_recognized")[0].sent_payload).toMatchObject({
+      qualification: "A",
+      lead_id: "lead_new_1",
+      agent_key: "inwestor_presale",
+    });
   });
 
   it("B: 60 000 zł bez pośpiechu; B: mała kwota, ale „teraz”", async () => {
@@ -620,45 +809,111 @@ describe("save_investor_needs — kwalifikacja", () => {
       ctxFor({ args: { ticket_pln: 60000, decision_role: "rekomenduje", timeline: "kiedyś" } }),
     );
     expect(b1.qualification).toBe("B");
-    const b2 = await result("save_investor_needs", ctxFor({ args: { ticket_pln: 10000, decision_role: "szuka info", timeline: "teraz" } }));
+    const b2 = await result(
+      "save_investor_needs",
+      ctxFor({ args: { ticket_pln: 10000, decision_role: "szuka info", timeline: "teraz" } }),
+    );
     expect(b2.qualification).toBe("B");
   });
 
   it("C: 20 000 zł, szuka informacji, kiedyś — bez kontaktu nie zakłada leada", async () => {
-    const c = await result("save_investor_needs", ctxFor({ args: { ticket_pln: 20000, decision_role: "szuka_info", timeline: "kiedys" } }));
-    expect(c).toMatchObject({ saved: true, qualification: "C", lead_id: null, saved_on_lead: false });
-    expect(mocks.upsertLeadFromSource).not.toHaveBeenCalled();
+    const c = await result(
+      "save_investor_needs",
+      ctxFor({ args: { ticket_pln: 20000, decision_role: "szuka_info", timeline: "kiedys" } }),
+    );
+    expect(c).toMatchObject({ saved: true, qualification: "C", saved_on_lead: false });
+    expect(table("leads")).toHaveLength(0);
     expect(sessionRow()?.needs.investor_qualification).toBe("C");
   });
 
-  it("lead z sesji: bez szukania i bez upsertu, scalenie application_data", async () => {
-    db.leads = [{ id: "lead_s", status: "nowy", notes: null, email: null, phone_normalized: PHONE, application_data: { lead_magnet: "poradnik" } }];
+  it("lead potwierdzonego rozmówcy: bez szukania, scalenie application_data, kontakt NIE nadpisywany", async () => {
+    db.leads = [
+      {
+        id: "lead_s",
+        status: "nowy",
+        notes: null,
+        email: null,
+        phone_normalized: PHONE,
+        application_data: { lead_magnet: "poradnik" },
+      },
+    ];
     const r = await result(
       "save_investor_needs",
-      ctxFor({ session: session({ lead_id: "lead_s" }), callerPhone: PHONE, args: { ticket_pln: 300000, decision_role: "decydent", timeline: "teraz" } }),
+      ctxFor({
+        session: session({
+          lead_id: "lead_s",
+          identity_verified: true,
+          identity_method: "phone_match",
+          subject_kind: "lead",
+          subject_id: "lead_s",
+        }),
+        callerPhone: PHONE,
+        args: {
+          ticket_pln: 300000,
+          decision_role: "decydent",
+          timeline: "teraz",
+          callback_email: "obcy@example.com",
+        },
+      }),
     );
-    expect(r).toMatchObject({ qualification: "A", lead_id: "lead_s" });
+    expect(r).toMatchObject({ qualification: "A", saved_on_lead: true });
     expect(mocks.findLeadId).not.toHaveBeenCalled();
-    expect(mocks.upsertLeadFromSource).not.toHaveBeenCalled();
-    expect(db.leads[0].application_data).toMatchObject({ lead_magnet: "poradnik", qualification: "A" });
+    expect(db.leads).toHaveLength(1);
+    expect(db.leads[0].application_data).toMatchObject({
+      lead_magnet: "poradnik",
+      qualification: "A",
+    });
+    expect(db.leads[0].email).toBeNull();
   });
 
-  it("istniejący lead po telefonie nie idzie przez upsert (typ i źródło zostają)", async () => {
-    db.leads = [{ id: "lead_old", type: "pozyczkowy", source: "meta", status: "w_kontakcie", email: null, phone_normalized: PHONE, application_data: {} }];
-    mocks.findLeadId.mockResolvedValue("lead_old");
-    const r = await result("save_investor_needs", ctxFor({ callerPhone: PHONE, args: { ticket_pln: 100000 } }));
-    expect(r.lead_id).toBe("lead_old");
+  it("AUTH-7: lead z sesji bez potwierdzenia i lead znaleziony po podanym numerze — nietknięte; nowy lead „możliwy duplikat”", async () => {
+    db.leads = [
+      {
+        id: "lead_victim",
+        type: "pozyczkowy",
+        source: "meta",
+        status: "w_kontakcie",
+        notes: "notatka zespołu",
+        email: null,
+        phone_normalized: PHONE,
+        application_data: {},
+      },
+    ];
+    mocks.findLeadId.mockResolvedValue("lead_victim");
+    const before = JSON.stringify(db.leads[0]);
+    await result(
+      "save_investor_needs",
+      ctxFor({
+        session: session({ lead_id: "lead_victim" }),
+        args: { ticket_pln: 100000, callback_phone: PHONE, callback_email: "atak@example.com" },
+      }),
+    );
+    expect(JSON.stringify(db.leads[0])).toBe(before);
+    const created = db.leads.find((l) => l.id !== "lead_victim")!;
+    expect(created).toMatchObject({
+      type: "inwestorski",
+      application_data: expect.objectContaining({ possible_duplicate_of: "lead_victim" }),
+    });
     expect(mocks.upsertLeadFromSource).not.toHaveBeenCalled();
-    expect(db.leads[0]).toMatchObject({ type: "pozyczkowy", source: "meta" });
   });
 
   it("qualifyInvestor — progi", () => {
-    expect(qualifyInvestor({ ticket_pln: 200000, decision_role: "decydent", timeline: "teraz" })).toBe("A");
-    expect(qualifyInvestor({ ticket_pln: 199999, decision_role: "decydent", timeline: "teraz" })).toBe("B");
-    expect(qualifyInvestor({ ticket_pln: 500000, decision_role: "rekomenduje", timeline: "kwartal" })).toBe("B");
-    expect(qualifyInvestor({ ticket_pln: 500000, decision_role: "decydent", timeline: "kiedys" })).toBe("B");
+    expect(
+      qualifyInvestor({ ticket_pln: 200000, decision_role: "decydent", timeline: "teraz" }),
+    ).toBe("A");
+    expect(
+      qualifyInvestor({ ticket_pln: 199999, decision_role: "decydent", timeline: "teraz" }),
+    ).toBe("B");
+    expect(
+      qualifyInvestor({ ticket_pln: 500000, decision_role: "rekomenduje", timeline: "kwartal" }),
+    ).toBe("B");
+    expect(
+      qualifyInvestor({ ticket_pln: 500000, decision_role: "decydent", timeline: "kiedys" }),
+    ).toBe("B");
     expect(qualifyInvestor({ ticket_pln: 50000, decision_role: null, timeline: null })).toBe("B");
-    expect(qualifyInvestor({ ticket_pln: 49999, decision_role: "decydent", timeline: "kiedys" })).toBe("C");
+    expect(
+      qualifyInvestor({ ticket_pln: 49999, decision_role: "decydent", timeline: "kiedys" }),
+    ).toBe("C");
     expect(qualifyInvestor({ ticket_pln: null, decision_role: null, timeline: null })).toBe("C");
   });
 });
@@ -682,10 +937,23 @@ describe("save_investor_needs — walidacja liczb i tekstu", () => {
   });
 
   it("wartości skrajne przycinane: horyzont do 600 mies., rentowność do 100% z flagą odsetek maksymalnych", async () => {
-    const r = await result("save_investor_needs", ctxFor({ args: { ticket_pln: "1 000 000 000", horizon_months: 9999, min_yield_pct: 150 } }));
+    const r = await result(
+      "save_investor_needs",
+      ctxFor({ args: { ticket_pln: "1 000 000 000", horizon_months: 9999, min_yield_pct: 150 } }),
+    );
     const needs = sessionRow()?.needs.investor_needs;
-    expect(needs).toMatchObject({ ticket_pln: 1_000_000_000, horizon_months: 600, min_yield_pct: 100 });
-    expect(r.flags).toEqual(expect.arrayContaining(["horizon_clamped", "min_yield_clamped", "min_yield_above_statutory_max"]));
+    expect(needs).toMatchObject({
+      ticket_pln: 1_000_000_000,
+      horizon_months: 600,
+      min_yield_pct: 100,
+    });
+    expect(r.flags).toEqual(
+      expect.arrayContaining([
+        "horizon_clamped",
+        "min_yield_clamped",
+        "min_yield_above_statutory_max",
+      ]),
+    );
     expect(r.say).toMatch(/14,5% rocznie/);
   });
 
@@ -710,7 +978,10 @@ describe("save_investor_needs — walidacja liczb i tekstu", () => {
     expect(needs.regions).toEqual(["Śląsk"]);
     expect(needs.decision_role).toBeNull();
     expect(needs.experience).toBeNull();
-    const short = await result("save_investor_needs", ctxFor({ args: { summary: `mój pesel ${PESEL}` } }));
+    const short = await result(
+      "save_investor_needs",
+      ctxFor({ args: { summary: `mój pesel ${PESEL}` } }),
+    );
     expect(short.saved).toBe(true);
     expect(JSON.stringify(table("agent_tool_sessions"))).not.toContain(PESEL);
     expect(JSON.stringify(table("automation_events"))).not.toContain(PESEL);
@@ -743,17 +1014,33 @@ describe("request_investor_callback", () => {
     expect((out as { error: string }).error).toMatch(/telefonu|e-mail/);
   });
 
-  it("zapis na leadzie: notatka dopisana, status „nowy” → „wymaga_kontaktu”, `say` bez obietnicy terminu", async () => {
-    db.leads = [{ id: "lead_s", status: "nowy", notes: "stara notatka", email: null, phone_normalized: PHONE, application_data: {} }];
+  it("zapis na leadzie potwierdzonego rozmówcy: notatka dopisana, status „nowy” → „wymaga_kontaktu”, `say` bez obietnicy terminu", async () => {
+    db.leads = [
+      {
+        id: "lead_s",
+        status: "nowy",
+        notes: "stara notatka",
+        email: null,
+        phone_normalized: PHONE,
+        application_data: {},
+      },
+    ];
     const r = await result(
       "request_investor_callback",
       ctxFor({
-        session: session({ lead_id: "lead_s" }),
+        session: session({
+          lead_id: "lead_s",
+          identity_verified: true,
+          identity_method: "phone_match",
+          subject_kind: "lead",
+          subject_id: "lead_s",
+        }),
         callerPhone: PHONE,
         args: { preferred_time: "po 16", topic: `pytania o umowę, pesel ${PESEL}` },
       }),
     );
-    expect(r).toMatchObject({ saved: true, lead_id: "lead_s", saved_on_lead: true, phone_hint: "…02 00" });
+    expect(r).toMatchObject({ saved: true, saved_on_lead: true, phone_hint: "…02 00" });
+    expect(r).not.toHaveProperty("lead_id");
     expect(r.say).toBe(CALLBACK_SAY);
     expect(r.say).toBe(
       "Zapisuję prośbę o kontakt. Nie obiecuję terminu — jeśli opiekun inwestorów uzna, że może pomóc, odezwie się bezpośrednio.",
@@ -768,15 +1055,43 @@ describe("request_investor_callback", () => {
     expect(sessionRow()?.needs.wants_callback).toBe(true);
   });
 
-  it("lead dalej w lejku — status zostaje, notatka dopisana; e-mail z args trafia w puste pole", async () => {
-    db.leads = [{ id: "lead_s", status: "wniosek_zlozony", notes: null, email: null, phone_normalized: null, application_data: {} }];
+  it("lead potwierdzony, dalej w lejku — status zostaje, notatka dopisana; e-mail z rozmowy NIE trafia do cudzego pola", async () => {
+    db.leads = [
+      {
+        id: "lead_s",
+        status: "wniosek_zlozony",
+        notes: null,
+        email: null,
+        phone_normalized: null,
+        application_data: {},
+      },
+    ];
     await result(
       "request_investor_callback",
-      ctxFor({ session: session({ lead_id: "lead_s" }), args: { email: "Inwestor@Example.com" } }),
+      ctxFor({
+        session: session({
+          lead_id: "lead_s",
+          identity_verified: true,
+          identity_method: "phone_match",
+          subject_kind: "lead",
+          subject_id: "lead_s",
+        }),
+        args: { email: "Inwestor@Example.com" },
+      }),
     );
     expect(db.leads[0].status).toBe("wniosek_zlozony");
-    expect(db.leads[0].email).toBe("inwestor@example.com");
+    expect(db.leads[0].email).toBeNull();
     expect(db.leads[0].notes).toContain("Prośba o kontakt opiekuna inwestorów");
+  });
+
+  it("bez potwierdzenia: prośba ląduje na NOWYM leadzie z kontaktem z rozmowy", async () => {
+    await result("request_investor_callback", ctxFor({ args: { email: "Nowy@Example.com" } }));
+    expect(db.leads).toHaveLength(1);
+    expect(db.leads[0]).toMatchObject({
+      type: "inwestorski",
+      email: "nowy@example.com",
+      status: "wymaga_kontaktu",
+    });
   });
 });
 
@@ -793,21 +1108,32 @@ describe("send_investor_registration_link", () => {
   });
 
   it("hamulec SMS (np. STOP / do_not_sms) → bez SMS-a, link do podania słownie", async () => {
-    mocks.sendSmsInternal.mockResolvedValue({ ok: false, skipped: true, reason: "opt_out", error: "SMS pominięty" });
+    mocks.sendSmsInternal.mockResolvedValue({
+      ok: false,
+      skipped: true,
+      reason: "opt_out",
+      error: "SMS pominięty",
+    });
     const r = await result("send_investor_registration_link", ctxFor({ callerPhone: PHONE }));
     expect(r).toMatchObject({ sent: false, reason: "opt_out", link: INVESTOR_REGISTRATION_URL });
     expect(r.say).toMatch(/financeyou\.pl\/rejestracja/);
   });
 
   it("brak telefonu (czat) → link do wpisania, bez SMS-a", async () => {
-    const r = await result("send_investor_registration_link", ctxFor({ session: session({ channel: "chat" }) }));
+    const r = await result(
+      "send_investor_registration_link",
+      ctxFor({ session: session({ channel: "chat" }) }),
+    );
     expect(r).toMatchObject({ sent: false, channel: "agent", link: INVESTOR_REGISTRATION_URL });
     expect(r.say).toContain(INVESTOR_REGISTRATION_URL);
     expect(mocks.sendSmsInternal).not.toHaveBeenCalled();
   });
 
   it("sprzeciw wobec kontaktu w sesji → bez SMS-a", async () => {
-    const r = await result("send_investor_registration_link", ctxFor({ callerPhone: PHONE, session: session({ do_not_contact: true }) }));
+    const r = await result(
+      "send_investor_registration_link",
+      ctxFor({ callerPhone: PHONE, session: session({ do_not_contact: true }) }),
+    );
     expect(r).toMatchObject({ sent: false, reason: "do_not_contact" });
     expect(mocks.sendSmsInternal).not.toHaveBeenCalled();
   });
