@@ -44,6 +44,11 @@ import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
+import {
+  RISK_STEP_COMPUTING_TEXT,
+  RISK_STEP_ETA_TEXT,
+  useRiskStepTrigger,
+} from "@/components/inwestor/use-risk-step-trigger";
 import { formatDateTime, formatPLN, propertyTypeLabels } from "@/lib/labels";
 import { STATUS_LABELS as KW_STATUS_LABELS } from "@/lib/kw-analysis/types";
 import {
@@ -170,7 +175,8 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
   const listQ = useQuery({
     queryKey: ["investor-analytics-list"],
     queryFn: () => listFn(),
-    // Trwający przebieg dokańcza cron (co 15 min) — odświeżamy listę co pół minuty.
+    // Trwający przebieg popychają szczegóły (odczyt, ocena ryzyka zlecana od
+    // razu po krokach 1–3), zapasowo cron co 5 min — odświeżamy co pół minuty.
     refetchInterval: (q) =>
       (q.state.data?.items ?? []).some((i) => i.run?.status === "running") ? 30_000 : false,
   });
@@ -541,11 +547,18 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
       toast.success(
         r.status === "running"
           ? "Przebieg pipeline'u już trwa — wyniki pojawią się tutaj."
-          : "Analiza uruchomiona: księga, właściciele i analiza KW są liczone od razu, ocenę ryzyka automat dokończy w ciągu ok. 15–30 minut.",
+          : `Analiza uruchomiona: księga, właściciele i analiza KW są liczone od razu, a ${RISK_STEP_ETA_TEXT}.`,
       );
       refresh();
     },
     onError: (e) => toast.error(errMsg(e)),
+  });
+  // Kroki 1–3 gotowe → ocena ryzyka od razu, bez czekania na cron.
+  const liveRun = detailQ.data?.item.run ?? null;
+  const riskStep = useRiskStepTrigger({
+    target: { kind: "analytics", applicationId },
+    run: liveRun ? { key: liveRun.id, status: liveRun.status, steps: liveRun.steps } : null,
+    onSettled: refresh,
   });
 
   if (detailQ.isLoading || !detailQ.data) {
@@ -716,8 +729,10 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
             <AlertTitle>Automat pracuje</AlertTitle>
             <AlertDescription>
-              Kroki wykonują się po kolei (pobranie KW z EKW potrafi potrwać kilka minut). Ten widok
-              odświeża się sam.
+              {riskStep.computing
+                ? RISK_STEP_COMPUTING_TEXT
+                : `Kroki wykonują się po kolei — ${RISK_STEP_ETA_TEXT}.`}{" "}
+              Ten widok odświeża się sam.
             </AlertDescription>
           </Alert>
         )}
@@ -792,7 +807,11 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
         ) : (
           <StepEmpty
             status={analyticsStepStatus(item, "risk")}
-            text="Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka."
+            text={
+              riskStep.computing
+                ? RISK_STEP_COMPUTING_TEXT
+                : "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka."
+            }
           />
         )}
       </StepCard>

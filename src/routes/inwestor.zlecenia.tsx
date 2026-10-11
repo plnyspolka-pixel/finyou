@@ -49,6 +49,11 @@ import {
   StepCard,
   StepEmpty,
 } from "@/components/inwestor/analytics-steps";
+import {
+  RISK_STEP_COMPUTING_TEXT,
+  RISK_STEP_ETA_TEXT,
+  useRiskStepTrigger,
+} from "@/components/inwestor/use-risk-step-trigger";
 import { KwAnalysisReport, KwStatusBadge } from "@/components/kw-analysis/kw-analysis-section";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
@@ -116,7 +121,8 @@ function MyOrdersPage() {
   const { data, isLoading } = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: () => fetchProjects(),
-    // Raporty w toku dokańcza cron — odświeżamy, gdy któryś trwa.
+    // Raporty w toku: ocenę ryzyka zleca karta Projektu od razu po krokach
+    // 1–3 (zapasowo cron co 5 min) — odświeżamy, gdy któryś trwa.
     refetchInterval: (q) =>
       q.state.data?.orders.some((o) => o.projects.some((p) => p.report.status === "running"))
         ? 20_000
@@ -261,7 +267,7 @@ function ProjectCard({
       ? { contact: p.contact, reservationExpiresAt: p.match.reservationExpiresAt }
       : null,
   );
-  // Nowe dane z serwera (np. cron dokończył ryzyko) nadpisują lokalny stan.
+  // Nowe dane z serwera (np. dokończona ocena ryzyka) nadpisują lokalny stan.
   if (p.report.finishedAt && p.report.finishedAt !== report.finishedAt) setReport(p.report);
 
   const reportMut = useMutation({
@@ -273,13 +279,30 @@ function ProjectCard({
         res.reused
           ? "Raport był już wygenerowany — pokazujemy gotowy."
           : res.report.status === "running"
-            ? "Raport w przygotowaniu — ocenę ryzyka dokończymy za chwilę."
+            ? `Raport w przygotowaniu — ${RISK_STEP_ETA_TEXT}.`
             : "Raport gotowy.",
       );
       void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
       void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
     },
     onError: (e) => toast.error(errMsg(e)),
+  });
+  // Kroki 1–3 raportu gotowe → ocena ryzyka od razu, bez czekania na cron
+  // (stan z listy Projektów — także przy zwiniętym raporcie).
+  const riskStep = useRiskStepTrigger({
+    target: { kind: "order-report", orderId: p.orderId, applicationId: p.applicationId },
+    run:
+      p.report.status === "running"
+        ? {
+            key: `${p.applicationId}:${p.report.startedAt ?? ""}`,
+            status: "running",
+            steps: p.report.steps,
+          }
+        : null,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
+    },
   });
   const reserveMut = useMutation({
     mutationFn: () =>
@@ -375,7 +398,8 @@ function ProjectCard({
             </Button>
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> raport w przygotowaniu
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
+                {riskStep.computing ? RISK_STEP_COMPUTING_TEXT : "raport w przygotowaniu"}
               </span>
             ) : null}
             {report.status === "error" ? (
@@ -393,6 +417,7 @@ function ProjectCard({
               orderId={p.orderId}
               applicationId={p.applicationId}
               report={report}
+              riskComputing={riskStep.computing}
             />
           ) : null}
           {showOffer ? (
@@ -672,18 +697,21 @@ function ReportPanel({
   orderId,
   applicationId,
   report,
+  riskComputing,
 }: {
   /** Numer Projektu i kwota z karty — do nagłówka i nazwy pliku PDF. */
   project: { ref: string | null; loanAmount: number | null };
   orderId: string;
   applicationId: string;
   report: OrderProjectReport;
+  /** Ocena ryzyka właśnie się liczy (zlecona przez kartę Projektu albo cron). */
+  riskComputing: boolean;
 }) {
   const detailFn = useServerFn(getOrderProjectReportDetail);
   const q = useQuery({
     queryKey: reportKey(orderId, applicationId),
     queryFn: () => detailFn({ data: { orderId, applicationId } }),
-    // Ocenę ryzyka dokańcza cron — dopytujemy, dopóki przebieg trwa.
+    // Odczyt popycha kroki 1–3 (księga z EKW) — dopytujemy, dopóki przebieg trwa.
     refetchInterval: (query) =>
       (query.state.data?.report.status ?? report.status) === "running" ? 20_000 : false,
   });
@@ -858,7 +886,11 @@ function ReportPanel({
         ) : (
           <StepEmpty
             status={status("risk")}
-            text="Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka (kilka–kilkanaście minut)."
+            text={
+              riskComputing
+                ? RISK_STEP_COMPUTING_TEXT
+                : `Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka — ${RISK_STEP_ETA_TEXT}.`
+            }
           />
         )}
       </StepCard>

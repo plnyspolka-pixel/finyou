@@ -4,23 +4,31 @@
 // KW → właściciele → analiza KW → pełna ocena ryzyka — ale bez wniosku w CRM:
 // wszystko żyje w wierszu investor_kw_checks. Błąd jednego kroku nie blokuje
 // pozostałych, jak w pipelinie. Kroki 1–3 przesuwa start i odczyt szczegółów
-// przez inwestora; ocenę ryzyka (minuty: scraping rynku, wycena, lokalizacja)
-// wykonuje wyłącznie cron tick analysis-pipeline-tick.
+// przez inwestora; ocenę ryzyka (30–50 s: scraping rynku, wycena,
+// lokalizacja) panel zleca zaraz po krokach 1–3 (runKwCheckRiskStepNow), a
+// zapasowo liczy ją cron tick analysis-pipeline-tick. Krok 4 ma zajęcie
+// (claim) — liczy go jeden wołający naraz (reguły: analysis-pipeline/step-timing).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { compactKwNumber } from "@/lib/kw";
+import {
+  canClaimRiskStep,
+  claimedRiskStep,
+  nextKwWait,
+  orderForTick,
+  pastDeadline,
+  riskStepRequestStatus,
+  TICK_BUDGET_MS,
+  withRiskClaimConditions,
+  withRiskSaveGuard,
+  type RiskSaveGuard,
+  type RiskStepRequestStatus,
+  type StepTiming,
+} from "@/lib/analysis-pipeline/step-timing";
 import type { AnalyticsStepState, KwCheckStepKey } from "./types";
-
-/** Ile ocen ryzyka (każda: minuty) wykonuje jeden cron tick. */
-const RISK_PER_TICK = 2;
-
-const PRE_RISK_STEPS: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis"];
-
-/** Maksymalna liczba prób pobrania KW (EKW udostępnia dokument z opóźnieniem). */
-const MAX_KW_WAIT_TICKS = 20;
 
 const STEP_ORDER: KwCheckStepKey[] = ["kw", "coowners", "kw_analysis", "risk"];
 
-type CheckSteps = Record<KwCheckStepKey, AnalyticsStepState & { waits?: number }>;
+type CheckSteps = Record<KwCheckStepKey, AnalyticsStepState & StepTiming>;
 
 export interface KwCheckRow {
   id: string;
@@ -54,17 +62,56 @@ function markStep(
   steps[key] = { status, error, finished_at: new Date().toISOString() };
 }
 
-async function save(id: string, patch: Record<string, unknown>): Promise<void> {
-  await db
+/**
+ * Zapis wiersza. Z `guard` — ze strażnikiem kroku 4 (step-timing:
+ * withRiskSaveGuard); false = stan w bazie poszedł dalej (ktoś zajął albo
+ * rozstrzygnął ocenę ryzyka) — wołający przerywa, nie nadpisuje cudzej pracy.
+ */
+async function save(
+  id: string,
+  patch: Record<string, unknown>,
+  guard?: RiskSaveGuard,
+): Promise<boolean> {
+  const q = db
     .from("investor_kw_checks")
     .update({ ...patch, last_advanced_at: new Date().toISOString() })
     .eq("id", id);
+  const { data, error } = await (guard ? withRiskSaveGuard(q, guard) : q).select("id");
+  if (error) {
+    console.error("[investor-kw-check] save", id, error.message);
+    return false;
+  }
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Zajęcie kroku 4 warunkowym UPDATE-em (compare-and-set na stanie kroku,
+ * który widzieliśmy). Zwraca `claimed_at` albo null, gdy ktoś był pierwszy.
+ */
+async function claimRiskStep(id: string, steps: CheckSteps): Promise<string | null> {
+  const claimed = claimedRiskStep();
+  const q = db
+    .from("investor_kw_checks")
+    .update({ steps: { ...steps, risk: claimed }, last_advanced_at: claimed.claimed_at })
+    .eq("id", id)
+    .eq("status", "running");
+  const { data, error } = await withRiskClaimConditions(q, steps.risk).select("id");
+  if (error) {
+    console.error("[investor-kw-check] risk claim", id, error.message);
+    return null;
+  }
+  return (data ?? []).length > 0 ? claimed.claimed_at : null;
 }
 
 export interface AdvanceOpts {
   pollMaxMs?: number;
-  /** Nie uruchamiaj oceny ryzyka (żądanie z przeglądarki — zostaje dla crona). */
+  /** Nie uruchamiaj oceny ryzyka (odczyt szczegółów — krok 4 zleca panel osobno). */
   skipRisk?: boolean;
+  /**
+   * Budżet cron ticku: po tym czasie (epoch ms) nie zaczynamy oceny ryzyka.
+   * Sprawdzane tuż przed krokiem 4, na świeżym stanie kroków 1–3.
+   */
+  riskDeadline?: number;
 }
 
 /**
@@ -96,12 +143,13 @@ export async function advanceKwCheck(
     if (outcome.ok) {
       markStep(steps, "kw", "done");
     } else if (outcome.status === "processing") {
-      const waits = (steps.kw.waits ?? 0) + 1;
-      if (waits >= MAX_KW_WAIT_TICKS) {
+      // Limit czasem, nie liczbą prób — próby są częste (odczyt, cron co 5 min).
+      const wait = nextKwWait(steps.kw);
+      if (wait.expired) {
         markStep(steps, "kw", "error", "Pobieranie KW nie zakończyło się w rozsądnym czasie.");
       } else {
-        steps.kw = { status: "running", waits };
-        await save(row.id, { steps });
+        steps.kw = wait.state;
+        await save(row.id, { steps }, "risk_pending");
         return "waiting";
       }
     } else if (outcome.status === "not_found") {
@@ -109,7 +157,7 @@ export async function advanceKwCheck(
     } else {
       markStep(steps, "kw", "error", outcome.error ?? `status: ${outcome.status}`);
     }
-    await save(row.id, { steps });
+    if (!(await save(row.id, { steps }, "risk_pending"))) return "waiting";
   }
 
   const kwAvailable = steps.kw.status === "done";
@@ -128,7 +176,7 @@ export async function advanceKwCheck(
         markStep(steps, "coowners", "error", e?.message ?? "błąd sprawdzenia właścicieli");
       }
     }
-    await save(row.id, { ...patch, steps });
+    if (!(await save(row.id, { ...patch, steps }, "risk_pending"))) return "waiting";
   }
 
   // ── Krok 3: analiza KW (silnik reguł) ──────────────────────────────────────
@@ -143,18 +191,24 @@ export async function advanceKwCheck(
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
       }
     }
-    await save(row.id, { ...patch, steps });
+    if (!(await save(row.id, { ...patch, steps }, "risk_pending"))) return "waiting";
   }
 
   // ── Krok 4: pełna ocena ryzyka (wycena, sprzedaż wymuszona, zbywalność) ────
-  if (steps.risk.status === "pending") {
-    if (!kwAvailable) {
+  // Gotowość na świeżym stanie kroków 1–3 (mogły domknąć się wyżej). Ocenę
+  // liczy ten, kto ją zajmie — pozostali wołający czekają na wynik.
+  if (steps.risk.status === "pending" || steps.risk.status === "running") {
+    if (!kwAvailable && steps.risk.status === "pending") {
       markStep(steps, "risk", "error", "Brak treści KW — ocena ryzyka niemożliwa.");
-      await save(row.id, { steps });
-    } else if (opts.skipRisk) {
+      if (!(await save(row.id, { steps }, "risk_pending"))) return "waiting";
+    } else if (opts.skipRisk || pastDeadline(opts.riskDeadline) || !canClaimRiskStep(steps)) {
       return "waiting";
     } else {
+      const claimedAt = await claimRiskStep(row.id, steps);
+      if (!claimedAt) return "waiting";
+      steps.risk = { status: "running", claimed_at: claimedAt };
       try {
+        if (!kwAvailable) throw new Error("Brak treści KW — ocena ryzyka niemożliwa.");
         const amount = row.loan_amount != null ? Number(row.loan_amount) : null;
         const value = row.property_value != null ? Number(row.property_value) : null;
         const { assessInvestmentRisk } =
@@ -195,7 +249,8 @@ export async function advanceKwCheck(
       } catch (e: any) {
         markStep(steps, "risk", "error", e?.message ?? "błąd oceny ryzyka");
       }
-      await save(row.id, { ...patch, steps });
+      // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze przejmujący.
+      if (!(await save(row.id, { ...patch, steps }, { claimedAt }))) return "waiting";
     }
   }
 
@@ -266,30 +321,51 @@ export async function advanceKwCheckSafe(row: KwCheckRow, opts: AdvanceOpts = {}
   }
 }
 
-/** Cron: przesuwa trwające sprawdzenia (najstarsze najpierw). */
-export async function processInvestorKwChecks(): Promise<{ processed: number }> {
+const CHECK_ROW_SELECT =
+  "id, user_id, kw_number, property_type, loan_amount, property_value, period_months, status, steps";
+
+/**
+ * Cron: przesuwa trwające sprawdzenia w budżecie czasu ticku — po
+ * `deadline` nie zaczynamy kolejnego sprawdzenia ani oceny ryzyka (reszta
+ * w następnym ticku, za 5 min). Gotowość do oceny ryzyka każde sprawdzenie
+ * ocenia samo, po krokach 1–3 w tym samym ticku. Najpierw sprawdzenia
+ * czekające tylko na ocenę ryzyka, potem pozostałe — w grupie najstarsze.
+ */
+export async function processInvestorKwChecks(
+  opts: { deadline?: number } = {},
+): Promise<{ processed: number }> {
+  const deadline = opts.deadline ?? Date.now() + TICK_BUDGET_MS;
   const { data, error } = await db
     .from("investor_kw_checks")
-    .select(
-      "id, user_id, kw_number, property_type, loan_amount, property_value, period_months, status, steps",
-    )
+    .select(CHECK_ROW_SELECT)
     .eq("status", "running")
     .order("created_at", { ascending: true })
-    .limit(10);
+    .limit(25);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as KwCheckRow[];
-  // Ocena ryzyka trwa minuty — najwyżej RISK_PER_TICK na tick, żeby nie
-  // zablokować pipeline'u wniosków. Sprawdzenia przed krokiem 4 dostają
-  // ocenę dopiero w kolejnym ticku (kroki 1–3 i tak mogą się tu domknąć).
-  let riskBudget = RISK_PER_TICK;
-  for (const row of rows) {
-    const ready = PRE_RISK_STEPS.every((k) => {
-      const st = row.steps?.[k]?.status;
-      return st === "done" || st === "error";
-    });
-    const runRisk = ready && riskBudget > 0;
-    if (runRisk) riskBudget -= 1;
-    await advanceKwCheckSafe(row, { skipRisk: !runRisk });
+  let processed = 0;
+  for (const row of orderForTick((data ?? []) as KwCheckRow[])) {
+    if (pastDeadline(deadline)) break;
+    processed += 1;
+    await advanceKwCheckSafe(row, { riskDeadline: deadline });
   }
-  return { processed: rows.length };
+  return { processed };
+}
+
+/**
+ * Ocena ryzyka na żądanie panelu inwestora: krok 4 sprawdzenia liczony od
+ * razu, w tym żądaniu (30–50 s) — tylko gdy kroki 1–3 są rozstrzygnięte, a
+ * zajęcie się powiedzie. Bezpieczne do wielokrotnego wołania: zajęty albo
+ * rozstrzygnięty krok zwraca tylko stan.
+ */
+export async function runKwCheckRiskStepNow(row: KwCheckRow): Promise<RiskStepRequestStatus> {
+  if (row.status !== "running" || !canClaimRiskStep(row.steps)) {
+    return riskStepRequestStatus(row.status, row.steps);
+  }
+  await advanceKwCheckSafe(row);
+  const { data: after } = await db
+    .from("investor_kw_checks")
+    .select("status, steps")
+    .eq("id", row.id)
+    .maybeSingle();
+  return riskStepRequestStatus(after?.status ?? null, after?.steps);
 }

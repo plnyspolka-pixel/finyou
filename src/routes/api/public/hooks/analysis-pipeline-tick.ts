@@ -1,8 +1,10 @@
-// Cron tick pipeline'u analitycznego: kwalifikuje kompletne wnioski
-// (score > 50) i przesuwa trwające przebiegi KW → właściciele → analiza KW
-// → ryzyko. Wyniki lądują w istniejących tabelach modułów; karta oferty
-// składa z nich raport na żywo. Przy okazji dokańcza szybkie analizy KW
-// inwestorów (wnioski spoza Finance You — investor_kw_checks).
+// Cron tick pipeline'u analitycznego (co 5 min): najpierw dokańcza szybkie
+// analizy KW inwestorów (wnioski spoza Finance You — investor_kw_checks),
+// potem kwalifikuje kompletne wnioski (score > 50, co 15 min) i przesuwa
+// trwające przebiegi KW → właściciele → analiza KW → ryzyko. Wyniki lądują
+// w istniejących tabelach modułów; karta oferty składa z nich raport na
+// żywo. Ocenę ryzyka inwestorów zleca zwykle panel od razu po krokach 1–3 —
+// tick jest siatką bezpieczeństwa (kolejność i budżet: analysis-pipeline/tick).
 import { createFileRoute } from "@tanstack/react-router";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
@@ -17,22 +19,21 @@ export const Route = createFileRoute("/api/public/hooks/analysis-pipeline-tick")
           await import("@/lib/analysis-pipeline/engine.server");
         const { processInvestorKwChecks } =
           await import("@/lib/investor-analytics/kw-checks.server");
-        try {
-          const sync = await syncAnalysisPipelineRuns();
-          const processing = await processAnalysisPipelineRuns();
-          // Błąd sprawdzeń inwestorów nie może zatrzymać pipeline'u wniosków.
-          const kwChecks = await processInvestorKwChecks().catch((e: any) => ({
-            processed: 0,
-            error: String(e?.message ?? e),
-          }));
-          if (sync.started || processing.processed || kwChecks.processed) {
-            console.log("[analysis-pipeline-tick]", JSON.stringify({ sync, processing, kwChecks }));
-          }
-          return Response.json({ ok: true, sync, processing, kwChecks });
-        } catch (e: any) {
-          console.error("[analysis-pipeline-tick] error", e?.message);
-          return Response.json({ ok: false, error: e?.message }, { status: 500 });
+        const { runAnalysisPipelineTick } = await import("@/lib/analysis-pipeline/tick");
+        const result = await runAnalysisPipelineTick({
+          processInvestorKwChecks,
+          syncAnalysisPipelineRuns,
+          processAnalysisPipelineRuns,
+        });
+        const { sync, processing, kwChecks } = result;
+        if (sync?.started || processing?.processed || kwChecks.processed || kwChecks.error) {
+          console.log("[analysis-pipeline-tick]", JSON.stringify({ sync, processing, kwChecks }));
         }
+        if (!result.ok) {
+          console.error("[analysis-pipeline-tick] error", result.errors.join("; "));
+          return Response.json(result, { status: 500 });
+        }
+        return Response.json(result);
       },
     },
   },

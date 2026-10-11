@@ -4,14 +4,33 @@
 // właściciela: 50; dopiero po skompletowaniu wniosku — koszty pobrań KW).
 // Ponowny przebieg tylko przy zmianie numeru KW albo ręcznie z panelu.
 // Błąd jednego kroku nie blokuje pozostałych — raport dostaje status kroku.
+// Krok 4 (ocena ryzyka) ma zajęcie (claim) — liczy go jeden wołający naraz:
+// panel inwestora zaraz po krokach 1–3, MCP, a zapasowo cron tick (reguły
+// czasu i zajęcia: step-timing.ts).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeLoanStatus } from "@/lib/loan-status";
 import { CANDIDATE_DB_STATUSES } from "@/lib/auto-distribution/engine.server";
+import {
+  canClaimRiskStep,
+  claimedRiskStep,
+  INTERACTIVE_KW_POLL_MS,
+  lastStepActivityAt,
+  nextKwWait,
+  orderForTick,
+  pastDeadline,
+  riskStepRequestStatus,
+  shouldAdvanceOnRead,
+  TICK_BUDGET_MS,
+  withRiskClaimConditions,
+  withRiskSaveGuard,
+  type RiskSaveGuard,
+  type RiskStepRequestStatus,
+} from "./step-timing";
 
 /** Minimalny potencjał lokalizacyjny uruchamiający pipeline (0–100). */
 export const PIPELINE_MIN_LOCATION_SCORE = 50;
-/** Maksymalna liczba ticków czekania na pobranie KW zanim uznamy błąd. */
-const MAX_KW_WAIT_TICKS = 20;
+/** Pauza, gdy ocenę ryzyka liczy właśnie ktoś inny (poza cron tickiem). */
+const RISK_BUSY_PAUSE_MS = 3_000;
 
 export type StepKey = "kw" | "coowners" | "kw_analysis" | "risk";
 export type StepStatus = "pending" | "running" | "done" | "error";
@@ -20,8 +39,13 @@ export interface StepState {
   status: StepStatus;
   finished_at?: string;
   error?: string;
-  /** Licznik ticków oczekiwania (krok KW czeka na CMD KW Engine). */
+  /** Licznik prób bez wyniku (krok KW czeka na EKW). */
   waits?: number;
+  /** Krok KW: pierwsza i ostatnia próba przy czekaniu na EKW. */
+  waiting_since?: string;
+  checked_at?: string;
+  /** Krok 4: kiedy przebieg zajął ocenę ryzyka (status `running`). */
+  claimed_at?: string;
 }
 
 export type RunSteps = Record<StepKey, StepState>;
@@ -129,22 +153,32 @@ export interface PipelineProcessResult {
   errors: number;
 }
 
-/** Przesuwa do przodu wszystkie trwające przebiegi (sekwencyjnie per przebieg). */
-export async function processAnalysisPipelineRuns(): Promise<PipelineProcessResult> {
+/**
+ * Przesuwa do przodu trwające przebiegi (sekwencyjnie per przebieg) w
+ * budżecie czasu cron ticku: po `deadline` nie zaczynamy kolejnego
+ * przebiegu ani oceny ryzyka (reszta w następnym ticku, za 5 min). Najpierw
+ * przebiegi czekające tylko na ocenę ryzyka, potem pozostałe — w grupie
+ * najstarsze najpierw.
+ */
+export async function processAnalysisPipelineRuns(
+  opts: { deadline?: number } = {},
+): Promise<PipelineProcessResult> {
   const result: PipelineProcessResult = { processed: 0, finished: 0, waiting: 0, errors: 0 };
+  const deadline = opts.deadline ?? Date.now() + TICK_BUDGET_MS;
 
   const { data: runs, error } = await (supabaseAdmin as any)
     .from("analysis_pipeline_runs")
     .select("id, loan_application_id, kw_number, steps, started_at")
     .eq("status", "running")
     .order("started_at", { ascending: true })
-    .limit(10);
+    .limit(25);
   if (error) throw new Error(error.message);
 
-  for (const run of (runs ?? []) as any[]) {
+  for (const run of orderForTick((runs ?? []) as any[])) {
+    if (pastDeadline(deadline)) break;
     result.processed += 1;
     try {
-      const outcome = await advanceRun(run);
+      const outcome = await advanceRun(run, { riskDeadline: deadline });
       if (outcome === "finished") result.finished += 1;
       else result.waiting += 1;
     } catch (e: any) {
@@ -237,8 +271,101 @@ export async function advanceAnalysisPipelineRunById(
   }
 }
 
-async function saveSteps(runId: string, steps: RunSteps): Promise<void> {
-  await (supabaseAdmin as any).from("analysis_pipeline_runs").update({ steps }).eq("id", runId);
+/** Najnowszy przebieg wniosku (ten, który pokazuje panel inwestora). */
+async function loadLatestRun(applicationId: string): Promise<any | null> {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .select("id, status, steps, started_at")
+    .eq("loan_application_id", applicationId)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+/**
+ * Advance-on-read (panel inwestora: szczegóły w Analityce, raport Projektu
+ * w „Moich zleceniach"): najnowszy przebieg z otwartymi krokami 1–3 i bez
+ * ruchu od ≥ 45 s dostaje krok naprzód w tym żądaniu — EKW udostępnia księgę
+ * z opóźnieniem, nie czekamy na cron. Bez oceny ryzyka (tę panel zleca
+ * osobno). Zwraca, czy przebieg był popchnięty; błąd nie psuje odczytu.
+ */
+export async function advanceLatestRunOnRead(applicationId: string): Promise<boolean> {
+  try {
+    const run = await loadLatestRun(applicationId);
+    const last = lastStepActivityAt(run?.started_at, run?.steps);
+    if (!run || !shouldAdvanceOnRead(run.status, run.steps, last)) return false;
+    await advanceAnalysisPipelineRunById(run.id, {
+      pollMaxMs: INTERACTIVE_KW_POLL_MS,
+      skipRisk: true,
+    });
+    return true;
+  } catch (e: any) {
+    console.error("[analysis-pipeline] advance on read", applicationId, e?.message);
+    return false;
+  }
+}
+
+/**
+ * Ocena ryzyka na żądanie panelu inwestora: krok 4 najnowszego przebiegu
+ * wniosku liczony od razu, w tym żądaniu (30–50 s, jak w MCP) — tylko gdy
+ * kroki 1–3 są rozstrzygnięte, a zajęcie się powiedzie. Bezpieczne do
+ * wielokrotnego wołania: zajęty albo rozstrzygnięty krok zwraca tylko stan.
+ */
+export async function runRiskStepForApplication(
+  applicationId: string,
+): Promise<RiskStepRequestStatus> {
+  const run = await loadLatestRun(applicationId);
+  if (!run) return "not_running";
+  if (run.status !== "running" || !canClaimRiskStep(run.steps)) {
+    return riskStepRequestStatus(run.status, run.steps);
+  }
+  try {
+    await advanceAnalysisPipelineRunById(run.id, { pollMaxMs: INTERACTIVE_KW_POLL_MS });
+  } catch (e: any) {
+    console.error("[analysis-pipeline] risk on request", run.id, e?.message);
+  }
+  const { data: after } = await (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .select("status, steps")
+    .eq("id", run.id)
+    .maybeSingle();
+  return riskStepRequestStatus(after?.status ?? null, after?.steps);
+}
+
+/**
+ * Zapis kroków ze strażnikiem kroku 4 (step-timing: withRiskSaveGuard).
+ * false = stan w bazie poszedł dalej (ktoś zajął albo rozstrzygnął ocenę
+ * ryzyka, zajęcie przejęto) — wołający przerywa, nie nadpisuje cudzej pracy.
+ */
+async function saveSteps(runId: string, steps: RunSteps, guard: RiskSaveGuard): Promise<boolean> {
+  const q = (supabaseAdmin as any).from("analysis_pipeline_runs").update({ steps }).eq("id", runId);
+  const { data, error } = await withRiskSaveGuard(q, guard).select("id");
+  if (error) {
+    console.error("[analysis-pipeline] save steps", runId, error.message);
+    return false;
+  }
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Zajęcie kroku 4 warunkowym UPDATE-em (compare-and-set na stanie kroku,
+ * który widzieliśmy). Zwraca `claimed_at` albo null, gdy ktoś był pierwszy.
+ */
+async function claimRiskStep(runId: string, steps: RunSteps): Promise<string | null> {
+  const claimed = claimedRiskStep();
+  const q = (supabaseAdmin as any)
+    .from("analysis_pipeline_runs")
+    .update({ steps: { ...steps, risk: claimed } })
+    .eq("id", runId)
+    .eq("status", "running");
+  const { data, error } = await withRiskClaimConditions(q, steps.risk).select("id");
+  if (error) {
+    console.error("[analysis-pipeline] risk claim", runId, error.message);
+    return null;
+  }
+  return (data ?? []).length > 0 ? claimed.claimed_at : null;
 }
 
 function markStep(steps: RunSteps, key: StepKey, status: StepStatus, error?: string): void {
@@ -247,6 +374,8 @@ function markStep(steps: RunSteps, key: StepKey, status: StepStatus, error?: str
     status,
     error: error ?? undefined,
     finished_at: status === "done" || status === "error" ? new Date().toISOString() : undefined,
+    // Zajęcie kroku 4 kończy się razem z wynikiem.
+    claimed_at: undefined,
   };
 }
 
@@ -254,10 +383,15 @@ export interface AdvanceRunOpts {
   /** Limit czekania na EKW (domyślnie 45 s — cron tick). */
   pollMaxMs?: number;
   /**
-   * Zatrzymaj się przed oceną ryzyka (minuty pracy) — żądanie z przeglądarki
-   * robi kroki 1–3, ocenę dokańcza cron tick.
+   * Zatrzymaj się przed oceną ryzyka — żądanie z przeglądarki robi kroki
+   * 1–3, ocenę panel zleca osobno (runRiskStepForApplication), zapasowo cron.
    */
   skipRisk?: boolean;
+  /**
+   * Budżet cron ticku: po tym czasie (epoch ms) nie zaczynamy oceny ryzyka.
+   * Sprawdzane tuż przed krokiem 4, na świeżym stanie kroków 1–3.
+   */
+  riskDeadline?: number;
 }
 
 /**
@@ -331,18 +465,19 @@ async function advanceRun(
     if (outcome.ok) {
       markStep(steps, "kw", "done");
     } else if (outcome.status === "processing") {
-      const waits = (steps.kw.waits ?? 0) + 1;
-      if (waits >= MAX_KW_WAIT_TICKS) {
+      // Limit czasem, nie liczbą prób — próby są częste (odczyt, cron co 5 min).
+      const wait = nextKwWait(steps.kw);
+      if (wait.expired) {
         markStep(steps, "kw", "error", "Pobieranie KW nie zakończyło się w rozsądnym czasie.");
       } else {
-        steps.kw = { status: "running", waits };
-        await saveSteps(run.id, steps);
+        steps.kw = wait.state;
+        await saveSteps(run.id, steps, "risk_pending");
         return "waiting";
       }
     } else {
       markStep(steps, "kw", "error", outcome.error ?? `status: ${outcome.status}`);
     }
-    await saveSteps(run.id, steps);
+    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
   }
 
   const kwAvailable = steps.kw.status === "done";
@@ -403,7 +538,7 @@ async function advanceRun(
         markStep(steps, "coowners", "error", e?.message ?? "błąd sprawdzenia właścicieli");
       }
     }
-    await saveSteps(run.id, steps);
+    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
   }
 
   // ── Krok 3: analiza KW (silnik reguł) ──────────────────────────────────────
@@ -418,12 +553,23 @@ async function advanceRun(
         markStep(steps, "kw_analysis", "error", e?.message ?? "błąd analizy KW");
       }
     }
-    await saveSteps(run.id, steps);
+    if (!(await saveSteps(run.id, steps, "risk_pending"))) return "waiting";
   }
 
   // ── Krok 4: analiza ryzyka ─────────────────────────────────────────────────
-  if (steps.risk.status === "pending" && opts.skipRisk) return "waiting";
-  if (steps.risk.status === "pending") {
+  // Gotowość na świeżym stanie kroków 1–3 (mogły domknąć się wyżej). Ocenę
+  // liczy ten, kto ją zajmie — pozostali wołający czekają na wynik.
+  if (steps.risk.status === "pending" || steps.risk.status === "running") {
+    if (opts.skipRisk || pastDeadline(opts.riskDeadline)) return "waiting";
+    if (!canClaimRiskStep(steps)) {
+      // Ocenę liczy ktoś inny. Poza cronem krótka pauza — pętla czekająca na
+      // wynik (MCP run_analysis_pipeline) nie kręci się w miejscu.
+      if (opts.riskDeadline == null) await new Promise((r) => setTimeout(r, RISK_BUSY_PAUSE_MS));
+      return "waiting";
+    }
+    const claimedAt = await claimRiskStep(run.id, steps);
+    if (!claimedAt) return "waiting";
+    steps.risk = { status: "running", claimed_at: claimedAt };
     try {
       const { runInvestmentRiskAssessmentCore } =
         await import("@/lib/risk-assessment/risk-assessment.functions");
@@ -448,7 +594,8 @@ async function advanceRun(
     } catch (e: any) {
       markStep(steps, "risk", "error", e?.message ?? "błąd analizy ryzyka");
     }
-    await saveSteps(run.id, steps);
+    // Zajęcie przejęte (praca trwała dłużej niż RISK_CLAIM_STALE_MS) — wynik zapisze przejmujący.
+    if (!(await saveSteps(run.id, steps, { claimedAt }))) return "waiting";
   }
 
   // ── Domknięcie przebiegu ───────────────────────────────────────────────────

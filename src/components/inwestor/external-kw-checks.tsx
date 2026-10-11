@@ -34,6 +34,11 @@ import {
   startMyKwCheck,
 } from "@/lib/investor-analytics/kw-checks.functions";
 import {
+  RISK_STEP_COMPUTING_TEXT,
+  RISK_STEP_ETA_TEXT,
+  useRiskStepTrigger,
+} from "./use-risk-step-trigger";
+import {
   ANALYTICS_STEP_STATUS_LABELS,
   KW_CHECK_DAILY_LIMIT,
   KW_CHECK_PROPERTY_TYPES,
@@ -207,7 +212,7 @@ function NewCheckForm({ onCreated }: { onCreated: (id: string) => void }) {
       toast.success(
         r.reused
           ? "Ta księga jest już sprawdzana — otwieram trwające sprawdzenie."
-          : "Sprawdzenie ruszyło. Pobranie KW z EKW może potrwać kilka minut.",
+          : `Sprawdzenie ruszyło — ${RISK_STEP_ETA_TEXT}.`,
       );
       setKw("");
       setLabel("");
@@ -346,6 +351,16 @@ function CheckDetail({ id }: { id: string }) {
     },
     refetchInterval: (q) => (q.state.data?.item.status === "running" ? 30_000 : false),
   });
+  // Kroki 1–3 gotowe → ocena ryzyka od razu, bez czekania na cron.
+  const live = detailQ.data?.item;
+  const riskStep = useRiskStepTrigger({
+    target: { kind: "kw-check", id },
+    run: live ? { key: live.id, status: live.status, steps: live.steps } : null,
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["investor-kw-check", id] });
+      void qc.invalidateQueries({ queryKey: ["investor-kw-checks"] });
+    },
+  });
 
   if (detailQ.isError) {
     return (
@@ -453,8 +468,10 @@ function CheckDetail({ id }: { id: string }) {
             <Loader2 className="h-4 w-4 animate-spin" />
             <AlertTitle>Automat pracuje</AlertTitle>
             <AlertDescription>
-              Pobranie KW z EKW potrafi potrwać kilka minut, a pełna ocena ryzyka rusza w tle do
-              15–30 minut później. Ten widok odświeża się sam.
+              {riskStep.computing
+                ? RISK_STEP_COMPUTING_TEXT
+                : `Kroki wykonują się po kolei — pełna ${RISK_STEP_ETA_TEXT}.`}{" "}
+              Ten widok odświeża się sam.
             </AlertDescription>
           </Alert>
         )}
@@ -515,7 +532,11 @@ function CheckDetail({ id }: { id: string }) {
         ) : (
           <StepEmpty
             status={riskStatus}
-            text="Pełną ocenę ryzyka (wycena rynkowa, sprzedaż wymuszona, zbywalność, klasa ryzyka) wykonuje automat w tle — zwykle do 15–30 minut od pobrania księgi."
+            text={
+              riskStep.computing
+                ? RISK_STEP_COMPUTING_TEXT
+                : "Pełną ocenę ryzyka (wycena rynkowa, sprzedaż wymuszona, zbywalność, klasa ryzyka) automat liczy zaraz po analizie księgi — w ciągu ok. 15 minut od uruchomienia analizy (pobranie księgi wieczystej zwykle trwa kilka minut)."
+            }
           />
         )}
       </StepCard>

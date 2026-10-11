@@ -4,8 +4,10 @@
 // ryzyka) to ten sam silnik, którym posługuje się panel admina
 // (lib/analysis-pipeline/engine.server + cron tick). Tu inwestor dostaje:
 //  • listę okazji/wniosków, do których ma dostęp, ze stanem przebiegu,
-//  • szczegóły: treść KW, właściciele, raport analizy KW, prognoza wartości,
-//  • uruchomienie przebiegu na żądanie (limit: 1 przebieg / wniosek / 24 h).
+//  • szczegóły: treść KW, właściciele, raport analizy KW, prognoza wartości
+//    (odczyt popycha trwający przebieg, gdy kroki 1–3 stoją ≥ 45 s),
+//  • uruchomienie przebiegu na żądanie (limit: 1 przebieg / wniosek / 24 h);
+//    ocenę ryzyka panel zleca zaraz po krokach 1–3 (risk-step.functions.ts).
 //
 // Zakres dostępu (serwer, niezależnie od UI) — wyłącznie wnioski wybrane dla
 // tego inwestora, nigdy cała pula Finance You:
@@ -24,6 +26,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { compactKwNumber, formatKwNumber, normalizeKwNumber } from "@/lib/kw";
+import { INTERACTIVE_KW_POLL_MS } from "@/lib/analysis-pipeline/step-timing";
 import type { CoOwnersAnalysis } from "@/lib/coowners/types";
 import type { KwAnalysisResult } from "@/lib/kw-analysis/types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
@@ -330,8 +333,11 @@ export const listMyAnalyticsApplications = createServerFn({ method: "GET" })
     return { items, orderRequired: false };
   });
 
-/** Wniosek w zasięgu inwestora albo błąd — wspólna bramka szczegółów i uruchomienia. */
-async function loadAccessibleApp(db: any, userId: string, applicationId: string) {
+/**
+ * Wniosek w zasięgu inwestora albo błąd — wspólna bramka szczegółów,
+ * uruchomienia i oceny ryzyka na żądanie (risk-step.functions.ts).
+ */
+export async function loadAccessibleApp(db: any, userId: string, applicationId: string) {
   const scope = await loadScope(db, userId);
   if (!scope.hasOrder) throw new Error(ORDER_REQUIRED_MESSAGE);
   const { data: app, error } = await db
@@ -433,7 +439,11 @@ export async function loadKwDocumentView(
   };
 }
 
-/** Szczegóły pipeline'u dla jednego wniosku: KW, właściciele, analiza KW, ryzyko. */
+/**
+ * Szczegóły pipeline'u dla jednego wniosku: KW, właściciele, analiza KW,
+ * ryzyko. Gdy kroki 1–3 trwającego przebiegu stoją ≥ 45 s, odczyt popycha
+ * je o krok (EKW udostępnia księgę z opóźnieniem) — bez czekania na cron.
+ */
 export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
@@ -441,6 +451,8 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
     const userId = context.userId as string;
     const db = await adminDb();
     const { scope, app, source } = await loadAccessibleApp(db, userId, data.applicationId);
+    const { advanceLatestRunOnRead } = await import("@/lib/analysis-pipeline/engine.server");
+    await advanceLatestRunOnRead(String(app.id));
     const idx = await loadResultIndex(db, [app]);
     const item = buildItem(app, source, scope, idx);
 
@@ -506,8 +518,9 @@ export const getMyAnalyticsDetail = createServerFn({ method: "GET" })
  * Uruchomienie pipeline'u na żądanie inwestora — ta sama funkcja startowa co
  * re-run z panelu admina (numer KW w formie kompaktowej, jak klucz cache
  * kw_documents: pobrana już księga nie jest zamawiana ponownie). Kroki 1–3
- * wykonują się od razu w tym żądaniu; ocenę ryzyka (minuty) dokańcza cron
- * tick. Limit: jeden przebieg na wniosek na 24 h.
+ * wykonują się od razu w tym żądaniu; ocenę ryzyka (30–50 s) panel zleca
+ * zaraz potem osobnym żądaniem (runMyRiskStep), a cron tick jest siatką
+ * bezpieczeństwa. Limit: jeden przebieg na wniosek na 24 h.
  */
 export const requestInvestorAnalysisRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -538,7 +551,10 @@ export const requestInvestorAnalysisRun = createServerFn({ method: "POST" })
       "inwestor: na żądanie z modułu Analityka",
     );
     try {
-      await advanceAnalysisPipelineRunById(run.id, { pollMaxMs: 20_000, skipRisk: true });
+      await advanceAnalysisPipelineRunById(run.id, {
+        pollMaxMs: INTERACTIVE_KW_POLL_MS,
+        skipRisk: true,
+      });
     } catch (e: any) {
       // Błąd kroku zamyka przebieg (widoczny w szczegółach) — nie zlecenie.
       console.error("[investor-analytics] advance failed", run.id, e?.message);
