@@ -225,6 +225,20 @@
       "when": 1791672066479,
       "tag": "0031_zlecenie_przelacznik_prowizji_fy",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791672126479,
+      "tag": "0032_agenci_narzedzia_sesje",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791672186479,
+      "tag": "0033_agent_fleet",
+      "breakpoints": true
     }
   ]
 }

@@ -61,6 +61,8 @@ create index if not exists agent_tool_calls_tool_time_idx
 
 alter table public.agent_tool_sessions enable row level security;
 alter table public.agent_tool_calls enable row level security;
+revoke all on public.agent_tool_sessions from public, anon, authenticated;
+revoke all on public.agent_tool_calls from public, anon, authenticated;
 
 -- Wynik rozmowy windykacyjnej wyszukuje się po `metadata.conversation_id`
 -- (tak działa webhook post-call). Indeks wyrażeniowy zamiast nowej kolumny —

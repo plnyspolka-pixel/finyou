@@ -34,18 +34,29 @@ export function listTools(): ToolSpec[] {
   return Array.from(REGISTRY.values());
 }
 
-let loaded = false;
+// Wspólna obietnica, nie flaga: przy zimnym starcie dwa równoległe żądania
+// muszą CZEKAĆ na te same importy. Flaga ustawiana przed `await` wpuszczała
+// drugie żądanie do pustego rejestru („Nieznane narzędzie” dla floty).
+let loading: Promise<void> | null = null;
 /** Ładuje moduły domenowe raz na proces (dynamiczny import — lekki start). */
-export async function ensureToolsLoaded(): Promise<void> {
-  if (loaded) return;
-  loaded = true;
-  const mods = await Promise.all([
+export function ensureToolsLoaded(): Promise<void> {
+  loading ??= Promise.all([
     import("./tools-triage.server"),
     import("./tools-collections.server"),
     import("./tools-investor.server"),
     import("./tools-knowledge.server"),
-  ]);
-  for (const m of mods) registerTools(m.TOOLS);
+  ]).then(
+    (mods) => {
+      for (const m of mods) registerTools(m.TOOLS);
+    },
+    (e: unknown) => {
+      // Nieudany import (np. chwilowy błąd wdrożenia) nie może zablokować
+      // rejestru na zawsze — następne żądanie spróbuje ponownie.
+      loading = null;
+      throw e;
+    },
+  );
+  return loading;
 }
 
 export interface DispatchOutcome {
@@ -82,6 +93,15 @@ export async function dispatchTool(request: Request, body: ToolRequestBody): Pro
     });
     return { status, body: { ok: false, error } };
   };
+
+  // Najpierw sekret, ZANIM cokolwiek trafi do bazy: nieuwierzytelnione
+  // żądanie nie poznaje listy narzędzi (zawsze 401) i nie może zapychać
+  // audytu zapisami. Odmowy na tym etapie idą tylko do logu serwera.
+  const preAuth = authorizeRequest(request, { allowQueryToken: true });
+  if (!preAuth.ok) {
+    console.warn("[agent-tools] odrzucone bez sekretu:", preAuth.reason);
+    return { status: 401, body: { ok: false, error: "unauthorized" } };
+  }
 
   if (!spec) return deny(400, "unknown_tool", `Nieznane narzędzie: ${tool || "(brak)"}`);
 

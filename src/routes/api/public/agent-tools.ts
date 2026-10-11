@@ -1,11 +1,35 @@
-// Webhook toole agentów ElevenLabs — jeden endpoint dla wszystkich narzędzi
-// procesowych. Agent (konsola ElevenLabs → Tools → Webhook) woła POST z JSON:
-//   { "tool": "...", "lead_id"?, "phone"?, "email"?, "application_id"?, "args"? }
-// Auth: nagłówek X-Agent-Tools-Secret albo ?token= — sekret AGENT_TOOLS_SECRET.
+// Webhook toole agentów ElevenLabs — jeden endpoint, dwie ścieżki. Agent
+// (konsola ElevenLabs → Tools → Webhook) woła POST z JSON.
 //
-// Narzędzia wołają DOKŁADNIE te same funkcje serwerowe co dotychczasowe boty
-// (executeTool z elevenlabs-text-agent.server), więc zapisy w bazie wyglądają
-// identycznie; do tego odczyt statusu wniosku, brief braków i issue_invoice.
+// 1. Ścieżka rejestru — flota agentów (recepcja, intake, presale inwestora,
+//    panel inwestora, windykacja głosowa i tekstowa):
+//      { "tool": "...", "agent_key": "...", "conversation_id"?, "thread_key"?,
+//        "channel"?, "phone"?, "email"?, "args"? }
+//    Wybierana, gdy body niesie `agent_key` ALBO `tool` nie jest narzędziem
+//    legacy. Całość robi dispatchTool (@/lib/agent-tools/registry.server):
+//    sekret porównywany w czasie stałym (zapisy i dane podmiotu — WYŁĄCZNIE
+//    nagłówek X-Agent-Tools-Secret, nigdy ?token=), lista dozwolonych agentów,
+//    bramka tożsamości, limit na rozmowę, redakcja wyniku i audyt każdej
+//    decyzji w agent_tool_calls. Żądanie bez poprawnego sekretu dostaje 401
+//    i nie dociera do żadnego handlera. Handlery ufają tylko sesji rozmowy,
+//    nigdy identyfikatorom z body.
+//    Obecność `agent_key` przesądza o tej ścieżce nawet przy nazwie legacy —
+//    agent floty nie może zejść do słabszej autoryzacji (?token=) ani do
+//    odczytu po lead_id podanym w body.
+//
+// 2. Ścieżka legacy — żywe narzędzia fy_* skonfigurowane ręcznie w konsoli
+//    ElevenLabs (update_lead_data, send_application_link, mark_ready_for_human,
+//    request_invoice, get_application_status, get_missing_info_brief,
+//    issue_invoice). Zachowanie bez zmian:
+//      { "tool": "...", "lead_id"?, "phone"?, "email"?, "application_id"?, "args"? }
+//    Auth: nagłówek X-Agent-Tools-Secret albo ?token= — sekret AGENT_TOOLS_SECRET.
+//    Narzędzia wołają DOKŁADNIE te same funkcje serwerowe co dotychczasowe boty
+//    (executeTool z elevenlabs-text-agent.server), więc zapisy w bazie wyglądają
+//    identycznie; do tego odczyt statusu wniosku, brief braków i issue_invoice.
+//
+// Body czytamy raz, PRZED sprawdzeniem sekretu, bo dopiero z niego wiadomo,
+// która ścieżka autoryzuje. Nieparsowalny JSON idzie ścieżką legacy, więc
+// odpowiedź jest taka jak dotąd: bez sekretu 401, z sekretem 400 invalid_json.
 import { createFileRoute } from "@tanstack/react-router";
 
 const WRITE_TOOLS = new Set([
@@ -14,6 +38,34 @@ const WRITE_TOOLS = new Set([
   "mark_ready_for_human",
   "request_invoice",
 ]);
+
+/** Nazwy obsługiwane przez ścieżkę legacy — porównanie dosłowne, jak dotąd. */
+const LEGACY_TOOLS = new Set([
+  ...WRITE_TOOLS,
+  "get_application_status",
+  "get_missing_info_brief",
+  "issue_invoice",
+]);
+
+/** Body jako obiekt — tablica / liczba / null z JSON-a nie niesie pól narzędzia. */
+function asObject(body: unknown): Record<string, unknown> {
+  return body && typeof body === "object" && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
+    : {};
+}
+
+/**
+ * Czy wywołanie należy do rejestru narzędzi agentów. Pusty `agent_key`
+ * (np. niewypełniona zmienna dynamiczna) nie przejmuje narzędzia legacy;
+ * każda niepusta wartość — tak, także nieznany klucz, który rejestr odrzuci.
+ */
+function routesToRegistry(body: Record<string, unknown>): boolean {
+  const agentKey = body.agent_key;
+  const hasAgentKey =
+    typeof agentKey === "string" ? agentKey.trim() !== "" : agentKey != null;
+  if (hasAgentKey) return true;
+  return !LEGACY_TOOLS.has(String(body.tool ?? ""));
+}
 
 function unauthorized(): Response {
   return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -92,16 +144,39 @@ export const Route = createFileRoute("/api/public/agent-tools")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        let body: any;
+        let parsed = true;
+        try {
+          body = await request.json();
+        } catch {
+          parsed = false;
+        }
+
+        // ── Ścieżka rejestru — autoryzuje sam dispatchTool ─────────────────
+        if (parsed && routesToRegistry(asObject(body))) {
+          try {
+            const { dispatchTool } = await import("@/lib/agent-tools/registry.server");
+            const outcome = await dispatchTool(request, asObject(body));
+            return Response.json(outcome.body, { status: outcome.status });
+          } catch (e: any) {
+            // dispatchTool sam nie rzuca; tu trafia tylko awaria ładowania
+            // modułów. Bez szczegółów w odpowiedzi — agent czyta ją rozmówcy.
+            console.error("[agent-tools] dispatch error", e?.message);
+            return Response.json(
+              { ok: false, error: "Narzędzie jest chwilowo niedostępne — spróbuj ponownie za chwilę." },
+              { status: 500 },
+            );
+          }
+        }
+
+        // ── Ścieżka legacy — sekret z nagłówka albo ?token=, jak dotąd ──────
         const secret = process.env.AGENT_TOOLS_SECRET;
         const url = new URL(request.url);
         const provided =
           request.headers.get("x-agent-tools-secret") ?? url.searchParams.get("token");
         if (!secret || provided !== secret) return unauthorized();
 
-        let body: any;
-        try {
-          body = await request.json();
-        } catch {
+        if (!parsed) {
           return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
         }
         const tool = String(body?.tool ?? "");

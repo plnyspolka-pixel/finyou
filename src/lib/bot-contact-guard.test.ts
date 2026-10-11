@@ -126,3 +126,14 @@ describe("nationalPhoneDigits", () => {
     expect(nationalPhoneDigits("70106118031")).toBeNull();
   });
 });
+
+describe("numery pomocy kryzysowej", () => {
+  it("nie wycina Centrum Wsparcia ani telefonu zaufania", () => {
+    const msg =
+      "Nie jest Pan sam. Całodobowo pomaga Centrum Wsparcia 800 70 2222 albo telefon zaufania 116 123, a w nagłym zagrożeniu 112.";
+    const r = guardOutboundContactDetails(msg, {});
+    expect(r.redactions).toEqual([]);
+    expect(r.text).toContain("800 70 2222");
+    expect(r.text).toContain("116 123");
+  });
+});

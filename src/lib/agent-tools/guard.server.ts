@@ -2,7 +2,8 @@
 // redakcja danych wrażliwych i audyt. Każda decyzja (także odmowa) zostaje
 // w `agent_tool_calls`. Zasada: domyślnie ODMOWA; wszystko, co nie jest
 // wprost dozwolone, jest zabronione.
-import { createHash, timingSafeEqual } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import { threadSessionId, verifyThreadKey } from "./thread-key.server";
 import type {
   AgentKey,
   SubjectKind,
@@ -70,15 +71,21 @@ export function normalizeToolName(raw: unknown): string {
 }
 
 /**
- * ElevenLabs podaje w `system__conversation_id` identyfikator rozmowy. Gdy
- * go brak (np. test z konsoli), budujemy stabilny zastępczy z telefonu /
- * e-maila, żeby limity i weryfikacja tożsamości nadal działały per rozmówca.
+ * Klucz sesji narzędzi:
+ *  1. podpisany `thread_key` (kanały asynchroniczne — wątek trwa wiele
+ *     rozmów ElevenLabs, patrz thread-key.server.ts),
+ *  2. `system__conversation_id` z ElevenLabs,
+ *  3. brak obu (wywołanie spoza ElevenLabs) — losowy, jednorazowy klucz.
+ * Świadomie NIE wyprowadzamy klucza z telefonu ani e-maila: te pola może
+ * podać model, a wspólny klucz oznaczałby dziedziczenie cudzej, już
+ * potwierdzonej tożsamości.
  */
-export function resolveConversationId(body: ToolRequestBody, callerPhone: string | null): string {
+export function resolveConversationId(body: ToolRequestBody, _callerPhone: string | null): string {
+  const threadId = verifyThreadKey((body as { thread_key?: unknown }).thread_key);
+  if (threadId) return threadSessionId(threadId);
   const raw = String(body.conversation_id ?? "").trim();
-  if (raw && raw.length <= 128) return raw;
-  const seed = callerPhone ?? String(body.email ?? "").toLowerCase() ?? "anon";
-  return `synthetic:${createHash("sha256").update(seed).digest("hex").slice(0, 24)}`;
+  if (raw && raw.length <= 128 && /^[A-Za-z0-9_:-]+$/.test(raw) && !raw.startsWith("thread:")) return raw;
+  return `ephemeral:${randomUUID()}`;
 }
 
 export async function normalizePhone(raw: unknown): Promise<string | null> {

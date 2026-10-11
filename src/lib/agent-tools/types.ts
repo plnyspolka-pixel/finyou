@@ -52,6 +52,8 @@ export interface ToolSession {
 export interface ToolRequestBody {
   tool?: string;
   conversation_id?: string;
+  /** Podpisany klucz wątku (kanały asynchroniczne) — patrz thread-key.server.ts. */
+  thread_key?: string;
   agent_key?: string;
   channel?: string;
   lead_id?: string;
