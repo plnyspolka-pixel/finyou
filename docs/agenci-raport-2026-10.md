@@ -16,8 +16,10 @@ po scaleniu gałęzi i wdrożeniu.
 - Szeroki dostęp do danych przez jedno wejście z bezpiecznikami: lista
   narzędzi na agenta, limity na godzinę, zakres do własnego leada, maskowanie
   telefonu i e-maila, usuwanie PESEL i tokenów, audyt bez danych osobowych.
-- Agent wzrostu tworzy, publikuje i mierzy posty na FB i IG, odpowiada na
-  komentarze IG i YouTube, uczy się, co działa, i pilnuje prawdy.
+- Agent wzrostu codziennie robi rolkę i publikuje ją na wszystkich dostępnych
+  platformach (Instagram, Facebook, YouTube; TikTok i X, gdy są odblokowane).
+  Do tego jeden post tekstowy dziennie, odpowiedzi na komentarze IG i YouTube,
+  nauka na wynikach i pilnowanie prawdy.
 - Telefoniczna Ania mówiła klientom nieprawdę w czterech sprawach. Poprawione
   na żywo.
 
@@ -41,7 +43,10 @@ W rozmowie tekstowej kod dokłada przy każdej wiadomości klienta blok
 
 ### Agent wzrostu (`src/lib/growth-agent/`)
 
-Opis działania i sterowania: `docs/agent-wzrostu.md`.
+Główny produkt to codzienna rolka: plan → scenariusz → strażnik prawdy →
+render w Studiu (lektor, awatary HeyGen, napisy) → publikacja na wszystkie
+dostępne platformy → pomiar po 48 h. Opis działania i sterowania:
+`docs/agent-wzrostu.md`.
 
 ## Testy
 
@@ -93,9 +98,28 @@ sugerowania zakładania firmy, LTV 60% liczone z obecną hipoteką,
 ### Strażnik prawdy na prawdziwych postach
 
 19 ostatnich postów z profilu: 17 do inwestorów, 2 do przedsiębiorców.
-Dwa posty na Instagramie z 29 września blokuje: „stabilny zwrot z inwestycji”
-i „skutecznie i bezpiecznie lokować kapitał”. To obietnice, których nie da
-się uczciwie złożyć.
+Na Instagramie jest pięć rolek z 29 i 30 września z obietnicami, których nie
+da się uczciwie złożyć: „stabilny zwrot”, „skutecznie i bezpiecznie lokować
+kapitał”, „atrakcyjny i bezpieczny zwrot”, „stabilne zyski i minimalne
+ryzyko”, „zabezpieczyć Twój kapitał”. Do tego post z kwietnia: „decyzja nawet
+w 24h, brak BIK”. Strażnik blokuje takie sformułowania.
+
+### Strażnik prawdy na scenariuszach rolek
+
+Siedem ostatnich scenariuszy rolek ze Studia: sześć przechodzi, jeden
+(„Nie musisz mieć miliona”) blokuje nowa reguła statystyk bez źródła:
+„większość spraw na rynku to sto do trzystu tysięcy złotych”. Nie mamy takich
+danych, więc agent nie może ich podawać.
+
+### Logika rolek na prawdziwych danych
+
+- Rolki z 6–11 października zostały zaplanowane jednorazowo 5 października.
+  Po dzisiejszej (17:00) kolejka jest pusta — od 12 października rolkę robi
+  agent. Dziś nie doda drugiej, bo dzień ma już rolkę.
+- Platformy dostępne dla agenta: Instagram, Facebook, YouTube i X. TikTok
+  czeka na ustawienia posta od właściciela (wymóg audytu TikToka).
+- Stare błędy X (brak kredytów) i TikToka (audyt) są starsze niż tydzień, więc
+  agent spróbuje raz; po trwałym błędzie wstrzyma platformę na 7 dni.
 
 ### Test praktyczny posta
 
@@ -131,26 +155,40 @@ po 48 godzinach.
 4. **Profil mówi prawie tylko do inwestorów** (17 z 19 postów), zasięg
    i zaangażowanie bliskie zera (FB 57 obserwujących, IG 4). Agent wzrostu
    zmienia odbiorców na przemian.
-5. **Dwa posty IG z 29 września** z obietnicą stabilnego i bezpiecznego
-   zysku. Do decyzji: usunąć albo poprawić opis.
+5. **Pięć rolek IG z 29–30 września i post z kwietnia** z obietnicami
+   bezpiecznego i stabilnego zysku albo decyzji w 24 h. Do decyzji: usunąć
+   albo poprawić opisy.
 6. **Prompt A3 żyje tylko w ElevenLabs** — tabela `text_agent_settings`
    nie przyjmuje identyfikatora tego agenta. Synchronizacja z kodu go nie
    nadpisze, ale edycja z panelu też nie zadziała.
 7. **Ania nie zapisuje nagrań głosu**, tylko transkrypcje. Powitanie nie
    mówi więc o nagrywaniu. Jeśli nagrania mają być, trzeba je włączyć
    i dodać informację do powitania.
+8. **Rolka na Facebooku z 6 października wisi w stanie „publikowanie”** od
+   pięciu dni. Publikator oznacza wpis jako „w toku”, a gdy proces padnie
+   w trakcie wysyłki dużego wideo, nic go nie zwalnia. Agent przestaje czekać
+   na taki wpis po 6 h, ale go nie ponawia (Meta mogła już opublikować).
+   Do poprawki w publikatorze: zwalnianie wpisów „w toku” po czasie
+   z ostrożnym sprawdzeniem, czy post już istnieje.
+9. **Usługa wypalania napisów (caption-burner) nie odpowiada** (stan na 11
+   października), a jest domyślnym silnikiem Studia. Ostatnia rolka powstała
+   na Remotion. Agent sam wybiera działający silnik przy zleceniu.
+10. **Codzienne rolki nie powstawały automatycznie** — ktoś planował je ręcznie
+    partiami. Teraz robi to agent.
 
 ## Do decyzji właściciela
 
-| Sprawa                     | Co zrobić                                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Wdrożenie                  | scalić gałąź `claude/lucid-clarke-64wzxg` i wdrożyć — inaczej agent wzrostu i nowe narzędzia nie ruszą |
-| Dwa posty IG z 29 września | usunąć albo poprawić opis                                                                              |
-| Fakty Ani                  | potwierdzić LTV 60% i brak stawek miesięcznych w odpowiedziach telefonicznych                          |
-| X (Twitter)                | publikacja wymaga płatnych kredytów API; darmowo: Threads, Bluesky, strona firmowa LinkedIn            |
-| TikTok                     | audyt aplikacji wymaga nagrania przez człowieka (`docs/tiktok-audyt-nagranie.md`)                      |
-| Twilio                     | saldo 18 USD; włączyć automatyczne doładowanie, bo przy zerze staną SMS-y i telefony                   |
-| Komentarze FB              | zgoda na zmianę kierowania inwestorów w webhooku                                                       |
+| Sprawa                    | Co zrobić                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Wdrożenie                 | scalić gałąź `claude/lucid-clarke-64wzxg` i wdrożyć — inaczej agent wzrostu i nowe narzędzia nie ruszą |
+| Rolki IG z 29–30 września | usunąć albo poprawić opisy (pięć rolek i post z kwietnia)                                              |
+| TikTok dla agenta         | po audycie wybrać raz ustawienia posta: `growth_agent_settings` z `tiktok_privacy`                     |
+| Kredyty HeyGen            | rolka dziennie zużywa ok. 1 kredyt; agent prosi SMS-em, gdy zapas spadnie                              |
+| Fakty Ani                 | potwierdzić LTV 60% i brak stawek miesięcznych w odpowiedziach telefonicznych                          |
+| X (Twitter)               | publikacja wymaga płatnych kredytów API; darmowo: Threads, Bluesky, strona firmowa LinkedIn            |
+| TikTok                    | audyt aplikacji wymaga nagrania przez człowieka (`docs/tiktok-audyt-nagranie.md`)                      |
+| Twilio                    | saldo 18 USD; włączyć automatyczne doładowanie, bo przy zerze staną SMS-y i telefony                   |
+| Komentarze FB             | zgoda na zmianę kierowania inwestorów w webhooku                                                       |
 
 ## Ograniczenia
 

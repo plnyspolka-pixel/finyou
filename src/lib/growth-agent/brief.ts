@@ -109,7 +109,7 @@ export function buildReplyUserPrompt(input: {
   return `POST:\n${input.postText.slice(0, 1200)}\n\nKOMENTARZ:\n${input.comment.slice(0, 800)}\n\n${input.factsBlock.trim()}`;
 }
 
-export const REFLECTION_SYSTEM_PROMPT = `Jesteś analitykiem social mediów. Dostajesz nasze posty z cechami (odbiorca, filar, haczyk, pora) i wynikiem zaangażowania (wyżej = lepiej). Wyciągasz WNIOSKI, które poprawią kolejne posty.
+export const REFLECTION_SYSTEM_PROMPT = `Jesteś analitykiem social mediów. Dostajesz nasze rolki i posty z cechami (rodzaj, odbiorca, filar, haczyk, pora) i wynikiem (wyżej = lepiej; rolki i posty mają osobne skale — nie porównuj ich wprost). Wyciągasz WNIOSKI, które poprawią kolejne rolki i posty; najważniejsze są rolki — to główny produkt.
 
 ZASADY:
 - Najwyżej 8 wniosków, każdy jedno zdanie, w formie polecenia („Zaczynaj od…”, „Unikaj…”).
@@ -121,6 +121,8 @@ Zwracasz WYŁĄCZNIE JSON:
 {"lessons":["…"],"ideas":[{"title":"…","description":"…","kind":"prompt|code|connector|data_source","free":true,"url":"opcjonalny publiczny adres źródła danych"}]}`;
 
 export interface ReflectionRow {
+  /** rolka albo post — różne zachowanie widzów. */
+  format?: "post" | "reel";
   audience: string;
   pillar: string;
   hook: string;
@@ -137,7 +139,7 @@ export function buildReflectionUserPrompt(
     .slice(0, 40)
     .map(
       (r) =>
-        `- [${r.score.toFixed(3)}] ${r.audience}/${r.pillar}/${r.hook}/${r.slot} :: ${r.opening.slice(0, 120)}`,
+        `- [${r.score.toFixed(3)}] ${r.format === "reel" ? "ROLKA" : "post"} ${r.audience}/${r.pillar}/${r.hook}/${r.slot} :: ${r.opening.slice(0, 120)}`,
     );
   return `POSTY (wynik zaangażowania, cechy, otwarcie):\n${lines.join("\n")}\n\nOBECNE WNIOSKI:\n${currentPlaybook.map((l) => `- ${l}`).join("\n") || "(brak)"}`;
 }

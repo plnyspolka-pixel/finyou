@@ -5,8 +5,10 @@
 // zaczynał od zera.
 import { getAgentState, setAgentState, updateAgentAction } from "@/lib/agent-toolkit/store.server";
 import { engagementScore, median, rewardFromScore, type PostMetrics } from "./scoring";
-import { classifyContent, slotForDate, updateArms, type Features } from "./strategy";
-import { getArms, listItems, saveArms, type GrowthItemPayload } from "./state.server";
+import { reelScore, reelSlotForDate } from "./reel-plan";
+import { reelMetrics, reelScoreFromMetrics } from "./reel.server";
+import { classifyContent, slotForDate, updateArms, type ArmTable, type Features } from "./strategy";
+import { getArms, isReel, listItems, saveArms, type GrowthItemPayload } from "./state.server";
 
 const MEASURE_AFTER_H = 48;
 const BASELINE_KEEP = 60;
@@ -51,20 +53,28 @@ export async function instagramMetrics(mediaId: string): Promise<PostMetrics> {
   return { likes: media?.like_count ?? null, comments: media?.comments_count ?? null };
 }
 
-async function baselineScores(): Promise<number[]> {
-  return getAgentState<number[]>("growth_baseline_scores", []);
+type Fmt = "post" | "reel";
+const baselineKey = (f: Fmt) =>
+  f === "reel" ? "growth_baseline_scores_reel" : "growth_baseline_scores";
+
+async function baselineScores(f: Fmt = "post"): Promise<number[]> {
+  return getAgentState<number[]>(baselineKey(f), []);
 }
 
-async function pushBaseline(scores: number[]): Promise<void> {
-  const current = await baselineScores();
+async function pushBaseline(scores: number[], f: Fmt = "post"): Promise<void> {
+  const current = await baselineScores(f);
   await setAgentState(
-    "growth_baseline_scores",
+    baselineKey(f),
     [...current, ...scores].slice(-BASELINE_KEEP),
-    "wyniki bazowe zaangażowania",
+    `wyniki bazowe (${f})`,
   );
 }
 
-/** Pomiar postów opublikowanych ≥ 48 h temu, aktualizacja bandyty. */
+/**
+ * Pomiar treści opublikowanych ≥ 48 h temu, aktualizacja bandyty. Posty
+ * i rolki mają osobne miary (rolka liczy też zasięg), osobne mediany
+ * i osobne tabele bandyty.
+ */
 export async function measurePublished(now = new Date()): Promise<string[]> {
   const rows = await listItems({ stage: "published", limit: 30 });
   const due = rows.filter((r) => {
@@ -73,16 +83,25 @@ export async function measurePublished(now = new Date()): Promise<string[]> {
   });
   if (due.length === 0) return [];
 
-  let arms = await getArms();
-  const base = await baselineScores();
+  const arms: Record<Fmt, ArmTable> = { post: await getArms("post"), reel: await getArms("reel") };
+  const base: Record<Fmt, number[]> = {
+    post: await baselineScores("post"),
+    reel: await baselineScores("reel"),
+  };
+  const fresh: Record<Fmt, number[]> = { post: [], reel: [] };
   const out: string[] = [];
-  const newScores: number[] = [];
   for (const r of due.slice(0, 10)) {
     const p = r.payload as unknown as GrowthItemPayload;
-    const metrics: Record<string, PostMetrics> = {};
+    const fmt: Fmt = isReel(p) ? "reel" : "post";
+    let metrics: Record<string, PostMetrics> = {};
     try {
-      if (p.fb?.postId) metrics.facebook = await facebookMetrics(p.fb.postId);
-      if (p.ig?.mediaId) metrics.instagram = await instagramMetrics(p.ig.mediaId);
+      if (fmt === "reel") {
+        metrics = await reelMetrics(p);
+        if (Object.keys(metrics).length === 0) throw new Error("brak metryk z platform");
+      } else {
+        if (p.fb?.postId) metrics.facebook = await facebookMetrics(p.fb.postId);
+        if (p.ig?.mediaId) metrics.instagram = await instagramMetrics(p.ig.mediaId);
+      }
     } catch (e) {
       const attempts = (p.measureAttempts ?? 0) + 1;
       const giveUp = attempts >= 3;
@@ -96,17 +115,22 @@ export async function measurePublished(now = new Date()): Promise<string[]> {
       out.push(`${r.id.slice(0, 8)}:pomiar nieudany (${attempts}/3)`);
       continue;
     }
-    const scores = Object.values(metrics).map(engagementScore);
-    const score = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    const reward = rewardFromScore(score, median([...base, ...newScores]));
+    const score =
+      fmt === "reel"
+        ? reelScoreFromMetrics(metrics)
+        : (() => {
+            const scores = Object.values(metrics).map(engagementScore);
+            return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+          })();
+    const reward = rewardFromScore(score, median([...base[fmt], ...fresh[fmt]]));
     const f: Features = {
       audience: p.plan.audience,
       pillar: p.plan.pillar,
       hook: p.plan.hook,
       slot: p.plan.slot,
     };
-    arms = updateArms(arms, f, reward);
-    newScores.push(score);
+    arms[fmt] = updateArms(arms[fmt], f, reward);
+    fresh[fmt].push(score);
     await updateAgentAction(r.id, {
       payload: {
         ...p,
@@ -117,11 +141,13 @@ export async function measurePublished(now = new Date()): Promise<string[]> {
         measuredAt: now.toISOString(),
       } as unknown as Record<string, unknown>,
     });
-    out.push(`${r.id.slice(0, 8)}:wynik ${score.toFixed(3)} nagroda ${reward.toFixed(2)}`);
+    out.push(`${r.id.slice(0, 8)}:${fmt} wynik ${score.toFixed(3)} nagroda ${reward.toFixed(2)}`);
   }
-  if (newScores.length) {
-    await saveArms(arms);
-    await pushBaseline(newScores);
+  for (const fmt of ["post", "reel"] as Fmt[]) {
+    if (fresh[fmt].length) {
+      await saveArms(arms[fmt], fmt);
+      await pushBaseline(fresh[fmt], fmt);
+    }
   }
   return out;
 }
@@ -176,4 +202,49 @@ export async function warmStart(): Promise<string> {
     `ciepły start: ${samples.length} postów, mediana ${med.toFixed(4)}`,
   );
   return `ciepły start: ${samples.length} postów (FB ${fbPosts.length}, IG ${igMedia.length}), mediana ${med.toFixed(4)}`;
+}
+
+/**
+ * Ciepły start rolek (raz): dotychczasowe rolki z Instagrama → cechy
+ * + wynik (zaangażowanie i zasięg) → bandyta rolek i mediana bazowa.
+ */
+export async function warmStartReels(): Promise<string> {
+  const done = await getAgentState<boolean>("growth_warm_started_reel", false);
+  if (done) return "pominięto (już wykonany)";
+  const m = await import("@/lib/meta-api.server");
+  const media = await m.listIgMedia({ limit: 40 }).catch(() => [] as any[]);
+  const samples: Array<{ f: Features; score: number }> = [];
+  for (const item of media) {
+    if (item?.media_product_type !== "REELS") continue;
+    const text = String(item?.caption ?? "");
+    if (!text) continue;
+    const ins = await m
+      .getIgMediaInsights(item.id, "views,reach,likes,comments,shares,saved")
+      .catch(() => [] as any[]);
+    const score = reelScore({
+      views: val(ins, "views"),
+      reach: val(ins, "reach"),
+      likes: val(ins, "likes") ?? item?.like_count,
+      comments: val(ins, "comments") ?? item?.comments_count,
+      shares: val(ins, "shares"),
+      saves: val(ins, "saved"),
+    });
+    samples.push({ f: { ...classifyContent(text), slot: reelSlotForDate(item.timestamp) }, score });
+  }
+  const med = median(samples.map((x) => x.score));
+  let arms = await getArms("reel");
+  for (const x of samples) arms = updateArms(arms, x.f, rewardFromScore(x.score, med));
+  if (samples.length) {
+    await saveArms(arms, "reel");
+    await pushBaseline(
+      samples.map((x) => x.score),
+      "reel",
+    );
+  }
+  await setAgentState(
+    "growth_warm_started_reel",
+    true,
+    `ciepły start rolek: ${samples.length}, mediana ${med.toFixed(4)}`,
+  );
+  return `ciepły start rolek: ${samples.length} rolek z Instagrama, mediana ${med.toFixed(4)}`;
 }

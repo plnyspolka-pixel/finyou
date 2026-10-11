@@ -24,6 +24,7 @@ const ADMIN = ["administrator"] as const;
 const itemView = (r: any) => ({
   id: r.id,
   created_at: r.created_at,
+  format: r.payload?.format ?? "post",
   stage: r.payload?.stage,
   summary: r.summary,
   audience: r.payload?.plan?.audience,
@@ -36,6 +37,32 @@ const itemView = (r: any) => ({
   image_url: r.payload?.imageUrl,
   fb: r.payload?.fb,
   ig: r.payload?.ig,
+  reel: r.payload?.reel
+    ? {
+        title: r.payload.reel.title,
+        script: r.payload.reel.script,
+        studio_job_id: r.payload.reel.studioJobId,
+        job_status: r.payload.reel.jobStatus,
+        job_error: r.payload.reel.jobError,
+        video_url: r.payload.reel.videoUrl,
+        targets: r.payload.reel.targets,
+        skipped: r.payload.reel.skipped,
+        queue: [
+          ...(r.payload.reel.social ?? []).map((x: any) => ({
+            platform: x.platform,
+            status: x.status,
+            external_id: x.externalId,
+            error: x.error,
+          })),
+          ...(r.payload.reel.youtube ?? []).map((x: any) => ({
+            platform: "youtube",
+            status: x.status,
+            external_id: x.videoId,
+            error: x.error,
+          })),
+        ],
+      }
+    : undefined,
   score: r.payload?.score ?? null,
   reward: r.payload?.reward ?? null,
   guard: Object.fromEntries(
@@ -51,7 +78,7 @@ export const growthAgentStatus = defineTool({
   name: "growth_agent_status",
   title: "Growth agent status",
   description:
-    "Stan agenta wzrostu (social media): ustawienia, koszt z 24 h, ostatnie posty z etapem (szkic / zaplanowany / opublikowany / zmierzony / zablokowany) i wynikiem, czego się nauczył (bandyta: odbiorca, filar, haczyk, pora), wnioski (playbook), propozycje rozwoju i sprawy czekające na właściciela. Administrator/operator.",
+    "Stan agenta wzrostu (social media): ustawienia, koszt z 24 h, ostatnie rolki i posty z etapem (szkic / w produkcji / zaplanowany / opublikowany / zmierzony / zablokowany), platformami i wynikiem, platformy wideo dostępne teraz (i pominięte z powodem), czego się nauczył osobno dla rolek i postów (odbiorca, filar, haczyk, pora), wnioski (playbook), propozycje rozwoju i sprawy czekające na właściciela. Administrator/operator.",
   inputSchema: { limit: z.number().int().min(1).max(50).default(15) },
   annotations: READ,
   handler: ({ limit }, ctx: ToolContext) =>
@@ -61,23 +88,43 @@ export const growthAgentStatus = defineTool({
       const { summarizeArms } = await import("@/lib/growth-agent/strategy");
       const store = await import("@/lib/agent-toolkit/store.server");
       const { pendingOwnerItems } = await import("@/lib/agent-toolkit/capabilities.server");
-      const [settings, spent, items, arms, playbook, proposals, replies, owner, lastReflection] =
-        await Promise.all([
-          st.getGrowthSettings(),
-          st.spentLast24h(),
-          st.listItems({ limit }),
-          st.getArms(),
-          st.getPlaybook(),
-          store.listAgentActions({ module: "growth_agent", action: "proposal", limit: 10 }),
-          store.listAgentActions({ module: "growth_agent", action: "reply", limit: 10 }),
-          pendingOwnerItems(),
-          store.getAgentState<string | null>("growth_last_reflection", null),
-        ]);
-      return ok({
+      const [
         settings,
+        spent,
+        items,
+        arms,
+        reelArms,
+        playbook,
+        proposals,
+        replies,
+        owner,
+        lastReflection,
+      ] = await Promise.all([
+        st.getGrowthSettings(),
+        st.spentLast24h(),
+        st.listItems({ limit }),
+        st.getArms("post"),
+        st.getArms("reel"),
+        st.getPlaybook(),
+        store.listAgentActions({ module: "growth_agent", action: "proposal", limit: 10 }),
+        store.listAgentActions({ module: "growth_agent", action: "reply", limit: 10 }),
+        pendingOwnerItems(),
+        store.getAgentState<string | null>("growth_last_reflection", null),
+      ]);
+      const { reelPlatformChoice } = await import("@/lib/growth-agent/reel.server");
+      const reelPlatforms = await reelPlatformChoice(settings, new Date()).catch((e) => ({
+        error: e instanceof Error ? e.message : String(e),
+      }));
+      return ok({
+        settings: {
+          ...settings,
+          tiktokPostOptions: settings.tiktokPostOptions ? "ustawione" : null,
+        },
         spent_24h_pln: spent,
+        reel_platforms_now: reelPlatforms,
         items: items.map(itemView),
-        learned: summarizeArms(arms).slice(0, 20),
+        learned_reels: summarizeArms(reelArms).slice(0, 20),
+        learned_posts: summarizeArms(arms).slice(0, 20),
         playbook,
         last_reflection: lastReflection,
         proposals: proposals.map((p) => ({
@@ -101,10 +148,26 @@ export const growthAgentSettings = defineTool({
   name: "growth_agent_settings",
   title: "Update growth agent settings",
   description:
-    "Zmienia ustawienia agenta wzrostu: enabled (wyłącznik), mode (auto = publikuje sam, draft = szkice do akceptacji), posts_per_day (0–4), platforms (facebook, instagram), engage (odpowiedzi na komentarze IG/YouTube), max_replies_per_run, daily_budget_pln. Tylko administrator.",
+    "Zmienia ustawienia agenta wzrostu: enabled (wyłącznik), mode (auto = publikuje sam, draft = szkice do akceptacji), reels_per_day (0–2, główny produkt: codzienna rolka na wszystkie dostępne platformy), reel_platforms („auto” albo lista: instagram_reels, facebook_reels, youtube, tiktok, x), tiktok_privacy + tiktok_* (ustawienia posta TikToka wybrane przez właściciela — bez nich agent pomija TikToka; tiktok_privacy=null czyści), posts_per_day (0–4, posty tekstowe), platforms (posty: facebook, instagram), engage (odpowiedzi na komentarze IG/YouTube), max_replies_per_run, daily_budget_pln. Tylko administrator.",
   inputSchema: {
     enabled: z.boolean().optional(),
     mode: z.enum(["auto", "draft"]).optional(),
+    reels_per_day: z.number().int().min(0).max(2).optional(),
+    reel_platforms: z
+      .union([
+        z.literal("auto"),
+        z.array(z.enum(["instagram_reels", "facebook_reels", "youtube", "tiktok", "x"])).min(1),
+      ])
+      .optional(),
+    tiktok_privacy: z
+      .enum(["PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR", "SELF_ONLY"])
+      .nullable()
+      .optional(),
+    tiktok_disable_comment: z.boolean().optional(),
+    tiktok_disable_duet: z.boolean().optional(),
+    tiktok_disable_stitch: z.boolean().optional(),
+    tiktok_brand_organic: z.boolean().optional(),
+    tiktok_branded_content: z.boolean().optional(),
     posts_per_day: z.number().int().min(0).max(4).optional(),
     platforms: z.array(z.enum(["facebook", "instagram"])).optional(),
     engage: z.boolean().optional(),
@@ -119,6 +182,21 @@ export const growthAgentSettings = defineTool({
       const patch: Record<string, unknown> = {};
       if (a.enabled !== undefined) patch.enabled = a.enabled;
       if (a.mode !== undefined) patch.mode = a.mode;
+      if (a.reels_per_day !== undefined) patch.reelsPerDay = a.reels_per_day;
+      if (a.reel_platforms !== undefined) patch.reelPlatforms = a.reel_platforms;
+      if (a.tiktok_privacy === null) patch.tiktokPostOptions = null;
+      else if (a.tiktok_privacy !== undefined) {
+        // Ten sam walidator co ekran publikacji Studia (wymóg audytu TikToka).
+        const { parseTiktokPostOptions } = await import("@/lib/tiktok-upload");
+        patch.tiktokPostOptions = parseTiktokPostOptions({
+          privacyLevel: a.tiktok_privacy,
+          disableComment: a.tiktok_disable_comment,
+          disableDuet: a.tiktok_disable_duet,
+          disableStitch: a.tiktok_disable_stitch,
+          brandOrganic: a.tiktok_brand_organic,
+          brandedContent: a.tiktok_branded_content,
+        });
+      }
       if (a.posts_per_day !== undefined) patch.postsPerDay = a.posts_per_day;
       if (a.platforms !== undefined) patch.platforms = a.platforms;
       if (a.engage !== undefined) patch.engage = a.engage;
@@ -134,10 +212,10 @@ export const growthAgentRun = defineTool({
   name: "growth_agent_run",
   title: "Run growth agent now",
   description:
-    "Uruchamia przebieg agenta wzrostu teraz. `force` wymusza fazy: create (nowy post — w trybie auto zaplanuje publikację!), engage (odpowiedzi na komentarze — realne odpowiedzi publiczne), improve (refleksja + kontrola stóp NBP). `dry_run=true` tylko planuje i pisze treść, nic nie zapisuje ani nie publikuje. Tylko administrator.",
+    "Uruchamia przebieg agenta wzrostu teraz. `force` wymusza fazy: reel (nowa rolka mimo rolki na dziś — w trybie auto zleca render w HeyGen i publikację na wszystkie dostępne platformy!), create (nowy post — w trybie auto zaplanuje publikację!), engage (odpowiedzi na komentarze — realne odpowiedzi publiczne), improve (refleksja + kontrola stóp NBP). `dry_run=true` tylko planuje i pisze treść, nic nie zapisuje, nie zleca renderu ani nie publikuje. Tylko administrator.",
   inputSchema: {
     force: z
-      .array(z.enum(["publish", "measure", "warm", "create", "engage", "improve"]))
+      .array(z.enum(["publish", "reel", "measure", "warm", "create", "engage", "improve"]))
       .default([]),
     dry_run: z.boolean().default(true),
   },
@@ -154,7 +232,7 @@ export const growthAgentDecide = defineTool({
   name: "growth_agent_decide",
   title: "Approve or cancel growth agent post",
   description:
-    "Decyzja o poście agenta wzrostu: approve (szkic → zaplanowana publikacja; termin z przeszłości przesuwa się na za 15 minut) albo cancel (anuluje zaplanowany post i wpis w kolejce publikacji). Tylko administrator.",
+    "Decyzja o poście albo rolce agenta wzrostu: approve (szkic posta → zaplanowana publikacja, termin z przeszłości przesuwa się na za 15 minut; szkic rolki → zlecenie renderu w Studiu i publikacja po renderze) albo cancel (anuluje szkic, rolkę w produkcji albo zaplanowaną publikację i jej wpisy w kolejkach). Tylko administrator.",
   inputSchema: { item_id: z.string().uuid(), decision: z.enum(["approve", "cancel"]) },
   annotations: DESTRUCTIVE,
   handler: ({ item_id, decision }, ctx: ToolContext) =>
@@ -176,14 +254,40 @@ export const growthAgentDecide = defineTool({
           throw new Error(
             `Post jest na etapie „${payload?.stage}” — akceptować można tylko szkic.`,
           );
+        if (payload?.format === "reel") {
+          const { startReelProduction } = await import("@/lib/growth-agent/reel.server");
+          const next = await startReelProduction(item_id, payload);
+          return ok({
+            item_id,
+            stage: next.stage,
+            studio_job_id: next.reel?.studioJobId,
+            note: "Render trwa zwykle 10–40 minut; publikacja o zaplanowanej porze (albo zaraz po renderze, gdy pora minęła).",
+          });
+        }
         const { scheduleItem } = await import("@/lib/growth-agent/create.server");
         const next = await scheduleItem(item_id, payload);
         return ok({ item_id, stage: next.stage, slot: next.plan.slotIso, fb: next.fb });
       }
-      if (!["awaiting_approval", "scheduled"].includes(payload?.stage)) {
+      if (!["awaiting_approval", "scheduled", "producing"].includes(payload?.stage)) {
         throw new Error(
-          `Post jest na etapie „${payload?.stage}” — anulować można szkic albo zaplanowany.`,
+          `Wpis jest na etapie „${payload?.stage}” — anulować można szkic, rolkę w produkcji albo zaplanowany.`,
         );
+      }
+      if (payload?.format === "reel") {
+        const socialIds = (payload.reel?.social ?? []).map((x: any) => x.id);
+        const ytIds = (payload.reel?.youtube ?? []).map((x: any) => x.id);
+        if (socialIds.length)
+          await s
+            .from("social_publish_queue")
+            .update({ status: "cancelled" })
+            .in("id", socialIds)
+            .in("status", ["pending"]);
+        if (ytIds.length)
+          await s
+            .from("youtube_publish_queue")
+            .update({ status: "cancelled" })
+            .in("id", ytIds)
+            .in("status", ["pending"]);
       }
       if (payload?.fb?.queueId) {
         await s

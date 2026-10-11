@@ -13943,7 +13943,7 @@
       {
         "name": "growth_agent_status",
         "title": "Growth agent status",
-        "description": "Stan agenta wzrostu (social media): ustawienia, koszt z 24 h, ostatnie posty z etapem (szkic / zaplanowany / opublikowany / zmierzony / zablokowany) i wynikiem, czego się nauczył (bandyta: odbiorca, filar, haczyk, pora), wnioski (playbook), propozycje rozwoju i sprawy czekające na właściciela. Administrator/operator.",
+        "description": "Stan agenta wzrostu (social media): ustawienia, koszt z 24 h, ostatnie rolki i posty z etapem (szkic / w produkcji / zaplanowany / opublikowany / zmierzony / zablokowany), platformami i wynikiem, platformy wideo dostępne teraz (i pominięte z powodem), czego się nauczył osobno dla rolek i postów (odbiorca, filar, haczyk, pora), wnioski (playbook), propozycje rozwoju i sprawy czekające na właściciela. Administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -13967,7 +13967,7 @@
       {
         "name": "growth_agent_settings",
         "title": "Update growth agent settings",
-        "description": "Zmienia ustawienia agenta wzrostu: enabled (wyłącznik), mode (auto = publikuje sam, draft = szkice do akceptacji), posts_per_day (0–4), platforms (facebook, instagram), engage (odpowiedzi na komentarze IG/YouTube), max_replies_per_run, daily_budget_pln. Tylko administrator.",
+        "description": "Zmienia ustawienia agenta wzrostu: enabled (wyłącznik), mode (auto = publikuje sam, draft = szkice do akceptacji), reels_per_day (0–2, główny produkt: codzienna rolka na wszystkie dostępne platformy), reel_platforms („auto” albo lista: instagram_reels, facebook_reels, youtube, tiktok, x), tiktok_privacy + tiktok_* (ustawienia posta TikToka wybrane przez właściciela — bez nich agent pomija TikToka; tiktok_privacy=null czyści), posts_per_day (0–4, posty tekstowe), platforms (posty: facebook, instagram), engage (odpowiedzi na komentarze IG/YouTube), max_replies_per_run, daily_budget_pln. Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -13986,6 +13986,64 @@
                 "auto",
                 "draft"
               ]
+            },
+            "reels_per_day": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "reel_platforms": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "instagram_reels",
+                      "facebook_reels",
+                      "youtube",
+                      "tiktok",
+                      "x"
+                    ]
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
+            "tiktok_privacy": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PUBLIC_TO_EVERYONE",
+                    "MUTUAL_FOLLOW_FRIENDS",
+                    "FOLLOWER_OF_CREATOR",
+                    "SELF_ONLY"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tiktok_disable_comment": {
+              "type": "boolean"
+            },
+            "tiktok_disable_duet": {
+              "type": "boolean"
+            },
+            "tiktok_disable_stitch": {
+              "type": "boolean"
+            },
+            "tiktok_brand_organic": {
+              "type": "boolean"
+            },
+            "tiktok_branded_content": {
+              "type": "boolean"
             },
             "posts_per_day": {
               "type": "integer",
@@ -14024,7 +14082,7 @@
       {
         "name": "growth_agent_run",
         "title": "Run growth agent now",
-        "description": "Uruchamia przebieg agenta wzrostu teraz. `force` wymusza fazy: create (nowy post — w trybie auto zaplanuje publikację!), engage (odpowiedzi na komentarze — realne odpowiedzi publiczne), improve (refleksja + kontrola stóp NBP). `dry_run=true` tylko planuje i pisze treść, nic nie zapisuje ani nie publikuje. Tylko administrator.",
+        "description": "Uruchamia przebieg agenta wzrostu teraz. `force` wymusza fazy: reel (nowa rolka mimo rolki na dziś — w trybie auto zleca render w HeyGen i publikację na wszystkie dostępne platformy!), create (nowy post — w trybie auto zaplanuje publikację!), engage (odpowiedzi na komentarze — realne odpowiedzi publiczne), improve (refleksja + kontrola stóp NBP). `dry_run=true` tylko planuje i pisze treść, nic nie zapisuje, nie zleca renderu ani nie publikuje. Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -14040,6 +14098,7 @@
                 "type": "string",
                 "enum": [
                   "publish",
+                  "reel",
                   "measure",
                   "warm",
                   "create",
@@ -14062,7 +14121,7 @@
       {
         "name": "growth_agent_decide",
         "title": "Approve or cancel growth agent post",
-        "description": "Decyzja o poście agenta wzrostu: approve (szkic → zaplanowana publikacja; termin z przeszłości przesuwa się na za 15 minut) albo cancel (anuluje zaplanowany post i wpis w kolejce publikacji). Tylko administrator.",
+        "description": "Decyzja o poście albo rolce agenta wzrostu: approve (szkic posta → zaplanowana publikacja, termin z przeszłości przesuwa się na za 15 minut; szkic rolki → zlecenie renderu w Studiu i publikacja po renderze) albo cancel (anuluje szkic, rolkę w produkcji albo zaplanowaną publikację i jej wpisy w kolejkach). Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": true,

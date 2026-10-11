@@ -24,17 +24,24 @@ export const HOOKS = [
 ] as const;
 /** Pory (czas Warszawy). 15:00 zajmuje codzienna rolka — nie kolidujemy. */
 export const SLOTS = ["07:40", "12:10", "19:05"] as const;
+/**
+ * Pory rolek (czas Warszawy). 17:00 to dotychczasowa pora codziennej rolki;
+ * bandyta uczy się, czy południe albo wieczór działają lepiej. Nie kolidują
+ * z porami postów tekstowych.
+ */
+export const REEL_SLOTS = ["12:30", "17:00", "20:30"] as const;
 
 export type AudienceKey = (typeof AUDIENCES)[number];
 export type PillarKey = (typeof PILLARS)[number];
 export type HookKey = (typeof HOOKS)[number];
 export type SlotKey = (typeof SLOTS)[number];
+export type ReelSlotKey = (typeof REEL_SLOTS)[number];
 
 export interface Features {
   audience: AudienceKey;
   pillar: PillarKey;
   hook: HookKey;
-  slot: SlotKey;
+  slot: SlotKey | ReelSlotKey;
 }
 
 export interface ArmStat {
@@ -172,6 +179,8 @@ export interface PlanInput {
   rng: Rng;
   /** Pory już zajęte dziś/jutro (ISO) — nie planujemy dwóch postów na tę samą porę. */
   takenSlotsIso?: string[];
+  /** Pory do wyboru (domyślnie pory postów; rolki mają własne). */
+  slots?: readonly (SlotKey | ReelSlotKey)[];
   questionBank: Array<{
     id: number;
     category: "klient" | "inwestor";
@@ -187,7 +196,7 @@ export interface PostPlan extends Features {
 }
 
 /** Najbliższe wystąpienie pory (czas Warszawy) po `now`, z pominięciem zajętych. */
-export function nextSlotIso(slot: SlotKey, now: Date, taken: string[] = []): string {
+export function nextSlotIso(slot: SlotKey | ReelSlotKey, now: Date, taken: string[] = []): string {
   const [hh, mm] = slot.split(":").map(Number);
   const takenSet = new Set(taken.map((t) => t.slice(0, 16)));
   for (let dayOffset = 0; dayOffset < 4; dayOffset++) {
@@ -239,7 +248,7 @@ export function planNextPost(input: PlanInput): PostPlan {
     return true;
   });
   const hook = pickThompson("hook", HOOKS, arms, rng, (h) => recent[0]?.hook !== h);
-  const slot = pickThompson("slot", SLOTS, arms, rng);
+  const slot = pickThompson("slot", input.slots ?? SLOTS, arms, rng);
   const slotIso = nextSlotIso(slot, input.now, input.takenSlotsIso);
 
   // Pytanie z bazy 250 — merytoryczna kotwica (sprawdzona prawnie), bez powtórek przez 60 dni.

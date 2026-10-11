@@ -24,6 +24,7 @@ import { describeBlocking, guardContent, type GuardResult } from "./truth-guard"
 import {
   getArms,
   getPlaybook,
+  isReel,
   listItems,
   type GrowthItemPayload,
   type GrowthPlatform,
@@ -152,7 +153,8 @@ export async function createPost(opts: {
     listItems({ limit: 60 }),
     takenSlots(now),
   ]);
-  const history: HistoryItem[] = recent
+  const posts = recent.filter((r) => !isReel(r.payload));
+  const history: HistoryItem[] = posts
     .filter((r) => r.payload?.plan)
     .map((r) => ({
       audience: r.payload!.plan.audience,
@@ -172,7 +174,7 @@ export async function createPost(opts: {
   if (opts.audience && opts.audience !== plan.audience) plan = { ...plan, audience: opts.audience };
 
   const factsBlock = buildLiveFactsBlock(plan.audience === "inwestor" ? "inwestor" : "klient", now);
-  const recentOpenings = recent
+  const recentOpenings = posts
     .map((r) => openingOf(String(r.payload?.texts?.facebook ?? "")))
     .filter(Boolean)
     .slice(0, 8);

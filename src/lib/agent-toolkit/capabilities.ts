@@ -49,6 +49,27 @@ export const CAPABILITY_CATALOGUE: CapabilityInfo[] = [
     importance: 3,
   },
   {
+    key: "heygen_credits",
+    label: "Kredyty HeyGen na rolki z awatarem (codzienna rolka)",
+    cost: "paid",
+    codeable: false,
+    ownerAction: "Doładować kredyty HeyGen albo zmienić plan, żeby codzienna rolka mogła powstać.",
+    freeAlternatives: [
+      "Publikacja gotowych, jeszcze niewykorzystanych filmów z biblioteki materiałów (bez nowych kosztów)",
+      "Rolka z samych przebitek i napisów (Pexels + lektor ElevenLabs w ramach planu) — wymaga dopisania trybu bez awatara",
+    ],
+    importance: 3,
+  },
+  {
+    key: "tiktok_post_options",
+    label: "Ustawienia posta TikToka dla agenta (kto widzi film, komentarze, oznaczenia)",
+    cost: "free_manual",
+    codeable: false,
+    ownerAction:
+      "Po audycie TikToka wybrać raz ustawienia posta (growth_agent_settings: tiktok_privacy) — TikTok wymaga, żeby wybrał je człowiek.",
+    importance: 2,
+  },
+  {
     key: "threads_publish",
     label: "Publikacja na Threads",
     cost: "free_manual",
@@ -195,6 +216,8 @@ export interface CapabilityVerdict {
 /** Słowa kluczowe → klucz katalogu (agent nie zawsze zna nazwy). */
 const KEYWORDS: Array<[RegExp, string]> = [
   [/\bx\b|twitter|tweet/i, "x_api_credits"],
+  [/heygen|awatar|avatar/i, "heygen_credits"],
+  [/tiktok.*(?:ustawie|prywatno|privacy|options)/i, "tiktok_post_options"],
   [/tiktok/i, "tiktok_audit"],
   [/threads/i, "threads_publish"],
   [/bluesky|bsky/i, "bluesky_account"],

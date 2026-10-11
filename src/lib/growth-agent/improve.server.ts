@@ -149,12 +149,13 @@ export async function reflect(opts: { now?: Date; dryRun?: boolean } = {}) {
     .map((r) => r.payload as unknown as GrowthItemPayload)
     .filter((p) => typeof p?.score === "number")
     .map((p) => ({
+      format: p.format ?? "post",
       audience: p.plan.audience,
       pillar: p.plan.pillar,
       hook: p.plan.hook,
       slot: p.plan.slot,
       score: p.score as number,
-      opening: openingOf(p.texts.facebook),
+      opening: p.reel?.title || openingOf(p.texts.facebook),
     }))
     .sort((a, b) => b.score - a.score);
   const current = await getPlaybook();

@@ -11,6 +11,7 @@ import {
   listAgentActions,
   setAgentState,
 } from "@/lib/agent-toolkit/store.server";
+import type { StudioPlatform } from "@/lib/studio-platforms";
 import type { ArmTable, PostPlan } from "./strategy";
 import type { GuardViolation } from "./truth-guard";
 import type { PostMetrics } from "./scoring";
@@ -28,17 +29,29 @@ export interface GrowthSettings {
   maxRepliesPerRun: number;
   /** Dzienny budżet na modele i grafiki (PLN). */
   dailyBudgetPln: number;
+  /** Rolki dziennie — główny produkt agenta (0 wyłącza rolki). */
+  reelsPerDay: number;
+  /** „auto” = wszystkie połączone platformy wideo; albo jawna lista. */
+  reelPlatforms: "auto" | StudioPlatform[];
+  /**
+   * Ustawienia posta TikToka wybrane przez właściciela (prywatność, interakcje,
+   * oznaczenia). Bez nich agent pomija TikToka — wymóg audytu TikToka.
+   */
+  tiktokPostOptions: Record<string, unknown> | null;
 }
 
 export const DEFAULT_GROWTH_SETTINGS: GrowthSettings = {
   enabled: true,
   mode: "auto",
-  // Mały profil: jakość > ilość. Codzienna rolka 15:00 i tak idzie osobno.
+  // Główny produkt to codzienna rolka; post tekstowy raz dziennie to dodatek.
   postsPerDay: 1,
   platforms: ["facebook", "instagram"],
   engage: true,
   maxRepliesPerRun: 5,
   dailyBudgetPln: 5,
+  reelsPerDay: 1,
+  reelPlatforms: "auto",
+  tiktokPostOptions: null,
 };
 
 export async function getGrowthSettings(): Promise<GrowthSettings> {
@@ -50,6 +63,9 @@ export async function getGrowthSettings(): Promise<GrowthSettings> {
   merged.platforms = (merged.platforms ?? []).filter(
     (p): p is GrowthPlatform => p === "facebook" || p === "instagram",
   );
+  merged.reelsPerDay = Math.max(0, Math.min(2, Math.round(Number(merged.reelsPerDay) || 0)));
+  if (merged.reelPlatforms !== "auto" && !Array.isArray(merged.reelPlatforms))
+    merged.reelPlatforms = "auto";
   return merged;
 }
 
@@ -65,6 +81,8 @@ export async function saveGrowthSettings(
 
 export type ItemStage =
   | "awaiting_approval"
+  /** Rolka: zlecona w Studiu, czeka na render i napisy. */
+  | "producing"
   | "scheduled"
   | "published"
   | "measured"
@@ -72,7 +90,35 @@ export type ItemStage =
   | "failed"
   | "cancelled";
 
+export interface ReelPayload {
+  script: string;
+  title: string;
+  caption: string;
+  short: string;
+  studioJobId: string | null;
+  videoUrl: string | null;
+  jobStatus?: string | null;
+  jobError?: string | null;
+  /** Ile razy ponowiono render (Studio: napisy albo pełny render). */
+  retries?: number;
+  /** Platformy wybrane przy zleceniu (i pominięte z powodem). */
+  targets: StudioPlatform[];
+  skipped: Array<{ platform: StudioPlatform; reason: string }>;
+  social: Array<{
+    id: string;
+    platform: StudioPlatform;
+    status?: string;
+    externalId?: string | null;
+    error?: string | null;
+  }>;
+  youtube: Array<{ id: string; status?: string; videoId?: string | null; error?: string | null }>;
+  queuedAt?: string | null;
+}
+
 export interface GrowthItemPayload {
+  /** Rodzaj treści; brak = post (zapisy sprzed rolek). */
+  format?: "post" | "reel";
+  reel?: ReelPayload;
   stage: ItemStage;
   plan: PostPlan;
   texts: { facebook: string; instagram: string };
@@ -104,9 +150,17 @@ export async function listItems(
   });
 }
 
-export const getArms = () => getAgentState<ArmTable>("growth_arms", {});
-export const saveArms = (arms: ArmTable) =>
-  setAgentState("growth_arms", arms, `bandyta: ${Object.keys(arms).length} ramion`);
+export type ContentFormat = "post" | "reel";
+const armsKey = (format: ContentFormat) => (format === "reel" ? "growth_arms_reel" : "growth_arms");
+
+/** Bandyta osobno dla postów i rolek — inne pory, inne zachowanie widzów. */
+export const getArms = (format: ContentFormat = "post") =>
+  getAgentState<ArmTable>(armsKey(format), {});
+export const saveArms = (arms: ArmTable, format: ContentFormat = "post") =>
+  setAgentState(armsKey(format), arms, `bandyta (${format}): ${Object.keys(arms).length} ramion`);
+
+export const isReel = (payload: unknown): boolean =>
+  (payload as GrowthItemPayload | null)?.format === "reel";
 export const getPlaybook = () => getAgentState<string[]>("growth_playbook", []);
 export const savePlaybook = (lessons: string[]) =>
   setAgentState("growth_playbook", lessons.slice(0, 12), `playbook: ${lessons.length} wniosków`);

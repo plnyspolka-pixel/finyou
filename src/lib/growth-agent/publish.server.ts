@@ -5,7 +5,7 @@
 //     (kontener → media_publish), bo kolejka obsługuje tylko rolki.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { updateAgentAction, type ActionRow } from "@/lib/agent-toolkit/store.server";
-import { listItems, type GrowthItemPayload } from "./state.server";
+import { isReel, listItems, type GrowthItemPayload } from "./state.server";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -36,7 +36,8 @@ async function publishInstagram(
 /** Jeden wpis: aktualizacja stanu FB z kolejki i publikacja IG, gdy nadszedł termin. */
 async function advance(row: ActionRow, now: Date): Promise<string | null> {
   const p = row.payload as unknown as GrowthItemPayload;
-  if (!p?.plan) return null;
+  // Rolki domyka reel.server.ts (kolejki Studia, kilka platform).
+  if (!p?.plan || isReel(p)) return null;
   const next: GrowthItemPayload = { ...p, fb: { ...(p.fb ?? {}) }, ig: { ...(p.ig ?? {}) } };
   let changed = false;
 

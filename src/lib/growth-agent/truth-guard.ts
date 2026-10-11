@@ -31,6 +31,8 @@ export type GuardPlatform =
   | "youtube"
   | "tiktok"
   | "comment_reply"
+  /** Tekst mówiony rolki — zastrzeżenie idzie w opisie, nie w lektorze. */
+  | "reel_script"
   | "generic";
 
 export interface GuardViolation {
@@ -110,6 +112,14 @@ const BANNED: Array<{ code: string; re: RegExp; message: string }> = [
     ),
     message:
       "Przedział zwrotu „kilkudziesięciu procent” nie wynika z faktów systemu (odsetki maksymalne + prowizja inwestora).",
+  },
+  {
+    code: "statystyka_bez_zrodla",
+    re: w(
+      `(?:większość|zdecydowana większość|przeważająca część|\\d+\\s?%)\\s+(?:spraw|pożyczek|transakcji|inwestorów|klientów|firm|przedsiębiorców|polaków|kredytobiorców)|(?:średnio|przeciętnie)\\s+inwestor\\p{L}*\\s+(?:zarabia|dostaje|ma)`,
+    ),
+    message:
+      "Statystyka rynku bez źródła w FAKTACH (np. „większość spraw…”, „X% inwestorów…”) — nie mamy takich danych, więc nie możemy ich podawać.",
   },
   {
     code: "stawka_miesieczna",
@@ -210,6 +220,7 @@ const LIMITS: Partial<Record<GuardPlatform, number>> = {
   youtube: 5000,
   tiktok: 2200,
   comment_reply: 1000,
+  reel_script: 1200,
 };
 
 /** Długość tekstu na X: URL liczy się jako 23 znaki. */
@@ -281,7 +292,12 @@ export function guardContent(input: GuardInput): GuardResult {
   // ── poprawki automatyczne ────────────────────────────────────────────────
   const isInvestor =
     input.audience === "inwestor" || (input.audience === "ogolny" && INVESTOR_CONTENT.test(text));
-  if (isInvestor && input.platform !== "comment_reply" && !/nie stanowi oferty/i.test(text)) {
+  if (
+    isInvestor &&
+    input.platform !== "comment_reply" &&
+    input.platform !== "reel_script" &&
+    !/nie stanowi oferty/i.test(text)
+  ) {
     const sep = input.platform === "x" ? " " : "\n\n";
     const candidate = `${text}${sep}${input.platform === "x" ? "Materiał edukacyjny, nie oferta. Inwestowanie wiąże się z ryzykiem." : INVESTOR_DISCLAIMER}`;
     text = candidate;

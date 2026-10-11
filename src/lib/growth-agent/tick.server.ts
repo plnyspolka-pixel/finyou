@@ -1,27 +1,29 @@
 // Przebieg agenta wzrostu — wołany z crona Studia publikacji (co 10 min)
 // i ręcznie przez MCP. Każda faza jest odporna na błąd pozostałych.
 //
-// Kolejność: publikacja wymagalnych → pomiar → ciepły start (raz) →
-// tworzenie (gdy brakuje zaplanowanych postów na najbliższą dobę) →
-// komentarze (co godzinę) → samodoskonalenie (co tydzień / po pomiarach).
+// Kolejność: publikacja wymagalnych → ROLKA (główny produkt: domknięcie
+// renderu i publikacji, a gdy dzień nie ma rolki — nowa) → pomiar → ciepły
+// start (raz) → post tekstowy (gdy brakuje na najbliższą dobę) → komentarze
+// (co godzinę) → samodoskonalenie (co tydzień / po pomiarach).
 //
 // Hamulce: dzierżawa (dwa równoległe przebiegi nie tworzą dwóch postów),
 // dzienny budżet PLN, wyłącznik w ustawieniach, tryb „draft" (szkice
 // zamiast publikacji).
 import { getAgentState, logAgentAction, setAgentState } from "@/lib/agent-toolkit/store.server";
 import { createPost } from "./create.server";
+import { advanceReels, createReel } from "./reel.server";
 import { engageComments } from "./engage.server";
 import { reflect, shouldReflect } from "./improve.server";
-import { measurePublished, warmStart } from "./observe.server";
+import { measurePublished, warmStart, warmStartReels } from "./observe.server";
 import { publishDue } from "./publish.server";
-import { getGrowthSettings, listItems, spentLast24h } from "./state.server";
+import { getGrowthSettings, isReel, listItems, spentLast24h } from "./state.server";
 
 const LEASE_MS = 8 * 60_000;
 const ENGAGE_EVERY_MS = 60 * 60_000;
 /** Tworzymy z wyprzedzeniem: post na najbliższą dobę powstaje wcześniej. */
 const HORIZON_MS = 24 * 3600_000;
 
-export type GrowthPhase = "publish" | "measure" | "warm" | "create" | "engage" | "improve";
+export type GrowthPhase = "publish" | "reel" | "measure" | "warm" | "create" | "engage" | "improve";
 
 export interface TickResult {
   ok: boolean;
@@ -45,8 +47,9 @@ async function releaseLease(): Promise<void> {
 async function plannedWithinHorizon(now: Date): Promise<number> {
   const rows = await listItems({ stage: ["scheduled", "awaiting_approval"], limit: 50 });
   const limit = now.getTime() + HORIZON_MS;
-  return rows.filter((r) => new Date(String(r.payload?.plan?.slotIso ?? 0)).getTime() <= limit)
-    .length;
+  return rows.filter(
+    (r) => !isReel(r.payload) && new Date(String(r.payload?.plan?.slotIso ?? 0)).getTime() <= limit,
+  ).length;
 }
 
 async function createdLast24h(now: Date): Promise<number> {
@@ -54,7 +57,7 @@ async function createdLast24h(now: Date): Promise<number> {
     sinceIso: new Date(now.getTime() - 24 * 3600_000).toISOString(),
     limit: 50,
   });
-  return rows.filter((r) => r.payload?.stage !== "blocked").length;
+  return rows.filter((r) => r.payload?.stage !== "blocked" && !isReel(r.payload)).length;
 }
 
 export async function runGrowthTick(
@@ -84,8 +87,47 @@ export async function runGrowthTick(
     const budgetLeft = settings.dailyBudgetPln - spent;
 
     if (!opts.dryRun) await run("publish", () => publishDue(now));
+
+    // Rolka — główny produkt. Najpierw domykamy rozpoczęte, potem (gdy dzień
+    // nie ma jeszcze rolki) zlecamy nową. Budżet PLN dotyczy tu tylko modelu
+    // od scenariusza — render rozlicza HeyGen, sprawdzany osobno.
+    if (settings.reelsPerDay > 0 || forced.has("reel")) {
+      await run("reel", async () => {
+        const advanced = opts.dryRun ? [] : await advanceReels(settings, now);
+        if (budgetLeft <= 0.05 && !forced.has("reel")) {
+          const reason = "budżet dzienny wyczerpany";
+          return advanced.length ? { advanced, create: { skipped: reason } } : { skipped: reason };
+        }
+        const r = await createReel({
+          settings,
+          now,
+          dryRun: opts.dryRun,
+          force: forced.has("reel"),
+        });
+        costPln += r.costPln;
+        if (r.stage === "skipped") {
+          // Nic nowego — bez wpisu w dzienniku co 10 minut.
+          return advanced.length
+            ? { advanced, create: { skipped: r.reason } }
+            : { skipped: r.reason };
+        }
+        return {
+          advanced,
+          create: {
+            itemId: r.itemId,
+            stage: r.stage,
+            slot: r.plan?.slotIso,
+            title: r.draft?.title,
+            platforms: r.platforms?.platforms,
+            pominiete: r.platforms?.skipped,
+            blocking: (r.violations ?? []).filter((v) => v.severity === "block").map((v) => v.code),
+          },
+        };
+      });
+    }
     if (!opts.dryRun) await run("measure", () => measurePublished(now));
-    if (!opts.dryRun) await run("warm", () => warmStart());
+    if (!opts.dryRun)
+      await run("warm", async () => ({ posty: await warmStart(), rolki: await warmStartReels() }));
 
     const wantCreate =
       forced.has("create") ||
@@ -134,15 +176,10 @@ export async function runGrowthTick(
       });
     }
 
-    const meaningful = Object.keys(phases).some((k) => {
-      const v = (phases as any)[k];
-      return Array.isArray(v)
-        ? v.length > 0
-        : v && typeof v === "object"
-          ? !("skipped" in v)
-          : Boolean(v);
-    });
-    if (!opts.dryRun && meaningful && (phases.create || phases.engage || phases.improve)) {
+    const meaningful = (v: unknown) =>
+      Array.isArray(v) ? v.length > 0 : v && typeof v === "object" ? !("skipped" in v) : Boolean(v);
+    const logged: GrowthPhase[] = ["reel", "create", "engage", "improve"];
+    if (!opts.dryRun && logged.some((k) => meaningful(phases[k]))) {
       await logAgentAction({
         module: "growth_agent",
         action: "run",
