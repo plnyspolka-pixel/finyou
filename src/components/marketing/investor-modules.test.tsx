@@ -15,9 +15,11 @@ describe("moduły Klubu Inwestorów — dane podstron", () => {
   });
 
   it.each(INVESTOR_MODULES.map((m) => [m.slug, m] as const))(
-    "%s — komplet cecha → zaleta → korzyść, kroki i grafika",
+    "%s — komplet funkcji, kroki i grafika",
     (_, m) => {
       expect(m.fab.length).toBeGreaterThanOrEqual(5);
+      expect(m.fab.length).toBeLessThanOrEqual(6);
+      expect(m.featuresTitle.trim().length).toBeGreaterThan(0);
       for (const row of m.fab) {
         for (const part of [row.title, row.cecha, row.zaleta, row.korzysc]) {
           expect(part.trim().length).toBeGreaterThan(0);
@@ -28,6 +30,26 @@ describe("moduły Klubu Inwestorów — dane podstron", () => {
       expect(m.note.trim().length).toBeGreaterThan(0);
       expect(m.metaDescription.length).toBeLessThanOrEqual(170);
       expect(existsSync(join(process.cwd(), "public", m.image))).toBe(true);
+    },
+  );
+
+  // Formuła cecha → zaleta → korzyść służy tylko do pisania — jej etykiety
+  // nie mogą trafić do tekstu na stronie (\b nie działa z „ć”).
+  it.each(INVESTOR_MODULES.map((m) => [m.slug, m] as const))(
+    "%s — bez etykiet formuły w treści strony",
+    (_, m) => {
+      const visible = [
+        m.tagline,
+        m.lead,
+        ...m.highlights,
+        m.featuresTitle,
+        ...m.fab.flatMap((r) => [r.title, r.cecha, r.zaleta, r.korzysc]),
+        ...m.steps.flatMap((st) => [st.t, st.d]),
+        m.note,
+      ];
+      for (const t of visible) {
+        expect(t).not.toMatch(/(?<![\p{L}])(cecha|zaleta|korzyść)(?![\p{L}])/iu);
+      }
     },
   );
 

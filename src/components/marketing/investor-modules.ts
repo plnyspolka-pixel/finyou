@@ -4,29 +4,37 @@ import type { Icon3DName } from "./icon-3d";
  * Moduły Klubu Inwestorów — dane podstron /dla-inwestora/<slug>, kart na
  * landingu inwestora i pozycji w sub-menu "Inwestor" (shell.tsx).
  *
- * Każdy moduł opisany jest w formule cecha → zaleta → korzyść (jak bullety
- * abonamentu w lib/investor-plan/plans.ts). Treść opisuje WYŁĄCZNIE to, co
- * robi kod panelu inwestora — przy zmianie modułu zaktualizuj też ten opis:
+ * Funkcje piszemy w formule cecha → zaleta → korzyść: pierwsze zdanie mówi,
+ * czym jest funkcja, środkowe — czym się wyróżnia, ostatnie — co zyskuje
+ * inwestor. Na stronie te trzy pola czytają się jak jeden opis zakończony
+ * zdaniem o korzyści; słów „cecha / zaleta / korzyść” nigdy nie pokazujemy.
+ * Tytuł ≤ 6 słów, opis ≤ ok. 55 słów, bez żargonu (numery artykułów, SHA-256,
+ * nazwy systemów), tylko fakty potwierdzone w kodzie.
+ *
+ * Treść opisuje WYŁĄCZNIE to, co robi kod panelu inwestora — przy zmianie
+ * modułu zaktualizuj też ten opis:
+ *  - Sieć sprzedaży   → Zlecenia i Projekty (lib/order-cycle-*, lead-source.ts, affiliate)
  *  - Analityk AI      → /inwestor/analityka (lib/analysis-pipeline, kw-analysis,
  *                       risk-assessment, property-analysis)
- *  - Windykator AI    → /inwestor/windykacja (lib/windykacja-*, debt-collection-math)
- *  - AML/compliance   → /inwestor/aml (lib/aml, crbr.server.ts)
  *  - Kancelaria AI    → /inwestor/dokumenty, /inwestor/podpisy (document-generator,
  *                       contract-engine, esign); 30 wzorów = tabela document_templates
- *  - Sieć sprzedaży   → Zlecenia i Projekty (lib/order-cycle-*, lead-source.ts, affiliate)
+ *  - AML/compliance   → /inwestor/aml (lib/aml, crbr.server.ts)
+ *  - Windykator AI    → /inwestor/windykacja (lib/windykacja-*, debt-collection-math)
+ * Kolejność tablicy = cykl pożyczki (menu, karty na landingu, „Pozostałe moduły”).
  * Nie podawaj tu cen abonamentu (są w plans.ts) ani obietnic, których kod nie
- * realizuje (np. automatycznych wysyłek windykacyjnych bez kliknięcia inwestora).
+ * realizuje (np. automatycznych wysyłek windykacyjnych bez kliknięcia inwestora,
+ * „15 minut przy każdym Projekcie” — zawsze „ok. 15 minut”).
  */
 
 export type FabRow = {
-  /** Krótka nazwa funkcji — nagłówek wiersza. */
+  /** Krótka nazwa funkcji — nagłówek karty. */
   title: string;
   icon: Icon3DName;
-  /** Cecha — co to jest. */
+  /** Pierwsze zdanie opisu: czym jest funkcja. */
   cecha: string;
-  /** Zaleta — co to robi / czym się wyróżnia. */
+  /** Środkowe zdanie opisu: czym się wyróżnia. */
   zaleta: string;
-  /** Korzyść — co inwestor z tego ma. */
+  /** Ostatnie zdanie — co zyskuje inwestor (wyróżnione na karcie). */
   korzysc: string;
 };
 
@@ -46,6 +54,8 @@ export type InvestorModule = {
   metaDescription: string;
   lead: string;
   highlights: [string, string, string];
+  /** Nagłówek H2 sekcji „Co zyskujesz”. */
+  featuresTitle: string;
   fab: FabRow[];
   steps: { t: string; d: string }[];
   note: string;
@@ -58,154 +68,372 @@ export type InvestorModule = {
   };
 };
 
-/** Zastrzeżenie wspólne dla modułów panelu (Regulamin Abonamentu, § 3 ust. 2). */
-const TRAINING_TOOL =
-  "Moduł jest narzędziem szkoleniowym dostępnym w ramach Abonamentu inwestora i stanowi część szkolenia, a nie odrębną usługę.";
-
 export const INVESTOR_MODULES: InvestorModule[] = [
+  {
+    slug: "siec-sprzedazy",
+    name: "Ogólnopolska sieć sprzedaży",
+    nameLead: "Ogólnopolska",
+    nameAccent: "sieć sprzedaży",
+    menuLabel: "Ogólnopolska sieć sprzedaży",
+    tagline: "Projekty z całej Polski dopasowane do Twojej kwoty",
+    image: "/marketing/moduly/siec-sprzedazy.webp",
+    imageAlt:
+      "Ogólnopolska sieć sprzedaży — mapa Polski z połączonymi punktami partnerów, dom, klucze i uścisk dłoni",
+    metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
+    metaDescription:
+      "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty z całej Polski dopasowane do Twojego Zlecenia — bez opłat za Projekt.",
+    lead: "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty podajesz w Zleceniu maksymalną kwotę, a my przedstawiamy Ci Projekty przedsiębiorców z całej Polski, które się w niej mieszczą.",
+    highlights: [
+      "Wnioski z całej Polski i z wielu kanałów",
+      "Rezerwacja Projektu na 24 h (+12 h)",
+      "Bez opłat za Projekt i za pozyskanie klienta",
+    ],
+    featuresTitle: "Nie szukasz klientów — Projekty trafiają do Ciebie",
+    fab: [
+      {
+        title: "Klienci zgłaszają się sami",
+        icon: "growth",
+        cecha:
+          "Przedsiębiorcy z całej Polski zgłaszają się do nas przez reklamy, czat, telefon do asystenta AI i formularze, a pośrednicy wnoszą wnioski swoich klientów.",
+        zaleta:
+          "Wszystkie wnioski trafiają do jednej puli, bez podziału na województwa, a koszt reklamy i wynagrodzenie pośredników pokrywa Finance You.",
+        korzysc: "Nie szukasz klientów i nie płacisz za ich pozyskanie.",
+      },
+      {
+        title: "Jedna kwota zamiast ogłoszeń",
+        icon: "access",
+        cecha: "W Zleceniu podajesz tylko jeden parametr: maksymalną kwotę finansowania.",
+        zaleta:
+          "System sam dopasowuje nowe wnioski, które się w niej mieszczą, i przedstawia je jako Projekty.",
+        korzysc: "Nie tracisz godzin na przeglądanie ogłoszeń.",
+      },
+      {
+        title: "Najpierw raport, potem kontakt",
+        icon: "knowledge",
+        cecha:
+          "Przed rezerwacją widzisz zapowiedź Projektu i raport analityczny, bez danych osobowych klienta i z zamaskowanym numerem księgi wieczystej.",
+        zaleta: "Zabezpieczenie oceniasz, zanim poświęcisz czas na rozmowę.",
+        korzysc: "Angażujesz się tylko w Projekty, które naprawdę Ci odpowiadają.",
+      },
+      {
+        title: "24 godziny na spokojną decyzję",
+        icon: "procedures",
+        cecha:
+          "Gdy Projekt Ci odpowiada, akceptujesz Kartę Leada i jednym przyciskiem pobierasz dane kontaktowe klienta oraz rezerwujesz Projekt na 24 godziny.",
+        zaleta:
+          "Rezerwację możesz raz przedłużyć o 12 godzin, a w tym czasie Projekt nie trafia do innych inwestorów.",
+        korzysc: "Rozmawiasz z klientem bezpośrednio i analizujesz bez wyścigu z konkurencją.",
+      },
+      {
+        title: "Od Projektu do umowy w jednym panelu",
+        icon: "dossier",
+        cecha:
+          "Ofertę składasz prosto z karty Projektu w kalkulatorze compliance, a klient albo pośrednik dostaje powiadomienie.",
+        zaleta:
+          "Po rezerwacji jednym kliknięciem przechodzisz do kreatora umowy z danymi Projektu.",
+        korzysc: "Nie przepisujesz danych między narzędziami.",
+      },
+      {
+        title: "Pozyskanie klienta na nasz koszt",
+        icon: "loan",
+        cecha: "Płacisz stały abonament, bez opłaty za Projekt i bez opłaty sukcesu.",
+        zaleta:
+          "Prowizję Finance You płaci klient z wypłacanej kwoty pożyczki, a koszt pozyskania klienta ponosi Finance You.",
+        korzysc: "Odsetki i Twoja prowizja w całości zostają u Ciebie.",
+      },
+    ],
+    steps: [
+      {
+        t: "Dołączasz do klubu",
+        d: "Abonament, zdalna weryfikacja tożsamości i bezpłatne umowy z Finance You.",
+      },
+      { t: "Składasz Zlecenie", d: "Podajesz tylko maksymalną kwotę finansowania." },
+      { t: "Dostajesz Projekty", d: "Wnioski z całej Polski, które mieszczą się w Twojej kwocie." },
+      {
+        t: "Rezerwujesz i rozmawiasz",
+        d: "Akceptujesz Kartę Leada, rezerwujesz Projekt i rozmawiasz z klientem bezpośrednio.",
+      },
+    ],
+    note: "Finance You świadczy usługę pośrednictwa finansowego na podstawie ramowej umowy pośrednictwa i nie jest stroną pożyczki. Nie gwarantujemy przedstawienia Projektu ani zawarcia transakcji — Projekty przedstawiamy inwestorowi z przyjętym Zleceniem, po zawarciu bezpłatnych Umów o dostęp do Klientów. Działasz we własnym imieniu, a nie w imieniu Finance You, a pośrednicy nie mogą gwarantować finansowania. Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału.",
+  },
   {
     slug: "analityk-ai",
     name: "Analityk AI",
     nameLead: "Analityk",
     nameAccent: "AI",
     menuLabel: "Analityk AI",
-    tagline: "Ocena ryzyka i wycena w 15 minut — w skali A–E",
+    tagline: "Ocena ryzyka A–E i wycena w ok. 15 minut",
     image: "/marketing/moduly/analityk-ai.webp",
     imageAlt:
       "Analityk AI — karty analizy nieruchomości: LTV, wartość rynkowa i ocena ryzyka na ekranie laptopa",
     metaTitle: "Analityk AI — analiza zabezpieczenia i ryzyka dla inwestora | Finance You",
     metaDescription:
-      "Ocena ryzyka i wycena w 15 minut: ponad 400 punktów danych, księga wieczysta, LTV, płynność, klasa A–E i raport PDF. Poznaj Analityka AI.",
-    lead: "Zanim wyłożysz kapitał, Analityk AI pobiera księgę wieczystą, sprawdza właścicieli w rejestrach, wycenia nieruchomość na danych z rynku i ocenia ryzyko w skali A–E. Ocena ryzyka i wycena są gotowe w 15 minut — w tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych. Raport pobierasz jednym kliknięciem w PDF, a decyzja zostaje po Twojej stronie.",
+      "Ocena ryzyka i wycena w ok. 15 minut: ponad 400 punktów danych, księga wieczysta, LTV, płynność, klasa A–E i raport PDF. Poznaj Analityka AI.",
+    lead: "Zanim wyłożysz kapitał, Analityk AI czyta księgę wieczystą, sprawdza właścicieli w rejestrach i wycenia nieruchomość na danych z rynku. Dostajesz pełny obraz zabezpieczenia, a decyzja zawsze zostaje po Twojej stronie.",
     highlights: [
-      "Ocena ryzyka i wycena w 15 minut",
-      "Skala A–E i ponad 400 punktów danych",
-      "Raport do pobrania w PDF",
+      "Ponad 400 punktów danych w jednej analizie",
+      "Wycena w widełkach i bezpieczny pułap LTV",
+      "Raport PDF do pobrania jednym kliknięciem",
     ],
+    featuresTitle: "Wiesz, co zabezpiecza Twój kapitał, zanim go wyłożysz",
     fab: [
       {
-        title: "15 minut, ponad 400 punktów danych",
+        title: "Decyzja tego samego dnia",
         icon: "updates",
-        cecha: "Ocena ryzyka i wycena nieruchomości gotowe w 15 minut od uruchomienia analizy.",
+        cecha: "Ocena ryzyka i wycena są gotowe w ok. 15 minut od uruchomienia analizy.",
         zaleta:
-          "W tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych — wpisy księgi wieczystej, rejestry, transakcje i oferty z rynku, dane GUS, mapy powodziowe i infrastrukturę okolicy.",
-        korzysc: "Decyzję podejmujesz tego samego dnia, a nie po tygodniu czekania na analizę.",
+          "W tym czasie sprawdzamy ponad 400 punktów danych: księgę wieczystą, rejestry, ceny transakcyjne, dane GUS i ryzyko powodzi.",
+        korzysc: "Decydujesz tego samego dnia, a nie po tygodniu czekania.",
       },
       {
-        title: "Księga wieczysta przeczytana za Ciebie",
+        title: "Stan prawny sprawdzony za Ciebie",
         icon: "documents",
         cecha:
-          "Automatyczne pobranie księgi wieczystej z systemu EKW — okładki i działów I-O, I-Sp, II, III i IV.",
+          "System sam pobiera księgę wieczystą, ocenia każdy wpis i pokazuje, na którym miejscu stanie Twoja hipoteka.",
         zaleta:
-          "Silnik reguł ocenia każdy wpis (od „Brak problemu” do „STOP”), przewiduje miejsce Twojej hipoteki, wskazuje wzmianki i alerty, a przy każdej uwadze wyjaśnia, co oznacza ona dla inwestora.",
+          "Każdą uwagę tłumaczy prostym językiem, a właścicieli zestawia z danymi z CEIDG i KRS, oznaczając firmy w likwidacji albo upadłości.",
         korzysc:
-          "Wiesz, czy zabezpieczenie jest czyste, zanim zapłacisz za opinię prawną albo podejmiesz decyzję.",
+          "Ryzyka w księdze i po stronie właściciela widzisz, zanim zapłacisz za opinię prawną.",
       },
       {
-        title: "Właściciele sprawdzeni w rejestrach",
-        icon: "shieldcheck",
-        cecha: "Właściciele z działu II księgi zestawieni z danymi z CEIDG i KRS.",
-        zaleta: "System oznacza firmy w likwidacji lub upadłości, zanim zaczniesz rozmowy.",
-        korzysc:
-          "Nie finansujesz podmiotu, którego sytuacja prawna przekreśla spłatę — wiesz to od pierwszego dnia.",
-      },
-      {
-        title: "Wartość rynkowa i LTV",
+        title: "Zapas bezpieczeństwa nawet na licytacji",
         icon: "growth",
         cecha:
-          "Wycena w widełkach — wartość minimalna, średnia i maksymalna — z ofert i danych transakcyjnych oraz trend lokalnego rynku.",
+          "Wycenę dostajesz w widełkach — minimum, średnia i maksimum — liczoną wprost z cen transakcyjnych i ofert z okolicy.",
         zaleta:
-          "Ceny liczone są wprost z danych, a AI tylko komentuje trend. System sugeruje bezpieczny pułap LTV dla danego typu nieruchomości i obniża go przy egzekucji, dożywociu czy słabej płynności.",
-        korzysc:
-          "Widzisz realną poduszkę bezpieczeństwa między kwotą pożyczki a wartością zabezpieczenia.",
+          "System podpowiada bezpieczny pułap LTV, niższy przy egzekucji, dożywociu albo słabej płynności, i pokazuje, od jakiej kwoty ruszy licytacja komornicza.",
+        korzysc: "Wiesz, jaki zapas daje zabezpieczenie także w najgorszym scenariuszu.",
       },
       {
-        title: "Scenariusz licytacji komorniczej",
-        icon: "kalkulator",
-        cecha:
-          "Wartości przy sprzedaży egzekucyjnej: pierwsza licytacja od 3/4, druga od 2/3 wartości oszacowania.",
-        zaleta:
-          "Oceniasz zabezpieczenie także w najgorszym scenariuszu — gdy sprawa trafi do komornika.",
-        korzysc: "Wiesz, ile realnie odzyskasz, zanim podpiszesz umowę.",
-      },
-      {
-        title: "Płynność i lokalizacja",
+        title: "Nieruchomość, którą da się sprzedać",
         icon: "house",
-        cecha:
-          "Wskaźnik płynności 0–100 z szacowanym czasem sprzedaży, liczbą ludności i jej trendem, odległością do dużego miasta, medianą ceny za m² i infrastrukturą w promieniu 1,5 km.",
+        cecha: "Wskaźnik płynności od 0 do 100 szacuje, jak szybko nieruchomość znajdzie kupca.",
         zaleta:
-          "Ocena opiera się na danych GUS, OpenStreetMap i lokalnych ofertach, a nie na deklaracjach klienta.",
-        korzysc: "Unikasz zabezpieczeń, których w razie problemów nikt nie kupi.",
+          "Bierze pod uwagę liczbę ludności i jej trend, odległość do dużego miasta, ceny za m² i infrastrukturę w promieniu 1,5 km — na danych GUS i z lokalnych ofert, a nie na słowo klienta.",
+        korzysc:
+          "Zabezpieczenie trudne do sprzedania rozpoznajesz, zanim stanie się Twoim problemem.",
       },
       {
-        title: "Karta zabezpieczenia",
-        icon: "aibrain",
-        cecha:
-          "Ocena zabezpieczenia 0–100 z pięciu obszarów: stan prawny i dokumenty, wartość i LTV, płynność, czynniki techniczne i ryzyko powodziowe oraz jakość danych.",
-        zaleta:
-          "Na jednej karcie widzisz trzy najmocniejsze strony i trzy główne ryzyka Projektu, z ostrożnym przedziałem wartości i ryzykiem powodzi z map ISOK.",
-        korzysc: "Porównujesz Projekty według tych samych kryteriów i decydujesz szybciej.",
-      },
-      {
-        title: "Ocena ryzyka w skali A–E",
+        title: "Projekty porównasz jednym spojrzeniem",
         icon: "status",
         cecha:
-          "Ocena inwestycyjna 0–100 i klasa od A (bardzo niskie ryzyko) do E (wysokie ryzyko), liczona z siedmiu składowych — od łatwości sprzedaży i stanu prawnego po dokumenty.",
+          "Karta zabezpieczenia ocenia Projekt w pięciu obszarach — od stanu prawnego i LTV po płynność i ryzyko powodzi — i wskazuje trzy największe atuty oraz trzy główne ryzyka.",
         zaleta:
-          "Twarde reguły nie pozwalają zawyżyć wyniku: egzekucja w toku albo bardzo wysokie ryzyko powodzi oznacza klasę E, a niezgodność właściciela z księgą wieczystą — najwyżej D.",
-        korzysc: "Jednym spojrzeniem porównujesz Projekty i widzisz, które wymagają ostrożności.",
+          "Całość uzupełnia klasa od A do E, a twarde reguły nie pozwalają jej zawyżyć: egzekucja w toku zawsze oznacza klasę E.",
+        korzysc:
+          "Porównujesz Projekty według tych samych kryteriów i od razu widzisz, które wymagają ostrożności.",
       },
       {
-        title: "Raport PDF jednym kliknięciem",
+        title: "Analiza także Twoich transakcji",
         icon: "dossier",
         cecha:
-          "Eksport całego raportu do PDF: księga wieczysta, właściciele, wycena, klasa A–E, płynność i karta zabezpieczenia.",
-        zaleta:
-          "Plik ma datę i Twoje dane w stopce, a dane identyfikujące pozostają ukryte, dopóki nie zarezerwujesz Projektu.",
-        korzysc:
-          "Dokumentację decyzji inwestycyjnej archiwizujesz i przekazujesz dalej bez kopiowania ekranów.",
-      },
-      {
-        title: "Analiza Twojej własnej transakcji",
-        icon: "knowledge",
-        cecha:
-          "Sprawdzenie dowolnej nieruchomości po numerze księgi wieczystej — także transakcji spoza Finance You — z oceną inwestycyjną w skali A–E.",
-        zaleta:
-          "Ocena łączy łatwość sprzedaży, stan prawny, zabezpieczenie, pewność wyceny i pozostałe czynniki w jeden wynik, widoczny tylko dla Ciebie.",
+          "Wystarczy numer księgi wieczystej, by sprawdzić dowolną nieruchomość — także spoza Finance You.",
+        zaleta: "Wynik z klasą A–E widzisz tylko Ty i pobierasz go w PDF.",
         korzysc: "Analityk pracuje dla Ciebie także przy transakcjach, które znajdziesz sam.",
       },
     ],
     steps: [
       {
-        t: "Wybierasz Projekt albo numer KW",
-        d: "Projekt dopasowany do Twojego Zlecenia albo własną transakcję spoza Finance You.",
+        t: "Wskazujesz Projekt albo numer KW",
+        d: "Projekt z Twojego Zlecenia albo własną transakcję spoza Finance You.",
+      },
+      { t: "Uruchamiasz analizę", d: "Jednym kliknięciem w panelu inwestora." },
+      {
+        t: "Wynik w ok. 15 minut",
+        d: "Wycena, klasa A–E i ponad 400 sprawdzonych punktów danych.",
       },
       {
-        t: "Klikasz „Uruchom analizę”",
-        d: "System pobiera księgę wieczystą, sprawdza właścicieli i analizuje każdy wpis.",
-      },
-      {
-        t: "Ocena ryzyka i wycena w 15 minut",
-        d: "W tym czasie skanujemy i oceniamy dla Ciebie ponad 400 punktów danych i nadajemy klasę A–E.",
-      },
-      {
-        t: "Pobierasz raport PDF i decydujesz",
-        d: "Z pełnym obrazem zabezpieczenia — decyzja o finansowaniu zawsze należy do Ciebie.",
+        t: "Pobierasz PDF i decydujesz",
+        d: "Z pełnym obrazem zabezpieczenia — decyzja zawsze należy do Ciebie.",
       },
     ],
-    note: `${TRAINING_TOOL} Raporty mają charakter informacyjny i nie stanowią rekomendacji ani porady inwestycyjnej, a wycena nie jest operatem szacunkowym. Klasa A–E jest neutralną klasyfikacją ryzyka. Decyzję podejmujesz samodzielnie — zalecamy weryfikację u rzeczoznawcy majątkowego i radcy prawnego.`,
+    note: "Analityk AI to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa. Raport ma charakter informacyjny i nie jest poradą inwestycyjną, a wycena nie jest operatem szacunkowym. Decyzję podejmujesz samodzielnie — zalecamy weryfikację u rzeczoznawcy majątkowego i radcy prawnego.",
     gradeScale: {
       components: [
         { label: "Łatwość sprzedaży", weight: 30 },
         { label: "Stan prawny (księga wieczysta)", weight: 20 },
         { label: "Zabezpieczenie", weight: 18 },
         { label: "Pewność wyceny", weight: 10 },
-        { label: "Ryzyko dożycia", weight: 9 },
-        { label: "Korespondencja", weight: 7 },
+        { label: "Wiek właścicieli (ryzyko sukcesji)", weight: 9 },
+        { label: "Sygnały z korespondencji z klientem", weight: 7 },
         { label: "Dokumenty", weight: 6 },
       ],
       caps: "Egzekucja w toku albo bardzo wysokie ryzyko powodzi ogranicza ocenę do klasy E, niezgodność właściciela z księgą wieczystą — do klasy D, a liczne sygnały ostrzegawcze w korespondencji — do klasy C.",
     },
+  },
+  {
+    slug: "kancelaria-ai",
+    name: "Kancelaria AI",
+    nameLead: "Kancelaria",
+    nameAccent: "AI",
+    menuLabel: "Kancelaria AI",
+    tagline: "Umowa pożyczki i 30 wzorów — od aneksu po wniosek do komornika",
+    image: "/marketing/moduly/kancelaria-ai.webp",
+    imageAlt:
+      "Kancelaria AI — umowa, wezwanie i inne dokumenty generowane na ekranie laptopa obok wagi Temidy",
+    metaTitle: "Kancelaria AI — 30 wzorów dokumentów i umowa pożyczki dla inwestora | Finance You",
+    metaDescription:
+      "Umowa pożyczki z biblioteki klauzul i 30 wzorów — od aneksu i wezwania po wniosek do komornika — z danymi z GUS i KRS oraz e-podpisem. Poznaj Kancelarię AI.",
+    lead: "Agent AI przeprowadzi Cię przez umowę pożyczki, a pozostałe dokumenty przygotujesz z gotowych wzorów, z danymi z rejestrów i kalkulatora. Gotowy plik wysyłasz do podpisu elektronicznego bez wychodzenia z panelu.",
+    highlights: [
+      "Umowa pożyczki ze 113 sprawdzonych klauzul",
+      "Dane firm z GUS, KRS i Białej Listy",
+      "E-podpis z weryfikacją tożsamości",
+    ],
+    featuresTitle: "Właściwy dokument na każdym etapie pożyczki",
+    fab: [
+      {
+        title: "Umowa pożyczki z agentem AI",
+        icon: "dossier",
+        cecha:
+          "Agent AI zbiera w rozmowie dane do umowy, a jej treść składa się ze 113 sprawdzonych klauzul.",
+        zaleta:
+          "AI niczego nie dopisuje od siebie i nie zgaduje danych, takich jak PESEL, NIP czy numer księgi wieczystej.",
+        korzysc:
+          "Dostajesz spójną umowę z wnioskiem i załącznikami w jednym edytowalnym pliku Word — bez pisania od zera.",
+      },
+      {
+        title: "30 wzorów na cały cykl pożyczki",
+        icon: "documents",
+        cecha:
+          "Wzory obejmują umowy i aneksy, windykację miękką i sądową oraz oświadczenia i załączniki — od aneksu wydłużającego termin, przez ostateczne wezwanie, po pozew, wniosek egzekucyjny i zgodę na wykreślenie hipoteki.",
+        zaleta:
+          "W module windykacji wypełniają się danymi konkretnej sprawy, a każdy plik poprawisz w Wordzie przed wysłaniem.",
+        korzysc: "Na każdym etapie pożyczki masz pod ręką właściwy dokument.",
+      },
+      {
+        title: "Dane stron bez przepisywania",
+        icon: "crmfolder",
+        cecha:
+          "Wpisujesz NIP, REGON albo KRS, a dane kontrahenta pobieramy z GUS, KRS i Białej Listy.",
+        zaleta: "Twoje dane jako pożyczkodawcy i wierzyciela uzupełniają się z profilu.",
+        korzysc: "Mniej pomyłek w oznaczeniu stron to mniej problemów przy egzekucji.",
+      },
+      {
+        title: "Liczby zgodne z kalkulacją",
+        icon: "kalkulator",
+        cecha:
+          "Kwoty — także słownie — i harmonogram spłat w tabeli trafiają do dokumentu prosto z kalkulatora, również z zapisanego PDF-u.",
+        zaleta: "Umowa pokazuje dokładnie te liczby, które widział klient.",
+        korzysc: "Nie przeliczasz niczego ręcznie i nie ryzykujesz rozbieżności.",
+      },
+      {
+        title: "Podpis na odległość, z dowodem",
+        icon: "shieldcheck",
+        cecha: "Dowolny PDF wysyłasz do podpisu — wszystkim naraz albo po kolei.",
+        zaleta:
+          "Podpisujący potwierdza tożsamość dokumentem, selfie i jednorazowym kodem, a system zapisuje czas, adres IP, przeglądarkę i cyfrowy odcisk pliku, więc dokument można później zweryfikować po kodzie.",
+        korzysc: "W razie sporu wiesz, kto, kiedy i co podpisał.",
+      },
+    ],
+    steps: [
+      {
+        t: "Wybierasz wzór",
+        d: "Albo uruchamiasz agenta, który przeprowadzi Cię przez umowę pożyczki.",
+      },
+      {
+        t: "Uzupełniasz dane",
+        d: "Firmy z rejestrów, liczby z kalkulatora — resztę tylko sprawdzasz.",
+      },
+      { t: "Generujesz dokument", d: "Edytowalny plik Word gotowy od ręki." },
+      { t: "Wysyłasz do podpisu", d: "E-podpis z weryfikacją tożsamości i kartą podpisów." },
+    ],
+    note: "Kancelaria AI to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa; wzory i kreator nie stanowią porady prawnej. Podpis dokumentowy nie jest kwalifikowanym podpisem elektronicznym i nie zastępuje formy pisemnej ani aktu notarialnego tam, gdzie wymaga ich prawo (np. przy ustanowieniu hipoteki czy poddaniu się egzekucji).",
+  },
+  {
+    slug: "aml-compliance",
+    name: "Moduł AML/compliance",
+    nameLead: "Moduł",
+    nameAccent: "AML/compliance",
+    menuLabel: "Moduł AML/compliance",
+    tagline: "Obowiązki AML w jednym miejscu — od weryfikacji klienta po GIIF",
+    image: "/marketing/moduly/aml-compliance.webp",
+    imageAlt:
+      "Moduł AML/compliance — tarcza ze znakiem zatwierdzenia, lista kontrolna oraz ekrany KYC i list sankcyjnych PEP",
+    metaTitle: "Moduł AML/compliance — GIIF, sankcje i rejestr ponadprogowy | Finance You",
+    metaDescription:
+      "Wsparcie raportowania do GIIF, screening list sankcyjnych i PEP oraz rejestr transakcji powyżej 15 000 EUR — w jednym miejscu. Poznaj moduł AML/compliance.",
+    lead: "Jeżeli udzielasz pożyczek w ramach działalności gospodarczej, możesz być instytucją obowiązaną w rozumieniu ustawy o przeciwdziałaniu praniu pieniędzy. Moduł AML prowadzi Cię przez te obowiązki krok po kroku i dokumentuje każdą Twoją decyzję.",
+    highlights: [
+      "Wsparcie raportowania do GIIF",
+      "Screening list sankcyjnych i PEP",
+      "Rejestr transakcji powyżej 15 000 EUR",
+    ],
+    featuresTitle: "Obowiązki AML pod kontrolą, bez osobnego systemu",
+    fab: [
+      {
+        title: "Zgłoszenie do GIIF na gotowych danych",
+        icon: "complianceDocs",
+        cecha:
+          "Zgłoszenie transakcji ponadprogowej albo zawiadomienie o transakcji podejrzanej przygotowujesz z danych, które już są w module — sprawdzonych pod kątem kompletności, w plikach XML i PDF.",
+        zaleta:
+          "Wysyłasz je w systemie GIIF własnym podpisem kwalifikowanym, a potwierdzenie UPO dołączasz do akt.",
+        korzysc: "Zgłaszasz w terminie i bez przepisywania danych.",
+      },
+      {
+        title: "Sankcje i PEP sprawdzone przed umową",
+        icon: "shieldcheck",
+        cecha:
+          "Klienta, a przy firmie także reprezentantów i beneficjentów rzeczywistych, sprawdzamy u wyspecjalizowanego dostawcy na listach sankcyjnych, PEP i listach ostrzegawczych.",
+        zaleta:
+          "Każde trafienie rozstrzygasz jednym wyborem, a potwierdzona sankcja albo nierozstrzygnięte trafienie blokuje klienta.",
+        korzysc: "Osobę z listy sankcyjnej wychwytujesz, zanim podpiszesz z nią umowę.",
+      },
+      {
+        title: "Próg 15 000 EUR pod kontrolą",
+        icon: "complianceRegistry",
+        cecha:
+          "Po potwierdzeniu transakcji system przelicza ją na euro po średnim kursie NBP z dnia transakcji i zapisuje kurs, numer tabeli i datę.",
+        zaleta:
+          "Gdy kwota przekracza 15 000 EUR, wpis w rejestrze z 7-dniowym terminem zakłada się sam.",
+        korzysc: "Terminy i statusy wszystkich transakcji ponadprogowych widzisz w jednym miejscu.",
+      },
+      {
+        title: "Wiesz, z kim zawierasz umowę",
+        icon: "access",
+        cecha:
+          "Klient potwierdza tożsamość sam, na telefonie — dokumentem i selfie z porównaniem twarzy — a firma przechodzi osobną weryfikację.",
+        zaleta:
+          "Beneficjentów rzeczywistych i reprezentantów pobierasz z Centralnego Rejestru Beneficjentów Rzeczywistych, a system oznacza każdą niezgodność z danymi klienta.",
+        korzysc: "Weryfikujesz klienta bez spotkania i bez kserowania dowodu.",
+      },
+      {
+        title: "Kontrola bez stresu",
+        icon: "complianceAml",
+        cecha:
+          "System proponuje poziom ryzyka klienta i pokazuje, z czego on wynika — od sankcji i PEP po transakcje gotówkowe czy brak źródła spłaty.",
+        zaleta:
+          "Zmiana propozycji wymaga uzasadnienia, a screeningi, decyzje i zgłoszenia trafiają z datą do dziennika, którego wpisów nie można zmienić ani usunąć.",
+        korzysc: "Przy kontroli pokazujesz kompletną historię swoich decyzji.",
+      },
+      {
+        title: "Procedura AML bez pustej kartki",
+        icon: "complianceProc",
+        cecha:
+          "W kreatorze dokumentów czeka wzór procedury wewnętrznej AML dla firmy pożyczkowej B2B, w edytowalnym pliku Word.",
+        zaleta: "Dostosowujesz go do własnej oceny ryzyka i przyjmujesz uchwałą.",
+        korzysc: "Nie zaczynasz dokumentacji AML od zera.",
+      },
+    ],
+    steps: [
+      {
+        t: "Weryfikujesz klienta",
+        d: "Tożsamość, dane z CRBR i screening list sankcyjnych oraz PEP.",
+      },
+      {
+        t: "Zatwierdzasz ocenę ryzyka",
+        d: "System proponuje poziom ryzyka, a Ty go przyjmujesz albo zmieniasz z uzasadnieniem.",
+      },
+      {
+        t: "Rejestrujesz transakcje",
+        d: "Transakcja powyżej 15 000 EUR sama trafia do rejestru, z terminem.",
+      },
+      {
+        t: "Raportujesz do GIIF",
+        d: "Gotowy plik XML i PDF, Twój podpis kwalifikowany, UPO w aktach.",
+      },
+    ],
+    note: "Moduł AML/compliance to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa ani porada prawna. Zgłoszenia do GIIF wysyłasz samodzielnie w SI GIIF, jako instytucja obowiązana, własnym podpisem kwalifikowanym — Finance You ich nie podpisuje i nie przechowuje Twojego podpisu. Wzór procedury trzeba dostosować do własnej oceny ryzyka i przyjąć.",
   },
   {
     slug: "windykator-ai",
@@ -220,433 +448,88 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     metaTitle: "Windykator AI — windykacja pożyczek jednym kliknięciem dla inwestora | Finance You",
     metaDescription:
       "Wszystkie procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Poznaj Windykatora AI.",
-    lead: "Wszystkie procedury windykacyjne uruchamiamy jednym kliknięciem i skutecznie prowadzimy sprawy od pierwszego upomnienia aż na biurko komornika. Windykator AI podpowiada ścieżkę i następny krok, liczy zadłużenie z odsetkami, przygotowuje pisma w Twoim imieniu — z danymi z Twojego profilu — wysyła SMS-y i e-maile, a nawet dzwoni do dłużnika głosem AI.",
+    lead: "Windykator AI podpowiada następny krok, liczy dług z odsetkami co do dnia i przygotowuje pisma, SMS-y i e-maile w Twoim imieniu, z danymi z Twojego profilu. Każdy krok zatwierdzasz Ty.",
     highlights: [
-      "Wszystkie procedury jednym kliknięciem",
-      "Od upomnienia aż do komornika",
-      "Pisma w Twoim imieniu",
+      "Ścieżka dobrana do dni opóźnienia",
+      "Telefon do dłużnika prowadzi agent AI",
+      "Teczka dowodowa dla sądu i komornika",
     ],
+    featuresTitle: "Nie zostajesz sam z niespłaconą pożyczką",
     fab: [
       {
-        title: "Cała procedura na jedno kliknięcie",
+        title: "Wiesz, co zrobić dziś",
         icon: "automation",
         cecha:
-          "Każdy etap windykacji — upomnienie, wezwanie do zapłaty, wypowiedzenie umowy, wniosek o klauzulę wykonalności i wniosek do komornika — uruchamiasz jednym kliknięciem z karty sprawy.",
+          "Windykator proponuje ścieżkę — miękką, standardową, twardą albo karną — według liczby dni opóźnienia i opisuje następny krok prostym językiem.",
         zaleta:
-          "System dobiera pismo do etapu, wstawia dane sprawy i zapisuje każdą czynność w aktach.",
-        korzysc:
-          "Prowadzisz sprawę od pierwszego upomnienia aż na biurko komornika — bez papierologii i bez szukania wzorów.",
-      },
-      {
-        title: "Cztery ścieżki postępowania",
-        icon: "procedures",
-        cecha:
-          "Ścieżki miękka, standardowa (z oświadczeniem z art. 777 k.p.c.), twarda i karna — każda z etapami, podstawą prawną i jedną główną czynnością na etap.",
-        zaleta:
-          "System rekomenduje ścieżkę według liczby dni opóźnienia i podpowiada następny krok, opisany prostym językiem.",
-        korzysc: "Wiesz, co zrobić dziś — nawet jeśli to Twoja pierwsza windykacja.",
+          "Upomnienie, wezwanie do zapłaty, wypowiedzenie umowy, wniosek o klauzulę wykonalności czy wniosek do komornika uruchamiasz jednym kliknięciem z karty sprawy, a każda czynność trafia do akt.",
+        korzysc: "Działasz pewnie, nawet jeśli to Twoja pierwsza windykacja.",
       },
       {
         title: "Pisma w Twoim imieniu",
         icon: "documents",
         cecha:
-          "Wzory pism: wezwanie do zapłaty, wypowiedzenie umowy, porozumienie ratalne, ugoda, wniosek o klauzulę wykonalności, wniosek do komornika i zawiadomienie o przestępstwie.",
-        zaleta:
-          "Pisma wystawiamy w Twoim imieniu jako wierzyciela — z danymi z Twojego profilu — a dane dłużnika, kwoty i terminy wstawiają się same.",
-        korzysc:
-          "Pismo masz od ręki, z właściwą stroną umowy jako wierzycielem i bez przepisywania danych.",
+          "System przygotowuje pisma w Twoim imieniu jako wierzyciela, z danymi z Twojego profilu: od wezwania do zapłaty i wypowiedzenia, przez porozumienie ratalne i ugodę, po wnioski do sądu i komornika oraz zawiadomienie o przestępstwie.",
+        zaleta: "Dane dłużnika, kwoty i terminy wstawiają się same.",
+        korzysc: "Pismo masz od ręki — bez szukania wzorów i przepisywania danych.",
       },
       {
-        title: "Saldo i odsetki co do dnia",
+        title: "Dług policzony co do dnia",
         icon: "kalkulator",
         cecha:
-          "Kalkulator zadłużenia liczący odsetki dzień po dniu, z limitem odsetek maksymalnych za opóźnienie i zaliczaniem wpłat zgodnie z art. 451 k.c.",
+          "Kalkulator zadłużenia liczy odsetki dzień po dniu i pilnuje limitu odsetek maksymalnych za opóźnienie.",
         zaleta:
-          "Rozróżnia okres przed i po wypowiedzeniu umowy oraz dolicza koszty czynności windykacyjnych według umowy pożyczki.",
+          "Rozróżnia okres przed wypowiedzeniem umowy i po nim, zalicza wpłaty zgodnie z przepisami i dolicza koszty windykacji przewidziane w umowie.",
         korzysc:
-          "Znasz kwotę, której możesz żądać — bez arkuszy kalkulacyjnych i ryzyka zawyżenia roszczenia.",
+          "Znasz kwotę, której możesz żądać — bez arkuszy i z mniejszym ryzykiem zawyżenia roszczenia.",
       },
       {
-        title: "SMS, e-mail i telefon AI",
+        title: "Trudne rozmowy prowadzi AI",
         icon: "chat",
-        cecha:
-          "Kontakt z dłużnikiem z poziomu sprawy: SMS, e-mail i rozmowa prowadzona przez agenta głosowego AI.",
+        cecha: "SMS-y i e-maile do dłużnika wysyłasz z karty sprawy w swoim imieniu.",
         zaleta:
-          "Wiadomości podpisujemy Twoim imieniem, a agent AI dzwoni w Twoim imieniu, podaje kwotę zaległości i pyta o termin spłaty — bez gróźb, bez negocjowania kwoty długu, tylko w godzinach 8:00–22:00, nie w niedziele i nie częściej niż raz na dobę.",
-        korzysc:
-          "Nie musisz sam prowadzić trudnych rozmów, a kontakt pozostaje w granicach prawa i dobrych obyczajów.",
+          "Na Twoje zlecenie dzwoni do niego agent głosowy AI: przedstawia się jako asystent, podaje kwotę zaległości i pyta o termin spłaty — bez gróźb, tylko w godzinach 8:00–22:00, nie w niedziele i najwyżej raz na dobę.",
+        korzysc: "Nie musisz sam prowadzić trudnych rozmów.",
       },
       {
-        title: "Terminy pod kontrolą",
+        title: "Terminy pilnowane za Ciebie",
         icon: "updates",
         cecha:
-          "Rejestr doręczeń z 7-dniowym terminem liczonym od skutecznego doręczenia — także przy awizo i zwrocie przesyłki.",
+          "Rejestr doręczeń liczy 7-dniowy termin od skutecznego doręczenia — także przy awizo i zwrocie przesyłki.",
         zaleta:
-          "Pulpit pokazuje sprawy „Wymaga działania dziś” i sprawy krytyczne, a AI rozpoznaje ze zdjęcia potwierdzenie nadania, zwrotkę czy awizo.",
-        korzysc: "Żaden termin nie przepada, a Ty nie przeglądasz codziennie stosu papierów.",
+          "Potwierdzenie nadania, zwrotkę czy awizo AI odczyta ze zdjęcia, a pulpit pokazuje sprawy, które wymagają działania dziś.",
+        korzysc: "Nie przeglądasz codziennie stosu papierów, żeby dotrzymać terminu.",
       },
       {
-        title: "Umowa odczytana przez AI",
-        icon: "aibrain",
-        cecha:
-          "Odczyt umowy pożyczki ze zdjęcia lub PDF: dłużnik, kwoty, harmonogram rat, numer księgi wieczystej, oprocentowanie i tabela opłat windykacyjnych.",
-        zaleta: "Sprawę zakładasz bez ręcznego przepisywania danych z umowy.",
-        korzysc: "Zaczynasz działać od razu — w windykacji liczy się każdy dzień.",
-      },
-      {
-        title: "Teczka sprawy gotowa dla komornika",
+        title: "Teczka gotowa dla komornika",
         icon: "crmfolder",
         cecha:
-          "Oś czasu sprawy, rejestr czynności i opłat, skany dowodów nadania i doręczeń oraz raport dowodowy do druku lub zapisu w PDF.",
+          "Oś czasu sprawy, rejestr czynności i opłat oraz dowody nadania i doręczeń składają się w jeden raport dowodowy do druku albo PDF.",
         zaleta:
-          "Zdarzenia są tylko dopisywane — każde ma datę, a historii nie da się później zmienić ani usunąć.",
+          "Zdarzenia tylko się dopisują, każde z datą, więc historii nie da się później zmienić.",
         korzysc:
-          "Kompletną dokumentację przekazujesz sądowi, komornikowi albo prawnikowi bez kompletowania jej od zera.",
+          "Gotową teczkę przekazujesz sądowi, komornikowi albo prawnikowi — bez zbierania dokumentów od zera.",
       },
     ],
     steps: [
       {
         t: "Zakładasz sprawę",
-        d: "AI odczytuje dane z umowy, a system liczy zaległość z odsetkami.",
+        d: "Ze zdjęcia lub PDF-u umowy — AI odczyta dane, a system policzy zaległość.",
       },
       {
-        t: "Uruchamiasz procedurę jednym kliknięciem",
-        d: "Upomnienie, SMS, e-mail, telefon AI albo pismo w Twoim imieniu.",
+        t: "Uruchamiasz pierwszy krok",
+        d: "Upomnienie, SMS, e-mail, telefon AI albo pismo — jednym kliknięciem.",
       },
       {
-        t: "Prowadzimy sprawę etap po etapie",
-        d: "Od wezwania do zapłaty i wypowiedzenia umowy po wniosek o klauzulę wykonalności.",
+        t: "Prowadzisz sprawę etap po etapie",
+        d: "System podpowiada kolejny krok, od wezwania do zapłaty po wniosek o klauzulę wykonalności.",
       },
       {
         t: "Sprawa trafia na biurko komornika",
         d: "Z kompletem pism, dowodów doręczeń i raportem dowodowym.",
       },
     ],
-    note: `${TRAINING_TOOL} Kliknięcie należy do Ciebie — każdą czynność zatwierdzasz Ty, a system liczy, podpowiada i przygotowuje dokumenty. Odzyskanie należności zależy też od sytuacji dłużnika i zabezpieczenia; w sporze sądowym sprawa może wymagać profesjonalnej obsługi prawnej.`,
-  },
-  {
-    slug: "aml-compliance",
-    name: "Moduł AML/compliance",
-    nameLead: "Moduł",
-    nameAccent: "AML/compliance",
-    menuLabel: "Moduł AML/compliance",
-    tagline: "Raportowanie do GIIF, screening sankcji i rejestr czynności ponadprogowych",
-    image: "/marketing/moduly/aml-compliance.webp",
-    imageAlt:
-      "Moduł AML/compliance — tarcza ze znakiem zatwierdzenia, lista kontrolna oraz ekrany KYC i list sankcyjnych PEP",
-    metaTitle: "Moduł AML/compliance — GIIF, sankcje i rejestr ponadprogowy | Finance You",
-    metaDescription:
-      "Wspieramy raportowanie do GIIF, screening list sankcyjnych i PEP oraz rejestr czynności ponadprogowych powyżej 15 000 EUR. Poznaj moduł AML/compliance.",
-    lead: "Wspieramy raportowanie do GIIF, screening list sankcyjnych i prowadzenie rejestru czynności ponadprogowych. Udzielając pożyczek, możesz podlegać obowiązkom instytucji obowiązanej z ustawy o przeciwdziałaniu praniu pieniędzy — moduł AML porządkuje je w jednym miejscu, od weryfikacji klienta po zgłoszenie z UPO w aktach.",
-    highlights: [
-      "Wsparcie raportowania do GIIF",
-      "Screening list sankcyjnych i PEP",
-      "Rejestr czynności ponadprogowych",
-    ],
-    fab: [
-      {
-        title: "Raportowanie do GIIF",
-        icon: "complianceDocs",
-        cecha:
-          "Zgłoszenia z art. 72, 74, 86 i 89–90 przygotowywane z danych modułu — z kontrolą kompletności, w formatach XML i PDF, z wersjami i sumą kontrolną SHA-256.",
-        zaleta:
-          "Zgłoszenie transakcji ponadprogowej tworzysz jednym kliknięciem prosto z rejestru, a po wysłaniu w SI GIIF własnym podpisem kwalifikowanym dołączasz UPO do akt.",
-        korzysc: "Zgłoszenie przygotowujesz na gotowych danych — w terminie i bez przepisywania.",
-      },
-      {
-        title: "Screening list sankcyjnych i PEP",
-        icon: "shieldcheck",
-        cecha:
-          "Sprawdzenie klienta — a przy firmie także każdego reprezentanta i beneficjenta rzeczywistego z CRBR — na listach sankcyjnych, PEP i w rejestrach karnych, u wyspecjalizowanego dostawcy, przed zawarciem umowy.",
-        zaleta:
-          "Każde trafienie rozstrzygasz jednym wyborem (fałszywy alarm, potwierdzony PEP, sankcja…), potwierdzona sankcja albo nierozstrzygnięte trafienie oznacza klienta jako zablokowanego, a zmiana danych klienta unieważnia wynik.",
-        korzysc: "Nie przeoczysz osoby z listy sankcyjnej przed podpisaniem umowy.",
-      },
-      {
-        title: "Rejestr czynności ponadprogowych",
-        icon: "complianceRegistry",
-        cecha:
-          "Rejestr transakcji powyżej 15 000 EUR, przeliczanych na euro po średnim kursie NBP z dnia transakcji — z zapisem kursu, numeru tabeli i daty.",
-        zaleta:
-          "Po potwierdzeniu wykonania transakcji system sam zakłada wpis w rejestrze z 7-dniowym terminem i decyzją do podjęcia: zgłoszenie do GIIF albo raport banku.",
-        korzysc:
-          "Terminy i statusy wszystkich czynności ponadprogowych widzisz w jednym rejestrze.",
-      },
-      {
-        title: "Rejestr klientów z CRBR",
-        icon: "crm",
-        cecha:
-          "Rejestr klientów — osób fizycznych i firm — z pobieraniem beneficjentów rzeczywistych i reprezentantów z Centralnego Rejestru Beneficjentów Rzeczywistych.",
-        zaleta: "System porównuje dane z CRBR z danymi klienta i oznacza niezgodności.",
-        korzysc: "Wiesz, z kim naprawdę zawierasz umowę.",
-      },
-      {
-        title: "Zdalna weryfikacja tożsamości",
-        icon: "access",
-        cecha:
-          "Link do weryfikacji KYC dla klienta — dokument tożsamości i selfie z porównaniem twarzy; dla firm weryfikacja KYB.",
-        zaleta:
-          "Klient przechodzi weryfikację sam, na telefonie, a wynik wraca do jego profilu automatycznie.",
-        korzysc: "Potwierdzasz tożsamość klienta bez spotkania i bez kserowania dokumentów.",
-      },
-      {
-        title: "Ocena ryzyka z uzasadnieniem",
-        icon: "complianceAml",
-        cecha:
-          "Punktowa propozycja poziomu ryzyka: sankcje, PEP, kraje wysokiego ryzyka, niezgodności w CRBR, brak beneficjentów, transakcje gotówkowe oraz brak celu finansowania lub źródła spłaty.",
-        zaleta:
-          "Widzisz, z czego wynika ocena, a zmiana propozycji systemu wymaga uzasadnienia, które zostaje w aktach.",
-        korzysc: "Twoja decyzja jest udokumentowana i obroni się podczas kontroli.",
-      },
-      {
-        title: "Wzór procedury wewnętrznej AML/CFT",
-        icon: "complianceProc",
-        cecha:
-          "Wzór procedury wewnętrznej AML/CFT dla firmy pożyczkowej B2B w kreatorze dokumentów (DOCX).",
-        zaleta:
-          "Masz gotowy punkt wyjścia do własnej procedury — do zestawienia z oceną ryzyka i przyjęcia uchwałą.",
-        korzysc: "Nie zaczynasz dokumentacji AML od pustej kartki.",
-      },
-      {
-        title: "Ślad audytowy nie do podważenia",
-        icon: "complianceProcess",
-        cecha:
-          "Dziennik zdarzeń AML tylko do dopisywania — baza danych blokuje edycję i usuwanie wpisów; pliki z sumą kontrolną SHA-256.",
-        zaleta:
-          "Każda czynność — screening, decyzja, zgłoszenie — zostaje zapisana z datą na stałe.",
-        korzysc: "W razie kontroli pokazujesz kompletny i wiarygodny ślad swoich działań.",
-      },
-    ],
-    steps: [
-      {
-        t: "Weryfikujesz klienta",
-        d: "KYC, dane z CRBR i screening list sankcyjnych oraz PEP.",
-      },
-      {
-        t: "Oceniasz ryzyko",
-        d: "System proponuje poziom ryzyka, a Ty go zatwierdzasz albo zmieniasz z uzasadnieniem.",
-      },
-      {
-        t: "Rejestrujesz czynności",
-        d: "Transakcje powyżej 15 000 EUR trafiają do rejestru czynności ponadprogowych z terminem.",
-      },
-      {
-        t: "Raportujesz do GIIF",
-        d: "Zgłoszenie w XML i PDF z danych modułu, a UPO dołączasz do akt.",
-      },
-    ],
-    note: `${TRAINING_TOOL} Wzór procedury wewnętrznej trzeba dostosować do własnej oceny ryzyka i przyjąć, a moduł nie zastępuje porady prawnej. Zgłoszenia do GIIF wysyłasz samodzielnie w SI GIIF, jako instytucja obowiązana, własnym podpisem kwalifikowanym — Finance You nie podpisuje ich za Ciebie i nie przechowuje Twojego podpisu.`,
-  },
-  {
-    slug: "kancelaria-ai",
-    name: "Kancelaria AI",
-    nameLead: "Kancelaria",
-    nameAccent: "AI",
-    menuLabel: "Kancelaria AI",
-    tagline: "30 wzorów dokumentów na klik",
-    image: "/marketing/moduly/kancelaria-ai.webp",
-    imageAlt:
-      "Kancelaria AI — umowa, wezwanie i inne dokumenty generowane na ekranie laptopa obok wagi Temidy",
-    metaTitle: "Kancelaria AI — 30 wzorów dokumentów i umowa pożyczki dla inwestora | Finance You",
-    metaDescription:
-      "Umowa pożyczki z biblioteki klauzul, 30 wzorów dokumentów — od aneksu i wezwania po wniosek do komornika — dane z GUS i KRS oraz e-podpis ze śladem audytowym.",
-    lead: "Umowa pożyczki składana z biblioteki sprawdzonych klauzul, aneksy, wezwania, oświadczenia oraz wnioski do sądu i komornika — gotowe wzory wypełniane danymi z rejestrów i kalkulatora. Na koniec wysyłasz dokument do podpisu elektronicznego z pełnym śladem audytowym.",
-    highlights: [
-      "Umowy, aneksy i wezwania",
-      "Generowanie jednym kliknięciem",
-      "E-podpis ze śladem audytowym",
-    ],
-    fab: [
-      {
-        title: "Umowa pożyczki z agentem AI",
-        icon: "dossier",
-        cecha:
-          "Agent AI zbiera w rozmowie dane do umowy, a tekst składa silnik z biblioteki 113 klauzul — wniosek, umowa i załączniki w jednym pliku DOCX.",
-        zaleta:
-          "AI nie pisze treści umowy i nie dopisuje danych, których nie podałeś (PESEL, NIP, numer KW) — wypełnia sprawdzone klauzule.",
-        korzysc: "Dostajesz spójną umowę bez pisania od zera i bez ryzyka zmyślonych zapisów.",
-      },
-      {
-        title: "30 wzorów na cały cykl pożyczki",
-        icon: "documents",
-        cecha:
-          "Wzory w kategoriach: umowy i aneksy, windykacja miękka, windykacja sądowa, oświadczenia i załączniki.",
-        zaleta:
-          "Od aneksu przedłużającego termin i ugody ratalnej, przez monit i ostateczne wezwanie, po pozew, wniosek egzekucyjny i zgodę na wykreślenie hipoteki.",
-        korzysc: "Na każdym etapie pożyczki masz pod ręką właściwy dokument.",
-      },
-      {
-        title: "Dane firm z rejestrów",
-        icon: "crmfolder",
-        cecha:
-          "Pobieranie danych kontrahenta po numerze NIP, REGON albo KRS — z GUS, KRS i Białej Listy.",
-        zaleta:
-          "Dane rejestrowe kontrahenta trafiają do dokumentu bez przepisywania, a Twoje dane jako pożyczkodawcy i wierzyciela uzupełniają się z profilu.",
-        korzysc: "Mniej pomyłek w oznaczeniu stron — mniej problemów przy egzekucji.",
-      },
-      {
-        title: "Liczby prosto z kalkulatora",
-        icon: "kalkulator",
-        cecha:
-          "Wartości z kalkulatora inwestora (także z zapisanego PDF), harmonogram spłat jako tabela Word i kwoty słownie.",
-        zaleta: "Liczby w dokumentach zgadzają się z kalkulacją, którą widział klient.",
-        korzysc: "Nie tracisz czasu na przeliczanie i nie ryzykujesz rozbieżności w umowie.",
-      },
-      {
-        title: "Wzory z danymi sprawy windykacyjnej",
-        icon: "procedures",
-        cecha: "W module windykacji wzory wypełniają się danymi konkretnej sprawy.",
-        zaleta:
-          "Dłużnik, kwoty i terminy trafiają do pisma automatycznie, a pismo wystawiamy w Twoim imieniu.",
-        korzysc: "Wezwanie czy wniosek przygotowujesz w chwili, gdy jest potrzebny.",
-      },
-      {
-        title: "Edytowalne pliki DOCX",
-        icon: "status",
-        cecha: "Dokumenty generowane w formacie Word (DOCX).",
-        zaleta: "Przed wysłaniem albo podpisem możesz dowolnie poprawić treść.",
-        korzysc: "Zachowujesz pełną kontrolę nad ostatecznym brzmieniem dokumentu.",
-      },
-      {
-        title: "E-podpis z pełnym śladem audytowym",
-        icon: "shieldcheck",
-        cecha:
-          "Podpis dokumentowy dowolnego PDF: weryfikacja tożsamości (dokument, test żywotności, porównanie twarzy) i jednorazowy kod, podpis równoległy albo kolejny.",
-        zaleta:
-          "Skrót SHA-256 pliku, adres IP, przeglądarka i czas każdego podpisu, karta podpisów i publiczna weryfikacja dokumentu po kodzie.",
-        korzysc: "Podpisujesz zdalnie, a w razie sporu masz dowód, kto, kiedy i co podpisał.",
-      },
-    ],
-    steps: [
-      {
-        t: "Wybierasz wzór",
-        d: "Albo uruchamiasz agenta, który przeprowadzi Cię przez umowę pożyczki.",
-      },
-      {
-        t: "Uzupełniasz dane",
-        d: "Firmy z GUS i KRS, liczby z kalkulatora, resztę wpisujesz albo sprawdzasz.",
-      },
-      {
-        t: "Klikasz „Generuj”",
-        d: "Pobierasz gotowy dokument w formacie DOCX.",
-      },
-      {
-        t: "Wysyłasz do podpisu",
-        d: "E-podpis z weryfikacją tożsamości i kartą podpisów.",
-      },
-    ],
-    note: `${TRAINING_TOOL} Wzory i kreator nie stanowią porady prawnej. Podpis dokumentowy nie jest kwalifikowanym podpisem elektronicznym i nie zastępuje formy pisemnej ani aktu notarialnego tam, gdzie wymaga ich prawo (np. ustanowienie hipoteki, oświadczenie o poddaniu się egzekucji).`,
-  },
-  {
-    slug: "siec-sprzedazy",
-    name: "Ogólnopolska sieć sprzedaży",
-    nameLead: "Ogólnopolska",
-    nameAccent: "sieć sprzedaży",
-    menuLabel: "Ogólnopolska sieć sprzedaży",
-    tagline: "Pośrednictwo finansowe dopasowane do potrzeb i możliwości",
-    image: "/marketing/moduly/siec-sprzedazy.webp",
-    imageAlt:
-      "Ogólnopolska sieć sprzedaży — mapa Polski z połączonymi punktami partnerów, dom, klucze i uścisk dłoni",
-    metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
-    metaDescription:
-      "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty z całej Polski dopasowane do Twojego Zlecenia, bez opłat za lead i za Projekt.",
-    lead: "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do ich potrzeb i możliwości. Przedsiębiorcy z całej Polski zgłaszają się do nas przez kampanie Finance You, czat, formularze i pośredników, a Ty — na podstawie swojego Zlecenia — dostajesz Projekty mieszczące się w Twojej kwocie, bez własnego marketingu.",
-    highlights: [
-      "Pośrednictwo finansowe na zlecenie klientów",
-      "Wnioski z całej Polski",
-      "Projekty dopasowane do Zlecenia",
-    ],
-    fab: [
-      {
-        title: "Pośrednictwo finansowe",
-        icon: "handshake",
-        cecha:
-          "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego — z inwestorem na podstawie ramowej umowy pośrednictwa finansowego świadczonego na odległość.",
-        zaleta:
-          "Pozyskujemy i kwalifikujemy wnioski przedsiębiorców i przedstawiamy Ci Projekty odpowiadające Twojemu Zleceniu — rozwiązania dopasowane do potrzeb i możliwości obu stron.",
-        korzysc: "Dostajesz gotowe tematy finansowania, a nie listę przypadkowych ogłoszeń.",
-      },
-      {
-        title: "Wiele kanałów pozyskania",
-        icon: "growth",
-        cecha:
-          "Wnioski z reklam w serwisach Meta, Messengera, czatu na stronie, telefonów do asystenta AI, e-maila, formularzy i landingów, panelu klienta oraz od pośredników.",
-        zaleta:
-          "Wszystkie trafiają do jednej puli, bez ograniczeń regionalnych — Zlecenie nie zawęża Projektów do województwa.",
-        korzysc:
-          "Nie szukasz klientów i nie płacisz za reklamę — to oni zgłaszają się do Finance You.",
-      },
-      {
-        title: "Program pośredników",
-        icon: "community",
-        cecha:
-          "Partnerzy i pośrednicy składają wnioski swoich klientów tym samym formularzem co klient.",
-        zaleta: "Pośredników wynagradza Finance You — nie Ty.",
-        korzysc: "Więcej tematów pożyczek bez dodatkowych kosztów po Twojej stronie.",
-      },
-      {
-        title: "Zlecenie zamiast przeglądania ogłoszeń",
-        icon: "access",
-        cecha:
-          "Zlecenie poszukiwania Projektów z jednym parametrem — maksymalną kwotą finansowania.",
-        zaleta:
-          "System sam dopasowuje nowe wnioski mieszczące się w tej kwocie i przedstawia je jako Projekty.",
-        korzysc: "Projekty trafiają do Ciebie, a Ty nie spędzasz godzin na szukaniu.",
-      },
-      {
-        title: "Najpierw raport, potem dane",
-        icon: "knowledge",
-        cecha:
-          "Przed rezerwacją widzisz zapowiedź Projektu i raport analityczny — bez danych osobowych klienta i z zamaskowanym numerem księgi wieczystej.",
-        zaleta:
-          "Dane kontaktowe dostajesz jednym przyciskiem „Pobierz dane kontaktowe i rezerwuj” i rozmawiasz z klientem bezpośrednio.",
-        korzysc:
-          "Oceniasz Projekt, zanim się zaangażujesz, i negocjujesz bez pośrednika w rozmowie.",
-      },
-      {
-        title: "Rezerwacja tylko dla Ciebie",
-        icon: "procedures",
-        cecha: "Rezerwacja Projektu na 24 h, z możliwością jednorazowego przedłużenia o 12 h.",
-        zaleta: "W czasie rezerwacji Projekt nie trafia do innych inwestorów.",
-        korzysc: "Analizujesz spokojnie, bez wyścigu z konkurencją.",
-      },
-      {
-        title: "Oferta i umowa z karty Projektu",
-        icon: "dossier",
-        cecha:
-          "Ofertę składasz prosto z karty Projektu w kalkulatorze compliance, a autor wniosku — klient albo pośrednik — dostaje powiadomienie.",
-        zaleta:
-          "Po odsłonięciu danych kontaktowych jednym kliknięciem przechodzisz do kreatora umowy z danymi Projektu.",
-        korzysc: "Od Projektu do umowy przechodzisz bez przepisywania danych.",
-      },
-      {
-        title: "Bez opłat za lead i za Projekt",
-        icon: "loan",
-        cecha:
-          "Stały abonament — bez opłaty za Projekt i bez opłaty sukcesu. Prowizję Finance You płaci klient, potrącaną z wypłaty pożyczki.",
-        zaleta: "Koszt pozyskania klienta i obsługi sieci sprzedaży jest po stronie Finance You.",
-        korzysc: "Cały zarobek z odsetek i Twojej prowizji zostaje u Ciebie.",
-      },
-    ],
-    steps: [
-      {
-        t: "Dołączasz do klubu",
-        d: "Abonament, zdalna weryfikacja tożsamości i umowy z Finance You.",
-      },
-      {
-        t: "Składasz Zlecenie",
-        d: "Podajesz tylko maksymalną kwotę finansowania.",
-      },
-      {
-        t: "Dostajesz Projekty",
-        d: "Wnioski z całej sieci sprzedaży mieszczące się w Twojej kwocie trafiają do Ciebie.",
-      },
-      {
-        t: "Rezerwujesz i rozmawiasz",
-        d: "Jednym przyciskiem rezerwujesz Projekt, dostajesz kontakt i rozmawiasz z klientem bezpośrednio.",
-      },
-    ],
-    note: "Finance You świadczy usługę pośrednictwa finansowego na podstawie ramowej umowy pośrednictwa, nie jest stroną finansowania i nie gwarantuje przedstawienia Projektu ani zawarcia transakcji. Projekty przedstawiamy wyłącznie inwestorowi z przyjętym Zleceniem, po zawarciu Umów o dostęp do Klientów. Inwestor nie działa w imieniu Finance You, a pośrednicy nie mogą gwarantować finansowania. Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału.",
+    note: "Windykator AI to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa. Każdą czynność zatwierdzasz Ty — system liczy, podpowiada i przygotowuje dokumenty. Odzyskanie należności zależy od sytuacji dłużnika i zabezpieczenia, a w sporze sądowym może być potrzebny prawnik.",
   },
 ];
 

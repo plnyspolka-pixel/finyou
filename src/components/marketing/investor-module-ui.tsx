@@ -4,127 +4,64 @@ import { Icon3D } from "./icon-3d";
 import { investorModulePath, type FabRow, type InvestorModule } from "./investor-modules";
 
 /**
- * Bloki podstron modułów inwestora: lista cecha → zaleta → korzyść i karty
- * modułów (landing /dla-inwestora oraz „Pozostałe moduły” na podstronach).
- * Układ responsywny w styles.css (.fy-fab-*, .fy-module-cards).
+ * Bloki podstron modułów inwestora: karty funkcji i karty modułów (landing
+ * /dla-inwestora oraz „Pozostałe moduły” na podstronach), a także skala A–E.
+ * Układ responsywny w styles.css (.fy-feature-grid, .fy-module-cards).
  */
 
-const FAB_PARTS = [
-  { key: "cecha", label: "Cecha", hint: "co to jest", color: "#7fb4f5" },
-  { key: "zaleta", label: "Zaleta", hint: "co to robi", color: "#6fd3d0" },
-  { key: "korzysc", label: "Korzyść", hint: "co zyskujesz", color: "#f0c667" },
-] as const;
-
-const labelStyle = (color: string): CSSProperties => ({
-  display: "inline-block",
-  fontSize: "0.68rem",
-  fontWeight: 800,
-  textTransform: "uppercase",
-  letterSpacing: "0.12em",
-  color,
-});
-
-/** Legenda nad listą — wyjaśnia trzy kolumny. */
-export function FabLegend() {
+/**
+ * Karty funkcji modułu. Pola cecha/zaleta/korzyść to tylko szkielet pisania —
+ * na stronie karta czyta się jak tytuł, jeden opis i wyróżnione zdanie
+ * o korzyści, bez etykiet.
+ */
+export function FeatureCards({ rows }: { rows: FabRow[] }) {
   return (
-    <ul
-      aria-label="Jak czytać opis"
-      style={{
-        margin: "1.6rem auto 0",
-        padding: 0,
-        listStyle: "none",
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        gap: "0.5rem",
-      }}
-    >
-      {FAB_PARTS.map((p, i) => (
-        <li
-          key={p.key}
+    <div className="fy-feature-grid">
+      {rows.map((r) => (
+        <article
+          key={r.title}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "0.4rem 0.85rem",
-            borderRadius: 999,
-            border: `1px solid ${p.color}55`,
-            background: `${p.color}12`,
-            fontSize: "0.82rem",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-2xl)",
+            padding: "1.4rem",
+            boxShadow: "var(--shadow-sm)",
           }}
         >
-          <span style={labelStyle(p.color)}>
-            {i + 1}. {p.label}
-          </span>
-          <span style={{ color: "var(--muted-foreground)" }}>— {p.hint}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function FabItem({ row }: { row: FabRow }) {
-  return (
-    <article
-      style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--radius-2xl)",
-        padding: "1.3rem",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Icon3D name={row.icon} size={44} />
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 800 }}>{row.title}</h3>
-      </div>
-      <dl className="fy-fab-grid">
-        {FAB_PARTS.map((p) => {
-          const benefit = p.key === "korzysc";
-          return (
-            <div
-              key={p.key}
-              className="fy-fab-cell"
-              style={{
-                borderRadius: "var(--radius-xl)",
-                padding: "0.85rem 0.95rem",
-                border: benefit ? "1px solid rgba(240,198,103,0.45)" : "1px solid var(--border)",
-                background: benefit
-                  ? "linear-gradient(160deg, rgba(240,198,103,0.12), rgba(240,198,103,0.04))"
-                  : "rgba(120,160,255,0.04)",
-              }}
-            >
-              <dt style={labelStyle(p.color)}>{p.label}</dt>
-              <dd
-                style={{
-                  margin: "0.35rem 0 0",
-                  fontSize: "0.88rem",
-                  lineHeight: 1.55,
-                  fontWeight: benefit ? 600 : 400,
-                  color: benefit ? "var(--foreground)" : "var(--muted-foreground)",
-                }}
-              >
-                {row[p.key]}
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-    </article>
-  );
-}
-
-export function FabList({ rows }: { rows: FabRow[] }) {
-  return (
-    <div style={{ marginTop: "2rem", display: "grid", gap: "1rem" }}>
-      {rows.map((r) => (
-        <FabItem key={r.title} row={r} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Icon3D name={r.icon} size={44} />
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, lineHeight: 1.3 }}>{r.title}</h3>
+          </div>
+          <p
+            style={{
+              marginTop: "0.8rem",
+              fontSize: "0.92rem",
+              lineHeight: 1.6,
+              color: "var(--muted-foreground)",
+            }}
+          >
+            {r.cecha} {r.zaleta}
+          </p>
+          <p
+            style={{
+              marginTop: "0.7rem",
+              paddingLeft: "0.75rem",
+              borderLeft: "2px solid #f0c667",
+              fontSize: "0.95rem",
+              lineHeight: 1.55,
+              fontWeight: 600,
+              color: "var(--foreground)",
+            }}
+          >
+            {r.korzysc}
+          </p>
+        </article>
       ))}
     </div>
   );
 }
 
-function ModuleCard({ m }: { m: InvestorModule }) {
+function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
   return (
     <a
       href={investorModulePath(m.slug)}
@@ -141,20 +78,22 @@ function ModuleCard({ m }: { m: InvestorModule }) {
         boxShadow: "var(--shadow-sm)",
       }}
     >
-      <img
-        src={m.image}
-        alt=""
-        loading="lazy"
-        width={1536}
-        height={1024}
-        style={{
-          display: "block",
-          width: "100%",
-          height: "auto",
-          aspectRatio: "3 / 2",
-          objectFit: "cover",
-        }}
-      />
+      {!compact && (
+        <img
+          src={m.image}
+          alt=""
+          loading="lazy"
+          width={1536}
+          height={1024}
+          style={{
+            display: "block",
+            width: "100%",
+            height: "auto",
+            aspectRatio: "3 / 2",
+            objectFit: "cover",
+          }}
+        />
+      )}
       <div
         style={{ display: "flex", flexDirection: "column", flex: 1, padding: "1rem 1.1rem 1.1rem" }}
       >
@@ -185,12 +124,26 @@ function ModuleCard({ m }: { m: InvestorModule }) {
   );
 }
 
-/** Karty modułów — `cols` to liczba kart w rzędzie na desktopie (niepełny rząd jest wyśrodkowany). */
-export function ModuleCards({ modules, cols = 3 }: { modules: InvestorModule[]; cols?: number }) {
+/**
+ * Karty modułów — `cols` to liczba kart w rzędzie na desktopie (niepełny rząd
+ * jest wyśrodkowany). `compact` — bez grafiki, dwie kolumny (podstrony modułów).
+ */
+export function ModuleCards({
+  modules,
+  cols = 3,
+  compact = false,
+}: {
+  modules: InvestorModule[];
+  cols?: number;
+  compact?: boolean;
+}) {
   return (
-    <div className="fy-module-cards" style={{ "--fy-cols": cols } as CSSProperties}>
+    <div
+      className={compact ? "fy-module-cards fy-module-cards--compact" : "fy-module-cards"}
+      style={compact ? undefined : ({ "--fy-cols": cols } as CSSProperties)}
+    >
       {modules.map((m) => (
-        <ModuleCard key={m.slug} m={m} />
+        <ModuleCard key={m.slug} m={m} compact={compact} />
       ))}
     </div>
   );

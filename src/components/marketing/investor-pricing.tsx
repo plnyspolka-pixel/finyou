@@ -1,24 +1,62 @@
 // Cennik inwestora na stronie publicznej: JEDEN abonament z przełącznikiem
-// okresu (suwak Miesięcznie / Rocznie). Ceny, rabat i zdania o płatności
+// okresu (suwak Miesięcznie / Rocznie). Ceny, rabat, tagline i punkty oferty
 // pochodzą z lib/investor-plan/plans.ts (jedno źródło prawdy dla strony,
 // panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
+//
+// Karta od góry: nazwa → suwak okresu → cena i podpowiedź → chip „bez karty"
+// → tagline → punkty oferty → drobny druk (płatność, sprzedawca, regulamin)
+// → przycisk do płatności.
 import { useState } from "react";
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
   SUBSCRIPTION_OPTIONS,
-  SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+  type BenefitBullet,
   type BillingPeriod,
 } from "@/lib/investor-plan/plans";
 import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
+import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 
 // Przycisk prowadzi do płatności Tpay; konto inwestora powstaje z danych
 // płatności po jej zaksięgowaniu (lib/access/guest-checkout.functions.ts).
 const CHECKOUT = "/abonament-inwestora";
 const PERIODS: BillingPeriod[] = ["miesiecznie", "rocznie"];
+
+/** Adres podstrony modułu o tej samej nazwie co punkt oferty (o ile istnieje). */
+function bulletHref(b: BenefitBullet): string | undefined {
+  const m = INVESTOR_MODULES.find((mod) => mod.name === b.cecha);
+  return m ? investorModulePath(m.slug) : undefined;
+}
+
+// Punkt oferty: nazwa jako pogrubiony nagłówek (link do podstrony modułu,
+// jeśli jest), pod nią JEDEN akapit — zaleta wyciszona, korzyść wyróżniona.
+// Bez etykiet części formuły i bez formy „Nazwa — Zdanie".
+function BenefitItem({ b }: { b: BenefitBullet }) {
+  const href = bulletHref(b);
+  return (
+    <li style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
+      <BrandIcon name="check" size={18} />
+      <div style={{ lineHeight: 1.45 }}>
+        <div style={{ fontWeight: 700, color: "var(--foreground)" }}>
+          {href ? (
+            <a href={href} style={{ color: "inherit", textDecoration: "underline" }}>
+              {b.cecha}
+            </a>
+          ) : (
+            b.cecha
+          )}
+        </div>
+        <p style={{ margin: "0.15rem 0 0", color: "var(--muted-foreground)" }}>
+          {b.zaleta}{" "}
+          <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{b.korzysc}</span>
+        </p>
+      </div>
+    </li>
+  );
+}
 
 // Suwak okresu: pigułka z przesuwanym „kciukiem". Semantyka radiogroup —
 // strzałki w lewo/prawo przełączają okres jak w natywnych radio.
@@ -204,7 +242,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               fontWeight: 700,
             }}
           >
-            <BrandIcon name="lock" size={16} /> Bez konieczności podpinania karty kredytowej
+            <BrandIcon name="lock" size={16} /> Bez karty kredytowej i bez automatycznego odnawiania
           </div>
         </div>
 
@@ -223,16 +261,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             }}
           >
             {t.bullets.map((b) => (
-              <li key={b.cecha} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
-                <BrandIcon name="check" size={18} />
-                <span style={{ lineHeight: 1.45 }}>
-                  <strong>{b.cecha}</strong>
-                  <span style={{ display: "block", color: "var(--muted-foreground)" }}>
-                    {b.zaleta}
-                  </span>
-                  <span style={{ display: "block", fontWeight: 600 }}>{b.korzysc}</span>
-                </span>
-              </li>
+              <BenefitItem key={b.cecha} b={b} />
             ))}
           </ul>
           <p
@@ -243,7 +272,8 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               color: "var(--muted-foreground)",
             }}
           >
-            {SUBSCRIPTION_PAYMENT_SENTENCE} Sprzedawca: {FUNDACJA.nazwa} (bez VAT),{" "}
+            Płatność jednorazowa przez Tpay — przelew albo BLIK. Ceny brutto. Sprzedawca:{" "}
+            {FUNDACJA.nazwa} (bez VAT),{" "}
             <a href={REGULAMIN_ABONAMENTU_PATH} style={{ textDecoration: "underline" }}>
               regulamin abonamentu
             </a>
@@ -254,7 +284,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             href={`${CHECKOUT}?okres=${period}`}
             style={{ width: "100%", marginTop: "1rem" }}
           >
-            Załóż konto inwestora
+            Dołącz do klubu
           </MktButton>
         </div>
       </div>
