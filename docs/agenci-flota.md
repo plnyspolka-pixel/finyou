@@ -42,8 +42,9 @@ generowanie obu wariantów z jednej funkcji.
 Sześć potrzeb (`TRIAGE_INTENTS`): nowe finansowanie, inwestowanie, trwający
 wniosek, spłata umowy, inwestor z kontem, inne. Recepcja:
 
-1. Po cichu woła `identify_caller` — podpowiedź z bazy (role, sugerowana trasa),
-   nigdy nie ujawniana rozmówcy.
+1. Po cichu woła `identify_caller` — sugerowana trasa wyznaczona po kontakcie
+   z kanału (numer połączenia, nadawca wiadomości), bez danych osobowych.
+   Numeru ani e-maila podanego w rozmowie nie sprawdza w bazie.
 2. Słucha; przy niejednoznaczności zadaje pytanie rozstrzygające z dwiema
    opcjami („nowa pożyczka czy podpisana umowa?”).
 3. `save_needs` z tym, co już wiadomo (żeby specjalista nie pytał drugi raz).
@@ -62,8 +63,16 @@ każdej wiadomości, a pożyczkobiorca potwierdzałby tożsamość przy każdym 
 Rozwiązanie (`src/lib/agent-fleet-routing.server.ts`):
 
 - wątek ma stały **podpisany** klucz (`thread_key`, HMAC z
-  `AGENT_TOOLS_SECRET`) — sesja narzędzi żyje pod `thread:lead:<id>`; klucz
-  podrobiony albo cudzy jest ignorowany;
+  `AGENT_TOOLS_SECRET`) — sesja narzędzi żyje pod
+  `thread:lead:<id>:<skrót nadawcy>`; klucz podrobiony albo cudzy jest
+  ignorowany. Wątek to lead **razem z nadawcą uwierzytelnionym przez
+  platformę** (sesja czatu, PSID Messengera / IGSID, numer nadawcy SMS, adres
+  e-mail): lead dopasowuje się po kontakcie, który każdy może wpisać
+  w formularzu, więc sam lead nie może nieść potwierdzonej tożsamości;
+- numer nadawcy SMS / adres e-mail jedzie podpisany w kluczu i jest dla
+  narzędzi kontaktem „z kanału” (jak caller-id);
+- bez nadawcy z kanału (np. follow-up wysyłany przez system) flota się nie
+  włącza — zostaje A1;
 - trasę wybiera **kod** z potrzeby zapisanej przez recepcję (`needs.intent`);
 - gdy recepcja rozpoznała potrzebę w tej turze, ta sama wiadomość od razu idzie
   do specjalisty (klient dostaje odpowiedź merytoryczną, nie „przekazuję…”);
@@ -83,18 +92,19 @@ ich podmienić. Sekret jest w magazynie sekretów ElevenLabs
 
 | Narzędzie                  | Agenty           | Tożsamość | Zapis | Co robi                                                                                   |
 | -------------------------- | ---------------- | --------- | ----- | ----------------------------------------------------------------------------------------- |
-| `identify_caller`          | wszystkie        | nie       | nie   | role rozmówcy i sugerowana trasa; bez kwot i numerów umów                                 |
-| `verify_identity`          | A2P, A4, A4T     | —         | tak   | dowód liczony w kodzie (numer umowy / imię i nazwisko + telefon lub e-mail), 3 próby      |
+| `identify_caller`          | wszystkie        | nie       | nie   | sugerowana trasa po kontakcie z kanału; bez danych osobowych                              |
+| `verify_identity`          | A2P, A4, A4T     | —         | tak   | dowód w kodzie: imię i nazwisko + numer umowy albo kod SMS; 3 próby + limit per podmiot   |
+| `send_verification_code`   | A2P, A4, A4T     | nie       | tak   | SMS z kodem na numer **z akt** (nigdy na numer podany w rozmowie), 3 kody / podmiot / dobę |
 | `save_needs`               | A0, A2P          | nie       | tak   | rozpoznane potrzeby w sesji                                                               |
 | `get_collection_case`      | A4, A4T          | **tak**   | nie   | akta konkretnej umowy: kwota na dziś z harmonogramu, etap, termin maks., opłaty z umowy   |
 | `record_payment_promise`   | A4, A4T          | **tak**   | tak   | deklaracja wpłaty w aktach; termin po limicie etapu odrzucony                             |
-| `record_call_note`         | A4, A4T          | nie       | tak   | osoba trzecia, STOP, upadłość, zgon, spór…                                                |
+| `record_call_note`         | A4, A4T          | częściowo | tak   | przed weryfikacją tylko neutralne rodzaje, oznaczone „Niezweryfikowane”                    |
 | `get_payment_instructions` | A4, A4T          | **tak**   | nie   | wyłącznie rachunek z umowy, pogrupowany do dyktowania                                     |
 | `lookup` / `describe_data` | A4, A4T          | per tabela| nie   | szeroki odczyt bazy przez allow-listę (niżej)                                             |
 | `get_pricing`              | A2P              | nie       | nie   | cennik z bazy (`access_products`) — jedyne źródło cen                                     |
 | `get_offer_teasers`        | A2P              | nie       | nie   | przykładowe karty spraw bez danych osobowych                                              |
-| `get_investor_state`       | A2P              | **tak**   | nie   | abonament, pakiet umów, kryteria, zlecenia, następny krok                                 |
-| `save_investor_needs`      | A2P              | nie       | tak   | potrzeby inwestora + kwalifikacja A/B/C (lead inwestorski)                                |
+| `get_investor_state`       | A2P              | **silna** | nie   | abonament, pakiet umów, kryteria, zlecenia, następny krok (po kodzie SMS)                 |
+| `save_investor_needs`      | A2P              | nie       | tak   | potrzeby + kwalifikacja A/B/C; pisze tylko do leada „swojej” rozmowy                      |
 | `request_investor_callback`| A2P              | nie       | tak   | prośba o kontakt — bez obietnicy terminu                                                  |
 | `send_investor_registration_link` | A2P       | nie       | tak   | SMS z linkiem (albo link do czatu)                                                        |
 | `search_knowledge`         | A0, A2P          | nie       | nie   | wiedza z `text_agent_knowledge` (RAG)                                                     |
@@ -109,16 +119,35 @@ ich podmienić. Sekret jest w magazynie sekretów ElevenLabs
 3. **Sesja jako źródło prawdy** (`agent_tool_sessions`) — identyfikatory
    z body/args to twierdzenia; zapytania zawęża serwer do podmiotu sesji.
    `identity_verified` podnosi wyłącznie `verify_identity` po sprawdzeniu dowodu
-   w kodzie. Klucz sesji nie jest wyprowadzany z telefonu ani e-maila.
-4. **Allow-lista odczytu** (`safe-read.server.ts`) — tylko zadeklarowane tabele,
+   w kodzie i zastępuje wtedy **cały** podmiot sesji (nic nie zostaje
+   z kandydata). Klucz sesji nie jest wyprowadzany z telefonu ani e-maila.
+4. **Model zaufania do kontaktu** — „kontakt z kanału” to tylko caller-id
+   (`system__caller_id`) albo nadawca z podpisanego klucza wątku. Numer czy
+   e-mail podany w rozmowie (`args`) nigdy nie wskazuje podmiotu, nie otwiera
+   cudzego leada i nie jest celem SMS-a z kodem.
+5. **Siła dowodu** — akta sprawy i konto inwestora: imię i nazwisko RAZEM
+   z numerem umowy (firma: dodatkowo kontakt z kanału zgodny z aktami) albo kod
+   SMS na numer z akt. Kontakt z kanału + nazwisko (co najmniej dwa człony)
+   otwiera tylko dane leada / klienta. Nieudane dowody liczone także per
+   podmiot (5 na dobę), więc nowa rozmowa nie zeruje zgadywania.
+6. **Ważność** — potwierdzenie wygasa: rozmowa 2 h, wątek tekstowy 12 h.
+7. **Allow-lista odczytu** (`safe-read.server.ts`) — tylko zadeklarowane tabele,
    tylko dozwolone kolumny, obowiązkowe zawężenie wiersza, limity wierszy.
    Kolumny wrażliwe (PESEL, NIP, rachunki, dowody, adresy, ocena wewnętrzna
-   wniosku) nie są wymienione, więc nie istnieją dla agenta.
-5. **Redakcja na wyjściu** — każdy wynik przechodzi `redactDeep`: klucze wrażliwe
-   usunięte, PESEL / numery rachunków / kart maskowane nawet pod niewinnym kluczem.
-6. **Limity** — per rozmowa i narzędzie (np. weryfikacja 5/10 min, deklaracja 3/30 min).
-7. **Audyt** — każda decyzja (także odmowa) w `agent_tool_calls`; odmowy także
-   w `automation_events` (`agent_tool_denied`).
+   wniosku) nie są wymienione, więc nie istnieją dla agenta. Każdy zakres
+   wymaga potwierdzonej tożsamości zgodnego rodzaju (sprawa → pożyczkobiorca,
+   konto → inwestor). Bez wolnych tekstów zespołu (`wind_events.tresc`).
+8. **Redakcja na wyjściu** — każdy wynik przechodzi `redactDeep`: klucze wrażliwe
+   usunięte, PESEL / NIP / dowód (z sumami kontrolnymi), rachunki i karty
+   maskowane nawet pod niewinnym kluczem; rachunek do spłaty z umowy
+   przepuszczany tylko pod własnym kluczem (do dyktowania).
+9. **Limity** — per rozmowa i narzędzie (np. weryfikacja 5/10 min, kod SMS 2/30 min).
+10. **Audyt** — każda decyzja (także odmowa) w `agent_tool_calls`; odmowy także
+   w `automation_events` (`agent_tool_denied`), bez cytatów z rozmowy.
+
+Ścieżka legacy (`fy_*`, A1): lead rozmowy tylko z `lead_id` zmiennej albo
+caller-id; numer / e-mail podany w rozmowie zakłada co najwyżej NOWEGO leada
+(„możliwy duplikat”), nigdy nie odczytuje ani nie nadpisuje cudzego.
 
 ### Adaptacja do zmian w systemie i bazie
 
@@ -132,7 +161,8 @@ ich podmienić. Sekret jest w magazynie sekretów ElevenLabs
 ## Windykacja na danych konkretnej umowy
 
 Telefon wychodzący (z panelu) dostaje zmienne sprawy z góry. Na wspólnej linii
-rozmówca dzwoni lub pisze sam, więc agent: `verify_identity` → `get_collection_case`
+rozmówca dzwoni lub pisze sam, więc agent: `verify_identity` (imię i nazwisko +
+numer umowy, a bez numeru — `send_verification_code` i kod) → `get_collection_case`
 (umowa, harmonogram, wpłaty, opłaty z tabeli tej umowy, zabezpieczenia,
 historia i pisma) → rozmowa według drabinki → `record_payment_promise`.
 Zapis trafia do `wind_events` z `metadata.conversation_id` — w tej samej
@@ -147,7 +177,8 @@ całodobowo), 116 123 i 112. `bot-contact-guard` przepuszcza te numery.
 
 ## Wdrożenie — kroki ręczne
 
-1. Migracje `0032_agenci_narzedzia_sesje`, `0033_agent_fleet` (drizzle → produkcja).
+1. Migracje `0032_agenci_narzedzia_sesje` (sesje, audyt, kody SMS, licznik
+   nieudanych dowodów), `0033_agent_fleet` (drizzle → produkcja).
 2. Deploy aplikacji — nowe narzędzia odpowiadają dopiero po wdrożeniu kodu
    (wcześniej endpoint zwraca „Nieznane narzędzie”).
 3. `voicebot_settings.agent_fleet.agents` — identyfikatory agentów floty
