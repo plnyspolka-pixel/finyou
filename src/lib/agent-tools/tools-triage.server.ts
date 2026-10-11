@@ -857,10 +857,9 @@ async function verifyIdentity(ctx: ToolContext): Promise<ToolResult> {
     subject_kind: subject.kind,
     first_name: subject.first_name,
     forma,
-    say:
-      forma === "brak"
-        ? "Dziękuję, tożsamość potwierdzona. Przechodzę do sprawy."
-        : `Dziękuję, ${forma === "Pani" ? "Pani" : "Panie"} ${subject.first_name}, tożsamość potwierdzona. Przechodzę do sprawy.`,
+    // Bez wołacza z imieniem („Panie Jan” to błąd, a odmiana imion w kodzie
+    // jest zawodna) — forma grzecznościowa idzie osobno w `forma`.
+    say: "Dziękuję, tożsamość potwierdzona. Przechodzę do sprawy.",
   });
 }
 

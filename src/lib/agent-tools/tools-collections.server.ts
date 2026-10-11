@@ -838,7 +838,7 @@ async function getPaymentInstructions(ctx: ToolContext): Promise<ToolResult> {
       rachunek_splaty_grupy: grupy,
       tytul_przelewu: tytulPrzelewu,
       odbiorca,
-      say: `Przelew na rachunek z umowy, odbiorca ${odbiorca}, numer: ${grupy.join(", ")}. W tytule: ${tytulPrzelewu}. Proszę powtórzyć numer, żebym mogła potwierdzić.`,
+      say: `Przelew na rachunek z umowy, odbiorca ${odbiorca}, numer: ${grupy.join(", ")}. W tytule: ${tytulPrzelewu}. Proszę powtórzyć numer — potwierdzę, czy się zgadza.`,
     },
   };
 }
