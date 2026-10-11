@@ -11,11 +11,37 @@ export const STUDIO_CLAUDE_MODEL = "claude-sonnet-5-5";
 
 export const isClaudeConfigured = (): boolean => !!(process.env.ANTHROPIC_API_KEY ?? "").trim();
 
+/**
+ * Wpis w `external_api_logs` (podgląd: MCP `list_external_api_calls`) — bez
+ * niego porażka projektanta znika w logach Workera, a rolka po cichu dostaje
+ * stare karty. Nigdy nie rzuca.
+ */
+export async function logClaudeCall(entry: {
+  label: string;
+  success: boolean;
+  error?: string | null;
+  ms?: number | null;
+}): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("external_api_logs").insert({
+      provider: "Anthropic",
+      query_type: entry.label,
+      query_value: STUDIO_CLAUDE_MODEL,
+      success: entry.success,
+      error_code: entry.error ? entry.error.slice(0, 500) : null,
+      response_time_ms: entry.ms ?? null,
+    });
+  } catch {
+    // Dziennik to diagnostyka — nie może psuć rolki.
+  }
+}
+
 export type ClaudeContent =
   | { type: "text"; text: string }
   | {
       type: "image";
-      source: { type: "base64"; media_type: string; data: string };
+      source: { type: "base64"; media_type: string; data: string } | { type: "url"; url: string };
     };
 
 type AnthropicResponse = {
@@ -23,7 +49,24 @@ type AnthropicResponse = {
   content: { type: string; text?: string }[];
 };
 
-export async function claudeJson<T>(args: {
+export async function claudeJson<T>(args: Parameters<typeof claudeJsonRaw>[0]): Promise<T> {
+  const t0 = Date.now();
+  try {
+    const out = await claudeJsonRaw<T>(args);
+    await logClaudeCall({ label: args.label, success: true, ms: Date.now() - t0 });
+    return out;
+  } catch (e) {
+    await logClaudeCall({
+      label: args.label,
+      success: false,
+      error: e instanceof Error ? e.message : String(e),
+      ms: Date.now() - t0,
+    });
+    throw e;
+  }
+}
+
+async function claudeJsonRaw<T>(args: {
   system: string;
   content: ClaudeContent[];
   schema: Record<string, unknown>;

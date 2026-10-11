@@ -221,7 +221,17 @@ async function designMotionForJob(
     return saved.length ? saved : null;
   }
   const { isMotionDesignerConfigured } = await import("./motion-designer.server");
-  if (!job.subtitle_url || !isMotionDesignerConfigured()) return null;
+  if (!job.subtitle_url || !isMotionDesignerConfigured()) {
+    const { logClaudeCall } = await import("./claude-json.server");
+    await logClaudeCall({
+      label: "Projektant",
+      success: false,
+      error: !job.subtitle_url
+        ? `pominięty (${job.id}): brak pliku SRT`
+        : `pominięty (${job.id}): brak ANTHROPIC_API_KEY w środowisku aplikacji`,
+    });
+    return null;
+  }
   try {
     const elements = await designAndSaveMotion(job, topic);
     return elements.length ? elements : null;

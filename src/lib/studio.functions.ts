@@ -1086,6 +1086,9 @@ export type StudioBrollAsset = {
   use_count: number;
   last_used_at: string | null;
   created_at: string;
+  media_type: "image" | "video";
+  thumbnail_url: string | null;
+  duration_seconds: number | null;
 };
 
 export const listStudioBroll = createServerFn({ method: "GET" })
@@ -1124,44 +1127,52 @@ export const addStudioBroll = createServerFn({ method: "POST" })
     return { ok: true, id: asset.id, media_url: asset.media_url };
   });
 
-// Upload pliku z dysku (panel: przeciągnij i upuść, wiele plików — po jednym
-// na wywołanie). Bez tagów grafikę opisuje AI (tytuł sceny, tagi EN/PL).
-export const uploadStudioBroll = createServerFn({ method: "POST" })
+// Upload z dysku (panel): plik idzie z przeglądarki prosto do Storage po
+// podpisanym linku (bez limitu ciała żądania Workera — klipy i duże zdjęcia),
+// serwer rezerwuje ścieżkę i potem wpisuje plik do banku. Bez tagów materiał
+// opisuje AI (grafikę wprost, klip po kadrze podglądowym z przeglądarki).
+export const createStudioBrollUpload = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => {
-    if (!(input instanceof FormData)) throw new Error("Oczekiwano FormData");
-    const file = input.get("file");
-    if (!(file instanceof File)) throw new Error("Brak pliku");
-    const str = (k: string) => {
-      const v = input.get(k);
-      return typeof v === "string" ? v : "";
-    };
-    return { file, title: str("title"), tags: str("tags") };
-  })
+  .inputValidator((d: { name: string; mime: string; size: number; thumbnail?: boolean }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
-    const { addBrollFromBytes } = await import("./studio-broll.server");
-    const tags = data.tags
+    const { createBrollUploadSlot } = await import("./studio-broll.server");
+    return createBrollUploadSlot(data);
+  });
+
+export const registerStudioBroll = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      path: string;
+      mime: string;
+      name: string;
+      title?: string;
+      tags?: string;
+      thumbnailPath?: string | null;
+      durationSeconds?: number | null;
+      orientation?: string | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { registerUploadedBroll } = await import("./studio-broll.server");
+    const tags = (data.tags ?? "")
       .split(",")
       .map((t) => t.trim().toLowerCase())
       .filter(Boolean);
-    const asset = await addBrollFromBytes({
-      bytes: new Uint8Array(await data.file.arrayBuffer()),
-      mime: data.file.type || "",
-      title: data.title.trim() || undefined,
+    const asset = await registerUploadedBroll({
+      path: data.path,
+      mime: data.mime,
+      name: data.name,
+      title: data.title?.trim() || undefined,
       tags,
-      source: "upload",
-      sourceQuery: data.title.trim(),
+      thumbnailPath: data.thumbnailPath ?? null,
+      durationSeconds: data.durationSeconds ?? null,
+      orientation: data.orientation ?? null,
       userId: context.userId,
-      autoDescribe: !tags.length,
     });
-    return {
-      ok: true,
-      id: asset.id,
-      media_url: asset.media_url,
-      title: asset.title,
-      tags: asset.tags,
-    };
+    return { ok: true, id: asset.id, title: asset.title, media_type: asset.media_type };
   });
 
 export const setStudioBrollActive = createServerFn({ method: "POST" })

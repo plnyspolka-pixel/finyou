@@ -475,6 +475,51 @@
 }
 .fy-nav-drop-panel a:last-child { border-radius: 0 0 10px 10px; }
 .fy-nav-drop-panel a:hover { color: var(--accent); background: rgba(20, 30, 66, 0.97); }
+/* menu „Klient”: dwie kolumny z nagłówkami grup w jednym panelu */
+.fy-nav-drop-panel--groups { left: 0; transform: none; }
+.fy-nav-drop-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(15rem, auto));
+  gap: 0.4rem 1rem;
+  padding: 0.8rem;
+  background: rgba(9, 14, 38, 0.97);
+  border: 1px solid rgba(84, 124, 214, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.fy-nav-drop-panel--groups a,
+.fy-nav-drop-panel--groups a:first-child,
+.fy-nav-drop-panel--groups a:last-child {
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.5rem 0.7rem;
+}
+.fy-nav-drop-panel--groups a:hover { background: rgba(20, 30, 66, 0.97); }
+.fy-nav-drop-label {
+  padding: 0.3rem 0.7rem 0.4rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+/* menu mobilne: rozwijana lista produktów pod „Klient” */
+.fy-nav-mobile-sub { border-bottom: 1px solid var(--border); }
+.fy-nav-mobile-sub summary {
+  padding: 0.55rem 0 0.55rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.fy-nav-mobile-sub a {
+  display: block;
+  padding: 0.5rem 0 0.5rem 2rem;
+  font-size: 0.84rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
 
 /* ——— stopka: ikony social mediów (okrągłe przyciski w kolumnie marki) ——— */
 .fy-marketing .fy-social a {
