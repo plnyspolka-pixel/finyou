@@ -46,5 +46,7 @@ describe("słownik nazw i teksty inwestora", () => {
     const text = s.replace(/"okazja"|\bokazja:/g, "");
     expect(text).not.toMatch(/[Oo]kazj[aeiy]\b/);
     expect(s).not.toMatch(/plnyspolka/);
+    // Formuła cecha → zaleta → korzyść to szkielet pisania, nie treść strony.
+    expect(s).not.toMatch(/Cecha\s*→|Każdą funkcję opisujemy/);
   });
 });

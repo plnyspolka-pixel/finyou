@@ -1,8 +1,10 @@
-// Podstrony modułów Klubu Inwestorów: /dla-inwestora/<moduł> (Analityk AI,
-// Windykator AI, AML/compliance, Kancelaria AI, sieć sprzedaży). Trasa
-// nie jest zagnieżdżona w /dla-inwestora (podkreślnik w nazwie pliku) — landing
-// nie renderuje <Outlet />. Treść i kolejność modułów: components/marketing/
+// Podstrony modułów Klubu Inwestorów: /dla-inwestora/<moduł> (sieć sprzedaży,
+// Analityk AI, Kancelaria AI, AML/compliance, Windykator AI). Trasa nie jest
+// zagnieżdżona w /dla-inwestora (podkreślnik w nazwie pliku) — landing nie
+// renderuje <Outlet />. Treść i kolejność modułów: components/marketing/
 // investor-modules.ts (ten sam plik zasila sub-menu "Inwestor" i karty na landingu).
+// Układ: hero → „Co zyskujesz” (karty funkcji) → [skala A–E] → kroki z notą
+// prawną → pozostałe moduły (kompaktowo) → CTA do cennika.
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -12,20 +14,20 @@ import {
   ComplianceNote,
   CTASection,
 } from "@/components/marketing/sections";
-import { MktBadge, MktButton } from "@/components/marketing/primitives";
+import { MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
-import {
-  FabLegend,
-  FabList,
-  GradeScale,
-  ModuleCards,
-} from "@/components/marketing/investor-module-ui";
+import { FeatureCards, GradeScale, ModuleCards } from "@/components/marketing/investor-module-ui";
 import {
   INVESTOR_MODULES,
   investorModuleBySlug,
   investorModulePath,
   type InvestorModule,
 } from "@/components/marketing/investor-modules";
+import {
+  plnLabel,
+  SUBSCRIPTION_MONTHLY_PLN,
+  SUBSCRIPTION_YEARLY_PLN,
+} from "@/lib/investor-plan/plans";
 import { breadcrumbLd, SITE_URL } from "@/lib/seo/company";
 
 const PRICING = "/dla-inwestora#cennik";
@@ -89,15 +91,9 @@ function InvestorModulePage() {
     <MarketingShell page="inwestorModul" sticky={{ label: "Dołącz do klubu", href: PRICING }}>
       <ModuleHero m={m} />
 
-      <Section id="cecha-zaleta-korzysc">
-        <SectionHead
-          center
-          eyebrow="Cecha → zaleta → korzyść"
-          title={`Co daje Ci ${m.name}`}
-          sub="Każdą funkcję opisujemy w trzech krokach: czym jest, co robi i co z tego masz."
-        />
-        <FabLegend />
-        <FabList rows={m.fab} />
+      <Section id="co-zyskujesz">
+        <SectionHead center eyebrow="Co zyskujesz" title={m.featuresTitle} />
+        <FeatureCards rows={m.fab} />
       </Section>
 
       {m.gradeScale && (
@@ -105,8 +101,8 @@ function InvestorModulePage() {
           <SectionHead
             center
             eyebrow="Skala A–E"
-            title="Ocena inwestycyjna w skali A–E"
-            sub="Każdy Projekt dostaje wynik od 0 do 100 punktów i klasę od A do E. Im wyższy wynik, tym niższe ryzyko."
+            title="Jak czytać klasę ryzyka"
+            sub="Każda analiza kończy się wynikiem od 0 do 100 punktów i klasą od A do E. Im wyższy wynik, tym niższe ryzyko."
           />
           <GradeScale components={m.gradeScale.components} caps={m.gradeScale.caps} />
         </Section>
@@ -121,21 +117,16 @@ function InvestorModulePage() {
       </Section>
 
       <Section id="pozostale-moduly">
-        <SectionHead
-          center
-          eyebrow="Moduły klubu"
-          title="Zobacz pozostałe moduły"
-          sub="Wszystkie działają w jednym panelu inwestora, w ramach jednego abonamentu."
-        />
-        <div style={{ marginTop: "2.5rem" }}>
-          <ModuleCards modules={others} cols={4} />
+        <SectionHead center title="Pozostałe moduły" />
+        <div style={{ marginTop: "2rem" }}>
+          <ModuleCards modules={others} compact />
         </div>
       </Section>
 
       <CTASection
         single
-        title="Wszystkie moduły w jednym abonamencie Klubu Inwestorów Hipotecznych."
-        sub="Bez opłat za Projekt i bez opłaty sukcesu. Sprawdź cennik i dołącz do klubu."
+        title="Wszystkie moduły w jednym abonamencie"
+        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — bez opłat za Projekt i bez prowizji od Twojego zysku.`}
         buttons={[{ label: "Dołącz do klubu", href: PRICING }]}
       />
     </MarketingShell>
@@ -176,10 +167,8 @@ function ModuleHero({ m }: { m: InvestorModule }) {
               {m.name}
             </span>
           </nav>
-          <MktBadge variant="secondary">Moduł Klubu Inwestorów Hipotecznych</MktBadge>
           <h1
             style={{
-              marginTop: "1rem",
               fontSize: "clamp(1.9rem, 4.4vw, 3.2rem)",
               fontWeight: 900,
               lineHeight: 1.06,
@@ -247,7 +236,7 @@ function ModuleHero({ m }: { m: InvestorModule }) {
             <MktButton
               variant="outline"
               size="xl"
-              href="#cecha-zaleta-korzysc"
+              href="#co-zyskujesz"
               style={{
                 maxWidth: "100%",
                 background: "rgba(255,255,255,.06)",

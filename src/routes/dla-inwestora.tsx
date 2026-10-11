@@ -13,7 +13,6 @@ import {
 } from "@/components/marketing/sections";
 import { MktBadge, MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
-import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import {
@@ -30,6 +29,7 @@ import { ExampleProjectsSection } from "@/components/landing/example-projects-se
 import { ModuleCards } from "@/components/marketing/investor-module-ui";
 import { INVESTOR_MODULES } from "@/components/marketing/investor-modules";
 import { faqPageLd } from "@/lib/seo/company";
+import { TERMS } from "@/lib/labels";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
 import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
@@ -56,11 +56,12 @@ const SHOW: Record<
   | "akademia"
   | "ochrona"
   | "windykacja"
-  | "moduly",
+  | "moduly"
+  | "prezentacja",
   boolean
 > = {
   zakladki: false, // pasek zakładek zamiast sekcji jedna pod drugą
-  kalkulator: true, // pełny kalkulator inwestora pod hero
+  kalkulator: true, // podgląd zysku (kalkulator w trybie marketingPreview) pod hero
   oferty: false, // przykładowe projekty
   pipeline: false, // oś dziewięciu kroków onboardingu
   system: false, // pokaz slajdów „Inteligentny system"
@@ -68,18 +69,18 @@ const SHOW: Record<
   ochrona: false, // pokaz slajdów „7 warstw ochrony"
   windykacja: false, // pokaz slajdów windykacji AI
   moduly: true, // karty modułów prowadzące do podstron /dla-inwestora/<moduł>
+  prezentacja: false, // „Kompleksowa prezentacja” pod modułami — wrócić, gdy film dostanie kadr tytułowy (poster)
 };
 
-// Filmy w hero. Pierwszy (nasza prezentacja ze Storage) po prawej w rzędzie 1, drugi piętro niżej po
-// lewej — odtwarzany z naszego pliku w Storage (src/lib/landing-video.ts).
+// Film w hero — prezenter z naszego pliku w Storage (src/lib/landing-video.ts).
 // Dopóki kopii nie ma (panel /admin/materialy → „Film na landingu inwestora"),
-// zapasowo gra odtwarzacz HeyGen (bez reakcji i komentarzy). Oba filmy mają tę
-// samą ramkę 16:9 i równe kolumny siatki (klasa fy-hero-videos w styles.css),
-// więc są identycznej wielkości — na desktopie i na telefonie.
-const HERO_VIDEO_URL =
+// zapasowo gra odtwarzacz HeyGen (bez reakcji i komentarzy). Długa
+// „Kompleksowa prezentacja” nie ma kadru tytułowego (pokazywała czarne pole
+// 0:00), więc jest schowana za SHOW.prezentacja.
+const PRESENTATION_VIDEO_URL =
   "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/marketing-materials/Finance You - Kompleksowa Prezentacja (Merged)_1080p_caption (2).mp4";
-const HERO_VIDEO_TITLE = "Klub Inwestorów Hipotecznych";
-const VIDEO2_TITLE = LANDING_INVESTOR_VIDEO.title;
+const PRESENTATION_VIDEO_TITLE = "Finance You — kompleksowa prezentacja";
+const HERO_VIDEO_TITLE = LANDING_INVESTOR_VIDEO.title;
 
 // Adres kopii filmu w Storage — null, gdy kopii jeszcze nie ma albo Storage
 // nie odpowiada (wtedy odtwarzacz HeyGen). Odporne na brak środowiska w SSR.
@@ -174,12 +175,13 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       {
         name: "description",
-        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
+        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz Projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
       },
-      { property: "og:title", content: "Dla inwestorów — Finance You" },
+      { property: "og:title", content: "Klub Inwestorów Hipotecznych | Finance You" },
       {
         property: "og:description",
-        content: "Klub Inwestorów Hipotecznych — edukacja, dokumenty, AI i sprawy klientów.",
+        content:
+          "Pożyczki dla firm zabezpieczone hipoteką: Projekty z całej Polski, ocena ryzyka A–E w ok. 15 minut, umowy, AML i windykacja — w jednym panelu.",
       },
       { property: "og:url", content: "https://financeyou.pl/dla-inwestora" },
       { property: "og:type", content: "website" },
@@ -195,72 +197,40 @@ export const Route = createFileRoute("/dla-inwestora")({
   component: InvestorLanding,
 });
 
-// Jeden dział korzyści — bez podziału na pakiety. Tytuł karty = co inwestor
-// zyskuje, opis = jak to dostaje. Inwestor płaci abonament (ceny w
-// lib/investor-plan/plans.ts); Prowizję od Pożyczkobiorcy płaci klient.
-// Fakty (rezerwacja, Karta Leada, raporty) muszą zgadzać się z FAQ_ALL niżej.
-// Kolejność: od kosztów i Zlecenia, przez weryfikację i umowy, po spłatę,
-// windykację i wiedzę.
+// Korzyści modelu współpracy — tylko to, czego nie opisują karty modułów ani
+// cennik: dopływ Projektów, rezerwacja, kontakt z klientem, harmonogram,
+// formalności i model kosztów. Bez cen (są w cenniku) i bez list funkcji
+// modułów. Fakty (rezerwacja, Karta Leada) muszą zgadzać się z FAQ_ALL niżej.
 const BENEFITS: FeatureItemData[] = [
-  {
-    icon: "loan",
-    t: "Stały abonament zamiast prowizji od zysku",
-    d: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej) — bez opłat za Projekt, opłaty sukcesu i podpinania karty kredytowej. Prowizję Finance You płaci klient.`,
-  },
   {
     icon: "access",
     t: "Projekty trafiają do Ciebie",
-    d: "Składasz Zlecenie z maksymalną kwotą, a my przedstawiamy Projekty mieszczące się w tej kwocie.",
-  },
-  {
-    icon: "shieldcheck",
-    t: "Weryfikację przechodzisz raz, zdalnie",
-    d: "KYC z dokumentem i selfie oraz screening sankcji/PEP w jednym procesie — bez wizyt i papierów.",
-  },
-  {
-    icon: "dossier",
-    t: "Umowy gotowe bez przepisywania",
-    d: "System wypełnia umowy Twoimi zweryfikowanymi danymi, a generator składa umowę pożyczki z uzgodnionych warunków.",
-  },
-  {
-    icon: "knowledge",
-    t: "Decyzja na podstawie faktów",
-    d: "Ocena ryzyka w skali A–E i wycena w 15 minut przy każdym Projekcie — ponad 400 punktów danych i raport do pobrania w PDF.",
+    d: "W Zleceniu podajesz tylko maksymalną kwotę, a my przedstawiamy Ci Projekty firm z całej Polski, które się w niej mieszczą. Nie szukasz klientów sam.",
   },
   {
     icon: "procedures",
-    t: "Czas na decyzję tylko dla Ciebie",
-    d: "Projekt jest zarezerwowany dla Ciebie przez 24 h, z możliwością przedłużenia o 12 h — w tym czasie nie trafia do innych inwestorów.",
+    t: "Decydujesz bez pośpiechu",
+    d: "Projekt rezerwujesz na 24 h i raz możesz przedłużyć rezerwację o 12 h. W tym czasie nie trafia do innych inwestorów.",
   },
   {
     icon: "chat",
-    t: "Rozmawiasz bezpośrednio z klientem",
-    d: "Dane kontaktowe dostajesz po akceptacji Karty Leada — bez pośredników w rozmowie.",
+    t: "Rozmawiasz z klientem bezpośrednio",
+    d: "Po akceptacji Karty Leada dostajesz dane kontaktowe klienta. Warunki negocjujesz sam, bez pośrednika w rozmowie.",
   },
   {
     icon: "status",
-    t: "Spłaty ustalone z góry",
-    d: "Harmonogram zaakceptowany przez klienta znasz, zanim wyłożysz kapitał.",
+    t: "Spłaty znasz z góry",
+    d: "Harmonogram zaakceptowany przez klienta widzisz, zanim wyłożysz kapitał. Klient spłaca bezpośrednio na Twój rachunek.",
   },
   {
-    icon: "kalkulator",
-    t: "Warunki zgodne z prawem",
-    d: "Kalkulator compliance pilnuje odsetek maksymalnych i limitów kosztów, zanim złożysz propozycję.",
+    icon: "shieldcheck",
+    t: "Formalności raz i zdalnie",
+    d: "Weryfikację tożsamości przechodzisz online, a umowy z Finance You system wypełnia Twoimi danymi. Bez wizyt i papierów.",
   },
   {
-    icon: "complianceAml",
-    t: "Obowiązki AML pod kontrolą",
-    d: "Wsparcie raportowania do GIIF, screening list sankcyjnych i rejestr czynności ponadprogowych w jednym module.",
-  },
-  {
-    icon: "aibrain",
-    t: "Odzyskujesz należności krok po kroku",
-    d: "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
-  },
-  {
-    icon: "training",
-    t: "Wiesz, jak inwestować od A do Z",
-    d: "Akademia inwestora — siedem modułów od strategii po windykację.",
+    icon: "loan",
+    t: "Odsetki i prowizja w całości dla Ciebie",
+    d: "Płacisz stały abonament, bez opłat za Projekt i bez opłaty sukcesu. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości trafiają do Ciebie.",
   },
 ];
 
@@ -413,83 +383,52 @@ const WINDYKACJA: TwoColSlide[] = [
   },
 ];
 
-const AI: FeatureItemData[] = [
-  {
-    icon: "updates",
-    t: "Przypomnienia",
-    d: "Automatyczne przypomnienia o terminach i działaniach.",
-  },
-  { icon: "chat", t: "SMS / e-mail / telefon", d: "Powtarzalna komunikacja w jednym miejscu." },
-  {
-    icon: "documents",
-    t: "Wezwania i rejestr kontaktu",
-    d: "Generowanie komunikacji i pełna historia.",
-  },
-  {
-    icon: "status",
-    t: "Monitoring spłat",
-    d: "Bieżący status i porządkowanie działań przedsądowych.",
-  },
-];
-
-const COMPLIANCE: { icon: Icon3DName; t: string }[] = [
-  { icon: "complianceAml", t: "AML" },
-  { icon: "complianceRodo", t: "RODO" },
-  { icon: "complianceDocs", t: "Dokumentacja" },
-  { icon: "complianceProc", t: "Procedury" },
-  { icon: "complianceRegistry", t: "Rejestry" },
-  { icon: "complianceProcess", t: "Zgodność procesu" },
-];
-
-// FAQ inwestora — 10 podstawowych pytań, krótkie odpowiedzi bez rozwijania.
+// FAQ inwestora — 9 podstawowych pytań, krótkie odpowiedzi bez rozwijania.
 // Finance You to zestaw narzędzi i szkolenie dla inwestora, nie platforma.
 // Fakty (opłaty, prowizja klienta, LTV, odsetki) muszą zgadzać się z Umową
 // ramową v7 (docs/legal/paczka-inwestor-v7/, docs/cennik-inwestora.md).
+// Bez stawek, które zmienia RPP (odsetki maksymalne pokazuje kalkulator).
 // Treść trafia także do JSON-LD FAQPage.
 const FAQ_ALL: FAQItem[] = [
   {
     q: "Czym jest Finance You dla inwestora?",
-    a: "Zestawem narzędzi i szkoleniem dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. Dostajesz dopasowane Projekty, raporty, dokumenty, obsługę spłat i windykacji oraz Akademię inwestora. Projekty pochodzą z ogólnopolskiej sieci sprzedaży Finance You — na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego.",
+    a: "To szkolenie i zestaw narzędzi dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. W abonamencie dostajesz Analityka AI, Kancelarię AI, moduł AML, Windykatora AI i Akademię inwestora, a po akceptacji bezpłatnych umów z Finance You — Projekty dopasowane do Twojego Zlecenia. Projekty pochodzą z ogólnopolskiej sieci sprzedaży: na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości.",
   },
   {
     q: "Ile to kosztuje?",
     a: `Abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. Bez opłat za Projekt i bez opłaty sukcesu. ${SUBSCRIPTION_PAYMENT_SENTENCE}`,
   },
   {
-    q: "Na czym zarabiam?",
-    a: "Na odsetkach (do wysokości odsetek maksymalnych, obecnie 14,5% rocznie) i na prowizji inwestora spłacanej w ratach.",
-  },
-  {
-    q: "Kto płaci prowizję Finance You?",
-    a: "Klient — 5% Kwoty Udzielonej, nie mniej niż 5 000 zł, potrącane z wypłaty. To nie jest koszt inwestora.",
+    q: "Na czym zarabiam i kto płaci prowizję Finance You?",
+    a: `Na odsetkach — do wysokości odsetek maksymalnych, których aktualną stawkę pokazuje kalkulator — i na swojej prowizji, którą klient spłaca w ratach. Prowizję Finance You płaci klient (${TERMS.fyCommissionRule}), więc nie jest to Twój koszt.`,
   },
   {
     q: "Jak zabezpieczona jest pożyczka?",
-    a: "Hipoteką na nieruchomości wpisaną na Twoją rzecz, przy LTV do 60%. Dodatkowo m.in. oświadczenie o poddaniu się egzekucji (art. 777 k.p.c.).",
+    a: "Hipoteką na nieruchomości wpisaną na Twoją rzecz, przy LTV do 60%, a dodatkowo m.in. oświadczeniem o poddaniu się egzekucji (art. 777 k.p.c.).",
   },
   {
     q: "Czy zysk jest gwarantowany?",
-    a: "Nie. Hipoteka ogranicza ryzyko, ale go nie eliminuje. Decyzję o finansowaniu podejmujesz samodzielnie.",
+    a: "Nie. Hipoteka ogranicza ryzyko, ale go nie eliminuje — dlatego przed decyzją dostajesz analizę zabezpieczenia i klasę ryzyka od A do E. Decyzję o finansowaniu podejmujesz samodzielnie.",
   },
   {
     q: "Kto jest stroną umowy pożyczki?",
-    a: "Ty i klient. Finance You nie udziela pożyczek i nie przechowuje Twoich pieniędzy — klient spłaca bezpośrednio na Twój rachunek.",
+    a: "Ty i klient — firma, która pożycza na cel związany z działalnością gospodarczą. Finance You nie udziela pożyczek i nie przechowuje Twoich pieniędzy, a klient spłaca bezpośrednio na Twój rachunek.",
   },
   {
     q: "Czy potrzebuję doświadczenia?",
-    a: "Nie. Akademia inwestora to 15 lat doświadczenia w jednym miejscu — uczysz się od podstaw, a nie na własnych błędach.",
+    a: "Nie musisz go mieć na start. Akademia inwestora prowadzi Cię od podstaw: od strategii i prawa, przez analizę nieruchomości i klienta, po case study i windykację. Każda pożyczka wiąże się jednak z ryzykiem, a decyzję podejmujesz samodzielnie.",
   },
   {
     q: "Jak zacząć?",
-    a: "Zakładasz konto i opłacasz abonament — to otwiera panel. Żeby dostawać Projekty, przechodzisz zdalną weryfikację tożsamości, akceptujesz umowy z Finance You i składasz Zlecenie z maksymalną kwotą finansowania.",
+    a: "Wybierasz abonament i płacisz — konto i panel otwierają się po płatności. Potem przechodzisz zdalną weryfikację tożsamości (dokument i selfie), akceptujesz bezpłatne umowy z Finance You i składasz Zlecenie z maksymalną kwotą. Od tej chwili szukamy dla Ciebie Projektów.",
   },
   {
     q: "Co jeśli klient nie płaci?",
-    a: "Windykator AI: wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Pisma wystawiamy w Twoim imieniu, a każdą decyzję podejmujesz Ty.",
+    a: "Uruchamiasz Windykatora AI. Każdą procedurę zaczynasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. System przygotowuje pisma w Twoim imieniu, a każdą decyzję podejmujesz Ty.",
   },
 ];
 
-// Duży złoty przycisk „Dołącz do klubu” — jedyny CTA w hero, prowadzi do
+// Duży złoty przycisk „Dołącz do klubu” — główny CTA strony, prowadzi do
 // cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
 // albo roczny), potem zakłada konto. W one-pagerze to zwykła kotwica
 // sekcji; w układzie zakładek przewijanie do zakładki obsługuje InvestorTabs
@@ -512,12 +451,18 @@ function JoinClubButton() {
   );
 }
 
+const HERO_POINTS = [
+  "Ponad 400 punktów danych, klasa ryzyka A–E i raport PDF",
+  "Rezerwacja Projektu na 24 h (+12 h)",
+  "Stały abonament, bez prowizji od Twojego zysku",
+];
+
 function Hero({ video }: { video: LandingVideoInfo | null }) {
   return (
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
       <div aria-hidden className="fy-hero-fx" />
       <div
-        className="fy-hero-grid fy-hero-videos"
+        className="fy-hero-grid"
         style={{
           position: "relative",
           maxWidth: "80rem",
@@ -536,16 +481,16 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               letterSpacing: "-0.025em",
             }}
           >
-            Dołącz do{" "}
+            Inwestuj w pożyczki dla firm{" "}
             <span
               style={{
-                background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
+                background: "linear-gradient(95deg,#f0c667,#f6dc9c 40%,#d4a03a)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
               }}
             >
-              Klubu Inwestorów Hipotecznych.
+              zabezpieczone hipoteką.
             </span>
           </h1>
           <p
@@ -557,32 +502,49 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Uzyskaj dostęp do edukacji, dokumentów, procedur, narzędzi AI i spraw klientów
-            szukających finansowania pod zabezpieczenie nieruchomości.
+            Podajesz w Zleceniu maksymalną kwotę, a my przedstawiamy Ci Projekty firm z całej
+            Polski. Ocenę ryzyka i wycenę nieruchomości masz w ok. 15 minut, a umowy, AML i
+            windykację prowadzisz w jednym panelu.
           </p>
+          <ul
+            style={{
+              marginTop: "1.2rem",
+              padding: 0,
+              listStyle: "none",
+              display: "grid",
+              gap: "0.5rem",
+            }}
+          >
+            {HERO_POINTS.map((h) => (
+              <li
+                key={h}
+                style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.95rem" }}
+              >
+                <BrandIcon name="check" size={18} />
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <JoinClubButton />
+            {SHOW.kalkulator && (
+              <MktButton
+                variant="outline"
+                size="cta"
+                href="#kalkulator"
+                style={{
+                  height: "4rem",
+                  maxWidth: "100%",
+                  background: "rgba(255,255,255,.06)",
+                  borderColor: "rgba(255,255,255,.28)",
+                  color: "#fff",
+                }}
+              >
+                Policz swój zysk
+              </MktButton>
+            )}
           </div>
         </div>
-        <HeroFrame glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))">
-          <video
-            src={encodeURI(HERO_VIDEO_URL)}
-            controls
-            playsInline
-            preload="metadata"
-            aria-label={HERO_VIDEO_TITLE}
-            style={{
-              width: "100%",
-              aspectRatio: "16 / 9",
-              display: "block",
-              background: "#05081c",
-            }}
-          />
-        </HeroFrame>
-
-        {/* Rząd 2 siatki hero: drugi film piętro niżej niż pierwszy, po lewej stronie
-            (z naszego pliku; zapasowo HeyGen), po prawej krótki opis i ten sam złoty
-            przycisk „Dołącz do klubu” prowadzący do cennika. */}
         <HeroFrame glow="linear-gradient(135deg, oklch(0.83 0.14 88 / .28), oklch(0.65 0.13 235 / .25))">
           {video ? (
             <video
@@ -591,7 +553,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               controls
               playsInline
               preload="metadata"
-              aria-label={VIDEO2_TITLE}
+              aria-label={HERO_VIDEO_TITLE}
               style={{
                 width: "100%",
                 aspectRatio: "16 / 9",
@@ -600,41 +562,37 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               }}
             />
           ) : (
-            <HeroIframe src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL} title={VIDEO2_TITLE} />
+            <HeroIframe src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL} title={HERO_VIDEO_TITLE} />
           )}
         </HeroFrame>
-        <div>
-          <Eyebrow tone="gold">Film 2</Eyebrow>
-          <h2
-            style={{
-              marginTop: "0.6rem",
-              fontSize: "clamp(1.45rem, 2.6vw, 2rem)",
-              fontWeight: 800,
-              lineHeight: 1.12,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Twoja droga do prywatnego finansowania nieruchomości.
-          </h2>
-          <p
-            style={{
-              marginTop: "0.9rem",
-              maxWidth: "32rem",
-              fontSize: "1rem",
-              lineHeight: 1.6,
-              color: "rgba(255,255,255,.8)",
-            }}
-          >
-            {SHOW.kalkulator
-              ? "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You. Bezpośrednio poniżej masz pełną wersję kalkulatora inwestora — policz zysk, raty, limity ustawowe i harmonogram spłat na własnych parametrach."
-              : "Obejrzyj, jak wygląda prywatne finansowanie nieruchomości w Finance You, a poniżej sprawdź, co zyskujesz jako inwestor i ile kosztuje abonament."}
-          </p>
-          <div style={{ marginTop: "1.4rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
-            <JoinClubButton />
-          </div>
-        </div>
       </div>
     </section>
+  );
+}
+
+// Długa prezentacja (SHOW.prezentacja) — osobny rząd pod modułami.
+function PresentationSection() {
+  return (
+    <Section id="prezentacja">
+      <SectionHead center eyebrow="Prezentacja" title="Finance You w pigułce" />
+      <div style={{ maxWidth: "56rem", margin: "2.5rem auto 0" }}>
+        <HeroFrame glow="linear-gradient(135deg, oklch(0.65 0.13 235 / .3), oklch(0.40 0.25 268 / .25))">
+          <video
+            src={encodeURI(PRESENTATION_VIDEO_URL)}
+            controls
+            playsInline
+            preload="metadata"
+            aria-label={PRESENTATION_VIDEO_TITLE}
+            style={{
+              width: "100%",
+              aspectRatio: "16 / 9",
+              display: "block",
+              background: "#05081c",
+            }}
+          />
+        </HeroFrame>
+      </div>
+    </Section>
   );
 }
 
@@ -680,41 +638,60 @@ function HeroIframe({ src, title }: { src: string; title: string }) {
   );
 }
 
-// Pełna wersja kalkulatora inwestora — ten sam komponent i ten sam tryb
-// (investorGuidance), co w panelu /inwestor/kalkulator: stopy NBP, limity
-// odsetek i MPKK, zysk ponad inflację, analiza zabezpieczenia, próg AML,
-// harmonogram, PDF i CSV. Bez dwóch przycisków wymagających konta („Wyślij do
-// kreatora", „Wyślij do klienta"). Sekcja stoi pod filmami, przed zakładkami.
-// Nad kalkulatorem stoi jedno duże pytanie zamiast nadtytułu, tytułu i opisu
-// (złoty gradient jak w nagłówku hero).
+// Publiczny podgląd zysku — ten sam komponent co w panelu, w trybie
+// marketingPreview: cztery suwaki i trzy wyniki (wykładasz / klient spłaca /
+// Twój zysk), bez stóp NBP, alertów prawnych, harmonogramu i eksportu.
+// initialMaxPayment={0} = zwykła rata annuitetowa (bez ukrytej raty balonowej).
+// Pełny kalkulator (harmonogram, limity, PDF) jest powodem, żeby dołączyć.
 function CalculatorSection() {
   return (
     <Section id="kalkulator">
-      <h2
+      <SectionHead
+        center
+        title={
+          <span
+            style={{
+              background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            Policz, ile możesz zarobić na jednej pożyczce
+          </span>
+        }
+        sub="Ustaw kwotę, okres, oprocentowanie i swoją prowizję — wynik przeliczy się od razu."
+      />
+      <div style={{ marginTop: "2.5rem" }}>
+        <LoanCalculator marketingPreview initialMaxPayment={0} />
+      </div>
+      <div
         style={{
-          margin: "0 auto",
-          maxWidth: "60rem",
+          marginTop: "2rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1.1rem",
           textAlign: "center",
-          fontSize: "clamp(2.4rem, 6vw, 4.5rem)",
-          fontWeight: 900,
-          lineHeight: 1.05,
-          letterSpacing: "-0.03em",
-          textTransform: "uppercase",
-          background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
-          WebkitBackgroundClip: "text",
-          backgroundClip: "text",
-          color: "transparent",
         }}
       >
-        Ile można na tym zarobić?
-      </h2>
-      <div style={{ marginTop: "2.5rem" }}>
-        <LoanCalculator investorGuidance hideAccountActions />
+        <p
+          style={{
+            maxWidth: "40rem",
+            fontSize: "1rem",
+            lineHeight: 1.6,
+            color: "var(--muted-foreground)",
+          }}
+        >
+          W klubie ten sam kalkulator pokaże pełny harmonogram rat, ostrzeże przed przekroczeniem
+          odsetek maksymalnych i podpowie kwotę hipoteki. Wynik pobierzesz w PDF.
+        </p>
+        <JoinClubButton />
       </div>
       <ComplianceNote style={{ marginTop: "2rem" }}>
-        Wyliczenia mają charakter poglądowy i nie stanowią oferty ani rekomendacji inwestycyjnej.
-        Ostateczne warunki wynikają z umowy pożyczki. Inwestowanie wiąże się z ryzykiem utraty
-        części lub całości kapitału.
+        Wyliczenie jest przykładem poglądowym i nie uwzględnia podatku dochodowego. Nie jest ofertą
+        ani poradą inwestycyjną lub prawną — warunki określa umowa pożyczki między Tobą a klientem.
+        Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału.
       </ComplianceNote>
     </Section>
   );
@@ -925,16 +902,16 @@ function WindykacjaSection() {
   );
 }
 
-// Karty modułów — każda prowadzi do podstrony z opisem cecha → zaleta → korzyść
-// (/dla-inwestora/<moduł>; te same pozycje są w sub-menu "Inwestor").
+// Karty modułów w kolejności cyklu pożyczki — każda prowadzi do podstrony
+// /dla-inwestora/<moduł> (te same pozycje są w sub-menu "Inwestor").
 function ModulesSection() {
   return (
     <Section id="moduly" tint>
       <SectionHead
         center
         eyebrow="Moduły klubu"
-        title="Pięć modułów w jednym abonamencie"
-        sub="Analiza zabezpieczenia, windykacja, AML, dokumenty i sieć sprzedaży. Wybierz moduł i zobacz, co dokładnie dostajesz."
+        title="Pięć modułów w jednym panelu"
+        sub="Na każdym etapie pożyczki — od Projektu po spłatę — masz pod ręką właściwe narzędzie."
       />
       <div style={{ marginTop: "2.5rem" }}>
         <ModuleCards modules={INVESTOR_MODULES} cols={3} />
@@ -946,21 +923,10 @@ function ModulesSection() {
 function CennikSection({ products }: { products: AccessProduct[] }) {
   return (
     <Section id="cennik" tint>
-      <SectionHead
-        center
-        eyebrow="Cennik"
-        title="Jeden abonament, pełny dostęp"
-        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przesuń suwak i zobacz, ile oszczędzasz przy płatności rocznej (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu). Bez konieczności podpinania karty kredytowej.`}
-      />
+      <SectionHead center eyebrow="Cennik" title="Jeden abonament, pełny dostęp" />
       <div style={{ marginTop: "2.5rem" }}>
         <InvestorPricing products={products} />
       </div>
-      <ComplianceNote style={{ marginTop: "2rem" }}>
-        Ceny brutto (PLN). {SUBSCRIPTION_PAYMENT_SENTENCE} Prowizję Finance You płaci klient: 5%
-        Kwoty Udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty (100 000 zł → 5 000
-        zł dla Finance You, 95 000 zł dla klienta). Materiały mają charakter edukacyjny i
-        informacyjny, a Finance You nie gwarantuje zysku.
-      </ComplianceNote>
     </Section>
   );
 }
@@ -1094,15 +1060,16 @@ function InvestorLanding() {
       <Section id="korzysci">
         <SectionHead
           eyebrow="Co zyskujesz"
-          title="Mniej ryzyka i formalności, więcej dobrych Projektów"
-          sub="Jeden abonament, bez prowizji od Twojego zysku. Dostajesz gotowy proces od Zlecenia po spłatę: sprawdzony klient, pełny raport, harmonogram, umowy, compliance i windykacja w jednym koncie."
+          title="My szukamy Projektów. Ty decydujesz, na czym zarabiasz."
+          sub="Od Zlecenia po spłatę — wszystko w jednym panelu."
         />
         <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={BENEFITS} icon3d />
+          <FeatureGrid items={BENEFITS} cols={3} icon3d />
         </div>
       </Section>
 
       {SHOW.moduly && <ModulesSection />}
+      {SHOW.prezentacja && <PresentationSection />}
 
       {!SHOW.zakladki && (
         <>
@@ -1113,84 +1080,52 @@ function InvestorLanding() {
         </>
       )}
 
-      <Section tint>
-        <SectionHead eyebrow="AI dla inwestora" title="Automatyzacja powtarzalnych czynności" />
-        <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={AI} cols={4} icon3d />
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          AI automatyzuje powtarzalne czynności operacyjne i komunikacyjne. W przypadku sporu
-          sądowego sprawa może wymagać profesjonalnej obsługi prawnej.
-        </ComplianceNote>
-      </Section>
-
-      <Section>
-        <SectionHead
-          eyebrow="Compliance"
-          title="Proces zgodny z procedurami"
-          sub="Wsparcie w obszarze AML, RODO, dokumentacji, rejestrów i zgodności procesu — plus edukacja prawno-operacyjna."
-        />
-        <div
-          className="fy-modules"
-          style={{
-            marginTop: "2.5rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(6,1fr)",
-            gap: "0.7rem",
-          }}
-        >
-          {COMPLIANCE.map((c) => (
-            <div
-              key={c.t}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 8,
-                padding: "1.1rem 0.5rem",
-                borderRadius: "var(--radius-xl)",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                boxShadow: "var(--shadow-xs)",
-                textAlign: "center",
-              }}
-            >
-              <Icon3D name={c.icon} size={56} />
-              <span style={{ fontSize: "0.74rem", fontWeight: 600 }}>{c.t}</span>
-            </div>
-          ))}
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Finance You wspiera zgodność procesu i edukację prawno-operacyjną. Nie zapewnia obsługi
-          prawnej.
-        </ComplianceNote>
-      </Section>
-
       {!SHOW.zakladki && <CennikSection products={products} />}
 
       <Section id="faq">
         <SectionHead center eyebrow="FAQ" title="Najczęstsze pytania inwestorów" />
         <FAQ items={FAQ_ALL} />
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Nie znalazłeś odpowiedzi? Napisz na kontakt@financeyou.pl albo zapytaj asystenta czatu.
-          Odpowiedzi mają charakter informacyjny — wiążące są postanowienia Umowy ramowej, NDA i
-          umowy RODO.
+        <p
+          style={{
+            marginTop: "1.5rem",
+            textAlign: "center",
+            fontSize: "0.95rem",
+            color: "var(--muted-foreground)",
+          }}
+        >
+          Masz inne pytanie? Napisz na{" "}
+          <a href="mailto:kontakt@financeyou.pl">kontakt@financeyou.pl</a> albo zapytaj asystenta na
+          czacie.
+        </p>
+        {/* Jedyna pełna nota prawna landingu — zastępuje noty sekcji AI, Compliance,
+            Cennik i FAQ. Usuwając coś stąd, sprawdź Regulamin Abonamentu (§ 3)
+            i Umowę ramową. */}
+        <ComplianceNote style={{ marginTop: "2.5rem" }}>
+          <strong>Ważne informacje.</strong> Abonament to szkolenie, a moduły są jego narzędziami,
+          nie odrębnymi usługami. Nie stanowią porady inwestycyjnej ani prawnej, a wycena nie jest
+          operatem szacunkowym. Finance You nie jest stroną umowy pożyczki — zawierasz ją
+          bezpośrednio z firmą, na jej cel gospodarczy. Abonament nie gwarantuje przedstawienia
+          Projektu ani zysku, a dostęp do Projektów wymaga akceptacji bezpłatnych umów z Finance
+          You. Zgłoszenia do GIIF wysyłasz samodzielnie, własnym podpisem kwalifikowanym.
+          Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału. Wiążące są
+          postanowienia Regulaminu Abonamentu, Umowy ramowej, NDA i umowy RODO.
         </ComplianceNote>
       </Section>
 
       <CTASection
         single
-        title="Zbuduj proces inwestowania w pożyczki hipoteczne z narzędziami, dokumentami i AI."
-        buttons={[{ label: "Załóż konto inwestora", href: "/abonament-inwestora" }]}
+        title="Twój kapitał, Twoje decyzje. Projekty i narzędzia w jednym panelu."
+        sub="Bez opłat za Projekt i bez prowizji od Twojego zysku — wybierz abonament miesięczny albo roczny."
+        buttons={[{ label: "Dołącz do klubu", href: PRICING_HASH }]}
       />
 
       <ChatWidget
         source="dla-inwestora"
         endpoint="/api/public/investor-chat-widget"
         storageKey="fy_invest_chat_session_id"
-        greeting="Dzień dobry. Jestem asystentem Finance You dla inwestorów instytucjonalnych. Odpowiem na pytania o model inwestycji w pożyczki zabezpieczone hipoteką, przyjmę też prośbę o fakturę. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
-        title="Asystent dla inwestorów"
-        subtitle="Inwestycje instytucjonalne, 24/7"
+        greeting="Dzień dobry! Jestem asystentem AI Klubu Inwestorów Hipotecznych. Odpowiem na pytania o abonament, narzędzia i finansowanie pożyczek dla firm zabezpieczonych hipoteką. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
+        title="Asystent inwestora"
+        subtitle="Klub Inwestorów Hipotecznych · 24/7"
       />
     </MarketingShell>
   );

@@ -253,11 +253,13 @@ function InwestorAbonament() {
                 {t.bullets.map((b) => (
                   <li key={b.cecha} className="flex gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                    <span>
-                      <span className="font-medium">{b.cecha}</span>
-                      <span className="block text-muted-foreground">{b.zaleta}</span>
-                      <span className="block font-medium">{b.korzysc}</span>
-                    </span>
+                    <div>
+                      <div className="font-semibold text-foreground">{b.cecha}</div>
+                      <p className="mt-0.5 text-muted-foreground">
+                        {b.zaleta}{" "}
+                        <span className="font-semibold text-foreground">{b.korzysc}</span>
+                      </p>
+                    </div>
                   </li>
                 ))}
               </ul>
