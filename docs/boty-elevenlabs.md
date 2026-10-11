@@ -131,6 +131,13 @@ W konsoli ElevenLabs dopnij te toole do agentów (Tools → Webhook) i przekaż
 `lead_id` z dynamic variables (widgety i router ustawiają `lead_id`,
 `channel`, `first_name`, `email`, `phone`).
 
+Nowsze narzędzia (`get_offer_facts`, `estimate_cost`, `search_knowledge`,
+`get_case_snapshot`, `get_market_snapshot`, `flag_urgent`, `log_insight`,
+`request_capability`) kod zakłada i dopina sam przy synchronizacji agentów
+(`src/lib/agent-toolkit/elevenlabs-tools.server.ts`, wersja zestawu
+`AGENT_TOOLSET_VERSION`). Uprawnienia i limity: `src/lib/agent-toolkit/policy.ts`.
+Raport z testów: `docs/agenci-raport-2026-10.md`.
+
 ## Sekrety wymagane
 
 | Sekret                 | Po co                                                 |
