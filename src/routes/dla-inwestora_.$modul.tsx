@@ -106,7 +106,7 @@ function InvestorModulePage() {
             center
             eyebrow="Skala A–E"
             title="Ocena inwestycyjna w skali A–E"
-            sub="Ocena ryzyka daje wynik od 0 do 100 punktów i klasę od A do E. Im wyższy wynik, tym niższe ryzyko."
+            sub="Każdy Projekt dostaje wynik od 0 do 100 punktów i klasę od A do E. Im wyższy wynik, tym niższe ryzyko."
           />
           <GradeScale components={m.gradeScale.components} caps={m.gradeScale.caps} />
         </Section>
