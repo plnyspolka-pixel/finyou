@@ -221,6 +221,27 @@ export function analyticsDoneCount(item: AnalyticsStepSource): number {
   return ANALYTICS_STEPS.filter((s) => analyticsStepStatus(item, s.key) === "done").length;
 }
 
+/**
+ * Raport Projektu w „Moich zleceniach" (OrderProjectReport) jako źródło stanu
+ * kroków — jedno mapowanie dla widoku i raportu PDF.
+ */
+export function orderReportStepSource(r: {
+  status: "none" | "running" | "done" | "error";
+  steps: AnalyticsRun["steps"];
+  results: AnalyticsResultFlags;
+}): AnalyticsStepSource {
+  return {
+    results: r.results,
+    run:
+      r.status === "none"
+        ? null
+        : {
+            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
+            steps: r.steps,
+          },
+  };
+}
+
 // ── Szybka analiza KW (wniosek spoza Finance You) ───────────────────────────
 // Inwestor podaje numer KW własnego tematu i rodzaj nieruchomości — wszystkie
 // cztery kroki pipeline'u, łącznie z pełną oceną ryzyka. Nie tworzy wniosku w CRM.

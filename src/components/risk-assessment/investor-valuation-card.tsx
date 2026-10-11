@@ -45,20 +45,16 @@ function fmtPln(v: number | null | undefined): string {
   }).format(v);
 }
 
+/** Tekst na pełnym kolorze klasy — biały ma na zieleni/bursztynie kontrast < 3:1. */
+const GRADE_INK = "#111827";
+
 /**
  * Ocena inwestycyjna w skali A–E (GRADE_BANDS): pięć klas z zakresami punktów,
  * aktywna klasa wyróżniona, wynik /100 oraz opis klasy. Kolor zawsze z literą
- * i opisem obok (nie polegamy na samym kolorze).
+ * i opisem obok (nie polegamy na samym kolorze). Bez profilu ryzyka
+ * (recommendationLabel) — ma inne progi i obok klasy dawałby sprzeczny werdykt.
  */
-function InvestmentGradeScale({
-  grade,
-  score,
-  profile,
-}: {
-  grade: RiskGrade;
-  score: number | null;
-  profile: string | null;
-}) {
+function InvestmentGradeScale({ grade, score }: { grade: RiskGrade; score: number | null }) {
   const band = gradeBand(grade);
   return (
     <div className="rounded-lg border p-3">
@@ -85,7 +81,7 @@ function InvestmentGradeScale({
               )}
               style={
                 active
-                  ? { backgroundColor: b.color, borderColor: b.color, color: "#fff" }
+                  ? { backgroundColor: b.color, borderColor: b.color, color: GRADE_INK }
                   : { backgroundColor: `${b.color}1a`, borderColor: `${b.color}59`, color: b.color }
               }
             >
@@ -106,10 +102,10 @@ function InvestmentGradeScale({
         <b style={{ color: band.color }}>Klasa {grade}</b> — {band.label}.{" "}
         <span className="text-muted-foreground">{band.description}</span>
       </p>
-      {profile && <p className="text-xs text-muted-foreground">Profil ryzyka: {profile}</p>}
       <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-        Neutralna klasyfikacja ryzyka liczona automatycznie z ocen cząstkowych (zabezpieczenie, stan
-        prawny KW, wycena, łatwość sprzedaży) — nie jest rekomendacją inwestycyjną.
+        Neutralna klasyfikacja ryzyka liczona automatycznie z ocen cząstkowych — m.in.
+        zabezpieczenia, stanu prawnego KW, pewności wyceny, łatwości sprzedaży i weryfikacji
+        właściciela — nie jest rekomendacją inwestycyjną.
       </p>
     </div>
   );
@@ -163,18 +159,14 @@ export function InvestorValuationCard({
           <TrendingUp className="h-5 w-5" /> Prognoza wartości i sprzedaży
         </CardTitle>
         <CardDescription>
-          Automatyczna prognoza dla tego tematu inwestycyjnego (dane rynkowe, bez danych osobowych
-          klienta).
+          Automatyczna prognoza dla tego tematu inwestycyjnego (dane rynkowe, bez ujawniania danych
+          osobowych klienta).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         {/* Ocena inwestycyjna A–E (starsze oceny bez klasy — blok pomijamy) */}
         {data.riskGrade && (
-          <InvestmentGradeScale
-            grade={data.riskGrade}
-            score={data.investmentScore ?? null}
-            profile={data.recommendationLabel ?? null}
-          />
+          <InvestmentGradeScale grade={data.riskGrade} score={data.investmentScore ?? null} />
         )}
 
         {/* Prognozowana wartość nieruchomości */}

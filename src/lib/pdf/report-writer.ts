@@ -32,11 +32,12 @@ const BRAND = "Finance You · Analityk AI";
 const NAVY = rgb(0.11, 0.16, 0.36);
 const NAVY_SOFT = rgb(0.93, 0.95, 0.99);
 const INK = rgb(0.12, 0.12, 0.14);
+/** Tekst na pełnym kolorze klasy A–E (#111827) — kontrast ≥ 4,5:1 na każdym z pięciu kolorów. */
+const GRADE_INK = rgb(0.067, 0.094, 0.153);
 const GRAY = rgb(0.42, 0.44, 0.5);
 const LIGHT = rgb(0.86, 0.88, 0.92);
 const ZEBRA = rgb(0.975, 0.98, 0.99);
 const TRACK = rgb(0.92, 0.93, 0.95);
-const WHITE = rgb(1, 1, 1);
 const AMBER = rgb(0.96, 0.62, 0.04);
 const AMBER_SOFT = rgb(1, 0.97, 0.9);
 
@@ -525,7 +526,8 @@ export class ReportWriter {
   /**
    * Pasek skali A–E (GRADE_BANDS): pięć pól z literą i zakresem punktów,
    * aktywna klasa w pełnym kolorze i z obwódką, pozostałe przygaszone; pod
-   * paskiem nazwy klas.
+   * paskiem nazwy klas. Na pełnym kolorze ciemny tekst (GRADE_INK) — biały ma
+   * na tych kolorach kontrast 2–3,8:1.
    */
   gradeScale(active: RiskGrade | null): void {
     const gap = 4;
@@ -559,16 +561,17 @@ export class ReportWriter {
         y: y + cellH - letterSize - 3,
         size: letterSize,
         font: this.bold,
-        color: isActive ? WHITE : color,
+        color: isActive ? GRADE_INK : color,
       });
       const range = this.clean(gradeRangeLabel(band));
-      const rw = this.regular.widthOfTextAtSize(range, 6.8);
+      const rangeFont = isActive ? this.bold : this.regular;
+      const rw = rangeFont.widthOfTextAtSize(range, 6.8);
       this.page.drawText(range, {
         x: x + (cellW - rw) / 2,
         y: y + 4,
         size: 6.8,
-        font: isActive ? this.bold : this.regular,
-        color: isActive ? WHITE : GRAY,
+        font: rangeFont,
+        color: isActive ? GRADE_INK : GRAY,
       });
       const lines = wrap(this.clean(band.label), this.regular, labelSize, cellW - 4).slice(0, 2);
       lines.forEach((ln, li) => {

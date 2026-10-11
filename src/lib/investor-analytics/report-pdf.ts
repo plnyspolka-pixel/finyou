@@ -15,7 +15,9 @@
 //  • PESEL maskowany w każdym tekście modelu; bez dat urodzenia i dożycia,
 //  • ocena inwestycyjna A–E (klasa ryzyka) i kategoria zbywalności A–E to dwie
 //    różne skale — każda ma własny tytuł,
-//  • zastrzeżenia raz, na końcu (zastrzeżenie analizy KW = REPORT_DISCLAIMER).
+//  • zastrzeżenia raz, na końcu (zastrzeżenie analizy KW = REPORT_DISCLAIMER —
+//    tylko gdy raport zawiera analizę KW),
+//  • kroki bez wyniku mają w PDF-ie notkę, jak puste karty kroków na ekranie.
 import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-projects.functions";
 import type {
   FindingCategory,
@@ -39,7 +41,7 @@ import type {
   RiskComponentScores,
   RiskGrade,
 } from "@/lib/risk-assessment/types";
-import { gradeFromScore, recommendationLabel } from "@/lib/risk-assessment/types";
+import { gradeFromScore } from "@/lib/risk-assessment/types";
 import { gradeBand, gradeRangeLabel } from "@/lib/risk-assessment/grade-bands";
 import { auctionOutcomeLabel, saleabilityBandLabel } from "@/lib/risk-assessment/forced-sale";
 import {
@@ -67,11 +69,12 @@ import {
   analyticsDoneCount,
   analyticsStepStatus,
   kwCheckStepStatus,
+  orderReportStepSource,
   type AnalyticsCoOwners,
   type AnalyticsDetail,
   type AnalyticsListItem,
+  type AnalyticsKwDocument,
   type AnalyticsStepKey,
-  type AnalyticsStepSource,
   type AnalyticsStepStatus,
   type KwCheckDetail,
 } from "./types";
@@ -97,6 +100,8 @@ export interface InvestorReportModel {
   subtitle: string | null;
   /** Numer KW tak, jak podaje źródło — przed rezerwacją zamaskowany. */
   kwNumber: string | null;
+  /** Numer Projektu z cyklu Zlecenia (np. FY-Z-4-P1) — nie identyfikuje właściciela. */
+  projectRef: string | null;
   /** Wersja przed rezerwacją (Zlecenia) — bez danych identyfikujących. */
   teaser: boolean;
   /** Ile z czterech kroków analizy jest gotowych. */
@@ -108,7 +113,12 @@ export interface InvestorReportModel {
 export type InvestorReportSource =
   | { kind: "analityka"; detail: AnalyticsDetail }
   | { kind: "kw_check"; detail: KwCheckDetail }
-  | { kind: "zlecenie"; detail: OrderProjectReportDetail };
+  | {
+      kind: "zlecenie";
+      detail: OrderProjectReportDetail;
+      /** Z karty Projektu — raport sam nie niesie numeru Projektu ani kwoty. */
+      project?: { ref: string | null; loanAmount: number | null };
+    };
 
 export const GRADE_SECTION_TITLE = "Ocena inwestycyjna A–E";
 export const SELLABILITY_SECTION_TITLE = "Kategoria zbywalności (A–E)";
@@ -233,10 +243,11 @@ function stepsTable(status: (k: AnalyticsStepKey) => AnalyticsStepStatus): Repor
   };
 }
 
+// Profil ryzyka (recommendationLabel) celowo pomijamy: ma inne progi i korektę
+// po wycenie rynkowej, więc obok klasy A–E dawałby drugi, sprzeczny werdykt.
 interface GradeInfo {
   grade: RiskGrade;
   score: number | null;
-  recommendationLabel: string | null;
 }
 
 function gradeFromValuation(v: InvestorValuationSummary | null): GradeInfo | null {
@@ -244,7 +255,7 @@ function gradeFromValuation(v: InvestorValuationSummary | null): GradeInfo | nul
   const score = v.investmentScore ?? null;
   const grade = v.riskGrade ?? (score != null ? gradeFromScore(score) : null);
   if (!grade) return null;
-  return { grade, score, recommendationLabel: v.recommendationLabel ?? null };
+  return { grade, score };
 }
 
 function gradeBlocks(g: GradeInfo): ReportBlock[] {
@@ -264,42 +275,52 @@ function gradeBlocks(g: GradeInfo): ReportBlock[] {
     t: "paragraph",
     text: `Klasa ${g.grade} (${gradeRangeLabel(band)} pkt) — ${band.label}. ${band.description}`,
   });
-  if (g.recommendationLabel) {
-    blocks.push({ t: "keyValues", rows: [["Profil ryzyka", g.recommendationLabel]] });
-  }
   blocks.push({
     t: "paragraph",
     muted: true,
     text:
       "Skala A–E to neutralna klasyfikacja ryzyka (0–100 pkt, wyżej = bezpieczniej), liczona " +
       "automatycznie z ocen cząstkowych — m.in. zabezpieczenia, stanu prawnego KW, pewności " +
-      "wyceny i łatwości sprzedaży. Nie jest rekomendacją inwestycyjną.",
+      "wyceny, łatwości sprzedaży i weryfikacji właściciela. Nie jest rekomendacją inwestycyjną.",
   });
   return blocks;
 }
 
-function riskDetailBlocks(risk: InvestmentRiskAssessment): ReportBlock[] {
-  const blocks: ReportBlock[] = [];
+function componentScoreBlocks(risk: InvestmentRiskAssessment): ReportBlock[] {
   const scores = risk.componentScores;
-  if (scores) {
-    blocks.push({ t: "subheading", text: "Oceny cząstkowe" });
-    for (const key of Object.keys(COMPONENT_LABELS) as Array<keyof RiskComponentScores>) {
-      const v = Math.round(scores[key] ?? 0);
-      blocks.push({
-        t: "score",
-        label: COMPONENT_LABELS[key],
-        value: v,
-        color: gradeBand(gradeFromScore(v)).color,
-      });
-    }
+  if (!scores) return [];
+  const blocks: ReportBlock[] = [{ t: "subheading", text: "Oceny cząstkowe" }];
+  for (const key of Object.keys(COMPONENT_LABELS) as Array<keyof RiskComponentScores>) {
+    const v = Math.round(scores[key] ?? 0);
+    blocks.push({
+      t: "score",
+      label: COMPONENT_LABELS[key],
+      value: v,
+      color: gradeBand(gradeFromScore(v)).color,
+    });
   }
-  if (risk.keyStrengths?.length) {
-    blocks.push({ t: "subheading", text: "Mocne strony" });
-    blocks.push({ t: "bullets", items: risk.keyStrengths });
+  return blocks;
+}
+
+/**
+ * Mocne strony i główne ryzyka oceny — osobna sekcja, nie pod klasą A–E:
+ * silnik dopisuje do nich „Kategoria zbywalności …” (ta ma własną sekcję)
+ * i punkty karty zabezpieczenia (te są w „Analizie zabezpieczenia”).
+ */
+function highlightBlocks(risk: InvestmentRiskAssessment): ReportBlock[] {
+  const cs = risk.collateralAnalysis?.collateralScore;
+  const elsewhere = new Set([...(cs?.mainStrengths ?? []), ...(cs?.mainRisks ?? [])]);
+  const keep = (items: string[] | undefined) =>
+    (items ?? []).filter((x) => !x.startsWith("Kategoria zbywalności") && !elsewhere.has(x));
+  const strengths = keep(risk.keyStrengths);
+  const risks = keep(risk.keyRisks);
+  if (!strengths.length && !risks.length) return [];
+  const blocks: ReportBlock[] = [{ t: "heading", text: "Mocne strony i główne ryzyka" }];
+  if (strengths.length) {
+    blocks.push({ t: "subheading", text: "Mocne strony" }, { t: "bullets", items: strengths });
   }
-  if (risk.keyRisks?.length) {
-    blocks.push({ t: "subheading", text: "Główne ryzyka" });
-    blocks.push({ t: "bullets", items: risk.keyRisks });
+  if (risks.length) {
+    blocks.push({ t: "subheading", text: "Główne ryzyka" }, { t: "bullets", items: risks });
   }
   return blocks;
 }
@@ -512,6 +533,9 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
   return blocks;
 }
 
+/** Najdłuższy cytat z KW w PDF-ie (znaki). */
+const QUOTE_MAX = 600;
+
 function sourceLine(e: SourceEvidence): string | null {
   if (!e.rawValue?.trim()) return null;
   const where = [
@@ -521,8 +545,17 @@ function sourceLine(e: SourceEvidence): string | null {
   ]
     .filter(Boolean)
     .join(" · ");
-  const quote = e.rawValue.length > 600 ? `${e.rawValue.slice(0, 600).trimEnd()}…` : e.rawValue;
-  return `${where}${e.fieldLabel ? ` — ${e.fieldLabel}` : ""}: „${maskPeselInText(quote)}”`;
+  // Najpierw maska, potem skrót: cięcie w środku numeru zostawiłoby 7–10 cyfr
+  // PESEL, których maska (pełne 11 cyfr) już nie rozpozna. Urwany cięciem
+  // ciąg cyfr (albo zamaskowanego numeru) odcinamy w całości.
+  const masked = maskPeselInText(e.rawValue);
+  let quote = masked;
+  if (masked.length > QUOTE_MAX) {
+    const cut = masked.slice(0, QUOTE_MAX);
+    const midNumber = /[\d*]/.test(masked[QUOTE_MAX]);
+    quote = `${(midNumber ? cut.replace(/[\d*]+$/, "") : cut).trimEnd()}…`;
+  }
+  return `${where}${e.fieldLabel ? ` — ${e.fieldLabel}` : ""}: „${quote}”`;
 }
 
 function findingBlocks(f: KwFinding, index: number): ReportBlock[] {
@@ -690,19 +723,35 @@ function sourcesBlocks(sources: DataSourceUsage[]): ReportBlock[] {
   ];
 }
 
-function disclaimerBlocks(): ReportBlock[] {
-  return [
+function disclaimerBlocks(withKwAnalysis: boolean): ReportBlock[] {
+  const blocks: ReportBlock[] = [
     { t: "heading", text: "Zastrzeżenia" },
     { t: "paragraph", text: RISK_DISCLAIMER_TEXT },
-    { t: "paragraph", text: REPORT_DISCLAIMER },
-    { t: "paragraph", text: VALUATION_NOT_APPRAISAL },
   ];
+  // Zastrzeżenie analizy KW — tylko gdy raport ją zawiera.
+  if (withKwAnalysis) blocks.push({ t: "paragraph", text: REPORT_DISCLAIMER });
+  blocks.push({ t: "paragraph", text: VALUATION_NOT_APPRAISAL });
+  return blocks;
+}
+
+/** Sekcja kroku bez wyniku — jak puste karty kroków na ekranie. */
+function pendingSection(title: string, text: string): ReportBlock[] {
+  return [
+    { t: "heading", text: title },
+    { t: "paragraph", muted: true, text },
+  ];
+}
+
+function kwDocumentRow(doc: AnalyticsKwDocument | null): [string, string | null] {
+  return ["Treść KW pobrana", doc?.fetchedAt ? formatWarsawDateTime(doc.fetchedAt) : null];
 }
 
 /** Część wspólna trzech widoków: ocena A–E, wycena, zbywalność, zabezpieczenie, KW, właściciele. */
 function resultBlocks(a: {
   grade: GradeInfo | null;
   gradeExtra?: ReportBlock[];
+  /** Mocne strony i ryzyka oceny (po zabezpieczeniu). */
+  highlights?: ReportBlock[];
   valuation: InvestorValuationSummary | null;
   collateral: PropertyAnalysisResult | null;
   kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
@@ -713,19 +762,30 @@ function resultBlocks(a: {
   if (a.grade) blocks.push(...gradeBlocks(a.grade), ...(a.gradeExtra ?? []));
   if (a.valuation) blocks.push(...valuationBlocks(a.valuation), ...saleabilityBlocks(a.valuation));
   if (a.collateral) blocks.push(...collateralBlocks(a.collateral));
+  blocks.push(...(a.highlights ?? []));
   if (!a.valuation && !a.collateral) {
     blocks.push(
-      { t: "heading", text: "Wycena i zbywalność" },
-      {
-        t: "paragraph",
-        muted: true,
-        text: "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka.",
-      },
+      ...pendingSection(
+        "Wycena i zbywalność",
+        "Prognoza wartości, szybkiej sprzedaży i zbywalności pojawi się po zakończeniu analizy ryzyka.",
+      ),
     );
   }
-  if (a.kwAnalysis) blocks.push(...kwAnalysisBlocks(a.kwAnalysis));
-  if (a.coowners) blocks.push(...ownersBlocks(a.coowners));
-  blocks.push(...sourcesBlocks(a.sources), ...disclaimerBlocks());
+  blocks.push(
+    ...(a.kwAnalysis
+      ? kwAnalysisBlocks(a.kwAnalysis)
+      : pendingSection(
+          "Analiza księgi wieczystej",
+          "Raport analizy KW pojawi się po pobraniu księgi wieczystej i przejściu silnika reguł.",
+        )),
+    ...(a.coowners
+      ? ownersBlocks(a.coowners)
+      : pendingSection(
+          "Właściciele i rejestry",
+          "Zestawienie właścicieli z działu II KW z CEIDG i KRS pojawi się po zakończeniu kroku 2.",
+        )),
+  );
+  blocks.push(...sourcesBlocks(a.sources), ...disclaimerBlocks(a.kwAnalysis != null));
   return blocks;
 }
 
@@ -748,6 +808,7 @@ function fromAnalytics(d: AnalyticsDetail): InvestorReportModel {
     ["Wartość szacunkowa", item.estimatedValue != null ? formatPLN(item.estimatedValue) : null],
     ["Powierzchnia", item.areaSqm != null ? `${item.areaSqm} m²` : null],
     ["Numer KW", item.kwNumber ?? "—"],
+    kwDocumentRow(d.kwDocument),
     [
       "Potencjał lokalizacji",
       item.locationScore != null ? `${Math.round(item.locationScore)}/100` : null,
@@ -765,6 +826,7 @@ function fromAnalytics(d: AnalyticsDetail): InvestorReportModel {
     title: "Raport analityczny",
     subtitle: `${itemTitle(item)} · ${formatPLN(item.loanAmount)}`,
     kwNumber: item.kwNumber,
+    projectRef: item.projectRef,
     teaser: false,
     stepsDone: done,
     blocks: [
@@ -791,16 +853,13 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
   const score =
     risk && Number.isFinite(risk.investmentScore) ? Math.round(risk.investmentScore) : null;
   const grade: GradeInfo | null = risk
-    ? {
-        grade: risk.riskGrade ?? gradeFromScore(score ?? 0),
-        score,
-        recommendationLabel: risk.recommendation ? recommendationLabel(risk.recommendation) : null,
-      }
+    ? { grade: risk.riskGrade ?? gradeFromScore(score ?? 0), score }
     : null;
   const rows = rowsWithText([
     ["Rodzaj", "Wniosek spoza Finance You"],
     ["Nazwa", item.label || "Wniosek zewnętrzny"],
     ["Numer KW", item.kwNumber],
+    kwDocumentRow(d.kwDocument),
     ["Rodzaj nieruchomości", propertyLabel(item.propertyType)],
     ["Kwota pożyczki", item.loanAmount != null ? formatPLN(item.loanAmount) : null],
     ["Okres", item.periodMonths != null ? `${item.periodMonths} mies.` : null],
@@ -816,7 +875,7 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
           muted: true,
           text: `Ocena z ${formatWarsawDateTime(risk.generatedAt)}. Dla tematu spoza Finance You bez dokumentów i korespondencji klienta — parametry nieruchomości pochodzą z działu I-O KW.`,
         },
-        ...riskDetailBlocks(risk),
+        ...componentScoreBlocks(risk),
       ]
     : [];
   return {
@@ -824,6 +883,7 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
     title: "Raport analityczny",
     subtitle: `${item.label || "Wniosek spoza Finance You"} · KW ${item.kwNumber}`,
     kwNumber: item.kwNumber,
+    projectRef: null,
     teaser: false,
     stepsDone: done,
     blocks: [
@@ -833,6 +893,7 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
       ...resultBlocks({
         grade,
         gradeExtra,
+        highlights: risk ? highlightBlocks(risk) : [],
         valuation: risk ? buildInvestorValuationSummary(risk) : null,
         collateral: risk?.collateralAnalysis ?? null,
         kwAnalysis: d.kwAnalysis,
@@ -843,23 +904,23 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
   };
 }
 
-function fromOrderReport(d: OrderProjectReportDetail): InvestorReportModel {
+function fromOrderReport(
+  d: OrderProjectReportDetail,
+  project: { ref: string | null; loanAmount: number | null } | undefined,
+): InvestorReportModel {
   const r = d.report;
-  const src: AnalyticsStepSource = {
-    results: r.results,
-    run:
-      r.status === "none"
-        ? null
-        : {
-            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
-            steps: r.steps,
-          },
-  };
+  const src = orderReportStepSource(r);
   const done = analyticsDoneCount(src);
   const teaser = !d.disclosed;
   const prop = d.collateral?.property ?? null;
-  const subtitle =
-    [propertyLabel(prop?.type), prop?.voivodeship].filter(Boolean).join(" · ") || null;
+  const projectRef = project?.ref?.trim() || null;
+  const subtitle = [
+    projectRef ? `Projekt ${projectRef}` : ANALYTICS_SOURCE_LABELS["okazja"],
+    propertyLabel(prop?.type),
+    prop?.voivodeship,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const reportStatus: Record<typeof r.status, string> = {
     none: "nie zamówiono",
     running: "w toku",
@@ -868,7 +929,10 @@ function fromOrderReport(d: OrderProjectReportDetail): InvestorReportModel {
   };
   const rows = rowsWithText([
     ["Źródło", ANALYTICS_SOURCE_LABELS["okazja"]],
+    ["Projekt", projectRef],
+    ["Wnioskowana kwota", project?.loanAmount != null ? formatPLN(project.loanAmount) : null],
     ["Numer KW", d.kwNumber ? `${d.kwNumber}${teaser ? " (zamaskowany do rezerwacji)" : ""}` : "—"],
+    kwDocumentRow(d.kwDocument),
     ["Rodzaj nieruchomości", propertyLabel(prop?.type)],
     ["Województwo", prop?.voivodeship],
     [
@@ -896,8 +960,9 @@ function fromOrderReport(d: OrderProjectReportDetail): InvestorReportModel {
   return {
     kind: "zlecenie",
     title: "Raport analityczny Projektu",
-    subtitle: subtitle ? `${subtitle} · ${ANALYTICS_SOURCE_LABELS["okazja"]}` : null,
+    subtitle,
     kwNumber: d.kwNumber,
+    projectRef,
     teaser,
     stepsDone: done,
     blocks,
@@ -914,7 +979,7 @@ export function buildInvestorReportModel(src: InvestorReportSource): InvestorRep
       ? fromAnalytics(src.detail)
       : src.kind === "kw_check"
         ? fromKwCheck(src.detail)
-        : fromOrderReport(src.detail);
+        : fromOrderReport(src.detail, src.project);
   return JSON.parse(JSON.stringify(model), (_key, value) =>
     typeof value === "string" ? maskPeselInText(value) : value,
   ) as InvestorReportModel;
@@ -951,16 +1016,24 @@ export function reportModelText(model: InvestorReportModel): string {
   return out.join("\n");
 }
 
-/** Nazwa pliku: bez numeru KW, gdy źródło go maskuje (wersja przed rezerwacją). */
+/**
+ * Nazwa pliku: raport Projektu z numerem Projektu (raporty kilku Projektów
+ * przed rezerwacją nie mają tej samej nazwy), numer KW tylko wtedy, gdy źródło
+ * go nie maskuje.
+ */
 export function reportPdfFilename(model: InvestorReportModel, date: Date = new Date()): string {
   const prefix: Record<ReportKind, string> = {
     analityka: "raport-analityczny",
     kw_check: "raport-analityczny-kw",
     zlecenie: "raport-projektu",
   };
+  const ref =
+    model.kind === "zlecenie" && model.projectRef
+      ? model.projectRef.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+      : "";
   const kw = !model.teaser && model.kwNumber ? formatKwNumber(model.kwNumber) : null;
-  const kwPart = kw ? `-${kw.replace(/\//g, "-")}` : "";
-  return `FY-${prefix[model.kind]}${kwPart}-${warsawDateStamp(date)}.pdf`;
+  const parts = [ref, kw ? kw.replace(/\//g, "-") : ""].filter(Boolean).map((p) => `-${p}`);
+  return `FY-${prefix[model.kind]}${parts.join("")}-${warsawDateStamp(date)}.pdf`;
 }
 
 export interface RenderReportOptions {

@@ -57,30 +57,38 @@ export function ReportPdfButton({
       const bytes = await mod.renderInvestorReportPdf(model, { preparedFor });
       downloadBytes(bytes, mod.reportPdfFilename(model));
     },
-    onError: (e) =>
-      toast.error(
-        `Nie udało się przygotować PDF: ${e instanceof Error ? e.message : "nieznany błąd"}`,
-      ),
+    // Szczegóły (np. nieaktualny fragment paczki po wdrożeniu) tylko w konsoli —
+    // inwestor dostaje komunikat po polsku ze wskazówką, co zrobić.
+    onError: (e) => {
+      console.error("Raport PDF:", e);
+      toast.error("Nie udało się przygotować PDF. Odśwież stronę i spróbuj ponownie.");
+    },
   });
 
+  // Wyłączony przycisk nie łapie najechania (pointer-events-none) — podpowiedź
+  // trzyma otoczka.
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={disabled || pdf.isPending}
+    <span
+      className="inline-flex"
       title={
         disabled
           ? "Raport PDF będzie dostępny po zakończeniu pierwszego kroku analizy."
           : "Pobierz raport analityczny jako PDF"
       }
-      onClick={() => pdf.mutate()}
     >
-      {pdf.isPending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <FileDown className="mr-2 h-4 w-4" />
-      )}
-      {pdf.isPending ? "Przygotowuję PDF…" : label}
-    </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={disabled || pdf.isPending}
+        onClick={() => pdf.mutate()}
+      >
+        {pdf.isPending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <FileDown className="mr-2 h-4 w-4" />
+        )}
+        {pdf.isPending ? "Przygotowuję PDF…" : label}
+      </Button>
+    </span>
   );
 }

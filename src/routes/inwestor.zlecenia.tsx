@@ -71,8 +71,8 @@ import {
   ANALYTICS_STEPS,
   analyticsDoneCount,
   analyticsStepStatus,
+  orderReportStepSource,
   type AnalyticsStepKey,
-  type AnalyticsStepSource,
   type AnalyticsStepStatus,
 } from "@/lib/investor-analytics/types";
 import type { FindingStatus } from "@/lib/kw-analysis/types";
@@ -388,7 +388,12 @@ function ProjectCard({
             ) : null}
           </div>
           {showReport && (report.status === "done" || report.status === "running") ? (
-            <ReportPanel orderId={p.orderId} applicationId={p.applicationId} report={report} />
+            <ReportPanel
+              project={{ ref: p.match?.projectRef ?? null, loanAmount: p.loanAmount }}
+              orderId={p.orderId}
+              applicationId={p.applicationId}
+              report={report}
+            />
           ) : null}
           {showOffer ? (
             <OfferPanel
@@ -662,24 +667,14 @@ function FilesRow({
 // osobno, dopiero po rozwinięciu raportu; przed rezerwacją serwer wysyła
 // wersję bez danych identyfikujących właściciela.
 
-function stepSource(r: OrderProjectReport): AnalyticsStepSource {
-  return {
-    results: r.results,
-    run:
-      r.status === "none"
-        ? null
-        : {
-            status: r.status === "running" ? "running" : r.status === "error" ? "error" : "done",
-            steps: r.steps,
-          },
-  };
-}
-
 function ReportPanel({
+  project,
   orderId,
   applicationId,
   report,
 }: {
+  /** Numer Projektu i kwota z karty — do nagłówka i nazwy pliku PDF. */
+  project: { ref: string | null; loanAmount: number | null };
   orderId: string;
   applicationId: string;
   report: OrderProjectReport;
@@ -713,7 +708,7 @@ function ReportPanel({
 
   const d = q.data;
   const r = d.report;
-  const src = stepSource(r);
+  const src = orderReportStepSource(r);
   const status = (k: AnalyticsStepKey): AnalyticsStepStatus => analyticsStepStatus(src, k);
   const done = analyticsDoneCount(src);
   const progress = Math.round((done / ANALYTICS_STEPS.length) * 100);
@@ -742,7 +737,10 @@ function ReportPanel({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <ReportPdfButton source={{ kind: "zlecenie", detail: d }} disabled={done === 0} />
+            <ReportPdfButton
+              source={{ kind: "zlecenie", detail: d, project }}
+              disabled={done === 0}
+            />
             {d.disclosed ? (
               <Button size="sm" variant="outline" asChild>
                 <Link to="/inwestor/analityka" search={{ app: applicationId }}>

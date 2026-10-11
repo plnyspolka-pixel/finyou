@@ -451,8 +451,14 @@ function risk(): InvestmentRiskAssessment {
       documentCompleteness: 30,
       exitLiquidity: 86,
     },
-    keyRisks: ["Hipoteka banku do spłaty przed wypłatą"],
-    keyStrengths: ["Płynny rynek mieszkań"],
+    // Jak w risk-scoring.ts: kategoria zbywalności i punkty karty zabezpieczenia
+    // trafiają też do mocnych stron / ryzyk oceny.
+    keyRisks: ["Hipoteka banku do spłaty przed wypłatą", "Malejąca liczba mieszkańców"],
+    keyStrengths: [
+      "Kategoria zbywalności A (mieszkanie w dużym mieście) — Miasto powyżej 100 tys. mieszkańców.",
+      "Czysty stan prawny nieruchomości (KW).",
+      "Płynny rynek mieszkań",
+    ],
     warnings: [],
     dataSources: collateral().dataSourcesUsed,
     executiveSummary: "Ocena inwestycji: 76/100 (klasa B) — kategoria A.",
@@ -525,11 +531,52 @@ function teaserOrderDetail(): OrderProjectReportDetail {
   };
 }
 
+const PROJECT = { ref: "FY-Z-4-P1", loanAmount: 90000 };
+
 const SOURCES: Array<[string, InvestorReportSource]> = [
   ["Analityka", { kind: "analityka", detail: analyticsDetail() }],
   ["analiza własnego wniosku", { kind: "kw_check", detail: kwCheckDetail() }],
-  ["raport Projektu przed rezerwacją", { kind: "zlecenie", detail: teaserOrderDetail() }],
+  [
+    "raport Projektu przed rezerwacją",
+    { kind: "zlecenie", detail: teaserOrderDetail(), project: PROJECT },
+  ],
 ];
+
+/** Analityka tuż po kroku 1: księga pobrana, reszta jeszcze bez wyników. */
+function stepOneOnlyDetail(): AnalyticsDetail {
+  const d = analyticsDetail();
+  return {
+    ...d,
+    item: {
+      ...d.item,
+      run: { ...d.item.run!, status: "running", steps: { kw: { status: "done" } } },
+      results: {
+        kwFetched: true,
+        kwAnalysisStatus: null,
+        coowners: false,
+        risk: false,
+        collateral: false,
+      },
+    },
+    kwDocument: {
+      status: "fetched",
+      fetchedAt: "2026-10-01T10:00:00Z",
+      lastError: null,
+      sections: {
+        okladka: null,
+        dzial_1o: null,
+        dzial_1s: null,
+        dzial_2: null,
+        dzial_3: null,
+        dzial_4: null,
+      },
+    },
+    kwAnalysis: null,
+    coowners: null,
+    valuation: null,
+    collateral: null,
+  };
+}
 
 const count = (hay: string, needle: string) => hay.split(needle).length - 1;
 
@@ -553,6 +600,19 @@ describe("model raportu PDF", () => {
     const text = reportModelText(buildInvestorReportModel(SOURCES[0][1]));
     expect(text).toContain("80*******45");
     expect(text).toContain("Żukowska Grażyna");
+  });
+
+  it("długi cytat skracany na PESEL-u nie zostawia jego cyfr", () => {
+    // PESEL na pozycjach 590–600 — granica skrótu (600 znaków) wypada w środku numeru.
+    const rawValue = `${"x".repeat(583)} PESEL ${PESEL}, córka Jana`;
+    const detail = analyticsDetail(0);
+    detail.kwAnalysis!.result.findings = [
+      finding(0, { source: [{ section: "II", fieldCode: "2.2.5", rawValue }] }),
+    ];
+    const text = reportModelText(buildInvestorReportModel({ kind: "analityka", detail }));
+    for (let n = 5; n <= PESEL.length; n++) expect(text).not.toContain(PESEL.slice(0, n));
+    expect(text).not.toContain("80*******4…");
+    expect(text).toContain("PESEL…");
   });
 
   it.each(SOURCES)("%s — zastrzeżenia dokładnie raz", (_, src) => {
@@ -595,8 +655,32 @@ describe("model raportu PDF", () => {
       });
       expect(gradeSection).toContain("Klasa B (70–84 pkt) — Niskie ryzyko");
       expect(gradeSection).not.toMatch(/zbywaln/i);
+      // Bez profilu ryzyka (inne progi niż A–E — drugi, sprzeczny werdykt).
+      expect(gradeSection).not.toMatch(/Profil/);
     },
   );
+
+  it("mocne strony i ryzyka oceny: osobna sekcja, bez kategorii zbywalności i powtórek", () => {
+    const model = buildInvestorReportModel(SOURCES[1][1]);
+    const at = model.blocks.findIndex(
+      (b) => b.t === "heading" && b.text === "Mocne strony i główne ryzyka",
+    );
+    expect(at).toBeGreaterThan(-1);
+    const next = model.blocks.findIndex((b, i) => i > at && b.t === "heading");
+    const section = reportModelText({
+      ...model,
+      title: "",
+      subtitle: null,
+      blocks: model.blocks.slice(at, next),
+    });
+    expect(section).toContain("Czysty stan prawny nieruchomości (KW).");
+    expect(section).toContain("Hipoteka banku do spłaty przed wypłatą");
+    expect(section).not.toMatch(/zbywaln/i);
+    // Punkty karty zabezpieczenia są raz — w „Analizie zabezpieczenia”.
+    const text = reportModelText(model);
+    expect(count(text, "Płynny rynek mieszkań")).toBe(1);
+    expect(count(text, "Malejąca liczba mieszkańców")).toBe(1);
+  });
 
   it.each(SOURCES)("%s — każdy znak modelu jest w foncie PDF", async (_, src) => {
     const text = reportModelText(buildInvestorReportModel(src));
@@ -612,7 +696,42 @@ describe("model raportu PDF", () => {
     expect(text).toContain("SL1S/00****44/8");
     expect(text).not.toContain("SL1S/00012344/8");
     expect(text).not.toMatch(/Żukowsk|Grażyn|Kwiatowa/);
-    expect(reportPdfFilename(model, DATE)).toBe("FY-raport-projektu-2026-10-10.pdf");
+    // Numer Projektu i kwota z karty — raporty kilku Projektów da się rozróżnić.
+    expect(model.subtitle).toContain("Projekt FY-Z-4-P1");
+    expect(text).toContain("Wnioskowana kwota");
+    expect(reportPdfFilename(model, DATE)).toBe("FY-raport-projektu-FY-Z-4-P1-2026-10-10.pdf");
+  });
+
+  it("raport Projektu po rezerwacji: numer Projektu i KW w nazwie pliku", () => {
+    const model = buildInvestorReportModel({
+      kind: "zlecenie",
+      detail: { ...teaserOrderDetail(), disclosed: true, kwNumber: "SL1S/00012344/8" },
+      project: PROJECT,
+    });
+    expect(model.teaser).toBe(false);
+    expect(reportPdfFilename(model, DATE)).toBe(
+      "FY-raport-projektu-FY-Z-4-P1-SL1S-00012344-8-2026-10-10.pdf",
+    );
+  });
+
+  it("po samym kroku 1: notki zamiast pustych sekcji, bez zastrzeżenia analizy KW", () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: stepOneOnlyDetail() });
+    expect(model.stepsDone).toBe(1);
+    const text = reportModelText(model);
+    expect(text).toContain("Treść KW pobrana");
+    expect(headings(model)).toEqual(
+      expect.arrayContaining([
+        "Wycena i zbywalność",
+        "Analiza księgi wieczystej",
+        "Właściciele i rejestry",
+      ]),
+    );
+    expect(text).toContain("Raport analizy KW pojawi się po pobraniu księgi wieczystej");
+    expect(text).toContain("Zestawienie właścicieli z działu II KW");
+    expect(text).not.toContain(GRADE_SECTION_TITLE);
+    expect(count(text, REPORT_DISCLAIMER)).toBe(0);
+    expect(count(text, RISK_DISCLAIMER_TEXT)).toBe(1);
+    expect(count(text, VALUATION_NOT_APPRAISAL)).toBe(1);
   });
 
   it("nazwa pliku po ujawnieniu zawiera numer KW", () => {
