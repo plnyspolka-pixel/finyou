@@ -17,9 +17,13 @@ import { AGENT_KEYS } from "./types";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseAdmin = any;
 
-async function admin(): Promise<LooseAdmin> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin as LooseAdmin;
+// Jeden import na proces — równoległe odczyty nie importują klienta naraz.
+let adminPromise: Promise<LooseAdmin> | null = null;
+function admin(): Promise<LooseAdmin> {
+  adminPromise ??= import("@/integrations/supabase/client.server").then(
+    (m) => m.supabaseAdmin as LooseAdmin,
+  );
+  return adminPromise;
 }
 
 // ── Autoryzacja transportu ───────────────────────────────────────────────────
