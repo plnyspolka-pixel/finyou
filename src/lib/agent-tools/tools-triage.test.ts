@@ -371,6 +371,31 @@ describe("lookup / describe_data", () => {
     expect((out as any).error).toMatch(/verify_identity/);
   });
 
+  it("płaski filtr where_column/where_value zawęża wiersze w obrębie sprawy rozmówcy", async () => {
+    // ElevenLabs wycina pola obiektu spoza schematu, więc filtr idzie płasko.
+    db.wind_events = [
+      { id: "e1", case_id: "c1", typ: "wplata", tytul: "Wpłata", data_zdarzenia: "2026-10-01", metadata: { x: 1 } },
+      { id: "e2", case_id: "c1", typ: "wezwanie", tytul: "Wezwanie", data_zdarzenia: "2026-10-02" },
+      { id: "e3", case_id: "c2", typ: "wplata", tytul: "Cudza wpłata", data_zdarzenia: "2026-10-03" },
+    ];
+    const verified = session({ agent_key: "windykacja", case_id: "c1", identity_verified: true, subject_kind: "borrower", subject_id: "b1" });
+    const out = await run(
+      "lookup",
+      voiceCtx("lookup", { args: { table: "wind_events", where_column: "typ", where_value: "wplata" }, session: verified }),
+    );
+    expect(out.ok).toBe(true);
+    const rows = (out as any).result.rows;
+    expect(rows.map((r: Row) => r.id)).toEqual(["e1"]);
+    expect(rows[0]).not.toHaveProperty("metadata");
+
+    const denied = await run(
+      "lookup",
+      voiceCtx("lookup", { args: { table: "wind_events", where_column: "case_id", where_value: "c2" }, session: verified }),
+    );
+    expect(denied.ok).toBe(false);
+    expect((denied as any).error).toMatch(/Filtr/);
+  });
+
   it("brak `table` → czytelny błąd", async () => {
     const out = await run("lookup", voiceCtx("lookup", { args: {} }));
     expect(out.ok).toBe(false);

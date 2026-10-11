@@ -981,9 +981,17 @@ async function lookup(ctx: ToolContext): Promise<ToolResult> {
           ),
         ) as Record<string, string | number | boolean>)
       : null;
+  // ElevenLabs wycina z body pola obiektu, których schemat narzędzia nie
+  // wymienia — dlatego narzędzie floty wysyła filtr jako dwa płaskie pola.
+  const whereColumn = str(ctx.args.where_column, 64);
+  const whereValue = ctx.args.where_value;
+  const flatWhere =
+    whereColumn && (typeof whereValue === "string" || typeof whereValue === "number" || typeof whereValue === "boolean")
+      ? { [whereColumn]: typeof whereValue === "string" ? whereValue.slice(0, 200) : whereValue }
+      : null;
   const limit = Number.isFinite(Number(ctx.args.limit)) ? Number(ctx.args.limit) : null;
 
-  const out = await safeLookup({ agent: ctx.session.agent_key, session: ctx.session, table, columns, where, limit });
+  const out = await safeLookup({ agent: ctx.session.agent_key, session: ctx.session, table, columns, where: flatWhere ?? where, limit });
   if (!out.ok) return { ok: false, error: out.error };
   ctx.redactions.push(...out.redactions);
   return ok({ table: table.toLowerCase(), rows: out.rows, columns: out.columns }, out.rows.length);

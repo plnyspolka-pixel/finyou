@@ -157,7 +157,10 @@ export const FLEET_TOOLS: readonly FleetToolSpec[] = [
     args: {
       table: S("Nazwa tabeli z listy dozwolonych (describe_data)."),
       columns: A("Opcjonalnie: podzbiór kolumn."),
-      where: { type: "object", description: "Opcjonalnie: filtr równości, np. {\"typ\":\"wplata\"}.", properties: {} },
+      // Płaskie pola zamiast obiektu: ElevenLabs wycina klucze obiektu,
+      // których schemat nie wymienia (tak gubił się `patch` w fy_update_lead_data).
+      where_column: S("Opcjonalnie: kolumna filtra równości, np. typ."),
+      where_value: S("Opcjonalnie: wartość filtra, np. wplata."),
       limit: N("Opcjonalnie: maksymalna liczba wierszy."),
     },
     requiredArgs: ["table"],
