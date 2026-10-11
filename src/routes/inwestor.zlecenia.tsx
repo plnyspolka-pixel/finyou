@@ -185,6 +185,9 @@ function MyOrdersPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {o.fyCommissionEnabled === false ? (
+                      <Badge className="bg-amber-100 text-amber-800">Bez prowizji FY</Badge>
+                    ) : null}
                     <Badge className={st.tone}>{st.label}</Badge>
                     {["zlozone", "przyjete"].includes(o.status) ? (
                       <Button
@@ -512,10 +515,13 @@ function OfferPanel({
 
   return (
     <div className="space-y-3 rounded-md border p-3">
+      {/* Zlecenie z wyłączoną prowizją Finance You (przełącznik admin+inwestor):
+          kalkulator oferty liczy wypłatę bez prowizji. */}
       <LoanCalculator
         initialAmount={Number(p.loanAmount) || 100_000}
         initialMonths={12}
         initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
+        hideFinanceYouFee={p.fyCommissionEnabled === false}
         onChange={setCalc}
       />
       {block.blocked ? (

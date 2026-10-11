@@ -23,7 +23,7 @@ import type { UmowaData } from "./schema";
 import { formatKwotaPL, parseKwota, payloadDoRaty } from "./schedule";
 import { buildEngineSchedule } from "./loan-schedule";
 import { fyCommission } from "./fees";
-import { FINANCE_YOU } from "./finance-you";
+import { FINANCE_YOU, jestFinanceYouInwestor } from "./finance-you";
 import { amountToWordsPLN } from "../amount-to-words-pl";
 
 // ── konwersje pomocnicze ───────────────────────────────────────
@@ -141,24 +141,40 @@ function budujPozyczkobiorce(profile: ClientProfile): any {
   });
 }
 
-/** Pożyczkodawca z `investorData` (fallback, gdy operator nie poda `overrides.pozyczkodawca`). */
+/**
+ * Pożyczkodawca z `investorData` (fallback, gdy operator nie poda
+ * `overrides.pozyczkodawca`). Mapujemy WSZYSTKO, co profil inwestora ma:
+ * wariant strony, identyfikatory, formę prawną, adres, kontakt i reprezentanta
+ * — czego w profilu nie ma, tego nie wpisujemy.
+ */
 function budujPozyczkodawce(inv: InvestorData): any {
-  const isPodmiot = !!(inv.companyName && inv.companyName.trim());
+  const nazwa = (inv.companyName ?? "").trim();
+  const isPodmiot = inv.entityVariant ? inv.entityVariant === "osoba_prawna" : !!nazwa;
   if (isPodmiot) {
     const rep = inv.representativeName;
     return czysc({
       typ: "podmiot_gospodarczy",
-      nazwa: inv.companyName,
+      nazwa: nazwa || inv.fullName,
+      forma_prawna: inv.legalForm,
+      krs: inv.krs,
       nip: inv.nip,
+      regon: inv.regon,
       adres: inv.address || "",
       telefon: inv.phone,
       email: inv.email,
-      reprezentacja: rep ? [czysc({ imie_nazwisko: rep, funkcja: "reprezentant" })] : undefined,
+      reprezentacja: rep
+        ? [czysc({ imie_nazwisko: rep, funkcja: inv.representativeRole || "reprezentant" })]
+        : undefined,
     });
   }
+  const jdg = inv.entityVariant === "jdg";
   return czysc({
     typ: "osoba_fizyczna",
     imie_nazwisko: inv.fullName || "",
+    firma: jdg ? nazwa : undefined,
+    pesel: inv.pesel,
+    nip: jdg ? inv.nip : undefined,
+    regon: jdg ? inv.regon : undefined,
     adres: inv.address || "",
     telefon: inv.phone,
     email: inv.email,
@@ -197,7 +213,11 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
   // Prowizja inwestora (w ratach) i Prowizja Finance You (potrącana z wypłaty)
   // to dwa różne pola umowy.
   const prowizjaInwestora = Number(payload.commissionPln) || 0;
-  const prowizjaFY = Number(payload.financeYouFeePln) || 0;
+  // Pożyczkodawcą jest sama Finance You → nie ma pośrednictwa, więc nie ma
+  // prowizji FY, choćby kalkulacja ją podawała.
+  const prowizjaFY = jestFinanceYouInwestor(profile.investorData)
+    ? 0
+    : Number(payload.financeYouFeePln) || 0;
   const prowizjaRaty = sched.map((r) => Number(r.prow) || 0);
   const raty = payloadDoRaty(payload, prowizjaRaty);
 
@@ -205,10 +225,9 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
   const balon = Number(payload.balloon) || 0;
   const inv = profile.investorData ?? {};
 
-  return czysc({
+  const warunki: Record<string, any> = czysc({
     kwota_pozyczki: kwota(payload.nominal),
     prowizja: czysc({ kwota: kwota(prowizjaInwestora), model: "nie_potracana_raty" }),
-    prowizja_finance_you: prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : undefined,
     oprocentowanie: oprocentowanie(payload.annualRate),
     cel: profile.borrowerData?.loanPurpose || "",
     harmonogram: czysc({
@@ -228,6 +247,11 @@ function budujWarunki(profile: ClientProfile, payload: LoanCalcPayload): any {
       finance_you: prowizjaFY > 0 ? FINANCE_YOU.rachunek : undefined,
     }),
   });
+  // Prowizja FY jawnie (po `czysc`, które wycina null): kwota albo `null`
+  // = „bez prowizji Finance You" (m.in. gdy Pożyczkodawcą jest sama FY).
+  // Pominięcie pola znaczy w silniku „dolicz 5 %".
+  warunki.prowizja_finance_you = prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : null;
+  return warunki;
 }
 
 function budujZabezpieczenia(profile: ClientProfile, payload: LoanCalcPayload): any {
@@ -281,7 +305,9 @@ export function profileToCalcPayload(profile: ClientProfile): LoanCalcPayload | 
   const annual = Number(o.annualInterestPercent ?? 0);
   if (!K || !months || !maxPay || !o.payoutDate) return null;
 
-  const feeFY = fyCommission(K);
+  // Pożyczka ze środków Finance You nie jest pośrednictwem — FY nie pobiera
+  // prowizji od własnej pożyczki.
+  const feeFY = jestFinanceYouInwestor(profile.investorData) ? 0 : fyCommission(K);
   const eng = buildEngineSchedule({
     kwotaPozyczki: K,
     prowizja: P,

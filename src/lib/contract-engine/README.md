@@ -8,22 +8,23 @@ w umowie bez poręczyciela.
 
 ## Pliki
 
-| Plik                         | Rola                                                                                                          | Odpowiednik w silniku                  |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `schema.ts`                  | Kontrakt danych (zod + typy TS). `.strict()` = `additionalProperties:false`.                                  | `schema/umowa.schema.json`             |
-| `clauses.json`               | Biblioteka klauzul (v1.3: 110 klauzul, 8 sekcji). Tu edytuje prawnik.                                         | `clauses/klauzule.json`                |
-| `umowa-docx.ts`              | Komplet w jednym .docx: wniosek → umowa → Zał. 1–3; podpisy jako niewidoczne tabele.                          | —                                      |
-| `komplet.ts`                 | `generujKomplet()` — jedno wejście dla kreatora, agenta i MCP (render + .docx + SHA-256 + wersja biblioteki). | —                                      |
-| `oplaty-windykacyjne.ts`     | Stawki Załącznika nr 3 — jedyne miejsce konfiguracji.                                                         | —                                      |
-| `conditions.ts`              | Ewaluator warunków — **własny parser, bez `eval`/`Function()`**.                                              | `ewaluuj_warunek`                      |
-| `facts.ts`                   | Fakty pochodne + oznaczenia i odmiana stron.                                                                  | `zbuduj_fakty`, `oznaczenie_strony`, … |
-| `renderer.ts`                | Złożenie dokumentu, numeracja, podstawianie pól.                                                              | `renderuj`                             |
-| `validator.ts`               | Dwie warstwy: schemat (zod) + reguły konstrukcyjne (R1–R32; bez ocen merytorycznych).                         | `validator.py`                         |
-| `odeslania.ts`               | Walidacja odesłań wewnętrznych po numeracji (umowa + cały komplet); błąd = blokada generacji.                 | —                                      |
-| `kw-nieruchomosci.server.ts` | Nieruchomości z treści KW w cache (sąd, opis, właściciele, obciążenia) — wspólne dla MCP i kreatora.          | —                                      |
-| `formatter.ts`               | Podgląd tekstowy (do diffów/przeglądu). Wierny port `textwrap`.                                               | `formatter.py`                         |
-| `fixtures/`                  | 5 scenariuszy testowych, kopie 1:1.                                                                           | `tests/`                               |
-| `contract-engine.test.ts`    | Port całego `test_suite.py` (194 asercje, w tym 33 negatywne).                                                | `test_suite.py`                        |
+| Plik                         | Rola                                                                                                           | Odpowiednik w silniku                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `schema.ts`                  | Kontrakt danych (zod + typy TS). `.strict()` = `additionalProperties:false`.                                   | `schema/umowa.schema.json`             |
+| `clauses.json`               | Biblioteka klauzul (v1.3: 110 klauzul, 8 sekcji). Tu edytuje prawnik.                                          | `clauses/klauzule.json`                |
+| `umowa-docx.ts`              | Komplet w jednym .docx: wniosek → umowa → Zał. 1–3; podpisy jako niewidoczne tabele.                           | —                                      |
+| `komplet.ts`                 | `generujKomplet()` — jedno wejście dla kreatora, agenta i MCP (render + .docx + SHA-256 + wersja biblioteki).  | —                                      |
+| `oplaty-windykacyjne.ts`     | Stawki Załącznika nr 3 — jedyne miejsce konfiguracji.                                                          | —                                      |
+| `conditions.ts`              | Ewaluator warunków — **własny parser, bez `eval`/`Function()`**.                                               | `ewaluuj_warunek`                      |
+| `facts.ts`                   | Fakty pochodne + oznaczenia i odmiana stron.                                                                   | `zbuduj_fakty`, `oznaczenie_strony`, … |
+| `renderer.ts`                | Złożenie dokumentu, numeracja, podstawianie pól.                                                               | `renderuj`                             |
+| `validator.ts`               | Dwie warstwy: schemat (zod) + reguły konstrukcyjne (R1–R32; bez ocen merytorycznych).                          | `validator.py`                         |
+| `odeslania.ts`               | Walidacja odesłań wewnętrznych po numeracji (umowa + cały komplet); błąd = blokada generacji.                  | —                                      |
+| `kw-nieruchomosci.server.ts` | Nieruchomości z treści KW w cache (sąd, opis, właściciele, obciążenia) — wspólne dla MCP i kreatora.           | —                                      |
+| `formatter.ts`               | Podgląd tekstowy (do diffów/przeglądu). Wierny port `textwrap`.                                                | `formatter.py`                         |
+| `inwestor-do-umowy.ts`       | Profil inwestora (`investors`) → Pożyczkodawca + rachunek do spłaty; kreator nie pyta o dane, które system ma. | —                                      |
+| `fixtures/`                  | 5 scenariuszy testowych, kopie 1:1.                                                                            | `tests/`                               |
+| `contract-engine.test.ts`    | Port całego `test_suite.py` (194 asercje, w tym 33 negatywne).                                                 | `test_suite.py`                        |
 
 ## Zmiany po sprawie Kańkowskich (zlecenie)
 
@@ -210,6 +211,32 @@ Zrealizowane (pkt 3.1 i 3.5 zlecenia — część niezależna od decyzji blokuj�
    od weryfikacji dokumentacji CMD KW Engine, do której nie ma tu dostępu.
 
 3. **Podmiana kreatora (pkt 3.4)** — na końcu, zależy od 1 i 2.
+
+## Prowizja od Pożyczkobiorcy a osoba Pożyczkodawcy
+
+Prowizja Finance You (5 % Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana
+z wypłaty) należy się za POŚREDNICTWO, więc zależy od tego, kto pożycza:
+
+- Pożyczkodawcą jest inwestor → `warunki.prowizja_finance_you` pominięte
+  znaczy „dolicz 5 %" (`uzupelnijRozliczenieFinanceYou`), a `rachunki.finance_you`
+  silnik wpisuje sam (Finance You ma jeden rachunek).
+- Pożyczkodawcą jest **sama Finance You** → prowizji nie ma: silnik ustawia
+  `prowizja_finance_you: null` i usuwa rachunek prowizyjny, nawet jeśli wpisał
+  je wcześniej kalkulator albo model. `jestFinanceYou` rozpoznaje stronę po
+  NIP, KRS **albo nazwie** (w kreatorze nazwa pojawia się przed numerami).
+- Umowa świadomie bez prowizji (oferta wewnętrzna pośrednika, Zlecenie
+  z wyłączoną prowizją) → mosty z kalkulatora i profilu wpisują JAWNE
+  `null`; pominięcie pola uruchomiłoby domyślne 5 %.
+
+## Dane Pożyczkodawcy z profilu inwestora
+
+Kreator umowy (agent AI, `umowa-agent.functions.ts`) na każdej turze dokłada
+pod szkic dane z profilu zalogowanego inwestora — `pozyczkodawcaZProfilu`
+(wariant strony, imię i nazwisko albo nazwa, PESEL/NIP/KRS/REGON, forma prawna,
+adres, kontakt, reprezentant) i rachunek do spłaty z kroku 2 pipeline'u. Profil
+jest BAZĄ: cokolwiek jest już w rozmowie, ma pierwszeństwo. Identyfikatory
+przepuszczamy tylko o poprawnej długości — inaczej walidator zgłaszałby błąd
+w polu, którego inwestor nie widział.
 
 ## Do weryfikacji prawnej (nie kodować obejść)
 

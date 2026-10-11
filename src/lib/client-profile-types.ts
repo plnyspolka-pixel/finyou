@@ -165,6 +165,15 @@ export interface InvestorData {
   email?: string;
   bankAccount?: string;
   representativeName?: string;
+  // Pozostałe dane Pożyczkodawcy z profilu inwestora (pipeline, krok 1) —
+  // kreator umowy wpisuje je do komparycji, gdy są w profilu.
+  /** „osoba_fizyczna" | „jdg" | „osoba_prawna" — wariant strony umowy. */
+  entityVariant?: string;
+  pesel?: string;
+  krs?: string;
+  regon?: string;
+  legalForm?: string;
+  representativeRole?: string;
 }
 
 export type InvestorReturnType = "amount" | "percent";

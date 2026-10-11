@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { fyCommission, kwotaNaReke } from "@/lib/contract-engine/fees";
+import { jestFinanceYouInwestor } from "@/lib/contract-engine/finance-you";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -276,7 +277,17 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
   };
 
   // ── derived ──────────────────────────────────────────────
-  const schedule = useMemo(() => buildDirectorSchedule(profile.offerData), [profile.offerData]);
+  // Pożyczkodawcą jest sama Finance You → bez Prowizji od Pożyczkobiorcy
+  // (nie ma pośrednictwa): Klient dostaje pełną Kwotę Udzieloną.
+  const bezProwizjiFY = useMemo(
+    () => jestFinanceYouInwestor(profile.investorData),
+    [profile.investorData],
+  );
+  const schedule = useMemo(
+    () => buildDirectorSchedule(profile.offerData, { bezProwizjiFY }),
+    [profile.offerData, bezProwizjiFY],
+  );
+  const prowizjaFYPln = bezProwizjiFY ? 0 : fyCommission(schedule?.nominalLoanAmount ?? 0);
   const completion = useMemo(() => calculateProfileCompletion(profile), [profile]);
   const securityRec = useMemo(
     () => recommendSecurity(schedule, profile.offerData),
@@ -1083,12 +1094,22 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
             <CardContent className="grid md:grid-cols-4 gap-3 text-sm">
               <Stat label="Kwota Udzielona" value={formatPLN(schedule?.nominalLoanAmount)} />
               <Stat
-                label="Prowizja Finance You (5%, min 5 000 zł, bez VAT) — potrącana"
-                value={formatPLN(fyCommission(schedule?.nominalLoanAmount ?? 0))}
+                label={
+                  bezProwizjiFY
+                    ? "Prowizja Finance You — brak (Pożyczkodawcą jest Finance You)"
+                    : "Prowizja Finance You (5%, min 5 000 zł, bez VAT) — potrącana"
+                }
+                value={formatPLN(prowizjaFYPln)}
               />
               <Stat
-                label="Klient otrzymuje na rękę"
-                value={formatPLN(kwotaNaReke(schedule?.nominalLoanAmount ?? 0))}
+                label={
+                  bezProwizjiFY ? "Klient otrzymuje (pełna kwota)" : "Klient otrzymuje na rękę"
+                }
+                value={formatPLN(
+                  bezProwizjiFY
+                    ? (schedule?.nominalLoanAmount ?? 0)
+                    : kwotaNaReke(schedule?.nominalLoanAmount ?? 0),
+                )}
               />
               <Stat
                 label="Wynagrodzenie inwestora / mies. (odsetki + prowizja)"

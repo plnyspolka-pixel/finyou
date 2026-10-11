@@ -43,6 +43,27 @@ describe("rachunki z profilu klienta", () => {
     expect(umowa.warunki.rachunki.splata).toBe("56 1090 2590 0000 0001 5708 1371");
   });
 
+  it("Pożyczkodawcą jest Finance You → umowa bez Prowizji od Pożyczkobiorcy", () => {
+    const p = profil();
+    const { umowa } = przetworzSzkic(buildUmowaData(p, profileToCalcPayload(p)!));
+    expect(umowa.warunki.prowizja_finance_you).toBeNull();
+    expect(umowa.warunki.rachunki.finance_you).toBeUndefined();
+  });
+
+  it("Pożyczkodawcą jest inwestor → prowizja FY 5 % (min 5 000 zł) i rachunek FY", () => {
+    const p = profil();
+    p.investorData = {
+      entityVariant: "osoba_fizyczna",
+      fullName: "Jan Inwestor",
+      pesel: "80010112345",
+      address: "ul. Krótka 2, 00-001 Warszawa",
+      bankAccount: "11 2222 3333 4444 5555 6666 7777",
+    };
+    const { umowa } = przetworzSzkic(buildUmowaData(p, profileToCalcPayload(p)!));
+    expect(umowa.warunki.prowizja_finance_you.kwota.cyframi).toBe("5 000,00");
+    expect(umowa.warunki.rachunki.finance_you).toBe("56 1090 2590 0000 0001 5708 1371");
+  });
+
   it("brak rachunku Pożyczkobiorcy → BLAD (R30)", () => {
     const p = profil();
     delete p.borrowerData.bankAccount;

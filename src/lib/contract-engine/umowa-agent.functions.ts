@@ -24,6 +24,7 @@ import { generujKomplet, type KompletWynik } from "./komplet";
 import { KATALOG_SCHEMATU } from "./umowa-schema-catalog";
 import { zapiszUmoweDocx } from "./umowa-storage.server";
 import { kalkulacjaDoSzkicu, wyglądaJakKalkulacja } from "./calc-to-umowa";
+import { dolaczProfilInwestoraDoSzkicu, INWESTOR_UMOWA_COLUMNS } from "./inwestor-do-umowy";
 import type { LoanCalcPayload } from "../loan-calc-pdf";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -52,10 +53,38 @@ const SYSTEM_PROMPT =
   "(dostaniesz listę problemów walidatora), i zadaj JEDNO najważniejsze pytanie o brakujące dane.\n" +
   '6. W "patch" zwróć TYLKO zmieniane fragmenty danych (deep-merge: obiekty są scalane, tablice podmieniane ' +
   "w całości — podając tablicę, podaj ją kompletną; null usuwa wartość).\n" +
-  '7. W "missing" wypisz najważniejsze brakujące dane (krótkie etykiety, max 8).\n\n' +
+  '7. W "missing" wypisz najważniejsze brakujące dane (krótkie etykiety, max 8).\n' +
+  "8. DANE POŻYCZKODAWCY (inwestora) system wpisuje SAM z jego profilu (pipeline inwestora: dane " +
+  "pożyczkodawcy i rachunek do spłaty) — nie pytaj o nie i nie nadpisuj ich; proś o nie tylko wtedy, " +
+  "gdy w szkicu nadal ich brakuje, albo gdy rozmówca sam chce je zmienić.\n" +
+  "9. Gdy Pożyczkodawcą jest Finance You, umowa NIE MA Prowizji od Pożyczkobiorcy (prowizji Finance You) " +
+  "— nie ma pośrednictwa, więc nie wpisuj jej ani nie pytaj o nią; system sam zeruje to pole.\n" +
+  "\n" +
   "SCHEMAT DANYCH UMOWY:\n" +
   KATALOG_SCHEMATU +
   '\n\nZwróć WYŁĄCZNIE JSON: { "reply": "…", "patch": { … }, "missing": ["…"] }';
+
+/**
+ * Dane POŻYCZKODAWCY z profilu zalogowanego inwestora — kreator umowy bierze
+ * je od razu, bez pytania (krok 1 i 2 pipeline'u inwestora: dane pożyczkodawcy
+ * i rachunek do spłaty). Dane z rozmowy (łatka modelu, ręczna zmiana) mają
+ * pierwszeństwo pole po polu — scalaniem zajmuje się czysta
+ * `dolaczProfilInwestoraDoSzkicu`.
+ */
+async function dolaczProfilInwestora(userId: string, szkic: any): Promise<any> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await (supabaseAdmin as any)
+      .from("investors")
+      .select(INWESTOR_UMOWA_COLUMNS)
+      .eq("user_id", userId)
+      .maybeSingle();
+    return dolaczProfilInwestoraDoSzkicu(szkic, data);
+  } catch (e) {
+    console.error("[umowa-agent] profil inwestora niedostępny", e);
+    return szkic;
+  }
+}
 
 // ── rozmowa z agentem ────────────────────────────────────────────────
 export interface UmowaAgentResult {
@@ -79,12 +108,14 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
     const calc = wyglądaJakKalkulacja(d?.calc) ? d.calc : null;
     return { messages, umowa: d?.umowa ?? {}, calc };
   })
-  .handler(async ({ data }): Promise<UmowaAgentResult> => {
+  .handler(async ({ data, context }): Promise<UmowaAgentResult> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Agent umowy jest chwilowo niedostępny.");
 
     let szkic = data.umowa && typeof data.umowa === "object" ? structuredClone(data.umowa) : {};
     if (data.calc) szkic = scalPatch(szkic, kalkulacjaDoSzkicu(data.calc));
+    // Pożyczkodawca i rachunek do spłaty — z profilu inwestora, bez pytania.
+    szkic = await dolaczProfilInwestora(context.userId as string, szkic);
 
     // Stan szkicu + aktualne problemy walidacji — kontekst dla agenta.
     const { problemy: problemyPrzed } = przetworzSzkic(structuredClone(szkic));
@@ -95,6 +126,10 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
         ? "\n\nUWAGA: warunki finansowe i harmonogram rat zostały właśnie wpisane do szkicu " +
           "wprost z kalkulatora (deterministycznie). NIE zmieniaj ich i nie przepisuj — potwierdź je " +
           "w odpowiedzi i przejdź do stron umowy, nieruchomości (KW) i zabezpieczeń."
+        : "") +
+      (szkic?.pozyczkodawca
+        ? "\n\nUWAGA: dane Pożyczkodawcy (inwestora) i rachunek do spłaty są wpisane z jego " +
+          "profilu w systemie. Nie pytaj o nie ponownie."
         : "") +
       "\n\nAKTUALNE PROBLEMY WALIDATORA:\n" +
       (problemyPrzed.length
@@ -158,8 +193,12 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
 export const previewUmowaAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { umowa: any }) => ({ umowa: d?.umowa ?? {} }))
-  .handler(async ({ data }) => {
-    const { umowa, problemy, autokorekty } = przetworzSzkic(structuredClone(data.umowa));
+  .handler(async ({ data, context }) => {
+    const szkic = await dolaczProfilInwestora(
+      context.userId as string,
+      structuredClone(data.umowa),
+    );
+    const { umowa, problemy, autokorekty } = przetworzSzkic(szkic);
     const blocked = problemy.some((p) => p.poziom === "BLAD");
     let previewText = "";
     if (!blocked) {
@@ -187,7 +226,8 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
   .inputValidator((d: { umowa: any }) => ({ umowa: d?.umowa ?? {} }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { umowa, problemy, autokorekty } = przetworzSzkic(structuredClone(data.umowa));
+    const szkic = await dolaczProfilInwestora(userId as string, structuredClone(data.umowa));
+    const { umowa, problemy, autokorekty } = przetworzSzkic(szkic);
     const blocked = problemy.some((p) => p.poziom === "BLAD");
     if (blocked) {
       return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };

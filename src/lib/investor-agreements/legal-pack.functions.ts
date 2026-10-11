@@ -17,7 +17,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import { orderLimitsFromSettings } from "./order-cycle-core";
+import {
+  canToggleFyCommission,
+  orderLimitsFromSettings,
+  resolveFyCommissionEnabled,
+} from "./order-cycle-core";
 
 const loose = (c: unknown) => c as any;
 
@@ -77,7 +81,7 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       loose(supabaseAdmin)
         .from("investor_orders")
         .select(
-          "id, order_seq, amount_pln, status, consumer_choice, submitted_at, decided_at, expires_at, rejection_reason",
+          "id, order_seq, amount_pln, status, consumer_choice, fy_commission_enabled, submitted_at, decided_at, expires_at, rejection_reason",
         )
         .eq("user_id", userId)
         .order("submitted_at", { ascending: false })
@@ -150,9 +154,15 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
         .in("id", staleIds);
     }
 
+    // Czy pokazać przełącznik prowizji Finance You przy składaniu Zlecenia
+    // (uprawnienia inwestora + administratora razem).
+    const { getUserRoles } = await import("@/lib/access/guards.server");
+    const canToggleFyCommissionFlag = canToggleFyCommission(await getUserRoles(userId));
+
     return {
       packActive,
       packComplete,
+      canToggleFyCommission: canToggleFyCommissionFlag,
       investor,
       documents: docsState,
       deliveries: deliveries ?? [],
@@ -477,6 +487,9 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
         consumerChoice: z
           .enum(["nie_dotyczy", "start_po_14_dniach", "zadanie_startu_przed_14"])
           .default("nie_dotyczy"),
+        /** Prowizja Finance You dla tego Zlecenia — wyłączyć może wyłącznie
+         *  inwestor będący jednocześnie administratorem (serwer weryfikuje). */
+        fyCommissionEnabled: z.boolean().default(true),
       })
       .parse(d),
   )
@@ -524,6 +537,15 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
+    // Przełącznik prowizji Finance You: honorujemy go wyłącznie, gdy składający
+    // Zlecenie ma JEDNOCZEŚNIE uprawnienia inwestora i administratora. Dla
+    // każdego innego inwestora Prowizja od Pożyczkobiorcy zostaje włączona.
+    const { getUserRoles } = await import("@/lib/access/guards.server");
+    const fyCommissionEnabled = resolveFyCommissionEnabled(
+      await getUserRoles(userId),
+      data.fyCommissionEnabled,
+    );
+
     const { ip, userAgent } = requestMeta();
     const { data: inserted, error } = await loose(supabaseAdmin)
       .from("investor_orders")
@@ -537,6 +559,7 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
         validity_days: 90,
         statements: { ...data.statements, ip, user_agent: userAgent },
         consumer_choice: investor?.is_consumer ? data.consumerChoice : "nie_dotyczy",
+        fy_commission_enabled: fyCommissionEnabled,
       })
       .select("id, order_seq")
       .single();
@@ -552,7 +575,10 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
         .insert({
           order_id: inserted.id,
           event_type: "zlecenie_zlozone",
-          payload: { order_no: `FY-Z-${inserted.order_seq}` },
+          payload: {
+            order_no: `FY-Z-${inserted.order_seq}`,
+            fy_commission_enabled: fyCommissionEnabled,
+          },
           document_versions: docs ?? [],
           actor: userId,
           actor_kind: "inwestor",

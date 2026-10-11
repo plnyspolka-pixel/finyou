@@ -7078,6 +7078,7 @@ export type Database = {
           decided_at: string | null
           decided_by: string | null
           expires_at: string | null
+          fy_commission_enabled: boolean
           id: string
           max_period_months: number | null
           min_annual_yield: number | null
@@ -7097,6 +7098,7 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           expires_at?: string | null
+          fy_commission_enabled?: boolean
           id?: string
           max_period_months?: number | null
           min_annual_yield?: number | null
@@ -7116,6 +7118,7 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           expires_at?: string | null
+          fy_commission_enabled?: boolean
           id?: string
           max_period_months?: number | null
           min_annual_yield?: number | null

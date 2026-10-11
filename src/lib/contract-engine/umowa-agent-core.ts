@@ -229,10 +229,21 @@ function stronaWskazana(strona: any): boolean {
  *    Udzielonej, nie mniej niż 5 000 zł; jawne `null` = umowa bez prowizji FY,
  *  • rachunek Finance You do przelewu prowizji jest wpisywany ZAWSZE
  *    automatycznie — Finance You ma jeden rachunek (spłaty i prowizja).
+ *
+ * Gdy Pożyczkodawcą jest SAMA Finance You, prowizji nie ma z definicji (nie ma
+ * pośrednictwa — FY nie pobiera prowizji od własnej pożyczki): kreator umowy
+ * KASUJE prowizję i rachunek prowizyjny, także gdy wpisał je wcześniej
+ * kalkulator albo model.
  */
 export function uzupelnijRozliczenieFinanceYou(umowa: any): void {
   const w = umowa?.warunki;
-  if (!w || !stronaWskazana(umowa?.pozyczkodawca) || jestFinanceYou(umowa.pozyczkodawca)) return;
+  if (!w || !stronaWskazana(umowa?.pozyczkodawca)) return;
+  if (jestFinanceYou(umowa.pozyczkodawca)) {
+    // null (a nie usunięcie pola) = jawnie „umowa bez prowizji FY".
+    w.prowizja_finance_you = null;
+    if (w.rachunki && "finance_you" in w.rachunki) delete w.rachunki.finance_you;
+    return;
+  }
   if (w.prowizja_finance_you === undefined) {
     const kwota = parseKwota(w.kwota_pozyczki?.cyframi);
     if (!Number.isNaN(kwota) && kwota > 0) {

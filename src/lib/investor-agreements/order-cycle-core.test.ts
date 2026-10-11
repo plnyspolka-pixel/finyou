@@ -3,6 +3,8 @@ import {
   ACTIVE_MATCH_STATUSES,
   amountMatchesOrder,
   buildKartaLeada,
+  canToggleFyCommission,
+  resolveFyCommissionEnabled,
   canTransition,
   clientProvisionPln,
   consumerKaraStatement,
@@ -225,5 +227,30 @@ describe("hasLiveOrder — zakładka „Złóż zlecenie” w menu", () => {
     expect(hasLiveOrder([{ status: "przyjete", expires_at: "2026-10-03T11:59:59Z" }], now)).toBe(
       false,
     );
+  });
+});
+
+describe("przełącznik prowizji Finance You przy Zleceniu", () => {
+  it("widzi go tylko inwestor będący jednocześnie administratorem", () => {
+    expect(canToggleFyCommission(["inwestor", "administrator"])).toBe(true);
+    expect(canToggleFyCommission(["administrator", "inwestor", "operator"])).toBe(true);
+    expect(canToggleFyCommission(["inwestor"])).toBe(false);
+    expect(canToggleFyCommission(["administrator"])).toBe(false);
+    expect(canToggleFyCommission(["operator", "ksiegowosc"])).toBe(false);
+    expect(canToggleFyCommission([])).toBe(false);
+    expect(canToggleFyCommission(null)).toBe(false);
+  });
+
+  it("z uprawnieniami honoruje wybór, domyślnie prowizja włączona", () => {
+    const roles = ["inwestor", "administrator"];
+    expect(resolveFyCommissionEnabled(roles, false)).toBe(false);
+    expect(resolveFyCommissionEnabled(roles, true)).toBe(true);
+    expect(resolveFyCommissionEnabled(roles, undefined)).toBe(true);
+  });
+
+  it("bez uprawnień prowizja zostaje włączona, nawet gdy żądanie mówi inaczej", () => {
+    expect(resolveFyCommissionEnabled(["inwestor"], false)).toBe(true);
+    expect(resolveFyCommissionEnabled(["administrator"], false)).toBe(true);
+    expect(resolveFyCommissionEnabled([], false)).toBe(true);
   });
 });

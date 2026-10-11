@@ -63,7 +63,15 @@ export type ScheduleInput = OfferData;
  * Wynagrodzenie inwestora jest teraz **wyprowadzane** (odsetki + prowizja),
  * a nie zadawane osobnym parametrem.
  */
-export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null {
+export function buildDirectorSchedule(
+  offer: ScheduleInput,
+  /**
+   * `bezProwizjiFY` — pożyczka bez Prowizji od Pożyczkobiorcy: Pożyczkodawcą
+   * jest sama Finance You (brak pośrednictwa) albo prowizja została wyłączona.
+   * Wtedy Klient dostaje pełną Kwotę Udzieloną.
+   */
+  opts: { bezProwizjiFY?: boolean } = {},
+): ScheduleData | null {
   const kwotaPozyczki = Number(offer.netAmountToClient ?? 0);
   const prowizja = Number(offer.creditedCommission ?? 0);
   const maxPayment = Number(offer.maxMonthlyPaymentByClient ?? 0);
@@ -73,7 +81,7 @@ export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null
 
   if (!kwotaPozyczki || !maxPayment || !months || !payoutDate) return null;
 
-  const prowizjaFY = fyCommission(kwotaPozyczki);
+  const prowizjaFY = opts.bezProwizjiFY ? 0 : fyCommission(kwotaPozyczki);
   const eng = buildEngineSchedule({
     kwotaPozyczki,
     prowizja,
@@ -107,7 +115,9 @@ export function buildDirectorSchedule(offer: ScheduleInput): ScheduleData | null
     kwotaPozyczki > 0 ? round2((annualizedInvestorProfitAmount / kwotaPozyczki) * 100) : 0;
 
   const infos: string[] = [
-    `Kwota Udzielona ${formatPLN(kwotaPozyczki)}: Prowizja Finance You ${formatPLN(prowizjaFY)} (5%, min 5 000 zł, bez VAT) potrącana z wypłaty — Klient otrzymuje ${formatPLN(eng.kwotaWyplaconaKlientowi)}; prowizja inwestora rozłożona na raty (KWO_02).`,
+    prowizjaFY > 0
+      ? `Kwota Udzielona ${formatPLN(kwotaPozyczki)}: Prowizja Finance You ${formatPLN(prowizjaFY)} (5%, min 5 000 zł, bez VAT) potrącana z wypłaty — Klient otrzymuje ${formatPLN(eng.kwotaWyplaconaKlientowi)}; prowizja inwestora rozłożona na raty (KWO_02).`
+      : `Kwota Udzielona ${formatPLN(kwotaPozyczki)} bez Prowizji od Pożyczkobiorcy — Klient otrzymuje całość; prowizja inwestora rozłożona na raty (KWO_02).`,
   ];
   if (eng.balloon > 0)
     infos.push(
