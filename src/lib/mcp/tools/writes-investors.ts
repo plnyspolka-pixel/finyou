@@ -12,6 +12,7 @@ import {
   oneOf,
   patchOf,
   requireTeamAdmin,
+  requireUser,
   rowsOf,
   updateOne,
 } from "../_helpers";
@@ -438,9 +439,136 @@ export const setInvestmentProjectStatus = defineTool({
     }),
 });
 
+/**
+ * Propozycja inwestora z konta wywołującego — to samo, co „Złóż propozycję”
+ * na /inwestor/wniosek/$id: harmonogram z silnika (buildEngineSchedule, jak
+ * kalkulator), zapis klientem użytkownika (RLS + strażnik statusów: konto
+ * inwestor + administrator dostaje auto-akceptację), potem powiadomienie
+ * autora wniosku (mail, Messenger, telefon) jak po złożeniu w panelu.
+ */
+export const submitInvestorOffer = defineTool({
+  name: "submit_investor_offer",
+  title: "Submit investor offer",
+  description:
+    "Składa propozycję finansowania do wniosku z konta inwestora zalogowanego użytkownika — jak przycisk „Złóż propozycję” w panelu inwestora: harmonogram z silnika (odsetki od salda, prowizja inwestora w ratach, pułap raty → balon w ostatniej racie), zapis z RLS i strażnikiem statusów (konto z rolą administratora dostaje auto-akceptację), powiadomienie autora wniosku (operator/pośrednik/klient: e-mail, Messenger, krótki telefon). `status=szkic` zapisuje bez powiadomienia. Wykonuj tylko na wyraźne polecenie użytkownika.",
+  inputSchema: {
+    loan_application_id: z.string().uuid(),
+    amount: z.number().positive().describe("Kwota Udzielona (PLN)."),
+    months: z.number().int().min(1).max(360),
+    annual_rate: z.number().min(0).max(100).describe("Oprocentowanie roczne w %."),
+    commission_pln: z
+      .number()
+      .min(0)
+      .default(0)
+      .describe("Prowizja inwestora w PLN (rozłożona równo na raty)."),
+    max_monthly_payment: z
+      .number()
+      .positive()
+      .optional()
+      .describe(
+        "Pułap raty; reszta kapitału w ostatniej racie (balon). Domyślnie rata annuitetowa.",
+      ),
+    finance_you_fee: z
+      .boolean()
+      .default(false)
+      .describe("Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty."),
+    note: z.string().max(4000).optional(),
+    status: z.enum(["szkic", "zlozona"]).default("zlozona"),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      const s = requireUser(ctx) as any;
+      const uid = actorId(ctx);
+      const { buildEngineSchedule } = await import("@/lib/contract-engine/loan-schedule");
+      const { fyCommission } = await import("@/lib/contract-engine/fees");
+      const { data: investor } = await s
+        .from("investors")
+        .select("id")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (!investor) return fail("Brak profilu inwestora dla tego konta.");
+
+      const r = a.annual_rate / 100 / 12;
+      const annuity =
+        r > 0 ? (a.amount * r) / (1 - Math.pow(1 + r, -a.months)) : a.amount / a.months;
+      const cap = a.max_monthly_payment ?? annuity + a.commission_pln / a.months;
+      const now = new Date();
+      const first = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const eng = buildEngineSchedule({
+        kwotaPozyczki: a.amount,
+        prowizja: a.commission_pln,
+        prowizjaFY: a.finance_you_fee ? fyCommission(a.amount) : 0,
+        annualRatePercent: a.annual_rate,
+        months: a.months,
+        maxMonthlyPayment: cap,
+        firstPaymentDate: `${first.getFullYear()}-${pad(first.getMonth() + 1)}-${pad(first.getDate())}`,
+      });
+      if (eng.errors.length) return fail(eng.errors.join(" "));
+      const regular = eng.rows[0]?.rata_razem ?? 0;
+
+      const { data: offer, error } = await s
+        .from("investor_offers")
+        .insert({
+          loan_application_id: a.loan_application_id,
+          investor_id: investor.id,
+          offer_status: a.status,
+          proposed_amount: a.amount,
+          period_months: a.months,
+          expected_yearly_yield: a.annual_rate,
+          commission: a.commission_pln,
+          collection_protection: false,
+          has_balloon: eng.balloon > 0,
+          balloon_amount: eng.balloon > 0 ? eng.balloon : null,
+          repayment_type: eng.balloon > 0 ? "mieszana" : "miesieczna",
+          estimated_monthly_payment: regular,
+          estimated_total_cost: eng.totalToRepay,
+          schedule: eng.rows.map((x) => ({
+            idx: x.nr,
+            date: x.termin,
+            rata: x.rata_razem,
+            kapital: x.kapital,
+            odsetki: x.odsetki,
+            prowizja: x.prowizja,
+            saldo: x.saldo,
+          })),
+          investor_note: a.note ?? null,
+          submitted_at: a.status === "zlozona" ? new Date().toISOString() : null,
+        })
+        .select(
+          "id, loan_application_id, offer_status, proposed_amount, period_months, expected_yearly_yield, commission, estimated_monthly_payment, balloon_amount, estimated_total_cost, decided_by_role, submitted_at",
+        )
+        .single();
+      if (error) return fail(`investor_offers: ${error.message}`);
+
+      let notify: unknown = null;
+      if (a.status === "zlozona") {
+        try {
+          const { notifyInvestorOfferSubmitted } =
+            await import("@/lib/investor-offer-notify.server");
+          notify = await notifyInvestorOfferSubmitted(offer.id as string);
+        } catch (e) {
+          notify = { error: e instanceof Error ? e.message : String(e) };
+        }
+      }
+      return ok({
+        ok: true,
+        offer,
+        regular_payment: regular,
+        balloon: eng.balloon,
+        total_interest: eng.totalInterest,
+        total_to_repay: eng.totalToRepay,
+        warnings: eng.warnings,
+        notify,
+      });
+    }),
+});
+
 export const writesInvestorsTools = [
   updateInvestorCriteria,
   decideInvestorOffer,
+  submitInvestorOffer,
   decideAutoDistributionProposal,
   decideCriteriaChangeProposal,
   setInvestorActive,
