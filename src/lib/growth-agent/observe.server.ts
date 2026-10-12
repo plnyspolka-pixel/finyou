@@ -23,14 +23,14 @@ export async function facebookMetrics(postId: string): Promise<PostMetrics> {
   const m = await import("@/lib/meta-api.server");
   const post = await m.getPost(postId);
   const insights = await m
-    .getPostInsights(postId, "post_impressions_unique,post_impressions,post_clicks")
+    .getPostInsights(postId, "post_total_media_view_unique,post_media_view,post_clicks")
     .catch(() => [] as any[]);
   return {
     likes: post?.likes?.summary?.total_count ?? null,
     comments: post?.comments?.summary?.total_count ?? null,
     shares: post?.shares?.count ?? null,
-    reach: val(insights, "post_impressions_unique"),
-    impressions: val(insights, "post_impressions"),
+    reach: val(insights, "post_total_media_view_unique"),
+    views: val(insights, "post_media_view"),
     clicks: val(insights, "post_clicks"),
   };
 }
@@ -167,13 +167,13 @@ export async function warmStart(): Promise<string> {
     const text = String(post?.message ?? "");
     if (!text) continue;
     const insights = await m
-      .getPostInsights(post.id, "post_impressions_unique")
+      .getPostInsights(post.id, "post_total_media_view_unique")
       .catch(() => [] as any[]);
     const score = engagementScore({
       likes: post?.likes?.summary?.total_count,
       comments: post?.comments?.summary?.total_count,
       shares: post?.shares?.count,
-      reach: val(insights, "post_impressions_unique"),
+      reach: val(insights, "post_total_media_view_unique"),
     });
     samples.push({ f: { ...classifyContent(text), slot: slotForDate(post.created_time) }, score });
   }
