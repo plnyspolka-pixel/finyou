@@ -1069,8 +1069,13 @@ function ContactBox({
       ) : (
         <p className="text-xs text-muted-foreground">Brak danych kontaktowych klienta.</p>
       )}
+      <p className="text-xs text-muted-foreground">
+        Umowę (dane klienta i KW) przygotujesz dopiero po akceptacji Twojej propozycji
+        indywidualnych warunków finansowania.
+      </p>
       <div className="flex flex-wrap gap-2">
-        {/* Po Ujawnieniu: kreator umowy z danymi klienta, KW i złożoną ofertą. */}
+        {/* Kreator umowy z danymi klienta i KW — serwer wpuszcza wyłącznie po
+            akceptacji propozycji warunków przez uprawnioną stronę. */}
         <Button
           size="sm"
           disabled={pendingKey === applicationId}

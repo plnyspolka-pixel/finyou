@@ -9,10 +9,13 @@
 // administratora, są akceptowane automatycznie (trigger w bazie:
 // investor_offers_guard_status — tu tylko lustrzana reguła dla UI i testów).
 
-/** Statusy, w których propozycja została zaakceptowana przez uprawnioną stronę. */
+/**
+ * Statusy, w których propozycja została zaakceptowana przez uprawnioną stronę.
+ * Tylko te odblokowują pobranie danych klienta i KW do umowy oraz tworzenie
+ * umowy — nie ma ścieżki obejścia (także „Ujawnienie" w „Moich zleceniach").
+ */
 export const OFFER_ACCEPTED_STATUSES = [
   "zatwierdzona_przez_administratora",
-  "wyslana_do_klienta",
   "zaakceptowana_przez_klienta",
 ] as const;
 

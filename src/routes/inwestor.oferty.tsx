@@ -145,7 +145,7 @@ function InwestorOferty() {
                               title={
                                 o.contractUnlocked
                                   ? "Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
-                                  : "Dostępne po odsłonięciu danych kontaktowych klienta (rezerwacja w „Moich zleceniach”) albo po akceptacji propozycji przez uprawnioną stronę"
+                                  : "Dostępne po akceptacji Twojej propozycji przez uprawnioną stronę (administratora, operatora, pożyczkobiorcę albo pośrednika)"
                               }
                               disabled={!o.contractUnlocked || creatingFor === o.id}
                               onClick={() => void createContract({ offerId: o.id })}

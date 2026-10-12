@@ -1,11 +1,13 @@
 // „Stwórz umowę" z listy „Moje oferty": komplet danych do kreatora umowy —
 // pełne dane klienta (pożyczkobiorcy), nieruchomości z numerami KW i
 // parametry złożonej oferty (harmonogram liczy front tym samym silnikiem co PDF).
-// Tylko właściciel oferty, po Ujawnieniu danych kontaktowych albo akceptacji klienta. Każde odsłonięcie
+// Tylko właściciel oferty i wyłącznie po akceptacji propozycji przez uprawnioną
+// stronę (Ujawnienie w „Moich zleceniach" nie wystarcza). Każde odsłonięcie
 // danych klienta logujemy w automation_events.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isOfferAccepted, OFFER_ACCEPTED_STATUSES } from "@/lib/investor-offers/acceptance";
 
 export interface OfferContractContext {
   offer: {
@@ -58,7 +60,7 @@ export const getOfferContractContext = createServerFn({ method: "POST" })
     z
       .union([
         z.object({ offerId: z.string().uuid() }),
-        // Z „Moich zleceń": ostatnia złożona oferta tego inwestora do wniosku.
+        // Z „Moich zleceń": ostatnia zaakceptowana propozycja inwestora do wniosku.
         z.object({ applicationId: z.string().uuid() }),
       ])
       .parse(d),
@@ -87,7 +89,7 @@ export const getOfferContractContext = createServerFn({ method: "POST" })
           .select(select)
           .eq("investor_id", inv.id)
           .eq("loan_application_id", data.applicationId)
-          .neq("offer_status", "szkic")
+          .in("offer_status", [...OFFER_ACCEPTED_STATUSES])
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle());
@@ -96,18 +98,14 @@ export const getOfferContractContext = createServerFn({ method: "POST" })
     if ("offerId" in data && (!offer || offer.investor?.user_id !== context.userId)) {
       throw new Error("Nie znaleziono oferty.");
     }
-    // Dane identyfikujące klienta dopiero po odsłonięciu danych kontaktowych
-    // (rezerwacja w „Moich zleceniach") albo po akceptacji oferty przez klienta.
-    // Bez oferty (z „Moich zleceń") — wystarczy Ujawnienie.
-    const { contractUnlocked, disclosedApplicationIds } =
-      await import("@/lib/investor-agreements/order-projects.functions");
-    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
-    const appId: string = offer?.loan?.id ?? ("applicationId" in data ? data.applicationId : "");
-    if (!contractUnlocked(offer?.offer_status ?? "", disclosed.has(appId))) {
+    // Dane identyfikujące klienta i KW wyłącznie po akceptacji propozycji
+    // przez uprawnioną stronę — bez wyjątków.
+    if (!offer || !isOfferAccepted(offer.offer_status)) {
       throw new Error(
-        "Umowę można stworzyć po odsłonięciu danych kontaktowych klienta albo po akceptacji oferty.",
+        "Umowę można stworzyć dopiero po akceptacji Twojej propozycji warunków finansowania.",
       );
     }
+    const appId: string = offer.loan?.id ?? "";
     let app: any = offer?.loan ?? null;
     if (!app) {
       ({ data: app } = await db
@@ -181,10 +179,10 @@ export const getOfferContractContext = createServerFn({ method: "POST" })
   });
 
 /**
- * „Przygotuj umowę" z „Moich zleceń" bez wcześniejszej oferty: ekran danych
- * stron (contract-prep) działa na ofercie, więc bierzemy ostatnią ofertę
- * inwestora do wniosku, a gdy jej nie ma — tworzymy szkic z parametrów wniosku.
- * Tylko po Ujawnieniu danych kontaktowych tego Projektu.
+ * „Przygotuj umowę" z „Moich zleceń": ekran danych stron (contract-prep)
+ * działa na ofercie — zwracamy zaakceptowaną propozycję inwestora do wniosku.
+ * Bez akceptacji propozycji przez uprawnioną stronę umowy nie przygotujemy
+ * (Ujawnienie danych kontaktowych nie wystarcza).
  */
 export const ensureContractOffer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -192,48 +190,25 @@ export const ensureContractOffer = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<{ offerId: string }> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
-    const { disclosedApplicationIds } =
-      await import("@/lib/investor-agreements/order-projects.functions");
-    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
-    if (!disclosed.has(data.applicationId)) {
-      throw new Error("Umowę można przygotować po odsłonięciu danych kontaktowych klienta.");
-    }
     const { data: inv } = await db
       .from("investors")
       .select("id")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (!inv) throw new Error("Brak profilu inwestora.");
-    const { data: offers } = await db
+    const { data: accepted } = await db
       .from("investor_offers")
-      .select("id, offer_status")
+      .select("id")
       .eq("investor_id", inv.id)
       .eq("loan_application_id", data.applicationId)
+      .in("offer_status", [...OFFER_ACCEPTED_STATUSES])
       .order("created_at", { ascending: false })
-      .limit(20);
-    const existing =
-      (offers ?? []).find((o: any) => o.offer_status !== "szkic") ?? (offers ?? [])[0];
-    if (existing) return { offerId: existing.id as string };
-
-    const { data: app } = await db
-      .from("loan_applications")
-      .select("loan_amount, preferred_period_months, annual_investor_rate")
-      .eq("id", data.applicationId)
+      .limit(1)
       .maybeSingle();
-    const { data: created, error } = await db
-      .from("investor_offers")
-      .insert({
-        loan_application_id: data.applicationId,
-        investor_id: inv.id,
-        offer_status: "szkic",
-        proposed_amount: app?.loan_amount ?? null,
-        period_months: app?.preferred_period_months ?? null,
-        expected_yearly_yield: app?.annual_investor_rate ?? null,
-        collection_protection: false,
-        investor_note: "Szkic utworzony przy przygotowaniu umowy z „Moich zleceń”.",
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { offerId: created.id as string };
+    if (!accepted) {
+      throw new Error(
+        "Umowę można przygotować dopiero po akceptacji Twojej propozycji warunków finansowania.",
+      );
+    }
+    return { offerId: accepted.id as string };
   });

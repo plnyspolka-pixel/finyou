@@ -71,6 +71,8 @@ function InwestorWniosek() {
   const navigate = useNavigate();
   const [app, setApp] = useState<any | null>(null);
   const [investorId, setInvestorId] = useState<string | null>(null);
+  // Umowa / e-podpis dopiero po akceptacji propozycji przez uprawnioną stronę.
+  const [hasAcceptedOffer, setHasAcceptedOffer] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
@@ -107,7 +109,15 @@ function InwestorWniosek() {
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
-        if (inv) setInvestorId(inv.id);
+        if (inv) {
+          setInvestorId(inv.id);
+          const { data: mine } = await supabase
+            .from("investor_offers")
+            .select("offer_status")
+            .eq("investor_id", inv.id)
+            .eq("loan_application_id", id);
+          setHasAcceptedOffer((mine ?? []).some((o) => isOfferAccepted(o.offer_status)));
+        }
       }
       const { data: ds } = await supabase
         .from("documents")
@@ -275,16 +285,19 @@ function InwestorWniosek() {
               <Eye className="mr-1 h-3 w-3" />
               {app.view_count ?? 0} odsłon
             </Badge>
-            {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod). */}
-            <Button
-              asChild
-              size="sm"
-              className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
-            >
-              <a href={`/inwestor/podpisy?nowa=1&klient=${app.client_id}&wniosek=${id}`}>
-                Wyślij umowę do e-podpisu
-              </a>
-            </Button>
+            {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod) —
+                tylko po akceptacji propozycji; serwer i tak to egzekwuje. */}
+            {hasAcceptedOffer && (
+              <Button
+                asChild
+                size="sm"
+                className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
+              >
+                <a href={`/inwestor/podpisy?nowa=1&klient=${app.client_id}&wniosek=${id}`}>
+                  Wyślij umowę do e-podpisu
+                </a>
+              </Button>
+            )}
           </div>
         }
       />

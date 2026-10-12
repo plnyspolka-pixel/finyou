@@ -181,8 +181,13 @@ export async function disclosedApplicationIds(db: any, userId: string): Promise<
 }
 
 /** „Stwórz umowę": po Ujawnieniu danych kontaktowych albo po akceptacji klienta. */
-export function contractUnlocked(offerStatus: string, disclosed: boolean): boolean {
-  return disclosed || isOfferAccepted(offerStatus);
+/**
+ * Dane klienta i KW do umowy oraz tworzenie umowy — wyłącznie po akceptacji
+ * propozycji przez uprawnioną stronę. Ujawnienie danych kontaktowych
+ * w „Moich zleceniach" NIE odblokowuje umowy.
+ */
+export function contractUnlocked(offerStatus: string): boolean {
+  return isOfferAccepted(offerStatus);
 }
 
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {
@@ -1066,11 +1071,10 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const { maskKwRaw } = await import("@/lib/location-scoring/masking");
-    const disclosed = await disclosedApplicationIds(supabaseAdmin, context.userId);
     return Promise.all(
       (offers ?? []).map(async (o: any): Promise<MyOfferRow> => {
         const app = o.loan_application;
-        const unlocked = contractUnlocked(o.offer_status, disclosed.has(o.loan_application_id));
+        const unlocked = contractUnlocked(o.offer_status);
         if (!app) return { ...o, contractUnlocked: unlocked, project: null };
         const p = propertyOf(app);
         const { properties: _props, ...appRest } = app;

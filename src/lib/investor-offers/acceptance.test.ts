@@ -15,8 +15,9 @@ describe("propozycje 1:1 — akceptacja", () => {
 
   it("akceptacja administratora lub klienta odblokowuje dalszy etap", () => {
     expect(isOfferAccepted("zatwierdzona_przez_administratora")).toBe(true);
-    expect(isOfferAccepted("wyslana_do_klienta")).toBe(true);
     expect(isOfferAccepted("zaakceptowana_przez_klienta")).toBe(true);
+    // Przekazanie klientowi to jeszcze nie akceptacja — czeka na decyzję klienta.
+    expect(isOfferAccepted("wyslana_do_klienta")).toBe(false);
   });
 
   it("status po decyzji zależy od strony", () => {
