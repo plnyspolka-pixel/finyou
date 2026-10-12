@@ -1042,3 +1042,258 @@ export async function tekstZDocx(bytes: Uint8Array): Promise<string> {
   const zip = new PizZip(bytes);
   return tekstZDocumentXml(zip.file("word/document.xml")!.asText());
 }
+
+// ── bloki z .docx (PDF do e-podpisu) ───────────────────────────
+
+interface XmlEl {
+  tag: string;
+  attrs: Record<string, string>;
+  kids: Array<XmlEl | string>;
+}
+
+/** Minimalny parser XML (bez DTD/CDATA) — wystarcza na WordprocessingML. */
+function parsujXml(xml: string): XmlEl {
+  const root: XmlEl = { tag: "#root", attrs: {}, kids: [] };
+  const stos: XmlEl[] = [root];
+  const dec = (s: string) =>
+    s
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+      .replace(/&amp;/g, "&");
+  const re =
+    /<(\/?)([A-Za-z_][\w:.-]*)((?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|<\?[^>]*\?>|<!--[\s\S]*?-->|([^<]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml))) {
+    const [, zamk, tag, atr, samo, tekst] = m;
+    const top = stos[stos.length - 1];
+    if (tekst !== undefined) {
+      top.kids.push(dec(tekst));
+      continue;
+    }
+    if (!tag) continue;
+    if (zamk) {
+      while (stos.length > 1 && stos.pop()!.tag !== tag);
+      continue;
+    }
+    const attrs: Record<string, string> = {};
+    for (const a of (atr ?? "").matchAll(/([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+      attrs[a[1]] = dec(a[2] ?? a[3] ?? "");
+    }
+    const el: XmlEl = { tag, attrs, kids: [] };
+    top.kids.push(el);
+    if (!samo) stos.push(el);
+  }
+  return root;
+}
+
+const dzieci = (el: XmlEl | undefined, tag: string): XmlEl[] =>
+  (el?.kids ?? []).filter((k): k is XmlEl => typeof k !== "string" && k.tag === tag);
+const dziecko = (el: XmlEl | undefined, tag: string): XmlEl | undefined => dzieci(el, tag)[0];
+/** Włączona właściwość (`<w:b/>`, `<w:b w:val="1"/>`, ale nie `w:val="0"`). */
+const wlaczone = (el: XmlEl | undefined): boolean =>
+  Boolean(el) && !["0", "false", "off"].includes(el!.attrs["w:val"] ?? "");
+
+interface AkapitDocx {
+  runs: Run[];
+  /** Rozmiar w półpunktach (największy w akapicie), gdy ustawiony jawnie. */
+  sz: number | null;
+  jc: string | null;
+  indLeft: number;
+  pageBreakBefore: boolean;
+  keepNext: boolean;
+}
+
+function akapitZXml(p: XmlEl): AkapitDocx {
+  const ppr = dziecko(p, "w:pPr");
+  const runs: Run[] = [];
+  let sz: number | null = null;
+  const zbierz = (el: XmlEl) => {
+    for (const k of el.kids) {
+      if (typeof k === "string") continue;
+      if (k.tag === "w:r") {
+        const rpr = dziecko(k, "w:rPr");
+        const s = dziecko(rpr, "w:sz")?.attrs["w:val"];
+        if (s) sz = Math.max(sz ?? 0, Number(s));
+        let tekst = "";
+        for (const x of k.kids) {
+          if (typeof x === "string") continue;
+          if (x.tag === "w:t") tekst += x.kids.filter((c) => typeof c === "string").join("");
+          else if (x.tag === "w:tab") tekst += " ";
+          else if (x.tag === "w:br") tekst += " ";
+        }
+        if (!tekst) continue;
+        const bold = wlaczone(dziecko(rpr, "w:b"));
+        const italic = wlaczone(dziecko(rpr, "w:i"));
+        const prev = runs[runs.length - 1];
+        if (prev && Boolean(prev.bold) === bold && Boolean(prev.italic) === italic) {
+          prev.tekst += tekst;
+        } else {
+          runs.push({ tekst, ...(bold ? { bold } : {}), ...(italic ? { italic } : {}) });
+        }
+      } else if (k.tag === "w:hyperlink" || k.tag === "w:smartTag" || k.tag === "w:ins") {
+        zbierz(k);
+      }
+    }
+  };
+  zbierz(p);
+  return {
+    runs,
+    sz,
+    jc: dziecko(ppr, "w:jc")?.attrs["w:val"] ?? null,
+    indLeft: Number(dziecko(ppr, "w:ind")?.attrs["w:left"] ?? 0) || 0,
+    pageBreakBefore: wlaczone(dziecko(ppr, "w:pageBreakBefore")),
+    keepNext: wlaczone(dziecko(ppr, "w:keepNext")),
+  };
+}
+
+const tekstRunow = (runs: Run[]) => runs.map((x) => x.tekst).join("");
+const KROPKI = /^[….·_]{6,}$/;
+
+function blokZAkapitu(a: AkapitDocx): Blok | null {
+  const tekst = tekstRunow(a.runs).trim();
+  if (!tekst) return null;
+  const wszystkoBold = a.runs.every((x) => x.bold || !x.tekst.trim());
+  const wSrodku = a.jc === "center";
+  if (wszystkoBold && wSrodku && (a.sz ?? 0) >= 28) {
+    return { t: "tytul", tekst, ...(a.pageBreakBefore ? { nowaStrona: true } : {}) };
+  }
+  if (a.pageBreakBefore) return { t: "tytul", tekst, nowaStrona: true };
+  if (wszystkoBold && wSrodku) return { t: "podtytul", tekst };
+  if (wszystkoBold && a.keepNext && tekst.length <= 160) return { t: "naglowek", tekst };
+
+  let runs = a.runs.map((x) => ({ ...x }));
+  let wciecie: Extract<Blok, { t: "akapit" }>["wciecie"];
+  let etykieta: string | undefined;
+  if (a.indLeft > 0) {
+    // Etykieta (np. „1.”, „a)”, „–”) to pierwszy run zakończony spacją.
+    const m = /^(\S{1,6}) /.exec(runs[0]?.tekst ?? "");
+    const pelny = runs[0] && m && runs[0].tekst === m[0];
+    if (m && (pelny || /^(\d+\.|[a-z]\)|[–-])$/.test(m[1]))) {
+      etykieta = m[1];
+      runs[0].tekst = runs[0].tekst.slice(m[0].length);
+      if (!runs[0].tekst) {
+        const pierwszy = runs.shift()!;
+        if (pierwszy.bold) wciecie = "ustep";
+      } else if (runs[0].bold && pelny) wciecie = "ustep";
+    }
+    if (!wciecie) {
+      wciecie =
+        a.indLeft >= 600 ? "podpunkt" : etykieta && /^[–-]$/.test(etykieta) ? "lista" : "ustep";
+    }
+  }
+  runs = runs.filter((x) => x.tekst);
+  const align =
+    a.jc === "center" ? "center" : a.jc === "both" || a.jc === "distribute" ? "both" : "left";
+  return {
+    t: "akapit",
+    runs,
+    ...(wciecie ? { wciecie } : {}),
+    ...(etykieta ? { etykieta } : {}),
+    align,
+  };
+}
+
+function blokZTabeli(tbl: XmlEl): Blok | null {
+  const tblPr = dziecko(tbl, "w:tblPr");
+  const ramki = dziecko(tblPr, "w:tblBorders");
+  const bezRamek =
+    !ramki ||
+    dzieci(ramki, "w:top")
+      .concat(dzieci(ramki, "w:insideV"), dzieci(ramki, "w:insideH"))
+      .every((b) => ["nil", "none"].includes(b.attrs["w:val"] ?? ""));
+  const szerokosci = dzieci(dziecko(tbl, "w:tblGrid"), "w:gridCol").map(
+    (g) => Number(g.attrs["w:w"]) || 0,
+  );
+  const wiersze = dzieci(tbl, "w:tr").map((tr) => ({
+    naglowek: Boolean(dziecko(dziecko(tr, "w:trPr"), "w:tblHeader")),
+    komorki: dzieci(tr, "w:tc").map((tc) => dzieci(tc, "w:p").map(akapitZXml)),
+  }));
+  if (wiersze.length === 0) return null;
+
+  // Niewidoczna tabela z linią kropek nad rolą → blok podpisów.
+  const podpisowa =
+    bezRamek &&
+    wiersze.some((w) => w.komorki.some((ak) => KROPKI.test(tekstRunow(ak[0]?.runs ?? []).trim())));
+  if (podpisowa) {
+    const osoby: Podpisujacy[] = [];
+    for (const w of wiersze) {
+      for (const ak of w.komorki) {
+        const linie = ak
+          .map((a) => ({ a, tekst: tekstRunow(a.runs).trim() }))
+          .filter((x) => x.tekst && !KROPKI.test(x.tekst));
+        if (linie.length === 0) continue;
+        const [rola, ...reszta] = linie;
+        const male = (a: AkapitDocx) => a.sz !== null && a.sz < 20;
+        const nazwa = reszta.find((x) => !male(x.a));
+        osoby.push({
+          rola: rola.tekst,
+          ...(nazwa ? { nazwa: nazwa.tekst } : {}),
+          ...(reszta.some((x) => x !== nazwa)
+            ? { wImieniu: reszta.filter((x) => x !== nazwa).map((x) => x.tekst) }
+            : {}),
+        });
+      }
+    }
+    return osoby.length ? { t: "podpisy", osoby } : null;
+  }
+
+  const kol = Math.max(szerokosci.length, ...wiersze.map((w) => w.komorki.length));
+  const szer = Array.from({ length: kol }, (_, i) => szerokosci[i] || 1000);
+  return {
+    t: "tabela",
+    szerokosci: szer,
+    wiersze: wiersze.map((w) => ({
+      ...(w.naglowek ? { naglowek: true } : {}),
+      komorki: w.komorki.map((ak): Komorka => {
+        const runs: Run[] = [];
+        ak.forEach((a, i) => {
+          if (i > 0 && a.runs.length) runs.push({ tekst: " " });
+          runs.push(...a.runs);
+        });
+        const jc = ak.find((a) => a.jc)?.jc;
+        return {
+          tekst: runs.length ? runs : "",
+          ...(jc === "center" || jc === "right" ? { align: jc } : {}),
+        };
+      }),
+    })),
+  };
+}
+
+/**
+ * Bloki z WordprocessingML — odwrotność `blokiDoXml` (tytuły, nagłówki,
+ * ustępy z etykietą i wcięciem, tabele z ramką, niewidoczna tabela podpisów).
+ * Dla obcych plików .docx działa heurystycznie: akapity, pogrubienia,
+ * wyrównanie, tabele. Służy do PDF-u do e-podpisu z zachowaniem układu.
+ */
+export function blokiZDocumentXml(xml: string): Blok[] {
+  const body = dziecko(dziecko(parsujXml(xml), "w:document"), "w:body");
+  const out: Blok[] = [];
+  const przejdz = (el: XmlEl | undefined) => {
+    for (const k of el?.kids ?? []) {
+      if (typeof k === "string") continue;
+      if (k.tag === "w:p") {
+        const b = blokZAkapitu(akapitZXml(k));
+        if (b) out.push(b);
+      } else if (k.tag === "w:tbl") {
+        const b = blokZTabeli(k);
+        if (b) out.push(b);
+      } else if (k.tag === "w:sdt") {
+        przejdz(dziecko(k, "w:sdtContent"));
+      }
+    }
+  };
+  przejdz(body);
+  return out;
+}
+
+/** Bloki z bajtów .docx. */
+export async function blokiZDocx(bytes: Uint8Array): Promise<Blok[]> {
+  const { default: PizZip } = await import("pizzip");
+  const zip = new PizZip(bytes);
+  return blokiZDocumentXml(zip.file("word/document.xml")!.asText());
+}

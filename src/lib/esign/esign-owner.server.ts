@@ -401,9 +401,10 @@ export async function listClientDocumentsImpl(
 
 /**
  * Źródło koperty z wygenerowanej umowy: gotowy PDF (pdf_path) albo DOCX
- * zamieniony na PDF tą samą „drukarką”, co pakiet prawny (tekst z
- * document.xml → bloki → pdf-lib). Podpisywany jest zawsze plik PDF — ten sam,
- * który widzi podpisujący. Dostęp do wiersza sprawdza RLS (klient użytkownika).
+ * zamieniony na PDF z zachowaniem układu (document.xml → bloki: tytuły,
+ * ustępy, tabele, podpisy → pdf-lib). SHA-256 w identyfikatorze liczony jest
+ * z tekstu .docx — jak w audycie kompletu. Podpisywany jest zawsze plik PDF —
+ * ten sam, który widzi podpisujący. Dostęp do wiersza sprawdza RLS (klient użytkownika).
  */
 async function sourceFromGeneratedDocument(
   generatedDocumentId: string,
@@ -431,12 +432,12 @@ async function sourceFromGeneratedDocument(
   }
   if (!doc.docx_path) throw new Error("Wygenerowany dokument nie ma pliku.");
   const docx = await downloadBytes(doc.docx_path, CLIENT_FILES_BUCKET);
-  const { tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
+  const { blokiZDocx, tekstZDocx } = await import("@/lib/contract-engine/umowa-docx");
   const text = await tekstZDocx(docx);
   if (!text.trim()) throw new Error("Nie udało się odczytać treści umowy z pliku DOCX.");
-  const { pdfZTekstu } = await import("@/lib/legal/pdf-z-tekstu");
-  const bytes = await pdfZTekstu({
-    contentText: text,
+  const { pdfZBlokow } = await import("@/lib/legal/pdf-z-tekstu");
+  const bytes = await pdfZBlokow({
+    bloki: await blokiZDocx(docx),
     title: doc.template_name ?? "Umowa",
     version: "do podpisu",
     sha256: await sha256Hex(text),
