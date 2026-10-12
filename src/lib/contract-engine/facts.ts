@@ -374,9 +374,14 @@ export function zbudujFakty(d: any): Record<string, any> {
   f.pb_spelnia = wielu ? "spełniają" : "spełnia";
   f.pb_zlozy = wielu ? "złożą" : "złoży";
   f.pb_dopusci = wielu ? "dopuszczą" : "dopuści";
-  f.pb_podpis_poswiadczony = wielu
-    ? "z podpisami Pożyczkobiorców poświadczonymi notarialnie"
-    : "z podpisem Pożyczkobiorcy poświadczonym notarialnie";
+  // Biblioteka 1.5: podpis pod Umową bez poświadczenia notarialnego —
+  // własnoręczny albo elektroniczny (eIDAS), także w e-podpisie Finance You;
+  // notariusz zostaje przy hipotece i 777 (§ 2 ust. 6 lit. b).
+  const podpisElektroniczny =
+    "własnoręcznie albo podpisem elektronicznym w rozumieniu rozporządzenia eIDAS, w tym w systemie e-podpisu Finance You";
+  f.pb_podpis_umowy = wielu
+    ? `podpisanej przez Pożyczkobiorców ${podpisElektroniczny}`
+    : `podpisanej przez Pożyczkobiorcę ${podpisElektroniczny}`;
   // Oświadczenie o aktywnym wykonywaniu działalności (CEIDG) — pożyczkobiorca
   // będący osobą fizyczną przedsiębiorcą (nie rolnikiem prowadzącym gospodarstwo).
   f.ma_pb_ceidg = poz.some(

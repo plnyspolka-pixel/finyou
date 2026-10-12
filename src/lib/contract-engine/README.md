@@ -153,6 +153,15 @@ w MCP; brak treści = ostrzeżenie, nie blokada). Sąd — z okładki księgi al
 innej księgi tego samego wydziału w cache; statycznej tabeli „kod wydziału →
 sąd” celowo nie ma (wymaga zweryfikowanego wykazu kodów wydziałów).
 
+## Biblioteka 1.5 (październik 2026)
+
+Zmiana treści (decyzja właściciela z 12.10.2026): `KWO_06a` — § 2 ust. 6
+lit. a nie wymaga już podpisu Pożyczkobiorcy poświadczonego notarialnie.
+Warunkiem wejścia w życie jest oryginał Umowy „podpisanej przez Pożyczkobiorcę
+własnoręcznie albo podpisem elektronicznym w rozumieniu rozporządzenia eIDAS,
+w tym w systemie e-podpisu Finance You” (fakt `pb_podpis_umowy`). Akty
+notarialne z żądaniem wpisu hipoteki i z art. 777 (lit. b) bez zmian.
+
 ## Agent umowy (AI) — główny ekran /inwestor
 
 Silnik jest uzbrojony w **osobnego agenta czatowego tylko do wypełniania

@@ -145,7 +145,7 @@ describe("przypadek końcowy zlecenia (a)", () => {
     expect(k1.sha256).toBe(k2.sha256);
     expect(Buffer.from(k1.bytes).equals(Buffer.from(k2.bytes))).toBe(true);
     expect(k1.wersjaBiblioteki).toBe(WERSJA_BIBLIOTEKI);
-    expect(WERSJA_BIBLIOTEKI).toBe("1.4");
+    expect(WERSJA_BIBLIOTEKI).toBe("1.5");
   });
 
   it("plik .docx ma komplet części pakietu (document, styles, relacje)", async () => {
@@ -268,8 +268,9 @@ describe("biblioteka 1.4 — przypadek końcowy (a): JDG kobieta, hipoteka na ko
       "6. Umowa jest ważna z chwilą jej podpisania, a wchodzi w życie z dniem przekazania Pożyczkodawcy łącznie:",
     );
     expect(tekst).toContain(
-      "a) oryginału Umowy wraz z załącznikami, z podpisem Pożyczkobiorcy poświadczonym notarialnie;",
+      "a) oryginału Umowy wraz z załącznikami, podpisanej przez Pożyczkobiorcę własnoręcznie albo podpisem elektronicznym w rozumieniu rozporządzenia eIDAS, w tym w systemie e-podpisu Finance You;",
     );
+    expect(tekst).not.toContain("poświadczonym notarialnie");
     expect(tekst).toContain(
       "b) wypisów aktów notarialnych obejmujących żądanie wpisu hipoteki, o której mowa w § 3 ust. 1 (wraz z żądaniem wpisu roszczenia o przeniesienie hipoteki na opróżnione miejsce hipoteczne), oraz oświadczenie o poddaniu się egzekucji w trybie art. 777 § 1 pkt 5 k.p.c., o którym mowa w § 3 ust. 4;",
     );
