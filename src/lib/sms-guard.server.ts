@@ -62,11 +62,27 @@ export function defaultSmsLimits(): SmsLimits {
 const CRITICAL_SOURCES = new Set(["phone_verification", "panel_manual", "windykacja", "test"]);
 
 /**
- * Źródła konwersacyjne — odpowiedź na SMS, który klient sam do nas wysłał.
- * `elevenlabs_agent` (link wysyłany przez Anię w trakcie rozmowy) świadomie tu
- * NIE jest: na wejściu leada wystarczy jeden SMS powitalny z tym samym linkiem.
+ * Źródła konwersacyjne — odpowiedź na SMS, który klient sam do nas wysłał,
+ * oraz link, o który klient POPROSIŁ w trakcie rozmowy z agentem
+ * (`elevenlabs_agent_requested`, endpoint /api/public/elevenlabs-send-sms —
+ * agent woła narzędzie dopiero po zgodzie rozmówcy, numer to caller ID).
+ *
+ * Ogólne `elevenlabs_agent` świadomie tu NIE jest: na wejściu leada wystarczy
+ * jeden SMS powitalny z tym samym linkiem. Ale SMS zamówiony przez klienta to
+ * nie marketing — wcześniej stop-klatka automatów (`sms_outbound_paused`)
+ * blokowała go razem z kadencją i klienci przez telefon słyszeli „nie mam
+ * potwierdzenia wysyłki", prosili ponownie i rozłączali się bez linku.
  */
-const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply"]);
+const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply", "elevenlabs_agent_requested"]);
+
+/**
+ * Ile IDENTYCZNYCH wiadomości konwersacyjnych wolno wysłać w 24 h. Klient,
+ * który nie dostał linku, prosi o ponowną wysyłkę — jedna powtórka jest
+ * w porządku, kolejne to już pętla.
+ */
+const CONVERSATIONAL_DUPLICATE_ALLOWANCE: Record<string, number> = {
+  elevenlabs_agent_requested: 2,
+};
 
 export function classifySmsSource(source: string | null | undefined): SmsCategory {
   const s = String(source ?? "").trim();
@@ -130,6 +146,8 @@ export interface SmsDecisionInput {
   recent: RecentSms[];
   optedOut: boolean;
   limits?: SmsLimits;
+  /** Konwersacyjne: ile identycznych treści w 24 h jest dozwolonych (domyślnie 1). */
+  duplicateAllowance?: number;
 }
 
 /** Stan stop-klatki z `voicebot_settings` (kolumny `sms_*_paused`). */
@@ -204,11 +222,18 @@ export function decideSms(input: SmsDecisionInput): SmsDecision {
       };
     }
     const normalized = normalizeSmsBody(input.body);
-    if (normalized && last24h.some((r) => normalizeSmsBody(r.body) === normalized)) {
+    const allowance = Math.max(1, input.duplicateAllowance ?? 1);
+    const sameBody = normalized
+      ? last24h.filter((r) => normalizeSmsBody(r.body) === normalized).length
+      : 0;
+    if (sameBody >= allowance) {
       return {
         allowed: false,
         reason: "duplicate",
-        detail: "Identyczna odpowiedź poszła już w ostatnich 24 h",
+        detail:
+          allowance > 1
+            ? `Identyczna wiadomość poszła już ${sameBody}× w ostatnich 24 h`
+            : "Identyczna odpowiedź poszła już w ostatnich 24 h",
       };
     }
     return { allowed: true };
@@ -332,6 +357,7 @@ export async function evaluateSmsGuard(opts: {
       recent,
       optedOut,
       limits,
+      duplicateAllowance: CONVERSATIONAL_DUPLICATE_ALLOWANCE[opts.source],
     });
   } catch (e) {
     // Awaria odczytu nie może zablokować krytycznej komunikacji, ale też nie

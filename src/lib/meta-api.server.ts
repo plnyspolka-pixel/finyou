@@ -172,12 +172,18 @@ export async function getPost(postId: string) {
   });
 }
 
+/**
+ * Domyślne metryki posta. Meta wycofała post_impressions(_unique)
+ * i post_engaged_users (Graph zwraca #100 „must be a valid insights metric”
+ * dla całego zapytania) — następcy to wyświetlenia mediów.
+ */
+export const DEFAULT_POST_METRICS =
+  "post_media_view,post_total_media_view_unique,post_clicks,post_reactions_by_type_total";
+
 export async function getPostInsights(postId: string, metrics?: string) {
   const json = await graphRequest(`${postId}/insights`, {
     query: {
-      metric:
-        metrics ??
-        "post_impressions,post_impressions_unique,post_engaged_users,post_clicks,post_reactions_by_type_total",
+      metric: metrics ?? DEFAULT_POST_METRICS,
     },
     token: "page",
   });

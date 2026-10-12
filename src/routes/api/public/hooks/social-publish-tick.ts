@@ -3,7 +3,7 @@
 // TikTok przez Content Posting API, X przez API v2), domyka dwuetapowe
 // publikacje IG (kontener → media_publish), TikToka (upload → polling statusu)
 // i X-a (upload mediów → polling przetwarzania), odświeża tokeny TikToka
-// i X-a, obsługuje kolejkę wsadową wideo HeyGen (joby 'queued' i polling
+// i X-a, uruchamia agenta wzrostu (src/lib/growth-agent), obsługuje kolejkę wsadową wideo HeyGen (joby 'queued' i polling
 // renderów z auto-publikacją) oraz kompresję wideo przed publikacją
 // (video_renditions: zlecanie i domykanie zadań w usłudze FFmpeg) — dzięki
 // temu batch, auto-publikacja i kompresja działają także przy zamkniętej
@@ -16,6 +16,7 @@ import { runTiktokPublishTick } from "@/lib/tiktok.server";
 import { runXPublishTick } from "@/lib/x.server";
 import { runVideoRenditionTick } from "@/lib/video-rendition.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
+import { runGrowthTick } from "@/lib/growth-agent/tick.server";
 
 async function runTick(): Promise<Response> {
   try {
@@ -40,7 +41,13 @@ async function runTick(): Promise<Response> {
     const x = await runXPublishTick().catch((e) => ({
       error: e instanceof Error ? e.message : String(e),
     }));
-    const result = { ...social, video, renditions, tiktok, x };
+    // Agent wzrostu (posty, pomiar, komentarze, samodoskonalenie) — na końcu,
+    // po publikacji kolejki; ma własną dzierżawę, budżet i wyłącznik, a jego
+    // błąd nie może wywalić publikacji.
+    const growth = await runGrowthTick().catch((e) => ({
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    const result = { ...social, video, renditions, tiktok, x, growth };
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { "Content-Type": "application/json" },

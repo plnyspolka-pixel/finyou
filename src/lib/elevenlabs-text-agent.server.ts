@@ -23,12 +23,21 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { normalizeKwNumber } from "./kw";
 import {
+  HONESTY_RULES,
   INTAKE_PROCESS_RULES,
+  INVESTOR_DISCOVERY_RULES,
+  NEEDS_DISCOVERY_RULES,
   NO_INVENTED_CONTACT_RULES,
   RAPPORT_RULES,
   channelDynamicVariables,
   channelRules,
 } from "./agent-channel-rules";
+import {
+  detectSignals,
+  formatSignalsBlock,
+  type ConversationSignals,
+} from "./agent-toolkit/needs-discovery";
+import { buildLiveFactsBlock } from "./agent-toolkit/live-facts";
 import { guardOutboundContactDetails } from "./bot-contact-guard";
 import { SUBSCRIPTION_PAYMENT_SENTENCE, SUBSCRIPTION_PRICE_SENTENCE } from "./investor-plan/plans";
 
@@ -142,7 +151,7 @@ STYL — pisz jak człowiek na czacie:
 - Zero urzędowego tonu i list wypunktowanych w rozmowie. Emoji rzadko albo wcale.`;
 }
 
-function defaultInvestorSystemPrompt(): string {
+export function defaultInvestorSystemPrompt(): string {
   return `Jesteś asystentem Finance You dla INWESTORÓW INSTYTUCJONALNYCH (fundusze, spółki, family office, firmy inwestujące kapitał) piszących na czacie na stronie financeyou.pl/dla-inwestora.
 Finance You to zestaw narzędzi i szkolenie dla inwestorów, którzy finansują pożyczki dla firm zabezpieczone hipoteką na nieruchomości, którą pożyczkobiorca już posiada. Inwestorzy finansują konkretne, zweryfikowane sprawy klientów i zarabiają na oprocentowaniu; zabezpieczeniem jest wpis hipoteki. Inwestorzy zainteresowani działaniem pod marką Finance You mogą też korzystać z naszej sieci sprzedaży.
 
@@ -155,20 +164,20 @@ Twoim celem jest:
 4. Sprawy transakcyjne (warunki współpracy, negocjacje, umowa ramowa, konkretne sprawy do sfinansowania, prośba o kontakt) → wywołaj mark_ready_for_human z krótkim uzasadnieniem i poinformuj, że opiekun inwestorów instytucjonalnych odezwie się bezpośrednio.
 
 CZEGO NIE ROBISZ:
-- NIE obiecujesz stóp zwrotu, oprocentowania ani warunków konkretnych transakcji — te ustala się indywidualnie przy każdej sprawie. Możesz opisywać mechanikę (zarobek z oprocentowania pożyczki, zabezpieczenie hipoteką), bez składania obietnic.
+- NIE obiecujesz stóp zwrotu, oprocentowania ani warunków konkretnych transakcji — te ustala się indywidualnie przy każdej sprawie. Możesz i powinieneś opisywać mechanikę z FAKTÓW: zarobek z oprocentowania (nie wyżej niż odsetki maksymalne) i z własnej prowizji inwestora, zabezpieczenie hipoteką przy LTV do 60% — bez obietnic wyniku. Hipoteka nie gwarantuje odzyskania pieniędzy; daje prawo dochodzenia należności z nieruchomości.
 - O kosztach mówisz tylko wtedy, gdy rozmówca zapyta. Dostęp do narzędzi i szkoleń to abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Nie ma pakietów, opłat za projekt ani opłaty sukcesu. Prowizję Finance You płaci klient: 5% kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT, potrącaną z wypłaty. Jeśli rozmówca sam zapyta o dostęp, podaj link {{LINK_REJESTRACJA_INWESTORA}} bez namawiania.
 - Finansowanie wyłącznie na cel związany z działalnością gospodarczą klienta (B2B); oprocentowanie nie przekracza odsetek maksymalnych (obecnie 14,5% rocznie), LTV maksymalnie 60%.
 - NIE udzielasz porad inwestycyjnych, prawnych ani podatkowych; zaznacz, że informacje mają charakter informacyjny.
 - NIE prowadzisz rozmowy o pożyczce dla rozmówcy. Jeśli okazuje się, że to osoba szukająca finansowania — skieruj ją grzecznie na financeyou.pl (czat na stronie głównej) i nie zbieraj danych inwestorskich.
 
 STYL — profesjonalny partner biznesowy:
-- Po polsku, forma Pan/Pani (chyba że rozmówca wyraźnie przejdzie na "Ty").
+- Po polsku, forma Pan/Pani zgodna z płcią rozmówcy; gdy jej nie znasz — bezosobowo (chyba że rozmówca wyraźnie przejdzie na "Ty").
 - Konkretnie i merytorycznie, maks 3-4 zdania na wiadomość; bez emoji.
 - Odpowiadasz na pytania — nie zadajesz własnych, poza doprecyzowaniem czyjegoś pytania albo danymi do FV.
 - Nie powtarzaj formułek i nie zaczynaj każdej wiadomości tak samo.`;
 }
 
-function defaultPrivateInvestorSystemPrompt(): string {
+export function defaultPrivateInvestorSystemPrompt(): string {
   return `Jesteś asystentem Finance You dla inwestorów PRYWATNYCH korzystających z panelu na financeyou.pl/inwestor. Dostęp do panelu to abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Kolejność: najpierw abonament (zakładka Dostęp i płatności — otwiera panel; płacąc, inwestor akceptuje Regulamin abonamentu inwestora, a sprzedawcą jest Fundacja Krzewienia Edukacji Finansowej im. Pieczaka, faktura bez VAT). Gdy inwestor chce dostępu do Klientów i Projektów, uzupełnia dane, przechodzi KYC i akceptuje Umowę ramową, NDA i umowę RODO z Finance You — akceptacja otwiera moduł ofert (Zlecenia, dopasowane Projekty i oferty); Finance You nie pobiera za to wynagrodzenia. Po wygaśnięciu dane zostają, a kolejny okres liczy się od końca obecnego.
 Finance You to zestaw narzędzi i szkolenie dla inwestorów, którzy finansują pożyczki dla firm zabezpieczone hipoteką na nieruchomości, którą pożyczkobiorca już posiada. Inwestorzy zainteresowani działaniem pod marką Finance You mogą też korzystać z naszej sieci sprzedaży. Inwestorzy finansują zweryfikowane projekty klientów (wyłącznie na cel związany z działalnością gospodarczą) i zarabiają na oprocentowaniu (nie wyższym niż odsetki maksymalne, obecnie 14,5% rocznie) oraz na własnej prowizji rozłożonej w ratach; zabezpieczeniem jest wpis hipoteki, LTV maksymalnie 60%.
 
@@ -185,7 +194,7 @@ CZEGO NIE ROBISZ:
 - Spraw indywidualnych (rozliczenia, reklamacje, problemy z płatnością, faktury) nie rozstrzygasz — wskaż zakładkę Płatności i faktury albo kontakt z obsługą Finance You.
 
 STYL:
-- Po polsku, życzliwie i konkretnie, forma Pan/Pani (jeśli rozmówca pisze na "Ty" — przejdź na "Ty").
+- Po polsku, życzliwie i konkretnie, forma Pan/Pani zgodna z płcią rozmówcy; gdy jej nie znasz — bezosobowo (jeśli rozmówca pisze na "Ty" — przejdź na "Ty").
 - Maks 3-4 zdania na wiadomość; prosty język bez żargonu, chyba że rozmówca jest zaawansowany.
 - Nie powtarzaj formułek i nie zaczynaj każdej wiadomości tak samo.`;
 }
@@ -349,146 +358,19 @@ async function guardReply(
   return guarded.text;
 }
 
-export async function runAgentTurn(opts: {
-  leadId: string;
-  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
-  userMessage: string;
-  attachmentsSummary?: string | null;
-  variant?: AgentVariant;
-}): Promise<AgentReply> {
-  const variant: AgentVariant = opts.variant ?? "klient";
-  const s = admin();
-  const { data: lead } = await s.from("leads").select("*").eq("id", opts.leadId).maybeSingle();
-  if (!lead) throw new Error(`Lead ${opts.leadId} not found`);
-
-  // Historia per wariant — rozmowa inwestorska nie miesza się z kanałami
-  // pożyczkobiorcy (i odwrotnie), nawet gdy lead ma oba rodzaje komunikacji.
-  const historyChannels =
-    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat", "sms"];
-  const { data: history } = await s
-    .from("lead_communications")
-    .select("direction, content, created_at, channel")
-    .eq("lead_id", opts.leadId)
-    .in("channel", historyChannels)
-    .order("created_at", { ascending: true })
-    .limit(40);
-
-  // ── Ścieżka ElevenLabs (decyzja: wszystkie boty procesowe na ElevenLabs) ──
-  // Gdy agent dla powierzchni istnieje, tura idzie do niego (tryb tekstowy);
-  // narzędzia wykonuje webhook /api/public/agent-tools po stronie ElevenLabs.
-  // Sesja WebSocket żyje jedną turę, więc pamięć rozmowy dowozimy sami:
-  // ostatnie wiadomości wątku idą w treści jako kontekst przed nową
-  // wiadomością. Każde niepowodzenie = cichy powrót do silnika poniżej.
-  try {
-    const { getAgentIdForSurface, ensureAgentPromptsFresh } =
-      await import("./elevenlabs-agents.server");
-    const surface =
-      variant === "inwestor"
-        ? ("investor_info" as const)
-        : variant === "inwestor_prywatny"
-          ? ("investor_panel" as const)
-          : ("intake" as const);
-    const elAgentId = await getAgentIdForSurface(surface);
-    if (elAgentId) {
-      // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
-      // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
-      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs.
-      await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
-      const recent = (history ?? []).slice(-16);
-      const historyBlock =
-        recent.length > 0
-          ? recent
-              .map(
-                (h) =>
-                  `${h.direction === "inbound" ? "KLIENT" : "TY (asystent)"}: ${String(
-                    h.content ?? "",
-                  )
-                    .replace(/\s+/g, " ")
-                    .slice(0, 600)}`,
-              )
-              .join("\n")
-          : "(brak wcześniejszych wiadomości)";
-      const elMessage =
-        `[DOTYCHCZASOWA ROZMOWA — kontekst, nie odpowiadaj na nią ponownie]\n${historyBlock}\n\n` +
-        `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}`;
-
-      const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
-      const turn = await elevenLabsTextTurn({
-        agentId: elAgentId,
-        userMessage: elMessage,
-        dynamicVariables: {
-          ...channelDynamicVariables(opts.channel),
-          lead_id: lead.id,
-          first_name: lead.first_name ?? "",
-          last_name: lead.last_name ?? "",
-          email: lead.email ?? "",
-          phone: lead.phone_normalized ?? lead.phone_raw ?? "",
-        },
-      });
-      if (turn.ok && turn.reply) {
-        const safeReply = await guardReply(s, opts.leadId, opts.channel, turn.reply, [
-          ...(history ?? []).map((h) => h.content),
-          opts.userMessage,
-          lead.email,
-          lead.phone_raw,
-          lead.phone_normalized,
-          // Link do wniosku wysłany wcześniej (send_application_link) — bot może go powtórzyć.
-          (lead as { return_link?: string | null }).return_link,
-        ]);
-        return { reply: safeReply, toolCalls: [] };
-      }
-      console.warn(
-        `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
-      );
-    }
-  } catch (e) {
-    console.error("[el-text-agent] ElevenLabs path error — fallback", e);
-  }
-
-  const { prompt: basePrompt } = await fetchAgentPrompt(variant);
-  // Zasady kanału dokładamy TU, a nie do promptu w bazie: jeden prompt
-  // obsługuje wszystkie kanały, a różnią się one tym, co w danym kanale w
-  // ogóle jest możliwe (załączniki, długość wypowiedzi, link do wniosku).
-  // Twarde zasady (zero obietnic kontaktu, zero zmyślonych numerów) muszą być
-  // TU tak samo jak w prompcie agenta ElevenLabs — inaczej silnik zapasowy
-  // odpowiada bez nich i to on zmyśla.
-  const systemPrompt =
-    variant === "klient"
-      ? basePrompt +
-        RAPPORT_RULES +
-        channelRules(opts.channel) +
-        INTAKE_PROCESS_RULES +
-        NO_INVENTED_CONTACT_RULES
-      : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
-
-  // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
-  // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
-  // placeholdera {{MAGIC_LINK_KLIENT}} — podstawiamy go poniżej.
-  // Wariant inwestorski nie tworzy konta klienta — dostaje link rejestracji inwestora.
-  let applicationLink = "https://financeyou.pl/klient";
-  if (lead.email && variant === "klient") {
-    try {
-      const { ensureKlientAccountAndMagicLink } = await import("./client-magic-link.server");
-      const r = await ensureKlientAccountAndMagicLink(lead.email, {
-        firstName: lead.first_name ?? null,
-        lastName: lead.last_name ?? null,
-        source: "text_agent",
-      });
-      if (r.magicLink) applicationLink = r.magicLink;
-      if (r.userId && lead.client_id) {
-        await s
-          .from("clients")
-          .update({ user_id: r.userId })
-          .eq("id", lead.client_id)
-          .is("user_id", null);
-      }
-    } catch (e) {
-      console.error("[el-text-agent] magic link failed", e);
-    }
-  }
-
-  const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
-
+/**
+ * [STAN DANYCH] — checklist braków liczona z BAZY (lead + application_data +
+ * załączniki), nie z pamięci modelu. Wspólna dla ścieżki ElevenLabs i silnika
+ * zapasowego: wcześniej dostawał ją tylko silnik zapasowy, więc agent
+ * ElevenLabs dopytywał o dane, które już mieliśmy (zgłoszenie z pamięci
+ * asystenta: „Bot pyta o dane, które już ma").
+ */
+async function buildDataStateBlock(
+  s: SupabaseClient,
+  lead: any,
+  opts: { leadId: string; channel: string; attachmentsSummary?: string | null },
+  variant: AgentVariant,
+): Promise<string> {
   // Checklist braków liczona z BAZY (lead + application_data + załączniki),
   // nie z pamięci modelu — bot ma dopytywać tylko o to, czego naprawdę nie mamy,
   // a gdy komplet jest zebrany, lead awansuje na wniosek (maybePromote…).
@@ -547,6 +429,231 @@ export async function runAgentTurn(opts: {
         : `\n\n[STAN DANYCH — sprawdzony w bazie]\nMamy już: ${known.length ? known.join(", ") : "nic"}.\nBrakuje: ${missing.join(", ")}.\nNIE pytaj o nic z listy "mamy już". Dopytuj naturalnie o PIERWSZĄ brakującą pozycję (jedno pytanie na wiadomość), najpierw odpowiadając na pytanie klienta.${attachmentsHint}`;
   }
 
+  return checklistBlock;
+}
+
+/**
+ * Reakcje KODU na sygnały — tam, gdzie nie wolno polegać na modelu:
+ *  • pilna sprawa (licytacja, termin ≤ 14 dni) → oznaczenie leada + push do
+ *    zespołu (raz na dobę), niezależnie od tego, czy model wywoła narzędzie,
+ *  • tematy rozmów (bez treści, bez danych osobowych) → dziennik dla agenta
+ *    wzrostu: z pytań klientów powstają treści edukacyjne.
+ */
+async function reactToSignals(
+  _s: SupabaseClient,
+  lead: any,
+  channel: string,
+  variant: AgentVariant,
+  signals: ConversationSignals,
+): Promise<void> {
+  const { flagLeadUrgent } = await import("./agent-toolkit/tools.server");
+  const { logAgentAction } = await import("./agent-toolkit/store.server");
+  if (variant === "klient" && signals.urgency === "krytyczna") {
+    await flagLeadUrgent(lead.id, {
+      reason: signals.urgencyReasons.join(", "),
+      deadlineDays: signals.deadlineDays,
+      channel,
+      source: "auto",
+    });
+  }
+  if (signals.topics.length > 0 || signals.disqualifiers.length > 0) {
+    await logAgentAction({
+      module: "agent_insights",
+      action: "temat_rozmowy",
+      summary: [...signals.topics, ...signals.disqualifiers].join(", "),
+      payload: {
+        topics: signals.topics,
+        disqualifiers: signals.disqualifiers,
+        audience: signals.audience,
+        urgency: signals.urgency,
+        channel,
+      },
+    });
+  }
+}
+
+export async function runAgentTurn(opts: {
+  leadId: string;
+  channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
+  userMessage: string;
+  attachmentsSummary?: string | null;
+  variant?: AgentVariant;
+}): Promise<AgentReply> {
+  const variant: AgentVariant = opts.variant ?? "klient";
+  const s = admin();
+  const { data: lead } = await s.from("leads").select("*").eq("id", opts.leadId).maybeSingle();
+  if (!lead) throw new Error(`Lead ${opts.leadId} not found`);
+
+  // Historia per wariant — rozmowa inwestorska nie miesza się z kanałami
+  // pożyczkobiorcy (i odwrotnie), nawet gdy lead ma oba rodzaje komunikacji.
+  const historyChannels =
+    variant === "inwestor" ? ["chat_inwestor"] : ["messenger", "instagram", "email", "chat", "sms"];
+  const { data: history } = await s
+    .from("lead_communications")
+    .select("direction, content, created_at, channel")
+    .eq("lead_id", opts.leadId)
+    .in("channel", historyChannels)
+    .order("created_at", { ascending: true })
+    .limit(40);
+
+  // Stan danych z bazy + sygnały rozmowy (rozpoznanie potrzeb) — liczone RAZ
+  // i podawane obu ścieżkom (ElevenLabs i silnik zapasowy).
+  const checklistBlock = await buildDataStateBlock(s, lead, opts, variant);
+  const signals: ConversationSignals = detectSignals(opts.userMessage, {
+    firstName: lead.first_name ?? null,
+    history: (history ?? [])
+      .filter((h) => h.direction === "inbound")
+      .slice(-8)
+      .map((h) => String(h.content ?? "")),
+    surface:
+      variant === "klient" ? "intake" : variant === "inwestor" ? "investor_info" : "investor_panel",
+  });
+  const signalsBlock = `\n\n${formatSignalsBlock(signals)}`;
+  await reactToSignals(s, lead, opts.channel, variant, signals).catch((e) =>
+    console.error("[el-text-agent] reakcja na sygnały", e),
+  );
+
+  // ── Ścieżka ElevenLabs (decyzja: wszystkie boty procesowe na ElevenLabs) ──
+  // Gdy agent dla powierzchni istnieje, tura idzie do niego (tryb tekstowy);
+  // narzędzia wykonuje webhook /api/public/agent-tools po stronie ElevenLabs.
+  // Sesja WebSocket żyje jedną turę, więc pamięć rozmowy dowozimy sami:
+  // ostatnie wiadomości wątku idą w treści jako kontekst przed nową
+  // wiadomością. Każde niepowodzenie = cichy powrót do silnika poniżej.
+  try {
+    const { getAgentIdForSurface, ensureAgentPromptsFresh } =
+      await import("./elevenlabs-agents.server");
+    const surface =
+      variant === "inwestor"
+        ? ("investor_info" as const)
+        : variant === "inwestor_prywatny"
+          ? ("investor_panel" as const)
+          : ("intake" as const);
+    const elAgentId = await getAgentIdForSurface(surface);
+    if (elAgentId) {
+      // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
+      // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
+      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs.
+      await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
+      const recent = (history ?? []).slice(-16);
+      const historyBlock =
+        recent.length > 0
+          ? recent
+              .map(
+                (h) =>
+                  `${h.direction === "inbound" ? "KLIENT" : "TY (asystent)"}: ${String(
+                    h.content ?? "",
+                  )
+                    .replace(/\s+/g, " ")
+                    .slice(0, 600)}`,
+              )
+              .join("\n")
+          : "(brak wcześniejszych wiadomości)";
+      const attachmentsBlock = opts.attachmentsSummary
+        ? `\n\n[ZAŁĄCZNIKI KLIENTA — system je widzi]\n${opts.attachmentsSummary}`
+        : "";
+      const elMessage =
+        `[DOTYCHCZASOWA ROZMOWA — kontekst, nie odpowiadaj na nią ponownie]\n${historyBlock}` +
+        `${checklistBlock}${signalsBlock}\n\n` +
+        `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}${attachmentsBlock}`;
+
+      const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
+      const turn = await elevenLabsTextTurn({
+        agentId: elAgentId,
+        userMessage: elMessage,
+        dynamicVariables: {
+          ...channelDynamicVariables(opts.channel),
+          lead_id: lead.id,
+          first_name: lead.first_name ?? "",
+          last_name: lead.last_name ?? "",
+          email: lead.email ?? "",
+          phone: lead.phone_normalized ?? lead.phone_raw ?? "",
+        },
+      });
+      if (turn.ok && turn.reply) {
+        // Agent ElevenLabs nie podstawia naszych placeholderów — model potrafi
+        // przepisać je dosłownie („{{MAGIC_LINK_KLIENT}}"). Podstawiamy tu.
+        const returnLink = (lead as { return_link?: string | null }).return_link;
+        const withLinks = turn.reply
+          .replaceAll("{{MAGIC_LINK_KLIENT}}", returnLink || "https://financeyou.pl/klient")
+          .replaceAll(
+            "{{LINK_REJESTRACJA_INWESTORA}}",
+            "https://financeyou.pl/rejestracja?role=inwestor",
+          );
+        const safeReply = await guardReply(s, opts.leadId, opts.channel, withLinks, [
+          ...(history ?? []).map((h) => h.content),
+          opts.userMessage,
+          lead.email,
+          lead.phone_raw,
+          lead.phone_normalized,
+          // Link do wniosku wysłany wcześniej (send_application_link) — bot może go powtórzyć.
+          (lead as { return_link?: string | null }).return_link,
+        ]);
+        return { reply: safeReply, toolCalls: [] };
+      }
+      console.warn(
+        `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
+      );
+    }
+  } catch (e) {
+    console.error("[el-text-agent] ElevenLabs path error — fallback", e);
+  }
+
+  const { prompt: rawBasePrompt } = await fetchAgentPrompt(variant);
+  // Blok zarządzany kodem (zasady + fakty) wycinamy z promptu z panelu i
+  // doklejamy świeży poniżej — bez duplikatów i bez nieaktualnych liczb.
+  const { stripManagedBlocks } = await import("./agent-toolkit/prompt-blocks");
+  const basePrompt = stripManagedBlocks(rawBasePrompt);
+  // Zasady kanału dokładamy TU, a nie do promptu w bazie: jeden prompt
+  // obsługuje wszystkie kanały, a różnią się one tym, co w danym kanale w
+  // ogóle jest możliwe (załączniki, długość wypowiedzi, link do wniosku).
+  // Twarde zasady (zero obietnic kontaktu, zero zmyślonych numerów) muszą być
+  // TU tak samo jak w prompcie agenta ElevenLabs — inaczej silnik zapasowy
+  // odpowiada bez nich i to on zmyśla.
+  const systemPrompt =
+    variant === "klient"
+      ? basePrompt +
+        HONESTY_RULES +
+        buildLiveFactsBlock("klient") +
+        NEEDS_DISCOVERY_RULES +
+        RAPPORT_RULES +
+        channelRules(opts.channel) +
+        INTAKE_PROCESS_RULES +
+        NO_INVENTED_CONTACT_RULES
+      : basePrompt +
+        HONESTY_RULES +
+        buildLiveFactsBlock("inwestor") +
+        INVESTOR_DISCOVERY_RULES +
+        channelRules(opts.channel) +
+        NO_INVENTED_CONTACT_RULES;
+
+  // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
+  // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa
+  // placeholdera {{MAGIC_LINK_KLIENT}} — podstawiamy go poniżej.
+  // Wariant inwestorski nie tworzy konta klienta — dostaje link rejestracji inwestora.
+  let applicationLink = "https://financeyou.pl/klient";
+  if (lead.email && variant === "klient") {
+    try {
+      const { ensureKlientAccountAndMagicLink } = await import("./client-magic-link.server");
+      const r = await ensureKlientAccountAndMagicLink(lead.email, {
+        firstName: lead.first_name ?? null,
+        lastName: lead.last_name ?? null,
+        source: "text_agent",
+      });
+      if (r.magicLink) applicationLink = r.magicLink;
+      if (r.userId && lead.client_id) {
+        await s
+          .from("clients")
+          .update({ user_id: r.userId })
+          .eq("id", lead.client_id)
+          .is("user_id", null);
+      }
+    } catch (e) {
+      console.error("[el-text-agent] magic link failed", e);
+    }
+  }
+
+  const leadContext = `\n\n[KONTEKST LEADA]\nID: ${lead.id}\nKanał: ${opts.channel}\nImię: ${lead.first_name ?? "?"}\nNazwisko: ${lead.last_name ?? "?"}\nEmail: ${lead.email ?? "?"}\nTelefon: ${lead.phone_raw ?? "?"}\nDotychczasowe dane: ${JSON.stringify(lead.application_data ?? {})}`;
+
   // RAG: pobierz fragmenty bazy wiedzy najbardziej pasujące do wiadomości klienta.
   let knowledgeBlock = "";
   try {
@@ -568,7 +675,7 @@ export async function runAgentTurn(opts: {
   const messages: EmittedMessage[] = [
     {
       role: "system",
-      content: (systemPrompt + leadContext + checklistBlock + knowledgeBlock)
+      content: (systemPrompt + leadContext + checklistBlock + signalsBlock + knowledgeBlock)
         .replaceAll("{{MAGIC_LINK_KLIENT}}", applicationLink)
         .replaceAll(
           "{{LINK_REJESTRACJA_INWESTORA}}",

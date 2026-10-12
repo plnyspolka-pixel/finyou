@@ -19,7 +19,8 @@ export type EnqueuePublicationInput = {
   // Ustawienia posta TikToka wybrane przez twórcę na ekranie publikacji
   // (wymóg audytu — patrz src/lib/tiktok-upload.ts).
   tiktok_post_options?: unknown;
-  userId: string;
+  /** Autor wpisu; null = automat (np. agent wzrostu). */
+  userId: string | null;
 };
 
 export type EnqueuePublicationResult = {

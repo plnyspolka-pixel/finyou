@@ -7,7 +7,7 @@ import { timingSafeEqual } from "node:crypto";
 // Constant-time string comparison. Guards against timing side-channels on
 // secret comparisons. Returns false on any length mismatch without leaking
 // the compared length beyond the boolean result.
-function safeEqual(a: string, b: string): boolean {
+export function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a, "utf8");
   const bb = Buffer.from(b, "utf8");
   if (ba.length !== bb.length) return false;

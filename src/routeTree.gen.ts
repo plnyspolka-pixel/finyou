@@ -272,6 +272,7 @@ import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/ap
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
 import { Route as ApiPublicHooksFollowUpPlanTickRouteImport } from './routes/api/public/hooks/follow-up-plan-tick'
 import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/public/hooks/follow-up-tick'
+import { Route as ApiPublicHooksGrowthAgentTickRouteImport } from './routes/api/public/hooks/growth-agent-tick'
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksKwEasymkwPollRouteImport } from './routes/api/public/hooks/kw-easymkw-poll'
 import { Route as ApiPublicHooksLeadMagnetTickRouteImport } from './routes/api/public/hooks/lead-magnet-tick'
@@ -1676,6 +1677,12 @@ const ApiPublicHooksFollowUpTickRoute =
     path: '/api/public/hooks/follow-up-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksGrowthAgentTickRoute =
+  ApiPublicHooksGrowthAgentTickRouteImport.update({
+    id: '/api/public/hooks/growth-agent-tick',
+    path: '/api/public/hooks/growth-agent-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksInstitutionMailTickRoute =
   ApiPublicHooksInstitutionMailTickRouteImport.update({
     id: '/api/public/hooks/institution-mail-tick',
@@ -2160,6 +2167,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/growth-agent-tick': typeof ApiPublicHooksGrowthAgentTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
@@ -2452,6 +2460,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/growth-agent-tick': typeof ApiPublicHooksGrowthAgentTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
@@ -2755,6 +2764,7 @@ export interface FileRoutesById {
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
   '/api/public/hooks/follow-up-plan-tick': typeof ApiPublicHooksFollowUpPlanTickRoute
   '/api/public/hooks/follow-up-tick': typeof ApiPublicHooksFollowUpTickRoute
+  '/api/public/hooks/growth-agent-tick': typeof ApiPublicHooksGrowthAgentTickRoute
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
@@ -3059,6 +3069,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/growth-agent-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
@@ -3351,6 +3362,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/growth-agent-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
@@ -3653,6 +3665,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/elevenlabs-conversation-init'
     | '/api/public/hooks/follow-up-plan-tick'
     | '/api/public/hooks/follow-up-tick'
+    | '/api/public/hooks/growth-agent-tick'
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
@@ -3794,6 +3807,7 @@ export interface RootRouteChildren {
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
   ApiPublicHooksFollowUpPlanTickRoute: typeof ApiPublicHooksFollowUpPlanTickRoute
   ApiPublicHooksFollowUpTickRoute: typeof ApiPublicHooksFollowUpTickRoute
+  ApiPublicHooksGrowthAgentTickRoute: typeof ApiPublicHooksGrowthAgentTickRoute
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
   ApiPublicHooksKwEasymkwPollRoute: typeof ApiPublicHooksKwEasymkwPollRoute
   ApiPublicHooksLeadMagnetTickRoute: typeof ApiPublicHooksLeadMagnetTickRoute
@@ -5674,6 +5688,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksFollowUpTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/growth-agent-tick': {
+      id: '/api/public/hooks/growth-agent-tick'
+      path: '/api/public/hooks/growth-agent-tick'
+      fullPath: '/api/public/hooks/growth-agent-tick'
+      preLoaderRoute: typeof ApiPublicHooksGrowthAgentTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/institution-mail-tick': {
       id: '/api/public/hooks/institution-mail-tick'
       path: '/api/public/hooks/institution-mail-tick'
@@ -6502,6 +6523,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksElevenlabsConversationInitRoute,
   ApiPublicHooksFollowUpPlanTickRoute: ApiPublicHooksFollowUpPlanTickRoute,
   ApiPublicHooksFollowUpTickRoute: ApiPublicHooksFollowUpTickRoute,
+  ApiPublicHooksGrowthAgentTickRoute: ApiPublicHooksGrowthAgentTickRoute,
   ApiPublicHooksInstitutionMailTickRoute:
     ApiPublicHooksInstitutionMailTickRoute,
   ApiPublicHooksKwEasymkwPollRoute: ApiPublicHooksKwEasymkwPollRoute,

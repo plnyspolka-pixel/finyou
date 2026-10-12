@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { sendSmsInternal } from "@/lib/voicebot.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { safeEqual } from "@/lib/cron-auth.server";
 
 const BodySchema = z.object({
   phone: z.string().min(6).max(20),
@@ -143,7 +144,7 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
         if (!expected) {
           return json({ ok: false, error: "Webhook secret not configured on server" }, 500);
         }
-        if (!provided || provided !== expected) {
+        if (!provided || !safeEqual(provided, expected)) {
           return json({ ok: false, error: "Unauthorized: invalid x-webhook-secret" }, 401);
         }
 
@@ -187,10 +188,14 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
         const body =
           message || `Finance You: Cześć${name}! Tu Ania. Wejdź na ${url} i dokończ wniosek.`;
 
+        // Agent woła to narzędzie wyłącznie po zgodzie rozmówcy w trakcie
+        // rozmowy (numer = caller ID) — to SMS zamówiony przez klienta, a nie
+        // automat marketingowy. Kategoria konwersacyjna: stop-klatka automatów
+        // go nie zatrzymuje, STOP klienta (do_not_sms) i limit pętli — tak.
         const result = await sendSmsInternal({
           phone,
           body,
-          source: "elevenlabs_agent",
+          source: "elevenlabs_agent_requested",
         });
 
         console.log("[elevenlabs-send-sms] sms result", {

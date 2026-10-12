@@ -13941,6 +13941,354 @@
         "outputSchema": null
       },
       {
+        "name": "growth_agent_status",
+        "title": "Growth agent status",
+        "description": "Stan agenta wzrostu (social media): ustawienia, koszt z 24 h, ostatnie rolki i posty z etapem (szkic / w produkcji / zaplanowany / opublikowany / zmierzony / zablokowany), platformami i wynikiem, platformy wideo dostępne teraz (i pominięte z powodem), czego się nauczył osobno dla rolek i postów (odbiorca, filar, haczyk, pora), wnioski (playbook), propozycje rozwoju i sprawy czekające na właściciela. Administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 15
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "growth_agent_settings",
+        "title": "Update growth agent settings",
+        "description": "Zmienia ustawienia agenta wzrostu: enabled (wyłącznik), mode (auto = publikuje sam, draft = szkice do akceptacji), reels_per_day (0–2, główny produkt: codzienna rolka na wszystkie dostępne platformy), reel_platforms („auto” albo lista: instagram_reels, facebook_reels, youtube, tiktok, x), tiktok_privacy + tiktok_* (ustawienia posta TikToka wybrane przez właściciela — bez nich agent pomija TikToka; tiktok_privacy=null czyści), posts_per_day (0–4, posty tekstowe), platforms (posty: facebook, instagram), engage (odpowiedzi na komentarze IG/YouTube), max_replies_per_run, daily_budget_pln. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "draft"
+              ]
+            },
+            "reels_per_day": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2
+            },
+            "reel_platforms": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "instagram_reels",
+                      "facebook_reels",
+                      "youtube",
+                      "tiktok",
+                      "x"
+                    ]
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
+            "tiktok_privacy": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PUBLIC_TO_EVERYONE",
+                    "MUTUAL_FOLLOW_FRIENDS",
+                    "FOLLOWER_OF_CREATOR",
+                    "SELF_ONLY"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "tiktok_disable_comment": {
+              "type": "boolean"
+            },
+            "tiktok_disable_duet": {
+              "type": "boolean"
+            },
+            "tiktok_disable_stitch": {
+              "type": "boolean"
+            },
+            "tiktok_brand_organic": {
+              "type": "boolean"
+            },
+            "tiktok_branded_content": {
+              "type": "boolean"
+            },
+            "posts_per_day": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4
+            },
+            "platforms": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "facebook",
+                  "instagram"
+                ]
+              }
+            },
+            "engage": {
+              "type": "boolean"
+            },
+            "max_replies_per_run": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "daily_budget_pln": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "growth_agent_run",
+        "title": "Run growth agent now",
+        "description": "Uruchamia przebieg agenta wzrostu teraz. `force` wymusza fazy: reel (nowa rolka mimo rolki na dziś — w trybie auto zleca render w HeyGen i publikację na wszystkie dostępne platformy!), create (nowy post — w trybie auto zaplanuje publikację!), engage (odpowiedzi na komentarze — realne odpowiedzi publiczne), improve (refleksja + kontrola stóp NBP). `dry_run=true` tylko planuje i pisze treść, nic nie zapisuje, nie zleca renderu ani nie publikuje. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "force": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "publish",
+                  "reel",
+                  "measure",
+                  "warm",
+                  "create",
+                  "engage",
+                  "improve"
+                ]
+              },
+              "default": []
+            },
+            "dry_run": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "growth_agent_decide",
+        "title": "Approve or cancel growth agent post",
+        "description": "Decyzja o poście albo rolce agenta wzrostu: approve (szkic posta → zaplanowana publikacja, termin z przeszłości przesuwa się na za 15 minut; szkic rolki → zlecenie renderu w Studiu i publikacja po renderze) albo cancel (anuluje szkic, rolkę w produkcji albo zaplanowaną publikację i jej wpisy w kolejkach). Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "item_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "decision": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "cancel"
+              ]
+            }
+          },
+          "required": [
+            "item_id",
+            "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "growth_agent_check_text",
+        "title": "Truth guard check",
+        "description": "Sprawdza dowolny tekst (post, opis, odpowiedź) strażnikiem prawdy agentów: blokady (gwarancja zysku, „bez ryzyka”, prowizja/LTV/odsetki/abonament niezgodne z umowami, stawki miesięczne, cele prywatne, obce dane kontaktowe, długość), automatyczne poprawki (zastrzeżenie inwestycyjne, „link w bio”) i ostrzeżenia. Nic nie zapisuje.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 10000
+            },
+            "audience": {
+              "type": "string",
+              "enum": [
+                "inwestor",
+                "klient",
+                "ogolny"
+              ],
+              "default": "ogolny"
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "facebook_post",
+                "instagram",
+                "x",
+                "youtube",
+                "tiktok",
+                "comment_reply",
+                "generic"
+              ],
+              "default": "generic"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "request_agent_capability",
+        "title": "Request agent capability",
+        "description": "Zgłasza prośbę o nową możliwość dla agentów (narzędzie, konektor, źródło danych, kanał). Darmowe i możliwe kodem — przyznawane od razu (np. publiczne źródło z dozwolonej domeny); płatne albo wymagające człowieka — zapis + SMS do właściciela z darmowymi alternatywami (limit 2 SMS/dobę, ta sama sprawa raz na 7 dni). `notify=false` zapisuje bez SMS-a. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 5,
+              "maxLength": 500
+            },
+            "key": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "why": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "notify": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "description"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_agent_insights",
+        "title": "List agent insights and audit",
+        "description": "Dziennik agentów: obserwacje z rozmów (pytania bez odpowiedzi, obiekcje, pilne sprawy, komentarze wymagające człowieka), audyt wywołań narzędzi (kto, co, wynik), prośby o możliwości i SMS-y do właściciela. Administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "agent_insights",
+                "agent_tools",
+                "agent_capabilities",
+                "agent_owner",
+                "growth_agent"
+              ],
+              "default": "agent_insights"
+            },
+            "action": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 14
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "eleven_status",
         "title": "ElevenLabs status",
         "description": "Stan integracji ElevenLabs: klucz API, plan i zużycie znaków, agenty przypisane do powierzchni (A1 intake, A2 investor_info, A3 investor_panel, telefon, przypomnienia), numer telefonu voicebota, ustawienia dzwonienia i SMS, aktualne okno godzinowe dzwonienia, sekret webhook tooli. Tylko administrator/operator.",
@@ -18001,7 +18349,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. Przed zleceniem renderu sprawdzamy usługę caption-burner: gdy nie odpowiada, render w HeyGen nie rusza (kredyty zostają), zadanie czeka w kolejce, a odpowiedź ma pole `deferred` z powodem. Tick wstrzymuje kolejkę tak samo. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -18125,6 +18473,16 @@
               ],
               "description": "Kategoria w bibliotece materiałów (/admin/materialy), do której trafi gotowa rolka — to też zakładka w portalu pośrednika. Domyślnie sekret STUDIO_MATERIALS_AUDIENCE, a bez niego „klient”."
             },
+            "render_engine": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "caption_burner",
+                "remotion"
+              ],
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu.",
+              "default": "auto"
+            },
             "start_now": {
               "type": "boolean",
               "default": false
@@ -18138,7 +18496,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. `render_engine` (caption-burner / Remotion) można zmienić w każdym statusie poza `captioning` (wykończenie w toku) — silnik czyta się przy domykaniu renderu, więc działa też dla zadania w `rendering`, a dla `failed` / `ready` przy ponowieniu i zmianie napisów. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -18229,6 +18587,15 @@
                   "tiktok"
                 ]
               }
+            },
+            "render_engine": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "caption_burner",
+                "remotion"
+              ],
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu."
             }
           },
           "required": [
@@ -18794,6 +19161,215 @@
           },
           "required": [
             "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_motion_catalog",
+        "title": "Get Remotion motion component catalog",
+        "description": "Katalog komponentów elementów dynamicznych rolki Studia (silnik Remotion): stat, range, threshold, versus, checklist, steps, keyword, mythFact, alert, cta — opis, kiedy użyć, propsy i limity znaków, strefy kadru, zasady kotwic czasu (sync = DOSŁOWNY fragment lektora). Zacznij od niego przed `set_studio_motion`.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "design_studio_motion",
+        "title": "Design dynamic elements for a studio reel (Claude)",
+        "description": "Projektuje elementy dynamiczne rolki Studia modelem Claude (scenariusz + czasy z SRT + katalog komponentów) i ZAPISUJE projekt przy zadaniu (`motion_design`) — wejdzie przy najbliższym wykończeniu Remotion (render, `retry_studio_job`, `restyle_studio_job_captions`). Zwraca projekt i podgląd osi czasu. Nie renderuje. Wymaga pliku SRT zadania (po renderze lektora) i ANTHROPIC_API_KEY. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_studio_motion",
+        "title": "Set dynamic elements of a studio reel",
+        "description": "Zapisuje WŁASNY projekt elementów dynamicznych rolki (lista elementów z `get_motion_catalog`) przy zadaniu — zastępuje projekt AI przy wykończeniu Remotion. Walidacja jak dla AI: element z za długim tekstem, złymi propsami albo nieznanym komponentem odpada (wynik pokazuje, ile przeszło i oś czasu z SRT). `elements: []` = rolka bez elementów (zostaną zwykłe karty); `elements: null` = wyczyść, przy wykończeniu zaprojektuje AI. Potem `restyle_studio_job_captions` / `retry_studio_job`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "elements": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Elementy: {component, zone, sync, endSync, itemSync, props} — wg get_motion_catalog."
+            }
+          },
+          "required": [
+            "id",
+            "elements"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_broll_assets",
+        "title": "List B-roll bank",
+        "description": "Bank przebitek (B-roll) Studia: grafiki dobierane do rolek po tagach do frazy planera (rotacja: najdawniej użyte). Zwraca id, tytuł, tagi, URL, źródło, orientację, aktywność i licznik użyć. Szukaj po tytule/tagach (`search`).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "include_inactive": {
+              "type": "boolean",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_broll_asset",
+        "title": "Add image to B-roll bank",
+        "description": "Dodaje grafikę do banku przebitek z publicznego URL-a (http/https; JPG/PNG/WEBP, do 15 MB) — plik kopiujemy do naszego Storage. Bez `tags` grafikę opisuje AI (Claude patrzy na obraz: tytuł sceny po angielsku, tagi EN/PL, orientacja), żeby planer ją dobierał. Tytuł najlepiej jak fraza stockowa po angielsku. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 24
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_broll_asset_active",
+        "title": "Enable or disable a B-roll asset",
+        "description": "Włącza albo wyłącza przebitkę w banku — wyłączona nie wchodzi do doboru (np. nietrafiony kadr). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "active"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_broll_asset",
+        "title": "Delete a B-roll asset",
+        "description": "Usuwa przebitkę z banku razem z plikiem w Storage (nieodwracalne). Do ukrycia kadru wystarczy `set_broll_asset_active`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
