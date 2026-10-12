@@ -1,6 +1,6 @@
 {
   "$comment": "Biblioteka klauzul. Każda klauzula ma warunek włączenia (wyrażenie nad danymi) i szablon tekstu. Renderer iteruje po sekcjach w kolejności 'order'.",
-  "wersja": "1.4",
+  "wersja": "1.5",
   "sekcje": {
     "PRZEDMIOT": {
       "tytul": "PRZEDMIOT UMOWY",
@@ -154,7 +154,7 @@
       "sekcja": "KWOTA_PROWIZJA_WYPLATA",
       "order": 56,
       "warunek": true,
-      "tekst": "oryginału Umowy wraz z załącznikami, {{pb_podpis_poswiadczony}};",
+      "tekst": "oryginału Umowy wraz z załącznikami, {{pb_podpis_umowy}};",
       "poziom": "podpunkt"
     },
     {
