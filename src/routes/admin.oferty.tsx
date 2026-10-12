@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { formatPLN, offerStatusLabels, formatDate } from "@/lib/labels";
 import { Check, X, Send, FileSignature } from "lucide-react";
 import { createProfileFromOffer } from "@/lib/client-profile.functions";
+import { decideOfferProposal } from "@/lib/investor-offers/decision.functions";
+import { isOfferAccepted, isOfferPending } from "@/lib/investor-offers/acceptance";
 
 export const Route = createFileRoute("/admin/oferty")({
   component: AdminOferty,
@@ -32,6 +34,7 @@ export const Route = createFileRoute("/admin/oferty")({
 function AdminOferty() {
   const navigate = useNavigate();
   const prefillFn = useServerFn(createProfileFromOffer);
+  const decideFn = useServerFn(decideOfferProposal);
   const [rows, setRows] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -62,6 +65,24 @@ function AdminOferty() {
     void load();
   };
 
+  // Akceptacja / odrzucenie propozycji 1:1 — przez serwer (strażnik statusów).
+  const decide = async (id: string, decision: "accept" | "reject") => {
+    setBusyId(id);
+    try {
+      await decideFn({ data: { offerId: id, decision } });
+      toast.success(
+        decision === "accept"
+          ? "Propozycja zaakceptowana — odblokowano weryfikację i przygotowanie umowy"
+          : "Propozycja odrzucona",
+      );
+      void load();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Nie udało się zapisać decyzji");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const goToContract = async (offerId: string) => {
     setBusyId(offerId);
     try {
@@ -84,7 +105,8 @@ function AdminOferty() {
         <div>
           <h1 className="text-2xl font-bold">Oferty inwestorów</h1>
           <p className="text-sm text-muted-foreground">
-            Weryfikacja, zatwierdzanie, wysyłka do klienta.
+            Propozycje indywidualnych warunków (1:1) — akceptacja odblokowuje weryfikację i
+            przygotowanie umowy.
           </p>
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -141,19 +163,23 @@ function AdminOferty() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end flex-wrap">
-                        {o.offer_status === "zlozona" && (
+                        {isOfferPending(o.offer_status) && (
                           <>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void update(o.id, "zatwierdzona_przez_administratora")}
+                              title="Akceptuj propozycję"
+                              disabled={busyId === o.id}
+                              onClick={() => void decide(o.id, "accept")}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void update(o.id, "odrzucona_przez_administratora")}
+                              title="Odrzuć propozycję"
+                              disabled={busyId === o.id}
+                              onClick={() => void decide(o.id, "reject")}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -165,7 +191,7 @@ function AdminOferty() {
                             Wyślij klientowi
                           </Button>
                         )}
-                        {o.offer_status === "zaakceptowana_przez_klienta" && (
+                        {isOfferAccepted(o.offer_status) && (
                           <Button
                             size="sm"
                             disabled={busyId === o.id}

@@ -8,6 +8,7 @@
 // pobiera dane kontaktowe i rezerwuje Projekt (Dopasowanie → Karta Leada →
 // Karta Transferu → Ujawnienie → rezerwacja).
 import { createServerFn } from "@tanstack/react-start";
+import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
@@ -181,7 +182,7 @@ export async function disclosedApplicationIds(db: any, userId: string): Promise<
 
 /** „Stwórz umowę": po Ujawnieniu danych kontaktowych albo po akceptacji klienta. */
 export function contractUnlocked(offerStatus: string, disclosed: boolean): boolean {
-  return disclosed || offerStatus === "zaakceptowana_przez_klienta";
+  return disclosed || isOfferAccepted(offerStatus);
 }
 
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {

@@ -87,7 +87,7 @@ export const distributionStatusLabels: Record<string, string> = {
 
 export const offerStatusLabels: Record<string, string> = {
   szkic: "Szkic",
-  zlozona: "Złożona",
+  zlozona: "Propozycja złożona — oczekuje na akceptację",
   w_trakcie_weryfikacji: "W trakcie weryfikacji",
   zatwierdzona_przez_administratora: "Zatwierdzona przez administratora",
   odrzucona_przez_administratora: "Odrzucona przez administratora",
@@ -95,6 +95,7 @@ export const offerStatusLabels: Record<string, string> = {
   zaakceptowana_przez_klienta: "Zaakceptowana przez klienta",
   odrzucona_przez_klienta: "Odrzucona przez klienta",
   wygasla: "Wygasła",
+  wycofana_przez_inwestora: "Wycofana przez inwestora",
 };
 
 export const repaymentTypeLabels: Record<string, string> = {

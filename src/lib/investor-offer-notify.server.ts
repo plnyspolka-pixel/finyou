@@ -131,7 +131,13 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
     .eq("id", offerId)
     .maybeSingle();
   if (!offer) return { skipped: "offer_not_found" };
-  if (offer.offer_status !== "zlozona") return { skipped: "not_submitted" };
+  // Złożona propozycja albo auto-zaakceptowana (konto inwestor + administrator).
+  if (
+    offer.offer_status !== "zlozona" &&
+    offer.offer_status !== "zatwierdzona_przez_administratora"
+  ) {
+    return { skipped: "not_submitted" };
+  }
 
   const { data: app } = await db
     .from("loan_applications")

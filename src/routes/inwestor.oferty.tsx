@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Fragment, useState } from "react";
+import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
@@ -49,7 +50,7 @@ function InwestorOferty() {
 
   // „Stwórz umowę": pełne dane klienta + KW + złożona oferta → kreator umowy.
   const { createContract, pendingKey: creatingFor } = useCreateContract();
-  const accepted = offers.filter((o) => o.offer_status === "zaakceptowana_przez_klienta");
+  const accepted = offers.filter((o) => isOfferAccepted(o.offer_status));
   return (
     <div className="space-y-6">
       <FancyPageHeader
@@ -63,8 +64,8 @@ function InwestorOferty() {
             <div>
               <p className="font-medium text-emerald-700 dark:text-emerald-300">
                 {accepted.length === 1
-                  ? "Klient zaakceptował Twoją ofertę — uzupełnij dane do umowy."
-                  : `Klienci zaakceptowali ${accepted.length} Twoich ofert — uzupełnij dane do umów.`}
+                  ? "Twoja propozycja została zaakceptowana — uzupełnij dane do umowy."
+                  : `Zaakceptowano ${accepted.length} Twoich propozycji — uzupełnij dane do umów.`}
               </p>
               <p className="text-muted-foreground mt-1">
                 Uzupełnij swoje dane (adres, rachunek bankowy, reprezentacja). Klient uzupełnia
@@ -118,13 +119,7 @@ function InwestorOferty() {
                         <Commission amount={o.proposed_amount} commission={o.commission} />
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            o.offer_status === "zaakceptowana_przez_klienta"
-                              ? "default"
-                              : "secondary"
-                          }
-                        >
+                        <Badge variant={isOfferAccepted(o.offer_status) ? "default" : "secondary"}>
                           {offerStatusLabels[o.offer_status]}
                         </Badge>
                       </TableCell>
@@ -150,7 +145,7 @@ function InwestorOferty() {
                               title={
                                 o.contractUnlocked
                                   ? "Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
-                                  : "Dostępne po odsłonięciu danych kontaktowych klienta (rezerwacja w „Moich zleceniach”) albo po akceptacji oferty"
+                                  : "Dostępne po odsłonięciu danych kontaktowych klienta (rezerwacja w „Moich zleceniach”) albo po akceptacji propozycji przez uprawnioną stronę"
                               }
                               disabled={!o.contractUnlocked || creatingFor === o.id}
                               onClick={() => void createContract({ offerId: o.id })}
@@ -163,7 +158,7 @@ function InwestorOferty() {
                               Stwórz umowę
                             </Button>
                           )}
-                          {o.offer_status === "zaakceptowana_przez_klienta" && (
+                          {isOfferAccepted(o.offer_status) && (
                             <Button
                               size="sm"
                               variant="outline"
