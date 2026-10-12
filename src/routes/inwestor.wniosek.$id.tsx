@@ -19,6 +19,7 @@ import {
   Eye,
   AlertTriangle,
   FolderOpen,
+  Info,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { residentialAuctionBlockRisk } from "@/lib/risk-assessment/forced-sale";
@@ -38,6 +39,7 @@ import { useQuery } from "@tanstack/react-query";
 import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { notifyMyOfferSubmitted } from "@/lib/investor-offer-notify.functions";
+import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { ApplicationInfoBadges } from "@/components/application-info-badges";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 
@@ -69,6 +71,8 @@ function InwestorWniosek() {
   const navigate = useNavigate();
   const [app, setApp] = useState<any | null>(null);
   const [investorId, setInvestorId] = useState<string | null>(null);
+  // Umowa / e-podpis dopiero po akceptacji propozycji przez uprawnioną stronę.
+  const [hasAcceptedOffer, setHasAcceptedOffer] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
@@ -105,7 +109,15 @@ function InwestorWniosek() {
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
-        if (inv) setInvestorId(inv.id);
+        if (inv) {
+          setInvestorId(inv.id);
+          const { data: mine } = await supabase
+            .from("investor_offers")
+            .select("offer_status")
+            .eq("investor_id", inv.id)
+            .eq("loan_application_id", id);
+          setHasAcceptedOffer((mine ?? []).some((o) => isOfferAccepted(o.offer_status)));
+        }
       }
       const { data: ds } = await supabase
         .from("documents")
@@ -178,10 +190,12 @@ function InwestorWniosek() {
       investor_note: note || null,
       submitted_at: status === "zlozona" ? new Date().toISOString() : null,
     };
+    // Status nadaje baza (trigger investor_offers_guard_status): konto
+    // inwestor + administrator dostaje od razu akceptację propozycji.
     const { data: created, error } = await supabase
       .from("investor_offers")
       .insert(payload)
-      .select("id")
+      .select("id, offer_status")
       .single();
     setSubmitting(false);
     if (error) {
@@ -194,7 +208,13 @@ function InwestorWniosek() {
         console.error("[oferta] powiadomienie nie wyszło:", e),
       );
     }
-    toast.success(status === "zlozona" ? "Oferta złożona" : "Zapisano szkic");
+    if (status === "szkic") toast.success("Zapisano szkic");
+    else if (isOfferAccepted(created?.offer_status))
+      toast.success("Propozycja złożona i automatycznie zaakceptowana (konto administratora)");
+    else
+      toast.success(
+        "Propozycja złożona — dalszy etap odblokuje się po akceptacji przez uprawnioną stronę",
+      );
     void navigate({ to: "/inwestor/oferty" });
   };
 
@@ -265,16 +285,19 @@ function InwestorWniosek() {
               <Eye className="mr-1 h-3 w-3" />
               {app.view_count ?? 0} odsłon
             </Badge>
-            {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod). */}
-            <Button
-              asChild
-              size="sm"
-              className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
-            >
-              <a href={`/inwestor/podpisy?nowa=1&klient=${app.client_id}&wniosek=${id}`}>
-                Wyślij umowę do e-podpisu
-              </a>
-            </Button>
+            {/* Umowa do e-podpisu klienta (forma dokumentowa, Didit + kod) —
+                tylko po akceptacji propozycji; serwer i tak to egzekwuje. */}
+            {hasAcceptedOffer && (
+              <Button
+                asChild
+                size="sm"
+                className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
+              >
+                <a href={`/inwestor/podpisy?nowa=1&klient=${app.client_id}&wniosek=${id}`}>
+                  Wyślij umowę do e-podpisu
+                </a>
+              </Button>
+            )}
           </div>
         }
       />
@@ -379,9 +402,20 @@ function InwestorWniosek() {
 
       <RiskDisclaimer />
 
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <b>Indywidualne dopasowanie 1:1.</b> Nie przyjmujesz gotowej oferty — składasz niewiążącą,
+          indywidualną propozycję warunków finansowania. Dopiero po jej akceptacji przez uprawnioną
+          stronę (administratora, operatora, pożyczkobiorcę albo pośrednika) odblokujemy
+          weryfikację, kompletowanie danych i przygotowanie dokumentów umowy. Do tego momentu
+          propozycja nie oznacza zawarcia umowy ani automatycznego przyjęcia oferty.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
-          <CardTitle>Notatka dla administratora</CardTitle>
+          <CardTitle>Notatka do propozycji</CardTitle>
         </CardHeader>
         <CardContent>
           <Label className="sr-only">Notatka</Label>
@@ -389,7 +423,7 @@ function InwestorWniosek() {
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Opcjonalna notatka do oferty…"
+            placeholder="Opcjonalna notatka do propozycji…"
           />
         </CardContent>
       </Card>
@@ -446,7 +480,7 @@ function InwestorWniosek() {
         </Button>
         <Button disabled={submitting} onClick={() => void submit("zlozona")}>
           <Send className="mr-2 h-4 w-4" />
-          Złóż ofertę
+          Zaproponuj indywidualne warunki finansowania
         </Button>
       </div>
     </div>

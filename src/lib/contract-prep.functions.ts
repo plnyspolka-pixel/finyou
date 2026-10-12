@@ -4,6 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { ClientProfile, FieldSource } from "./client-profile-types";
 import { inwestorDoProfiluKlienta } from "./contract-engine/inwestor-do-umowy";
@@ -80,6 +81,12 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
     const isStaff = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!isStaff) throw new Error("Brak uprawnień do tej oferty");
     side = "client"; // staff może edytować obie sekcje przez osobne wywołania
+  } else if (!isOfferAccepted((offer as any).offer_status)) {
+    // Model 1:1: weryfikacja i kompletowanie danych do umowy dopiero po
+    // akceptacji propozycji przez uprawnioną stronę.
+    throw new Error(
+      "Propozycja nie została jeszcze zaakceptowana — kompletowanie danych do umowy jest zablokowane.",
+    );
   }
 
   // Strona inwestorska przygotowania umowy wymaga aktywnego pełnego

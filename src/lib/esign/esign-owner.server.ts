@@ -58,6 +58,7 @@ import {
   type SignerRow,
 } from "./esign.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
+import { OFFER_ACCEPTED_STATUSES } from "@/lib/investor-offers/acceptance";
 
 type OwnerRole = "admin" | "operator" | "inwestor";
 
@@ -181,8 +182,9 @@ async function investorIdOf(userId: string): Promise<string | null> {
 
 /**
  * Klienci, których dana rola może wskazać jako podpisujących: personel — wszyscy
- * (null = bez ograniczeń); inwestor — klienci z wniosków, na które złożył ofertę,
- * z Projektów z odkrytymi danymi kontaktowymi oraz z jego wcześniejszych kopert.
+ * (null = bez ograniczeń); inwestor — wyłącznie klienci z wniosków, na których
+ * jego propozycja została zaakceptowana przez uprawnioną stronę (model 1:1),
+ * oraz z jego wcześniejszych kopert. Ujawnienie w „Moich zleceniach" nie wystarcza.
  */
 async function allowedClientIds(role: OwnerRole, userId: string): Promise<string[] | null> {
   if (role !== "inwestor") return null;
@@ -193,6 +195,7 @@ async function allowedClientIds(role: OwnerRole, userId: string): Promise<string
       .from("investor_offers")
       .select("loan_application_id")
       .eq("investor_id", invId)
+      .in("offer_status", [...OFFER_ACCEPTED_STATUSES])
       .limit(500);
     const appIds = [
       ...new Set((offers ?? []).map((o: any) => o.loan_application_id).filter(Boolean)),
@@ -204,17 +207,6 @@ async function allowedClientIds(role: OwnerRole, userId: string): Promise<string
         .in("id", appIds);
       for (const a of apps ?? []) if (a.client_id) ids.add(a.client_id);
     }
-  }
-  // Klienci Projektów z odkrytymi danymi kontaktowymi („Moje zlecenia").
-  const { disclosedApplicationIds } =
-    await import("@/lib/investor-agreements/order-projects.functions");
-  const disclosedApps = [...(await disclosedApplicationIds(db(), userId))];
-  if (disclosedApps.length) {
-    const { data: apps } = await db()
-      .from("loan_applications")
-      .select("client_id")
-      .in("id", disclosedApps);
-    for (const a of apps ?? []) if (a.client_id) ids.add(a.client_id);
   }
   const { data: envs } = await db()
     .from("esign_envelopes")
@@ -694,7 +686,9 @@ export async function createEnvelopeImpl(
       if (!s.clientId) throw new Error(`Wskaż klienta z systemu dla podpisującego nr ${i + 1}.`);
       const allowed = await allowedClientIds(role, userId);
       if (allowed && !allowed.includes(s.clientId)) {
-        throw new Error("Brak dostępu do tego klienta (nie ma wniosku z Twoją ofertą).");
+        throw new Error(
+          "Brak dostępu do tego klienta — wymagana zaakceptowana propozycja warunków finansowania.",
+        );
       }
       const { data: c } = await db()
         .from("clients")

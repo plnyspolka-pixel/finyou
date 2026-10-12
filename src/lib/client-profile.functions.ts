@@ -2,6 +2,7 @@
 // Tokeny trzymane wyłącznie po stronie serwera. Brak mocków.
 
 import { createServerFn } from "@tanstack/react-start";
+import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ClientProfile, BorrowerData, FieldSource } from "./client-profile-types";
@@ -219,11 +220,8 @@ export const createProfileFromOffer = createServerFn({ method: "POST" })
     if (offerErr || !offer) {
       throw new Error(offerErr?.message ?? "Oferta nie została znaleziona");
     }
-    if (
-      offer.offer_status !== "zaakceptowana_przez_klienta" &&
-      offer.offer_status !== "wyslana_do_klienta"
-    ) {
-      throw new Error("Oferta nie została jeszcze zaakceptowana przez klienta");
+    if (!isOfferAccepted(offer.offer_status)) {
+      throw new Error("Propozycja nie została jeszcze zaakceptowana przez uprawnioną stronę");
     }
 
     const app: any = (offer as any).loan ?? {};
