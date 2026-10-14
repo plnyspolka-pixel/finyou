@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Eye,
   AlertTriangle,
   Ban,
   Building2,
@@ -157,12 +158,14 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
         title="E-podpis"
         subtitle="Podpisywanie dokumentów w formie dokumentowej (art. 77² KC): podpisujący potwierdza tożsamość przez Didit, wpisuje kod jednorazowy i podpisuje bez zakładania konta. Podpisany PDF ma znacznik na każdej stronie i Kartę podpisów ze śladem audytowym."
         actions={
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Nowy dokument do podpisu
-          </Button>
+          role === "posrednik" ? undefined : (
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="bg-white text-[oklch(0.28_0.12_265)] hover:bg-white/90"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Nowy dokument do podpisu
+            </Button>
+          )
         }
       />
 
@@ -177,80 +180,78 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
 
       <ToSignSection list={list.data} onRefresh={refresh} />
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4" /> Koperty
-            </CardTitle>
-            <CardDescription>
-              {role === "inwestor"
-                ? "Dokumenty wysłane przez Ciebie do podpisu."
-                : "Dokumenty wysłane do podpisu przez zespół."}
-            </CardDescription>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
-            <RefreshCw className="mr-1 h-4 w-4" /> Odśwież
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {list.isLoading ? (
-            <div className="flex items-center gap-2 py-6 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie…
+      {list.data?.observed?.length || role === "posrednik" ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Eye className="h-4 w-4" /> Umowy Twoich klientów
+              </CardTitle>
+              <CardDescription>
+                Dokumenty do wniosków, które dodałeś(-aś) — wysłane do podpisu np. przez inwestora.
+                Jako obserwator widzisz treść, kto i kiedy podpisał, i pobierzesz pliki.
+              </CardDescription>
             </div>
-          ) : !list.data?.envelopes.length ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Brak kopert. Kliknij „Nowy dokument do podpisu”, wgraj PDF i dodaj podpisujących.
-            </p>
-          ) : (
-            <div className="divide-y">
-              {list.data.envelopes.map((e: any) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => setSelected(e.id)}
-                  className="flex w-full flex-wrap items-center gap-3 py-3 text-left hover:bg-muted/40"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">{e.public_id}</span>
-                      <span className="truncate font-medium">{e.title}</span>
-                      <EnvelopeBadge status={e.status} />
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      {e.signers.map((s: any) => (
-                        <span key={s.id} className="flex items-center gap-1">
-                          <span
-                            className={
-                              "inline-block h-2 w-2 rounded-full " +
-                              (s.status === "podpisany"
-                                ? "bg-emerald-500"
-                                : s.status === "odrzucony"
-                                  ? "bg-red-500"
-                                  : s.status === "niezgodnosc"
-                                    ? "bg-amber-500"
-                                    : "bg-muted-foreground/40")
-                            }
-                          />
-                          {s.full_name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-right text-xs text-muted-foreground">
-                    <div>utworzono {formatSignedAt(e.created_at).split(" (")[0]}</div>
-                    <div>
-                      {e.status === "zakonczona"
-                        ? `zamknięto ${formatSignedAt(e.completed_at).split(" (")[0]}`
-                        : `ważne do ${formatSignedAt(e.expires_at).split(" (")[0]}`}
-                    </div>
-                  </div>
-                </button>
-              ))}
+            <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
+              <RefreshCw className="mr-1 h-4 w-4" /> Odśwież
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {list.isLoading ? (
+              <div className="flex items-center gap-2 py-6 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie…
+              </div>
+            ) : !list.data?.observed?.length ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Na razie żadna umowa Twoich klientów nie została wysłana do podpisu.
+              </p>
+            ) : (
+              <div className="divide-y">
+                {list.data.observed.map((e: any) => (
+                  <EnvelopeListRow key={e.id} e={e} onOpen={setSelected} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {role === "posrednik" ? null : (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4" /> Koperty
+              </CardTitle>
+              <CardDescription>
+                {role === "inwestor"
+                  ? "Dokumenty wysłane przez Ciebie do podpisu."
+                  : "Dokumenty wysłane do podpisu przez zespół."}
+              </CardDescription>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
+              <RefreshCw className="mr-1 h-4 w-4" /> Odśwież
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {list.isLoading ? (
+              <div className="flex items-center gap-2 py-6 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Wczytywanie…
+              </div>
+            ) : !list.data?.envelopes.length ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Brak kopert. Kliknij „Nowy dokument do podpisu”, wgraj PDF i dodaj podpisujących.
+              </p>
+            ) : (
+              <div className="divide-y">
+                {list.data.envelopes.map((e: any) => (
+                  <EnvelopeListRow key={e.id} e={e} onOpen={setSelected} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <CreateEnvelopeDialog
         open={createOpen}
@@ -269,6 +270,52 @@ export function EsignPanel({ eyebrow, basePath }: { eyebrow: string; basePath: s
         onChanged={refresh}
       />
     </div>
+  );
+}
+
+/** Wiersz koperty na liście: identyfikator, tytuł, status i stan podpisujących. */
+function EnvelopeListRow({ e, onOpen }: { e: any; onOpen: (id: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(e.id)}
+      className="flex w-full flex-wrap items-center gap-3 py-3 text-left hover:bg-muted/40"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs text-muted-foreground">{e.public_id}</span>
+          <span className="truncate font-medium">{e.title}</span>
+          <EnvelopeBadge status={e.status} />
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {e.signers.map((s: any) => (
+            <span key={s.id} className="flex items-center gap-1">
+              <span
+                className={
+                  "inline-block h-2 w-2 rounded-full " +
+                  (s.status === "podpisany"
+                    ? "bg-emerald-500"
+                    : s.status === "odrzucony"
+                      ? "bg-red-500"
+                      : s.status === "niezgodnosc"
+                        ? "bg-amber-500"
+                        : "bg-muted-foreground/40")
+                }
+              />
+              {s.full_name}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="text-right text-xs text-muted-foreground">
+        <div>utworzono {formatSignedAt(e.created_at).split(" (")[0]}</div>
+        <div>
+          {e.status === "zakonczona"
+            ? `zamknięto ${formatSignedAt(e.completed_at).split(" (")[0]}`
+            : `ważne do ${formatSignedAt(e.expires_at).split(" (")[0]}`}
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -1159,6 +1206,14 @@ function EnvelopeDetailsSheet({
               </SheetDescription>
             </SheetHeader>
 
+            {d.observer ? (
+              <div className="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+                <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Obserwujesz ten dokument jako autor wniosku: widzisz treść, podpisujących i
+                historię, pobierzesz plik źródłowy i podpisany PDF. Zarządza nim nadawca.
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => download("zrodlo")}>
                 <FileText className="mr-1 h-4 w-4" /> Plik źródłowy
@@ -1288,8 +1343,14 @@ function EnvelopeDetailsSheet({
                   {s.status === "podpisany" ? (
                     <div className="text-xs">
                       <span className="text-muted-foreground">Podpisano: </span>
-                      {formatSignedAt(s.signed_at)} · IP {s.signature_ip ?? "—"} · kod:{" "}
-                      {s.otp_channel ?? "—"} → {s.otp_target ?? "—"}
+                      {formatSignedAt(s.signed_at)}
+                      {d.observer ? null : (
+                        <>
+                          {" "}
+                          · IP {s.signature_ip ?? "—"} · kod: {s.otp_channel ?? "—"} →{" "}
+                          {s.otp_target ?? "—"}
+                        </>
+                      )}
                       <div className="break-all text-muted-foreground">
                         ID podpisu: {s.signature_hash}
                       </div>

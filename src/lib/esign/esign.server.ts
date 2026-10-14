@@ -531,6 +531,91 @@ export async function notifyOwner(
   }
 }
 
+// ── obserwator: pośrednik / operator, który dodał wniosek ───────────────────
+
+export interface EnvelopeObserver {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  /** Panel, w którym obserwator widzi kopertę. */
+  panelUrl: string;
+}
+
+/**
+ * Obserwator koperty = autor wniosku (`loan_applications.created_by_partner_user_id`),
+ * do którego koperta jest przypięta — pośrednik albo operator, który przyprowadził
+ * klienta. Widzi treść, podpisujących i pobiera pliki; nie zarządza kopertą.
+ * Nie jest obserwatorem nadawca koperty (ma ją jako swoją).
+ */
+export async function envelopeObserver(
+  envelope: Pick<EnvelopeRow, "id" | "loan_application_id" | "created_by">,
+): Promise<EnvelopeObserver | null> {
+  if (!envelope.loan_application_id) return null;
+  const { data: app } = await db()
+    .from("loan_applications")
+    .select("created_by_partner_user_id")
+    .eq("id", envelope.loan_application_id)
+    .maybeSingle();
+  const userId = (app?.created_by_partner_user_id as string | null) ?? null;
+  if (!userId || userId === envelope.created_by) return null;
+  const [{ data: prof }, { data: roles }] = await Promise.all([
+    db()
+      .from("profiles")
+      .select("email, first_name, last_name")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    db().from("user_roles").select("role").eq("user_id", userId),
+  ]);
+  const r = (roles ?? []).map((x: { role: string }) => x.role);
+  const panel = r.includes("administrator")
+    ? "admin"
+    : r.includes("operator")
+      ? "operator"
+      : "posrednik";
+  return {
+    userId,
+    email: (prof?.email as string | null) ?? null,
+    name: [prof?.first_name, prof?.last_name].filter(Boolean).join(" ") || null,
+    panelUrl: `${appBase()}/${panel}/podpisy?koperta=${envelope.id}`,
+  };
+}
+
+/** Powiadomienie obserwatora (best-effort; pomija, gdy sam jest podpisującym). */
+export async function notifyObserver(
+  envelope: EnvelopeRow,
+  subject: string,
+  lines: string[],
+): Promise<void> {
+  try {
+    const obs = await envelopeObserver(envelope);
+    if (!obs?.email) return;
+    const signers = await loadSigners(envelope.id);
+    if (signers.some((s) => s.email.toLowerCase() === obs.email!.toLowerCase())) return;
+    const res = await send({
+      to: obs.email,
+      subject,
+      text: [
+        obs.name ? `Dzień dobry ${obs.name},` : "Dzień dobry,",
+        "",
+        ...lines,
+        "",
+        `Podgląd dokumentu i stan podpisów: ${obs.panelUrl}`,
+        "",
+        operatorName(),
+      ].join("\n"),
+      html: htmlMail(subject, lines.map(esc), { label: "Otwórz w panelu", url: obs.panelUrl }),
+    });
+    await logEsignEvent({
+      envelopeId: envelope.id,
+      eventType: "powiadomienie_obserwatora",
+      actorKind: "system",
+      payload: { email: maskEmail(obs.email), ok: res.ok, subject },
+    });
+  } catch (e) {
+    console.error("[esign] observer notification failed", e);
+  }
+}
+
 // ── finalizacja: stemplowanie + doręczenie ─────────────────────────────────
 
 function signerToStamp(s: SignerRow): StampSigner {
@@ -639,6 +724,15 @@ export async function finalizeEnvelope(envelopeId: string): Promise<{ finalized:
     recipients.set(s.email.toLowerCase(), s.identity?.fullName || s.full_name);
   if (envelope.sender_email && !recipients.has(envelope.sender_email.toLowerCase())) {
     recipients.set(envelope.sender_email.toLowerCase(), envelope.sender_name ?? "");
+  }
+  // Obserwator (pośrednik / operator, który dodał wniosek) też dostaje podpisany plik.
+  try {
+    const obs = await envelopeObserver(envelope);
+    if (obs?.email && !recipients.has(obs.email.toLowerCase())) {
+      recipients.set(obs.email.toLowerCase(), obs.name ?? "");
+    }
+  } catch (e) {
+    console.error("[esign] observer lookup failed", e);
   }
   const who = signers.map(
     (s) =>
