@@ -3,7 +3,8 @@
 // Autor = kto dodał wniosek: pośrednik/operator (created_by_partner_user_id,
 // rola z user_roles) albo — gdy wniosek przyszedł sam — klient.
 // Kanały:
-//   1) e-mail (zawsze, jeśli jest adres) — parametry oferty + link do panelu,
+//   1) e-mail (zawsze, jeśli jest adres) — parametry oferty + link do panelu
+//      i PDF z całą kalkulacją (parametry, koszty, harmonogram) w załączniku,
 //   2) Messenger/Instagram — tylko gdy autor pisał z nami tym kanałem
 //      (lead z PSID/IGSID dopasowany po wniosku/kliencie albo e-mailu/telefonie),
 //   3) krótki telefon (Twilio <Say>): „jest oferta dla Ciebie na mailu" —
@@ -126,7 +127,7 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
   const { data: offer } = await db
     .from("investor_offers")
     .select(
-      "id, offer_status, loan_application_id, proposed_amount, period_months, expected_yearly_yield, estimated_monthly_payment, estimated_total_cost, balloon_amount",
+      "id, offer_status, loan_application_id, proposed_amount, period_months, expected_yearly_yield, estimated_monthly_payment, estimated_total_cost, balloon_amount, commission, schedule, investor_note",
     )
     .eq("id", offerId)
     .maybeSingle();
@@ -142,7 +143,7 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
   const { data: app } = await db
     .from("loan_applications")
     .select(
-      "id, client_id, created_by_partner_user_id, client:clients(first_name, email, phone, phone_normalized, do_not_email)",
+      "id, client_id, created_by_partner_user_id, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
     )
     .eq("id", offer.loan_application_id)
     .maybeSingle();
@@ -175,9 +176,40 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
   const forWhom = r.role === "klient" ? "na Twój wniosek" : "do wniosku, który dodałeś(-aś)";
   const greeting = r.name ? `Dzień dobry ${r.name},` : "Dzień dobry,";
 
-  // 1) E-mail
+  // 1) E-mail z PDF-em kalkulacji (błąd PDF-u nie zatrzymuje maila).
   if (r.email) {
     const { sendResendEmail } = await import("@/lib/resend-send.server");
+    const attachments: Array<{ filename: string; content: string; contentType: string }> = [];
+    try {
+      const pdf = await import("@/lib/investor-offers/offer-pdf");
+      const clientLabel =
+        [app.client?.first_name, app.client?.last_name].filter(Boolean).join(" ") || null;
+      const model = {
+        clientLabel,
+        preparedFor: r.name ?? r.email,
+        amount: Number(offer.proposed_amount) || 0,
+        months: Number(offer.period_months) || 0,
+        annualRate: Number(offer.expected_yearly_yield) || 0,
+        commission: offer.commission != null ? Number(offer.commission) : null,
+        monthlyPayment:
+          offer.estimated_monthly_payment != null ? Number(offer.estimated_monthly_payment) : null,
+        balloon: offer.balloon_amount != null ? Number(offer.balloon_amount) : null,
+        totalToRepay:
+          offer.estimated_total_cost != null ? Number(offer.estimated_total_cost) : null,
+        schedule: pdf.parseOfferSchedule(offer.schedule),
+        note: offer.investor_note ?? null,
+        reference: String(offer.id).slice(0, 8).toUpperCase(),
+        generatedAt: new Date(),
+      };
+      const bytes = await pdf.buildOfferPdf(model);
+      attachments.push({
+        filename: pdf.offerPdfFilename(model),
+        content: Buffer.from(bytes).toString("base64"),
+        contentType: "application/pdf",
+      });
+    } catch (e) {
+      console.error("[investor-offer-notify] offer pdf failed:", e);
+    }
     const subject = "Finance You — masz nową ofertę finansowania";
     const text = [
       greeting,
@@ -185,6 +217,9 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
       `Inwestor złożył ofertę finansowania ${forWhom}:`,
       ...rows.map(([k, v]) => `• ${k}: ${v}`),
       "",
+      ...(attachments.length
+        ? ["Pełna kalkulacja z harmonogramem spłat — w załączniku (PDF).", ""]
+        : []),
       `Szczegóły w panelu: ${panelUrl}`,
     ].join("\n");
     const html = `<p>${escapeHtml(greeting)}</p>
@@ -195,13 +230,14 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
           `<tr><td style="color:#64748b">${escapeHtml(k)}</td><td><b>${escapeHtml(v)}</b></td></tr>`,
       )
       .join("")}</table>
-<p><a href="${escapeHtml(panelUrl)}">Zobacz szczegóły w panelu</a></p>`;
+${attachments.length ? "<p>Pełna kalkulacja z harmonogramem spłat — w załączniku (PDF).</p>\n" : ""}<p><a href="${escapeHtml(panelUrl)}">Zobacz szczegóły w panelu</a></p>`;
     const send = await sendResendEmail({
       to: r.email,
       subject,
       text,
       html,
       category: "transactional",
+      attachments,
     });
     result.email = { ok: send.ok, error: send.error };
     await logLeadCommunication({
@@ -213,7 +249,12 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
       subject,
       content: text,
       externalId: send.id ?? null,
-      metadata: { source: NOTIFY_TYPE, offer_id: offer.id, role: r.role },
+      metadata: {
+        source: NOTIFY_TYPE,
+        offer_id: offer.id,
+        role: r.role,
+        attachments: attachments.map((a) => a.filename),
+      },
       status: send.ok ? "sent" : "error",
       errorMessage: send.ok ? null : (send.error ?? null),
     });
