@@ -27,7 +27,7 @@ const MARGIN = { top: 78, right: 48, bottom: 62, left: 48 };
 const CONTENT_W = A4.w - MARGIN.left - MARGIN.right;
 const HEADER_H = 42;
 const FOOTER_Y = 30;
-const BRAND = "Finance You · Analityk AI";
+const DEFAULT_BRAND = "Finance You · Analityk AI";
 
 const NAVY = rgb(0.11, 0.16, 0.36);
 const NAVY_SOFT = rgb(0.93, 0.95, 0.99);
@@ -54,6 +54,8 @@ export interface ReportWriterOptions {
   generatedAt?: Date;
   /** Fonty (data-URI/base64/bajty); domyślnie Liberation Sans. */
   fonts?: ReportFonts;
+  /** Napis przy znaku w pasku górnym; domyślnie „Finance You · Analityk AI”. */
+  brand?: string;
 }
 
 export interface TableColumn {
@@ -639,10 +641,49 @@ export class ReportWriter {
     this.y -= 5;
   }
 
+  /**
+   * Rząd kafelków z kluczowymi liczbami (etykieta nad dużą wartością).
+   * `accent` wyróżnia kafelek pełnym kolorem marki.
+   */
+  highlights(items: Array<{ label: string; value: string; accent?: boolean }>): void {
+    if (items.length === 0) return;
+    const gap = 8;
+    const h = 46;
+    const w = (CONTENT_W - gap * (items.length - 1)) / items.length;
+    this.space(4);
+    this.ensure(h + 6);
+    const top = this.y;
+    items.forEach((it, i) => {
+      const x = MARGIN.left + i * (w + gap);
+      const fill = it.accent ? NAVY : NAVY_SOFT;
+      this.page.drawRectangle({ x, y: top - h, width: w, height: h, color: fill });
+      const label = truncate(this.clean(it.label.toUpperCase()), this.bold, 6.8, w - 16);
+      this.page.drawText(label, {
+        x: x + 8,
+        y: top - 15,
+        size: 6.8,
+        font: this.bold,
+        color: it.accent ? rgb(0.8, 0.85, 0.97) : GRAY,
+      });
+      let size = 14;
+      const value = this.clean(it.value);
+      while (size > 8 && this.bold.widthOfTextAtSize(value, size) > w - 16) size -= 0.5;
+      this.page.drawText(truncate(value, this.bold, size, w - 16), {
+        x: x + 8,
+        y: top - h + 11,
+        size,
+        font: this.bold,
+        color: it.accent ? rgb(1, 1, 1) : NAVY,
+      });
+    });
+    this.y = top - h - 8;
+  }
+
   /** Pasek górny i stopka na każdej stronie, metadane, zapis. */
   async save(): Promise<Uint8Array> {
     const pages = this.doc.getPages();
     const date = this.date;
+    const BRAND = this.opts.brand ?? DEFAULT_BRAND;
     const footerLeft = this.clean(
       `Przygotowano dla ${this.opts.preparedFor} · ${formatWarsawDateTime(date)}`,
     );
