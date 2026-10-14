@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  PenLine,
   Users,
   UserCheck,
   FileText,
@@ -26,6 +27,7 @@ const freeGroups: NavGroup[] = [
     items: [
       { to: "/posrednik/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
+      { to: "/posrednik/podpisy", label: "Umowy klientów", icon: PenLine },
       { to: "/posrednik/abonament", label: "Pełny dostęp", icon: CreditCard },
       { to: "/posrednik/platnosci", label: "Płatności i faktury", icon: Receipt },
       { to: "/posrednik/profil", label: "Mój profil", icon: UserCircle },
@@ -42,6 +44,7 @@ const paidGroups: NavGroup[] = [
       { to: "/posrednik/moje-leady", label: "Moje leady", icon: UserCheck },
       { to: "/posrednik/wniosek", label: "Wprowadź wniosek", icon: FilePlus2 },
       { to: "/posrednik/wnioski", label: "Moje wnioski", icon: FileText },
+      { to: "/posrednik/podpisy", label: "Umowy klientów", icon: PenLine },
       { to: "/posrednik/skrzynka", label: "Skrzynka mailowa", icon: Mail },
       { to: "/posrednik/szkolenia", label: "Akademia", icon: GraduationCap },
     ],

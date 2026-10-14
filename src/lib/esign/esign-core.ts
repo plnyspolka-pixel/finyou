@@ -484,6 +484,8 @@ export const EVENT_LABELS: Record<string, string> = {
   ponowne_zaproszenie: "Zaproszenie wysłane ponownie",
   link_skopiowany: "Nadawca wygenerował link do przekazania ręcznie",
   pobranie_podpisanego: "Pobrano podpisany dokument",
+  powiadomienie_obserwatora: "Obserwator (autor wniosku) powiadomiony e-mailem",
+  pobranie_przez_obserwatora: "Obserwator (autor wniosku) pobrał dokument",
 };
 
 export function eventLabel(type: string): string {

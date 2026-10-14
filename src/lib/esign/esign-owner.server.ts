@@ -52,6 +52,8 @@ import {
   uploadBytes,
   base64ToBytes,
   downloadBytes,
+  envelopeObserver,
+  notifyObserver,
   verifyUrl,
   type AuthCtx,
   type EnvelopeRow,
@@ -77,6 +79,48 @@ async function resolveOwnerRole(supabase: any, userId: string): Promise<OwnerRol
   throw new Error(
     "Brak uprawnień do modułu podpisu (wymagana rola administrator, operator albo inwestor).",
   );
+}
+
+/** Rola oglądającego: nadawca (admin/operator/inwestor) albo pośrednik — tylko obserwator. */
+type ViewerRole = OwnerRole | "posrednik";
+
+async function resolveViewerRole(supabase: any, userId: string): Promise<ViewerRole> {
+  const roles = await rolesOf(supabase, userId);
+  if (roles.includes("administrator")) return "admin";
+  if (roles.includes("operator")) return "operator";
+  if (roles.includes("inwestor")) return "inwestor";
+  if (roles.includes("posrednik")) return "posrednik";
+  throw new Error("Brak uprawnień do modułu podpisu.");
+}
+
+/** Czy użytkownik jest obserwatorem koperty (dodał wniosek, do którego jest przypięta). */
+async function isObserverOf(env: EnvelopeRow, userId: string): Promise<boolean> {
+  const obs = await envelopeObserver(env);
+  return obs?.userId === userId;
+}
+
+/** Podpisujący w widoku obserwatora — kto, kiedy, w jakim charakterze; bez danych z KYC i śladu technicznego. */
+function observerSignerRow(s: SignerRow) {
+  return {
+    id: s.id,
+    envelope_id: s.envelope_id,
+    order_no: s.order_no,
+    role_label: s.role_label,
+    full_name: s.identity?.fullName || s.full_name,
+    email: s.email,
+    signer_kind: s.signer_kind,
+    capacity_mode: s.capacity_mode,
+    company: s.company,
+    signed_capacity: s.signed_capacity,
+    status: s.status,
+    identity_verified_at: s.identity_verified_at,
+    invited_at: s.invited_at,
+    first_viewed_at: s.first_viewed_at,
+    signed_at: s.signed_at,
+    signature_hash: s.signature_hash,
+    rejected_at: s.rejected_at,
+    rejection_reason: s.rejection_reason,
+  };
 }
 
 async function investorByUser(userId: string) {
@@ -254,8 +298,9 @@ function publicSignerRow(s: SignerRow) {
 // ── kontekst nadawcy (prefill kreatora) ────────────────────────────────────
 
 export async function getEsignOwnerContextImpl(context: AuthCtx) {
-  const role = await resolveOwnerRole(context.supabase as any, context.userId);
-  const sender = await senderIdentity(role, context.userId, context.claims);
+  const role = await resolveViewerRole(context.supabase as any, context.userId);
+  const sender =
+    role === "posrednik" ? null : await senderIdentity(role, context.userId, context.claims);
   const inv = role === "inwestor" ? await investorByUser(context.userId) : null;
   const { hasDiditConfig } = await import("@/lib/didit.server");
   return {
@@ -605,6 +650,16 @@ async function inviteDue(env: EnvelopeRow, tokens: Map<string, string>): Promise
   return sentTo;
 }
 
+/** Autor wniosku dostaje znać, że umowa jego klienta poszła do podpisu. */
+async function notifySentToObserver(env: EnvelopeRow): Promise<void> {
+  const signers = await loadSigners(env.id);
+  await notifyObserver(env, `Umowa wysłana do podpisu — ${env.title} (${env.public_id})`, [
+    `${env.sender_name ?? "Finance You"} wysłał(a) do podpisu dokument „${env.title}”.`,
+    `Podpisują: ${signers.map((s) => s.full_name).join(", ")}.`,
+    "Jako autor wniosku widzisz treść dokumentu i stan podpisów w panelu. Po ostatnim podpisie dostaniesz podpisany PDF.",
+  ]);
+}
+
 export async function createEnvelopeImpl(
   data: z.infer<typeof createEnvelopeInput>,
   context: AuthCtx,
@@ -814,6 +869,7 @@ export async function createEnvelopeImpl(
       userAgent: meta.userAgent,
     });
     sentTo = await inviteDue({ ...env, status: "wyslana", sent_at: now }, tokens);
+    await notifySentToObserver({ ...env, status: "wyslana", sent_at: now });
   }
 
   return {
@@ -842,6 +898,7 @@ export async function sendEnvelopeImpl(data: z.infer<typeof sendEnvelopeInput>, 
     userAgent: meta.userAgent,
   });
   const sentTo = await inviteDue({ ...env, status: "wyslana", sent_at: now }, new Map());
+  await notifySentToObserver({ ...env, status: "wyslana", sent_at: now });
   return { ok: true, sentTo };
 }
 
@@ -960,17 +1017,42 @@ export async function listMyEnvelopesImpl(
   context: AuthCtx,
 ) {
   const { userId } = context;
-  const role = await resolveOwnerRole(context.supabase as any, userId);
-  let q = db()
-    .from("esign_envelopes")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(data.limit);
-  if (role === "inwestor") q = q.eq("created_by", userId);
-  else if (role === "operator") q = q.in("owner_role", ["admin", "operator"]);
-  if (data.status) q = q.eq("status", data.status);
-  const { data: envs } = await q;
-  const ids = (envs ?? []).map((e: EnvelopeRow) => e.id);
+  const role = await resolveViewerRole(context.supabase as any, userId);
+  let envs: EnvelopeRow[] = [];
+  if (role !== "posrednik") {
+    let q = db()
+      .from("esign_envelopes")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (role === "inwestor") q = q.eq("created_by", userId);
+    else if (role === "operator") q = q.in("owner_role", ["admin", "operator"]);
+    if (data.status) q = q.eq("status", data.status);
+    envs = (await q).data ?? [];
+  }
+  // Obserwowane: umowy do wniosków, które ten użytkownik dodał (klienci pośrednika /
+  // operatora), wysłane przez kogoś innego — np. inwestora. Bez szkiców.
+  const { data: myApps } = await db()
+    .from("loan_applications")
+    .select("id")
+    .eq("created_by_partner_user_id", userId)
+    .limit(1000);
+  const myAppIds = (myApps ?? []).map((a: { id: string }) => a.id);
+  const ownIds = new Set(envs.map((e) => e.id));
+  let observedEnvs: EnvelopeRow[] = [];
+  if (myAppIds.length) {
+    let oq = db()
+      .from("esign_envelopes")
+      .select("*")
+      .in("loan_application_id", myAppIds)
+      .neq("created_by", userId)
+      .neq("status", "szkic")
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (data.status) oq = oq.eq("status", data.status);
+    observedEnvs = ((await oq).data ?? []).filter((e: EnvelopeRow) => !ownIds.has(e.id));
+  }
+  const ids = [...envs, ...observedEnvs].map((e: EnvelopeRow) => e.id);
   const { data: signers } = ids.length
     ? await db()
         .from("esign_signers")
@@ -1009,7 +1091,12 @@ export async function listMyEnvelopesImpl(
 
   return {
     role,
-    envelopes: (envs ?? []).map((e: EnvelopeRow) => ({
+    envelopes: envs.map((e: EnvelopeRow) => ({
+      ...e,
+      signers: byEnv.get(e.id) ?? [],
+      verifyUrl: verifyUrl(e.verify_code),
+    })),
+    observed: observedEnvs.map((e: EnvelopeRow) => ({
       ...e,
       signers: byEnv.get(e.id) ?? [],
       verifyUrl: verifyUrl(e.verify_code),
@@ -1022,22 +1109,24 @@ export async function getEnvelopeDetailsImpl(
   data: z.infer<typeof getEnvelopeDetailsInput>,
   context: AuthCtx,
 ) {
-  const role = await resolveOwnerRole(context.supabase as any, context.userId);
+  const role = await resolveViewerRole(context.supabase as any, context.userId);
   let env = await loadEnvelope(data.envelopeId);
   if (!env) throw new Error("Nie znaleziono koperty.");
   const signers = await loadSigners(env.id);
   const myClients = await myClientIds(context.userId);
   const myEmail = claimsEmail(context);
   const isSigner = signers.some((s) => isMySigner(s, context.userId, myClients, myEmail));
-  if (!canManage(env, role, context.userId) && !isSigner)
-    throw new Error("Brak uprawnień do tej koperty.");
+  const manages = role !== "posrednik" && canManage(env, role, context.userId);
+  const observer = !manages && !isSigner && (await isObserverOf(env, context.userId));
+  if (!manages && !isSigner && !observer) throw new Error("Brak uprawnień do tej koperty.");
   env = await expireIfNeeded(env);
   const events = await loadEvents(env.id);
   return {
     envelope: { ...env, verifyUrl: verifyUrl(env.verify_code) },
-    signers: signers.map(publicSignerRow),
-    events,
-    canManage: canManage(env, role, context.userId),
+    signers: observer ? signers.map(observerSignerRow) : signers.map(publicSignerRow),
+    events: observer ? events.map(({ ip: _ip, user_agent: _ua, payload: _p, ...e }) => e) : events,
+    canManage: manages,
+    observer,
     mySignerId: signers.find((s) => isMySigner(s, context.userId, myClients, myEmail))?.id ?? null,
   };
 }
@@ -1047,23 +1136,36 @@ export async function getEnvelopeFileUrlImpl(
   data: z.infer<typeof getEnvelopeFileUrlInput>,
   context: AuthCtx,
 ) {
-  const role = await resolveOwnerRole(context.supabase as any, context.userId);
+  const role = await resolveViewerRole(context.supabase as any, context.userId);
   const env = await loadEnvelope(data.envelopeId);
   if (!env) throw new Error("Nie znaleziono koperty.");
   const signers = await loadSigners(env.id);
   const myClients = await myClientIds(context.userId);
   const myEmail = claimsEmail(context);
   const isSigner = signers.some((s) => isMySigner(s, context.userId, myClients, myEmail));
-  if (!canManage(env, role, context.userId) && !isSigner) throw new Error("Brak uprawnień.");
+  const manages = role !== "posrednik" && canManage(env, role, context.userId);
+  const observer = !manages && !isSigner && (await isObserverOf(env, context.userId));
+  if (!manages && !isSigner && !observer) throw new Error("Brak uprawnień.");
   const path = data.which === "podpisany" ? env.final_path : env.source_path;
   if (!path) throw new Error("Plik nie jest jeszcze dostępny.");
   const url = await signedFileUrl(path, 600, env.source_bucket);
-  if (data.which === "podpisany") {
+  if (observer) {
+    const meta = requestClientMeta();
+    await logEsignEvent({
+      envelopeId: env.id,
+      eventType: "pobranie_przez_obserwatora",
+      actorKind: "system",
+      actorUserId: context.userId,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      payload: { which: data.which },
+    });
+  } else if (data.which === "podpisany") {
     const meta = requestClientMeta();
     await logEsignEvent({
       envelopeId: env.id,
       eventType: "pobranie_podpisanego",
-      actorKind: isSigner && !canManage(env, role, context.userId) ? "podpisujacy" : "nadawca",
+      actorKind: isSigner && !manages ? "podpisujacy" : "nadawca",
       actorUserId: context.userId,
       ip: meta.ip,
       userAgent: meta.userAgent,

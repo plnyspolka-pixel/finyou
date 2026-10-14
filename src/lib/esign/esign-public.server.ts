@@ -43,6 +43,7 @@ import {
   downloadBytes,
   expireIfNeeded,
   finalizeEnvelope,
+  notifyObserver,
   hashOtp,
   hashToken,
   identityFromDecision,
@@ -691,7 +692,17 @@ export async function confirmSignatureImpl(data: z.infer<typeof confirmSignature
   }
 
   let finalized = false;
-  if (after.every((s) => s.status === "podpisany")) {
+  const allSigned = after.every((s) => s.status === "podpisany");
+  if (!allSigned) {
+    const signedName = signer.identity?.fullName || signer.full_name;
+    const left = after.filter((s) => s.status !== "podpisany").map((s) => s.full_name);
+    await notifyObserver(envelope, `Podpis złożony — ${envelope.title} (${envelope.public_id})`, [
+      `${signedName} podpisał(a) dokument „${envelope.title}”.`,
+      `Czekamy jeszcze na: ${left.join(", ")}.`,
+      "Po ostatnim podpisie dostaniesz podpisany PDF w załączniku.",
+    ]);
+  }
+  if (allSigned) {
     try {
       finalized = (await finalizeEnvelope(envelope.id)).finalized;
     } catch (e) {
@@ -740,6 +751,10 @@ export async function rejectSigningImpl(data: z.infer<typeof rejectSigningInput>
     `${signer.full_name} odmówił(a) podpisania dokumentu „${envelope.title}”.`,
     `Powód: ${data.reason}`,
     "Koperta została zamknięta. Po poprawkach utwórz nową kopertę.",
+  ]);
+  await notifyObserver(envelope, `Odmowa podpisu — ${envelope.title} (${envelope.public_id})`, [
+    `${signer.full_name} odmówił(a) podpisania dokumentu „${envelope.title}”.`,
+    `Powód: ${data.reason}`,
   ]);
   return { ok: true };
 }
