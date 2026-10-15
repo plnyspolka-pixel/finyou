@@ -7,6 +7,10 @@ import {
   canTransition,
   ACTIVE_MATCH_STATUSES,
   amountMatchesOrder,
+  isMatchStale,
+  projectFreshAt,
+  projectWindowStart,
+  TEASER_HOURS,
   type MatchStatus,
 } from "./order-cycle-core";
 
@@ -136,6 +140,9 @@ export async function insertMatch(
       status: input.releaseTeaser ? "teaser" : "dopasowane",
       teaser,
       teaser_released_at: input.releaseTeaser ? now.toISOString() : null,
+      teaser_expires_at: input.releaseTeaser
+        ? new Date(now.getTime() + TEASER_HOURS * 3600_000).toISOString()
+        : null,
       passed_from_match_id: input.passedFromMatchId ?? null,
       created_by: input.actorId,
     })
@@ -189,9 +196,29 @@ export async function insertMatch(
   return { ok: true, matchId: inserted.id as string, projectRef: inserted.project_ref as string };
 }
 
+/**
+ * Data „pojawienia się" wniosków, do których od `sinceIso` scalono nowszy
+ * duplikat (np. operator dodał ponownie klienta, który był już w bazie —
+ * deduplikacja archiwizuje nowy wniosek i przenosi dane do starszego).
+ * Mapa: id wniosku docelowego → utworzenie najnowszego scalonego.
+ */
+export async function latestMergedAt(db: any, sinceIso: string): Promise<Map<string, string>> {
+  const { data } = await loose(db)
+    .from("loan_applications")
+    .select("merged_into_id, created_at")
+    .not("merged_into_id", "is", null)
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: true })
+    .limit(500);
+  const out = new Map<string, string>();
+  for (const r of data ?? []) out.set(r.merged_into_id, r.created_at);
+  return out;
+}
+
 /** Automat: dla przyjętych, nieprzeterminowanych Zleceń inwestora bez aktywnego
- *  obiegu dobiera najstarszy wolny Projekt mieszczący się w kwocie Zlecenia
- *  (z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu) i od razu
+ *  obiegu dobiera najstarszy wolny Projekt mieszczący się w kwocie i oknie
+ *  Zlecenia (od 3 dni przed złożeniem; scalony nowszy duplikat odświeża datę)
+ *  z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu i od razu
  *  udostępnia teaser. Wyłączność sekwencyjna pilnowana indeksem w bazie. */
 export async function autoMatchInvestorOrders(db: any, orders: any[]) {
   const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
@@ -213,21 +240,41 @@ export async function autoMatchInvestorOrders(db: any, orders: any[]) {
     .select("application_id")
     .in("status", ACTIVE_MATCH_STATUSES);
   const busyApps = new Set((busy ?? []).map((m: any) => m.application_id));
-  const { data: apps } = await loose(db)
+
+  const earliest = new Date(
+    Math.min(...eligible.map((o) => projectWindowStart(o).getTime())),
+  ).toISOString();
+  const merged = await latestMergedAt(db, earliest);
+  const { data: fresh } = await loose(db)
     .from("loan_applications")
-    .select("id, loan_amount")
+    .select("id, loan_amount, created_at")
     .in("status", CANDIDATE_DB_STATUSES)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true })
+    .gte("created_at", earliest)
     .limit(300);
+  const freshIds = new Set((fresh ?? []).map((a: any) => a.id));
+  const mergedIds = [...merged.keys()].filter((id) => !freshIds.has(id));
+  const { data: revived } = mergedIds.length
+    ? await loose(db)
+        .from("loan_applications")
+        .select("id, loan_amount, created_at")
+        .in("status", CANDIDATE_DB_STATUSES)
+        .is("deleted_at", null)
+        .in("id", mergedIds)
+    : { data: [] };
+  const apps = [...(fresh ?? []), ...(revived ?? [])]
+    .map((a: any) => ({ ...a, fresh_at: projectFreshAt(a.created_at, merged.get(a.id)) }))
+    .sort((a, b) => a.fresh_at.localeCompare(b.fresh_at));
 
   const taken = new Set<string>();
   for (const o of eligible) {
     const mine = (orderMatches ?? []).filter((m: any) => m.order_id === o.id);
     if (mine.some((m: any) => ACTIVE_MATCH_STATUSES.includes(m.status))) continue;
     const seen = new Set(mine.map((m: any) => m.application_id));
-    for (const a of apps ?? []) {
+    const windowFrom = projectWindowStart(o).getTime();
+    for (const a of apps) {
       if (busyApps.has(a.id) || taken.has(a.id) || seen.has(a.id)) continue;
+      if (new Date(a.fresh_at).getTime() < windowFrom) continue;
       if (!amountMatchesOrder(Number(o.amount_pln), Number(a.loan_amount ?? 0))) continue;
       try {
         await insertMatch(db, {
@@ -322,27 +369,50 @@ export async function transition(
   if (!updated?.length) throw new Error("Stan Dopasowania zmienił się w międzyczasie — odśwież.");
 }
 
-/** Leniwe wygaszanie rezerwacji po terminie (dziennik: wygaśnięcie). */
-export async function expireStaleReservations(db: any, matches: any[]) {
-  const now = Date.now();
-  for (const m of matches) {
-    if (
-      m.status === "rezerwacja" &&
-      m.reservation_expires_at &&
-      new Date(m.reservation_expires_at).getTime() < now
-    ) {
-      await loose(db)
-        .from("investor_order_matches")
-        .update({ status: "wygasle", decided_at: new Date().toISOString() })
-        .eq("id", m.id)
-        .eq("status", "rezerwacja");
-      m.status = "wygasle";
-      await logCycleEvent(db, {
-        matchId: m.id,
-        orderId: m.order_id,
-        type: "rezerwacja_wygasla",
-        payload: { reservation_expires_at: m.reservation_expires_at },
-      });
-    }
+/**
+ * Leniwe wygaszanie Dopasowań po terminie — teaser (24 h, +12 h) i rezerwacja
+ * — we WSZYSTKICH Zleceniach (zwalnia Projekty zajęte u innych zleceniodawców).
+ * Wiersze z `matches` (jeśli podane) dostają nowy status także w pamięci.
+ */
+export async function expireStaleMatches(db: any, matches: any[] = []) {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const [{ data: teasers }, { data: reservations }] = await Promise.all([
+    // Termin teasera liczony w kodzie (starsze wiersze bez teaser_expires_at).
+    loose(db)
+      .from("investor_order_matches")
+      .select(
+        "id, order_id, status, teaser_expires_at, teaser_released_at, teaser_extended, created_at",
+      )
+      .eq("status", "teaser")
+      .or(`teaser_expires_at.lt.${nowIso},teaser_expires_at.is.null`),
+    loose(db)
+      .from("investor_order_matches")
+      .select("id, order_id, status, reservation_expires_at")
+      .eq("status", "rezerwacja")
+      .lt("reservation_expires_at", nowIso),
+  ]);
+  for (const m of [...(teasers ?? []), ...(reservations ?? [])]) {
+    if (!isMatchStale(m, now)) continue;
+    const { data: updated } = await loose(db)
+      .from("investor_order_matches")
+      .update({ status: "wygasle", decided_at: nowIso, updated_at: nowIso })
+      .eq("id", m.id)
+      .eq("status", m.status)
+      .select("id");
+    if (!updated?.length) continue;
+    for (const row of matches) if (row.id === m.id) row.status = "wygasle";
+    await logCycleEvent(db, {
+      matchId: m.id,
+      orderId: m.order_id,
+      type: m.status === "teaser" ? "teaser_wygasl" : "rezerwacja_wygasla",
+      payload:
+        m.status === "teaser"
+          ? {
+              teaser_released_at: m.teaser_released_at ?? null,
+              teaser_expires_at: m.teaser_expires_at ?? null,
+            }
+          : { reservation_expires_at: m.reservation_expires_at },
+    });
   }
 }

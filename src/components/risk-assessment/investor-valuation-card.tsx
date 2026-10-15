@@ -286,8 +286,8 @@ export function InvestorValuationCard({
             )}
           </div>
           {sa.floor?.available && (
-            <div className="text-xs flex items-center gap-1">
-              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="text-xs">
+              <Building2 className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
               Kondygnacja:{" "}
               <b>
                 {sa.floor.floorPietro === 0 ? "parter" : `${sa.floor.floorPietro}. piętro`}
@@ -296,14 +296,15 @@ export function InvestorValuationCard({
           )}
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
             {sa.localityPopulation != null && (
-              <span className="flex items-center gap-1">
-                <Users className="h-3.5 w-3.5 text-muted-foreground" /> Ludność:{" "}
-                <b>{sa.localityPopulation.toLocaleString("pl-PL")}</b> ({sa.populationTrend})
+              <span>
+                <Users className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
+                Ludność: <b>{sa.localityPopulation.toLocaleString("pl-PL")}</b> (
+                {sa.populationTrend})
               </span>
             )}
             {sa.nearestLargeCity.name && (
-              <span className="flex items-center gap-1">
-                <MapPinned className="h-3.5 w-3.5 text-muted-foreground" />{" "}
+              <span>
+                <MapPinned className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
                 {sa.nearestLargeCity.name}
                 {sa.nearestLargeCity.distanceKm != null
                   ? ` (${sa.nearestLargeCity.distanceKm} km)`
@@ -311,9 +312,9 @@ export function InvestorValuationCard({
               </span>
             )}
             {sa.offersTotal > 0 && (
-              <span className="flex items-center gap-1">
-                <Building2 className="h-3.5 w-3.5 text-muted-foreground" /> Oferty w okolicy:{" "}
-                <b>{sa.offersTotal}</b> (biura: {sa.offersAgency})
+              <span>
+                <Building2 className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-muted-foreground" />
+                Oferty w okolicy: <b>{sa.offersTotal}</b> (biura: {sa.offersAgency})
               </span>
             )}
             {sa.medianPricePerM2 != null && (

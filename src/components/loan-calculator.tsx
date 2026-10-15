@@ -69,8 +69,10 @@ import { AML_THRESHOLD_EUR } from "@/lib/aml/aml-types";
 import { plnLabel } from "@/lib/investor-plan/plans";
 import { FancyShell } from "@/components/landing/fancy-shell";
 
+// Telefon: karta siedzi już w FancyShell (własny padding) — bez drugiej ramki
+// i paddingu poziomego, inaczej treść ściskała się do kilku znaków w wierszu.
 const FANCY_CARD_CLS =
-  "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60";
+  "bg-transparent border-white/10 shadow-none text-white [&_.text-muted-foreground]:text-white/70 [&_.text-xs.text-muted-foreground]:text-white/60 max-sm:border-0 max-sm:[&>div]:px-0";
 
 /** Pole liczbowe z lokalnym stanem tekstu — nie nadpisuje wpisywanej wartości w trakcie edycji. */
 function NumberField({
@@ -1013,7 +1015,7 @@ export function LoanCalculator({
             {/* W podglądzie te kwoty pokazują karty wyniku obok. */}
             {!marketingPreview && (
               <div className="rounded-md border bg-muted/30 p-3 text-sm grid gap-1.5 sm:grid-cols-2">
-                <div className="flex justify-between gap-3">
+                <div className="flex flex-wrap justify-between gap-x-3">
                   <span className="text-muted-foreground">
                     Do wypłaty klientowi{hideFinanceYouFee ? " (pełna kwota)" : " (na rękę)"}
                   </span>
@@ -1021,7 +1023,7 @@ export function LoanCalculator({
                     {formatPLN(disbursedOnHand)}
                   </b>
                 </div>
-                <div className="flex justify-between gap-3">
+                <div className="flex flex-wrap justify-between gap-x-3">
                   <span className="text-muted-foreground">
                     Realny wkład gotówkowy inwestora
                     {internalOperatorMode && " (z prowizją operatora)"}

@@ -824,7 +824,13 @@ function CreateEnvelopeDialog({
                 ) : null}
 
                 {s.kind === "klient" ? (
-                  <ClientPicker value={s} onPick={(p) => update(i, p)} />
+                  <>
+                    <ClientPicker value={s} onPick={(p) => update(i, p)} />
+                    <p className="text-xs text-muted-foreground">
+                      Klient pożyczkowy podpisuje bez weryfikacji dokumentu (Didit) — wyłącznie
+                      kodem SMS na numer z karty klienta. Telefon jest wymagany.
+                    </p>
+                  </>
                 ) : null}
 
                 {s.kind === "ja" ? (

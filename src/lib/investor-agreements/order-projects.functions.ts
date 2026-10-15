@@ -36,7 +36,11 @@ import {
   amountMatchesOrder,
   consumerKaraStatement,
   orderLimitsFromSettings,
+  projectFreshAt,
+  projectWindowStart,
   reservationDeadline,
+  teaserDeadline,
+  TEASER_HOURS,
 } from "./order-cycle-core";
 import { getModuleSettings } from "@/lib/projects/guards.server";
 
@@ -44,7 +48,7 @@ const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
 
 /** Okno „świeżości" Projektu względem złożenia Zlecenia. */
-export const PROJECT_WINDOW_DAYS_BEFORE_ORDER = 3;
+export { PROJECT_WINDOW_DAYS_BEFORE_ORDER } from "./order-cycle-core";
 
 export interface OrderProjectFile {
   url: string;
@@ -119,6 +123,9 @@ export interface OrderProject {
     projectRef: string;
     status: string;
     reservationExpiresAt: string | null;
+    /** Termin decyzji przy teaserze (24 h, jednorazowo +12 h). */
+    teaserExpiresAt: string | null;
+    teaserExtended: boolean;
   } | null;
   /** Dane kontaktowe — tylko po Ujawnieniu (rezerwacja / transakcja). */
   contact: OrderProjectContact | null;
@@ -206,15 +213,12 @@ async function myAcceptedOrder(db: any, userId: string, orderId: string) {
   return order;
 }
 
-function windowStart(order: { submitted_at?: string | null }): Date {
-  const base = order.submitted_at ? new Date(order.submitted_at) : new Date();
-  return new Date(base.getTime() - PROJECT_WINDOW_DAYS_BEFORE_ORDER * 24 * 3600 * 1000);
-}
-
 /** Czy Projekt kwalifikuje się do Zlecenia (kwota + okno czasowe). */
 function appFitsOrder(order: any, app: any): boolean {
   if (!amountMatchesOrder(Number(order.amount_pln), Number(app.loan_amount ?? 0))) return false;
-  return new Date(app.created_at).getTime() >= windowStart(order).getTime();
+  // fresh_at: utworzenie wniosku albo scalonego do niego nowszego duplikatu.
+  const freshAt = app.fresh_at ?? app.created_at;
+  return new Date(freshAt).getTime() >= projectWindowStart(order).getTime();
 }
 
 /** Zdjęcia i pliki klienta — podpisane po stronie serwera (bucket prywatny). */
@@ -407,7 +411,7 @@ async function buildProject(
     applicationId: app.id,
     orderId: order.id,
     fyCommissionEnabled: order.fy_commission_enabled !== false,
-    createdAt: app.created_at,
+    createdAt: app.fresh_at ?? app.created_at,
     loanAmount: app.loan_amount != null ? Number(app.loan_amount) : null,
     periodMonths: app.preferred_period_months != null ? Number(app.preferred_period_months) : null,
     annualRate: app.annual_investor_rate != null ? Number(app.annual_investor_rate) : null,
@@ -430,6 +434,8 @@ async function buildProject(
           projectRef: match.project_ref,
           status: match.status,
           reservationExpiresAt: match.reservation_expires_at ?? null,
+          teaserExpiresAt: teaserDeadline(match)?.toISOString() ?? null,
+          teaserExtended: Boolean(match.teaser_extended),
         }
       : null,
     contact,
@@ -461,6 +467,8 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
     const limits = orderLimitsFromSettings(await getModuleSettings());
+    // Przeterminowane teasery/rezerwacje (także u innych) — zanim policzymy zajętość.
+    await (await srv()).expireStaleMatches(supabaseAdmin);
     const now = Date.now();
     const accepted = (orders ?? []).filter(
       (o: any) =>
@@ -473,7 +481,9 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       orderIds.length > 0
         ? loose(supabaseAdmin)
             .from("investor_order_matches")
-            .select("id, order_id, application_id, project_ref, status, reservation_expires_at")
+            .select(
+              "id, order_id, application_id, project_ref, status, reservation_expires_at, teaser_expires_at, teaser_released_at, teaser_extended, created_at",
+            )
             .in("order_id", orderIds)
             .in("status", TEASER_VISIBLE_MATCH_STATUSES)
         : Promise.resolve({ data: [] }),
@@ -482,6 +492,17 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .select("application_id, order_id")
         .in("status", ACTIVE_MATCH_STATUSES),
     ]);
+    // Projekty odrzucone przez inwestora w danym Zleceniu — nie wracają na listę.
+    const { data: declinedRows } = orderIds.length
+      ? await loose(supabaseAdmin)
+          .from("investor_order_matches")
+          .select("order_id, application_id")
+          .in("order_id", orderIds)
+          .eq("status", "odrzucone")
+      : { data: [] };
+    const declined = new Set(
+      (declinedRows ?? []).map((m: any) => `${m.order_id}:${m.application_id}`),
+    );
     const myOrderIdSet = new Set(orderIds);
     const busyElsewhere = new Set(
       (busy ?? [])
@@ -492,19 +513,35 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
     // Kandydaci: od najwcześniejszego okna wśród przyjętych Zleceń.
     let apps: any[] = [];
     const matchedAppIds = new Set((myMatches ?? []).map((m: any) => m.application_id));
+    let merged = new Map<string, string>();
     if (accepted.length > 0) {
-      const earliest = accepted
-        .map((o: any) => windowStart(o).getTime())
-        .reduce((a: number, b: number) => Math.min(a, b));
+      const earliest = new Date(
+        accepted
+          .map((o: any) => projectWindowStart(o).getTime())
+          .reduce((a: number, b: number) => Math.min(a, b)),
+      ).toISOString();
+      merged = await (await srv()).latestMergedAt(supabaseAdmin, earliest);
       const { data } = await loose(supabaseAdmin)
         .from("loan_applications")
         .select(APP_SELECT)
         .in("status", CANDIDATE_DB_STATUSES)
         .is("deleted_at", null)
-        .gte("created_at", new Date(earliest).toISOString())
+        .gte("created_at", earliest)
         .order("created_at", { ascending: false })
         .limit(300);
       apps = data ?? [];
+      // Starsze wnioski, do których w oknie scalono nowy duplikat (klient
+      // dodany ponownie) — dla inwestora to nowy Projekt.
+      const revivedIds = [...merged.keys()].filter((id) => !apps.some((a) => a.id === id));
+      if (revivedIds.length > 0) {
+        const { data: revived } = await loose(supabaseAdmin)
+          .from("loan_applications")
+          .select(APP_SELECT)
+          .in("status", CANDIDATE_DB_STATUSES)
+          .is("deleted_at", null)
+          .in("id", revivedIds);
+        apps = [...apps, ...(revived ?? [])];
+      }
     }
     // Projekty już dopasowane (także spoza okna / statusów kandydata).
     const missing = [...matchedAppIds].filter((id) => !apps.some((a) => a.id === id));
@@ -515,6 +552,9 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .in("id", missing);
       apps = [...apps, ...(data ?? [])];
     }
+    apps = apps
+      .map((a) => ({ ...a, fresh_at: projectFreshAt(a.created_at, merged.get(a.id)) }))
+      .sort((a, b) => String(b.fresh_at).localeCompare(String(a.fresh_at)));
 
     // Tylko wnioski z kompletem danych klienta (imię, nazwisko, telefon).
     const contacts = await loadContactsByClient(
@@ -544,18 +584,23 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       }
     }
 
+    // Projekty, do których wygenerowałem / wysłałem umowę, są już w „Moich umowach".
+    const { myContractApplicationIds } = await import("./my-contracts.server");
+    const withContract = await myContractApplicationIds(supabaseAdmin, userId);
+
     const result: MyOrderProjectsResult["orders"] = [];
     for (const o of orders ?? []) {
       const projects: OrderProject[] = [];
       if (accepted.includes(o)) {
         const seen = new Set<string>();
         for (const app of apps) {
-          if (app.deleted_at || seen.has(app.id)) continue;
+          if (app.deleted_at || seen.has(app.id) || withContract.has(app.id)) continue;
           const match =
             (myMatches ?? []).find(
               (m: any) => m.order_id === o.id && m.application_id === app.id,
             ) ?? null;
           if (!match) {
+            if (declined.has(`${o.id}:${app.id}`)) continue;
             if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
             // Projekt aktywny w innym moim Zleceniu — pokazujemy tylko tam.
             if ((myMatches ?? []).some((m: any) => m.application_id === app.id)) continue;
@@ -587,6 +632,15 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .eq("id", applicationId)
     .maybeSingle();
   if (!app || app.deleted_at) throw new Error("Nie znaleziono Projektu.");
+  // Scalony nowszy duplikat odświeża datę Projektu (jak w liście Projektów).
+  const { data: newestMerged } = await loose(db)
+    .from("loan_applications")
+    .select("created_at")
+    .eq("merged_into_id", app.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  app.fresh_at = projectFreshAt(app.created_at, newestMerged?.created_at ?? null);
   const contact = await loadContact(db, app.client_id ?? null);
   if (!contactComplete(contact)) {
     throw new Error("Projekt nie ma kompletu danych klienta (imię, nazwisko, telefon).");
@@ -818,6 +872,8 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    // Teaser po terminie wygasa — rezerwacja tworzy wtedy nowe Dopasowanie.
+    await (await srv()).expireStaleMatches(supabaseAdmin);
     const { app } = await eligibleApp(supabaseAdmin, order, data.applicationId);
 
     // Bramka: komplet dokumentów pakietu (kroki 1–5).
@@ -869,7 +925,10 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
     if (m.status === "dopasowane") {
       await (
         await srv()
-      ).transition(supabaseAdmin, m, "teaser", { teaser_released_at: new Date().toISOString() });
+      ).transition(supabaseAdmin, m, "teaser", {
+        teaser_released_at: new Date().toISOString(),
+        teaser_expires_at: new Date(Date.now() + TEASER_HOURS * 3600_000).toISOString(),
+      });
       m = await matchFor();
     }
     if (m.status === "teaser") {
@@ -1102,4 +1161,131 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
         };
       }),
     );
+  });
+
+/**
+ * Wycofanie złożonej propozycji przez inwestora (także zaakceptowanej —
+ * dopóki umowa nie poszła do podpisu). Zapis przez serwer: trigger w bazie
+ * nie pozwala inwestorowi zmieniać propozycji po decyzji drugiej strony.
+ */
+export const withdrawMyOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ offerId: z.string().uuid(), reason: z.string().max(500).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = loose(supabaseAdmin);
+    const { canWithdrawOffer } = await import("@/lib/investor-offers/acceptance");
+    const { data: inv } = await db
+      .from("investors")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const { data: offer } = inv
+      ? await db
+          .from("investor_offers")
+          .select("id, offer_status, loan_application_id, admin_note")
+          .eq("id", data.offerId)
+          .eq("investor_id", inv.id)
+          .maybeSingle()
+      : { data: null };
+    if (!offer) throw new Error("Nie znaleziono oferty.");
+    if (!canWithdrawOffer(offer.offer_status)) {
+      throw new Error("Tej oferty nie można już wycofać.");
+    }
+    const { data: envs } = await db
+      .from("esign_envelopes")
+      .select("id, status")
+      .eq("created_by", context.userId)
+      .eq("loan_application_id", offer.loan_application_id)
+      .in("status", ["wyslana", "zakonczona"]);
+    if ((envs ?? []).length > 0) {
+      throw new Error(
+        "Umowa do tego wniosku jest już w podpisywaniu albo podpisana — najpierw anuluj kopertę w E-podpisie.",
+      );
+    }
+    const now = new Date().toISOString();
+    const note = data.reason?.trim() || null;
+    const { data: updated, error } = await db
+      .from("investor_offers")
+      .update({
+        offer_status: "wycofana_przez_inwestora",
+        updated_at: now,
+        // Powód dopisujemy do notatki zespołu (bez nadpisywania).
+        ...(note
+          ? {
+              admin_note: [offer.admin_note, `Wycofana przez inwestora: ${note}`]
+                .filter(Boolean)
+                .join("\n"),
+            }
+          : {}),
+      })
+      .eq("id", offer.id)
+      .eq("offer_status", offer.offer_status)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!updated?.length) throw new Error("Stan oferty zmienił się w międzyczasie — odśwież.");
+    try {
+      const { notifyInvestorOfferWithdrawn } = await import("@/lib/investor-offer-notify.server");
+      await notifyInvestorOfferWithdrawn(offer.id, note);
+    } catch (e) {
+      console.error("[order-projects] withdraw notify failed:", e);
+    }
+    return { ok: true };
+  });
+
+/**
+ * „Odrzuć Projekt" dla Projektu z listy, który nie ma jeszcze obiegu
+ * (Dopasowania). Zapisujemy Dopasowanie od razu jako odrzucone — Projekt
+ * znika z listy tego Zlecenia, automat go nie dobierze, a ślad zostaje
+ * w dzienniku cyklu. Bez obiegu nie liczy się do limitu odrzuceń Zlecenia
+ * (Projekt aktywnego obiegu odrzuca declineMatch).
+ */
+export const dismissOrderProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ orderId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    const { data: active } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .select("id")
+      .eq("order_id", order.id)
+      .eq("application_id", data.applicationId)
+      .in("status", TEASER_VISIBLE_MATCH_STATUSES)
+      .limit(1);
+    if ((active ?? []).length > 0) {
+      throw new Error("Ten Projekt jest w obiegu — odrzuć go przyciskiem przy dopasowaniu.");
+    }
+    const s = await srv();
+    const { matchId, projectRef } = await s.insertMatch(supabaseAdmin, {
+      orderId: order.id,
+      applicationId: data.applicationId,
+      releaseTeaser: false,
+      actorId: userId,
+      actorKind: "system",
+    });
+    const { data: m } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .select("*")
+      .eq("id", matchId)
+      .maybeSingle();
+    await s.transition(supabaseAdmin, m, "odrzucone", {
+      decided_at: new Date().toISOString(),
+      decided_by: userId,
+      decision_reason: "odrzucony z listy Projektów (bez obiegu)",
+    });
+    await s.logCycleEvent(supabaseAdmin, {
+      matchId,
+      orderId: order.id,
+      type: "projekt_odrzucony",
+      payload: { reason: null, bez_obiegu: true, project_ref: projectRef },
+      actor: userId,
+      actorKind: "inwestor",
+    });
+    return { ok: true };
   });

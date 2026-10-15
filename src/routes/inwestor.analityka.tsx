@@ -34,6 +34,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { KwAnalysisReport } from "@/components/kw-analysis/kw-analysis-section";
 import {
   accent,
+  COMPACT_CARDS_MOBILE,
   CoOwnersStep,
   KwStep,
   StepCard,
@@ -145,7 +146,7 @@ function AnalitykaPage() {
 
   if (tab !== "wlasny") return <SelectedApplications tabs={tabs} />;
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", COMPACT_CARDS_MOBILE)}>
       <FancyPageHeader
         eyebrow="Analityka"
         title="Analiza własnego wniosku"
@@ -239,7 +240,7 @@ function SelectedApplications({ tabs }: { tabs: ReactNode }) {
   }, [items]);
 
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", COMPACT_CARDS_MOBILE)}>
       <FancyPageHeader
         eyebrow="Analityka"
         title="Pipeline analityczny"

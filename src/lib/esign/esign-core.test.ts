@@ -20,6 +20,7 @@ import {
   sha256Hex,
   signerTurnActive,
   verifyEventChain,
+  isSmsOnlySigner,
 } from "./esign-core";
 
 describe("namesMatch", () => {
@@ -188,5 +189,20 @@ describe("kody i tokeny", () => {
     const s = formatSignedAt("2026-10-05T12:22:31.000Z");
     expect(s).toContain("05.10.2026 14:22:31");
     expect(s).toContain("(2026-10-05T12:22:31Z)");
+  });
+});
+
+describe("isSmsOnlySigner — klient pożyczkowy podpisuje kodem SMS", () => {
+  it("klient z telefonem: ścieżka SMS bez Didit", () => {
+    expect(isSmsOnlySigner({ signer_kind: "klient", phone: "+48663407514" })).toBe(true);
+  });
+  it("klient bez telefonu: zwykła ścieżka", () => {
+    expect(isSmsOnlySigner({ signer_kind: "klient", phone: null })).toBe(false);
+    expect(isSmsOnlySigner({ signer_kind: "klient", phone: "  " })).toBe(false);
+  });
+  it("inwestor, personel, osoba zewnętrzna: Didit jak dotąd", () => {
+    for (const k of ["inwestor", "personel", "zewnetrzny"]) {
+      expect(isSmsOnlySigner({ signer_kind: k, phone: "+48600000000" })).toBe(false);
+    }
   });
 });

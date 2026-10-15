@@ -46,7 +46,17 @@ export function StepEmpty({ status, text }: { status: AnalyticsStepStatus; text:
   );
 }
 
+/**
+ * Telefon: karty shadcn (Zlecenie, raport, wycena, analiza KW…) zagnieżdżone
+ * jedna w drugiej zjadały po ~25 px z każdej strony na każdym poziomie —
+ * poniżej `sm` zdejmujemy im ramkę, tło i poziomy padding (klasa na korzeniu
+ * strony). Karty Projektu i kroków (inne zaokrąglenie) zostają ramkami.
+ */
+export const COMPACT_CARDS_MOBILE =
+  "max-sm:[&_.rounded-xl.border.bg-card]:border-0 max-sm:[&_.rounded-xl.border.bg-card]:bg-transparent max-sm:[&_.rounded-xl.border.bg-card]:shadow-none max-sm:[&_.rounded-xl.border.bg-card>.p-6]:px-0";
+
 /** Karta kroku pipeline'u — kolorowa krawędź, numer w kółku, stan (jak stepper inwestora). */
+
 export function StepCard({
   meta,
   status,
@@ -84,7 +94,7 @@ export function StepCard({
           opacity: status === "pending" ? 0.35 : 1,
         }}
       />
-      <header className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 pl-7">
+      <header className="flex flex-wrap items-start justify-between gap-3 px-3 py-3 pl-5 sm:px-5 sm:py-4 sm:pl-7">
         <div className="flex items-start gap-3">
           <span
             className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black text-white"
@@ -139,7 +149,7 @@ export function StepCard({
           </span>
         </div>
       </header>
-      <div className="px-5 pb-5 pl-7">
+      <div className="px-3 pb-4 pl-5 sm:px-5 sm:pb-5 sm:pl-7">
         {failed && error && (
           <Alert variant="destructive" className="mb-3">
             <AlertTriangle className="h-4 w-4" />

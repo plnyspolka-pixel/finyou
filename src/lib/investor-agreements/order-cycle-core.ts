@@ -12,7 +12,7 @@ export const MATCH_STATUSES = [
   "transakcja", // inwestor wchodzi w Transakcję (dalej: Zał. 6 przy wypłacie)
   "odrzucone", // inwestor odrzucił Projekt
   "przekazane", // przekazany do kolejnego Zlecenia (sekwencyjnie)
-  "wygasle", // rezerwacja wygasła bez decyzji
+  "wygasle", // teaser albo rezerwacja wygasły bez decyzji
 ] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
@@ -87,6 +87,75 @@ export function teasersForAcceptedOrders(orders: OrderWithMatches[]): TeaserRef[
  */
 export const RESERVATION_HOURS = 24;
 export const RESERVATION_EXTENSION_HOURS = 12;
+
+/**
+ * Teaser: 24 h na decyzję (Karta Leada / rezerwacja / odrzucenie) +
+ * jednorazowe przedłużenie o 12 h. Teaser bez decyzji wygasa i zwalnia
+ * Zlecenie dla kolejnego Projektu (a Projekt — dla innych zleceniodawców).
+ */
+export const TEASER_HOURS = 24;
+export const TEASER_EXTENSION_HOURS = 12;
+
+/** Termin teasera: zapisany `teaser_expires_at`, a dla starszych wierszy
+ *  (sprzed kolumny) — udostępnienie + 24 h (+12 h, jeśli przedłużony). */
+export function teaserDeadline(m: {
+  teaser_expires_at?: string | null;
+  teaser_released_at?: string | null;
+  created_at?: string | null;
+  teaser_extended?: boolean | null;
+}): Date | null {
+  if (m.teaser_expires_at) return new Date(m.teaser_expires_at);
+  const from = m.teaser_released_at ?? m.created_at;
+  if (!from) return null;
+  const hours = TEASER_HOURS + (m.teaser_extended ? TEASER_EXTENSION_HOURS : 0);
+  return new Date(new Date(from).getTime() + hours * 3600_000);
+}
+
+/** Czy Dopasowanie przeterminowane: teaser po terminie albo rezerwacja po terminie. */
+export function isMatchStale(
+  m: {
+    status: string;
+    reservation_expires_at?: string | null;
+    teaser_expires_at?: string | null;
+    teaser_released_at?: string | null;
+    created_at?: string | null;
+    teaser_extended?: boolean | null;
+  },
+  now: Date,
+): boolean {
+  if (m.status === "teaser") {
+    const d = teaserDeadline(m);
+    return d != null && d.getTime() < now.getTime();
+  }
+  if (m.status === "rezerwacja") {
+    return (
+      Boolean(m.reservation_expires_at) &&
+      new Date(m.reservation_expires_at as string).getTime() < now.getTime()
+    );
+  }
+  return false;
+}
+
+/** Okno „świeżości" Projektu względem złożenia Zlecenia (dni wstecz). */
+export const PROJECT_WINDOW_DAYS_BEFORE_ORDER = 3;
+
+export function projectWindowStart(order: { submitted_at?: string | null }): Date {
+  const base = order.submitted_at ? new Date(order.submitted_at) : new Date();
+  return new Date(base.getTime() - PROJECT_WINDOW_DAYS_BEFORE_ORDER * 24 * 3600 * 1000);
+}
+
+/**
+ * Data „pojawienia się" Projektu: utworzenie wniosku albo — gdy do starszego
+ * wniosku scalono nowszy duplikat (ten sam klient dodany ponownie, np. przez
+ * operatora) — utworzenie najnowszego scalonego wniosku. Dzięki temu klient
+ * dodany dziś do istniejącej karty jest dla inwestora nowym Projektem.
+ */
+export function projectFreshAt(createdAt: string, latestMergedAt?: string | null): string {
+  if (latestMergedAt && new Date(latestMergedAt).getTime() > new Date(createdAt).getTime()) {
+    return latestMergedAt;
+  }
+  return createdAt;
+}
 
 export interface OrderLimits {
   /** Godziny rezerwacji po Ujawnieniu. */

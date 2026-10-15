@@ -758,6 +758,11 @@ export async function createEnvelopeImpl(
       fullName = fullName || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
       email = email || (c.email ?? "").toLowerCase();
       phone = phone ?? c.phone ?? null;
+      // Ścieżka klienta pożyczkowego: podpis wyłącznie kodem SMS (bez Didit).
+      if (!phone || !String(phone).trim())
+        throw new Error(
+          `Klient „${fullName}” nie ma numeru telefonu — klient pożyczkowy podpisuje kodem SMS. Uzupełnij telefon w karcie klienta.`,
+        );
       if (capacity_mode === "firma" && !company) company = clientCompany(c);
     }
     if (!fullName || fullName.length < 3)
@@ -1034,10 +1039,27 @@ export async function listMyEnvelopesImpl(
   // operatora), wysłane przez kogoś innego — np. inwestora. Bez szkiców.
   const { data: myApps } = await db()
     .from("loan_applications")
-    .select("id")
+    .select("id, merged_into_id")
     .eq("created_by_partner_user_id", userId)
     .limit(1000);
   const myAppIds = (myApps ?? []).map((a: { id: string }) => a.id);
+  // Mój klient scalony do starszego wniosku bez autora — ten wniosek też jest „mój"
+  // (jak w envelopeObserver).
+  const mergedTargets = [
+    ...new Set(
+      (myApps ?? [])
+        .map((a: { merged_into_id: string | null }) => a.merged_into_id)
+        .filter((id: string | null): id is string => Boolean(id)),
+    ),
+  ];
+  if (mergedTargets.length) {
+    const { data: orphans } = await db()
+      .from("loan_applications")
+      .select("id")
+      .in("id", mergedTargets)
+      .is("created_by_partner_user_id", null);
+    for (const o of orphans ?? []) myAppIds.push(o.id as string);
+  }
   const ownIds = new Set(envs.map((e) => e.id));
   let observedEnvs: EnvelopeRow[] = [];
   if (myAppIds.length) {
