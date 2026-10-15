@@ -24,6 +24,7 @@ export function FancyShell({
     return (
       <div
         className={`relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-18px_oklch(0.55_0.02_265/0.45)] ${className}`}
+        style={{ backgroundColor: "oklch(0.85 0.015 255)" }}
       >
         <span
           aria-hidden
@@ -35,7 +36,8 @@ export function FancyShell({
           }}
         />
         <div
-          className={`relative overflow-hidden rounded-[22px] p-5 text-slate-800 md:p-6 ${innerClassName}`}
+          className={`relative isolate overflow-hidden rounded-[22px] p-5 text-slate-800 md:p-6 ${innerClassName}`}
+          style={{ backgroundColor: "oklch(0.94 0.01 255)" }}
         >
           <span
             aria-hidden
@@ -63,11 +65,10 @@ export function FancyShell({
           />
           <span
             aria-hidden
-            className="absolute inset-0 opacity-40 mix-blend-overlay"
+            className="absolute inset-y-0 left-0 w-[180%] opacity-40"
             style={{
               backgroundImage:
                 "linear-gradient(115deg, transparent 0 48%, oklch(0.98 0.005 250 / 0.55) 48% 49%, transparent 49% 62%, oklch(0.96 0.005 250 / 0.45) 62% 62.5%, transparent 62.5%)",
-              backgroundSize: "180% 100%",
               animation: "fy-kw-lines 9s linear infinite",
             }}
           />
@@ -78,7 +79,7 @@ export function FancyShell({
           @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
           @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
           @keyframes fy-kw-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
-          @keyframes fy-kw-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
+          @keyframes fy-kw-lines { 0% { transform: translateX(0); } 100% { transform: translateX(-44.444%); } }
         `}</style>
       </div>
     );
@@ -88,6 +89,7 @@ export function FancyShell({
     return (
       <div
         className={`relative w-full overflow-hidden rounded-3xl p-[3px] shadow-[0_18px_60px_-15px_oklch(0.55_0.18_75/0.55)] ${className}`}
+        style={{ backgroundColor: "oklch(0.75 0.16 80)" }}
       >
         <span
           aria-hidden
@@ -99,7 +101,8 @@ export function FancyShell({
           }}
         />
         <div
-          className={`relative overflow-hidden rounded-[20px] p-5 text-white md:p-6 ${innerClassName}`}
+          className={`relative isolate overflow-hidden rounded-[20px] p-5 text-white md:p-6 ${innerClassName}`}
+          style={{ backgroundColor: "oklch(0.18 0.04 265)" }}
         >
           <span
             aria-hidden
@@ -145,6 +148,7 @@ export function FancyShell({
   return (
     <div
       className={`relative w-full overflow-hidden rounded-3xl p-[2px] shadow-[0_12px_45px_-15px_oklch(0.40_0.25_268/0.55)] ${className}`}
+      style={{ backgroundColor: "oklch(0.40 0.25 268)" }}
     >
       <span
         aria-hidden
@@ -157,7 +161,8 @@ export function FancyShell({
       />
 
       <div
-        className={`relative overflow-hidden rounded-[22px] p-5 text-white md:p-6 ${innerClassName}`}
+        className={`relative isolate overflow-hidden rounded-[22px] p-5 text-white md:p-6 ${innerClassName}`}
+        style={{ backgroundColor: "oklch(0.18 0.06 265)" }}
       >
         <span
           aria-hidden
@@ -195,11 +200,10 @@ export function FancyShell({
             />
             <span
               aria-hidden
-              className="absolute inset-0 opacity-25 mix-blend-overlay"
+              className="absolute inset-y-0 left-0 w-[180%] opacity-25"
               style={{
                 backgroundImage:
                   "linear-gradient(115deg, transparent 0 48%, oklch(0.95 0.05 240 / 0.35) 48% 49%, transparent 49% 62%, oklch(0.95 0.05 240 / 0.25) 62% 62.5%, transparent 62.5%)",
-                backgroundSize: "180% 100%",
                 animation: "fy-kw-lines 7s linear infinite",
               }}
             />
@@ -213,7 +217,7 @@ export function FancyShell({
         @keyframes fy-kw-drift-a { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(20px,12px) scale(1.15); } }
         @keyframes fy-kw-drift-b { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(-22px,8px) scale(1.1); } }
         @keyframes fy-kw-drift-c { 0% { transform: translate(0,0) scale(1); } 100% { transform: translate(15px,-14px) scale(1.2); } }
-        @keyframes fy-kw-lines { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
+        @keyframes fy-kw-lines { 0% { transform: translateX(0); } 100% { transform: translateX(-44.444%); } }
       `}</style>
     </div>
   );
