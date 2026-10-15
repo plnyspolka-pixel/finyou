@@ -794,9 +794,9 @@ function OrderForm({
         <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-[11px] text-muted-foreground">
           <Percent className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            <b className="text-foreground">Bez prowizji Finance You.</b> Masz uprawnienia inwestora
-            i administratora, czyli finansujesz ze środków własnych — kalkulator oferty pomija
-            prowizję, a cała Kwota Udzielona trafia do Klienta.
+            <b className="text-foreground">Bez prowizji Finance You.</b> Inwestorem jest Finance You
+            (finansujesz ze środków własnych) — kalkulator oferty pomija prowizję, a cała Kwota
+            Udzielona trafia do Klienta.
           </p>
         </div>
       ) : null}

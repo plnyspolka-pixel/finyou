@@ -17,11 +17,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import {
-  canToggleFyCommission,
-  orderLimitsFromSettings,
-  resolveFyCommissionEnabled,
-} from "./order-cycle-core";
+import { orderLimitsFromSettings } from "./order-cycle-core";
 
 const loose = (c: unknown) => c as any;
 
@@ -154,9 +150,9 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
         .in("id", staleIds);
     }
 
-    // Administrator-inwestor (oba uprawnienia) finansuje sam — bez prowizji FY.
-    const { getUserRoles } = await import("@/lib/access/guards.server");
-    const canToggleFyCommissionFlag = canToggleFyCommission(await getUserRoles(userId));
+    // Inwestor = Finance You (admin+inwestor albo profil FY) — bez prowizji FY.
+    const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    const canToggleFyCommissionFlag = await isFinanceYouInvestorUser(userId);
 
     return {
       packActive,
@@ -539,14 +535,11 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Prowizja Finance You: administrator-inwestor finansuje ze środków własnych,
-    // więc jego Zlecenia są zawsze bez prowizji FY. Dla każdego innego inwestora
+    // Prowizja Finance You: gdy inwestorem jest Finance You (admin+inwestor albo
+    // profil inwestora FY), Zlecenia są zawsze bez prowizji FY. Dla każdego innego inwestora
     // Prowizja od Pożyczkobiorcy zostaje włączona.
-    const { getUserRoles } = await import("@/lib/access/guards.server");
-    const fyCommissionEnabled = resolveFyCommissionEnabled(
-      await getUserRoles(userId),
-      data.fyCommissionEnabled,
-    );
+    const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    const fyCommissionEnabled = !(await isFinanceYouInvestorUser(userId));
 
     const { ip, userAgent } = requestMeta();
     const { data: inserted, error } = await loose(supabaseAdmin)

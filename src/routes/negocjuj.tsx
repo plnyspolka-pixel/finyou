@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
+import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +51,8 @@ function NegocjujPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
+  // Inwestorem jest Finance You — kontroferta bez prowizji Finance You.
+  const fyInvestor = useIsFinanceYouInvestor();
   const [clientName, setClientName] = useState(search.client ?? "");
   const [clientEmail, setClientEmail] = useState("");
 
@@ -143,6 +146,7 @@ function NegocjujPage() {
 
         <LoanCalculator
           onChange={setCalc}
+          hideFinanceYouFee={fyInvestor}
           initialAmount={search.amount}
           initialMonths={search.months}
           initialAnnualRate={search.rate}

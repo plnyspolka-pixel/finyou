@@ -18,6 +18,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { db, assertApprovedInvestor, getModuleSettings } from "./guards.server";
 import { projectAudit } from "./audit.server";
+import { isFinanceYouInvestorUser } from "@/lib/investor-agreements/finance-you-investor.server";
 import { analyzeProjectRisk, computeLtv } from "./risk";
 import { computeProposal, type ProposalParams } from "./proposal-calc";
 import {
@@ -276,6 +277,7 @@ export const computeProposalServer = createServerFn({ method: "POST" })
       data.params as ProposalParams,
       Number(project.amount),
       Number(project.property_value) || null,
+      { noFinanceYouFee: await isFinanceYouInvestorUser(userId) },
     );
     return { computed, serverNow: new Date().toISOString() };
   });
@@ -344,6 +346,7 @@ export const submitProposal = createServerFn({ method: "POST" })
       data.params as ProposalParams,
       Number(project.amount),
       Number(project.property_value) || null,
+      { noFinanceYouFee: await isFinanceYouInvestorUser(userId) },
     );
     const settings = await getModuleSettings();
     const risk = analyzeProjectRisk(project, settings.ltv_bands, prefs?.maxLtvPercent ?? null);
