@@ -28,6 +28,11 @@ export interface ProposalParams {
   validUntil?: string;
 }
 
+export interface ProposalOptions {
+  /** Inwestorem jest Finance You — bez Prowizji Finance You (brak pośrednictwa). */
+  noFinanceYouFee?: boolean;
+}
+
 export interface ProposalComputed {
   monthlyPayment: number;
   finalPayment: number;
@@ -62,6 +67,7 @@ export function computeProposal(
   params: ProposalParams,
   expectedAmount: number,
   propertyValue: number | null,
+  options: ProposalOptions = {},
 ): ProposalComputed {
   const warnings: string[] = [];
   const amount = params.amount;
@@ -80,7 +86,7 @@ export function computeProposal(
     kwotaPozyczki: amount,
     prowizja: Math.max(0, params.commission),
     // Prowizja Finance You potrącana z wypłaty (poza ratami) — koszt Klienta.
-    prowizjaFY: fyCommission(amount),
+    prowizjaFY: options.noFinanceYouFee ? 0 : fyCommission(amount),
     annualRatePercent: params.interestRatePercent,
     months: params.periodMonths,
     maxMonthlyPayment: cap,

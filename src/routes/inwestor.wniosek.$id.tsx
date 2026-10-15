@@ -36,6 +36,7 @@ import { signStoragePath } from "@/lib/property-photos";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
+import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 import { openOrCreateThread } from "@/lib/chat.functions";
 import { getNbpRates } from "@/lib/nbp-rates.functions";
 import { notifyMyOfferSubmitted } from "@/lib/investor-offer-notify.functions";
@@ -90,6 +91,8 @@ function InwestorWniosek() {
 
   // Calc state — wypełniana przez LoanCalculator (onChange)
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
+  // Inwestorem jest Finance You — oferta bez prowizji Finance You.
+  const fyInvestor = useIsFinanceYouInvestor();
   const [note, setNote] = useState("");
 
   useEffect(() => {
@@ -376,6 +379,7 @@ function InwestorWniosek() {
         initialMonths={12}
         initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
         initialMaxPayment={Number(app.max_monthly_payment) || 0}
+        hideFinanceYouFee={fyInvestor}
         onChange={setCalc}
       />
 

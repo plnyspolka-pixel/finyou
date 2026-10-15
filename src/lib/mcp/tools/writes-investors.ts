@@ -471,7 +471,9 @@ export const submitInvestorOffer = defineTool({
     finance_you_fee: z
       .boolean()
       .default(false)
-      .describe("Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty."),
+      .describe(
+        "Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji.",
+      ),
     note: z.string().max(4000).optional(),
     status: z.enum(["szkic", "zlozona"]).default("zlozona"),
   },
@@ -488,6 +490,9 @@ export const submitInvestorOffer = defineTool({
         .eq("user_id", uid)
         .maybeSingle();
       if (!investor) return fail("Brak profilu inwestora dla tego konta.");
+      const { isFinanceYouInvestorUser } =
+        await import("@/lib/investor-agreements/finance-you-investor.server");
+      const fyInvestor = await isFinanceYouInvestorUser(uid);
 
       const r = a.annual_rate / 100 / 12;
       const annuity =
@@ -499,7 +504,8 @@ export const submitInvestorOffer = defineTool({
       const eng = buildEngineSchedule({
         kwotaPozyczki: a.amount,
         prowizja: a.commission_pln,
-        prowizjaFY: a.finance_you_fee ? fyCommission(a.amount) : 0,
+        // Inwestorem jest Finance You — prowizji FY nie ma nigdy.
+        prowizjaFY: a.finance_you_fee && !fyInvestor ? fyCommission(a.amount) : 0,
         annualRatePercent: a.annual_rate,
         months: a.months,
         maxMonthlyPayment: cap,

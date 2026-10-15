@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
+import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 
 export const Route = createFileRoute("/inwestor/kalkulator")({
   component: Kalkulator,
@@ -8,6 +9,8 @@ export const Route = createFileRoute("/inwestor/kalkulator")({
 
 function Kalkulator() {
   const navigate = useNavigate();
+  // Inwestorem jest Finance You — bez prowizji Finance You.
+  const fyInvestor = useIsFinanceYouInvestor();
   return (
     <div className="space-y-6 max-w-5xl">
       <FancyPageHeader
@@ -17,6 +20,7 @@ function Kalkulator() {
       />
       <LoanCalculator
         investorGuidance
+        hideFinanceYouFee={fyInvestor}
         // „Wyślij do kreatora": harmonogram trafia do kreatora umowy jako
         // pierwsza wiadomość rozmowy (UmowaAgentPanel czyta handoff po wejściu).
         onSentToCreator={() => void navigate({ to: "/inwestor/dokumenty" })}

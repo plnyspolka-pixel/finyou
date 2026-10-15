@@ -245,11 +245,11 @@ describe("przełącznik prowizji Finance You przy Zleceniu", () => {
     expect(canToggleFyCommission(null)).toBe(false);
   });
 
-  it("z uprawnieniami honoruje wybór, domyślnie prowizja włączona", () => {
+  it("administrator-inwestor finansuje sam — prowizji FY nie ma nigdy", () => {
     const roles = ["inwestor", "administrator"];
     expect(resolveFyCommissionEnabled(roles, false)).toBe(false);
-    expect(resolveFyCommissionEnabled(roles, true)).toBe(true);
-    expect(resolveFyCommissionEnabled(roles, undefined)).toBe(true);
+    expect(resolveFyCommissionEnabled(roles, true)).toBe(false);
+    expect(resolveFyCommissionEnabled(roles, undefined)).toBe(false);
   });
 
   it("bez uprawnień prowizja zostaje włączona, nawet gdy żądanie mówi inaczej", () => {

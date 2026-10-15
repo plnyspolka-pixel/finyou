@@ -467,6 +467,13 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
     const limits = orderLimitsFromSettings(await getModuleSettings());
+    // Inwestorem jest Finance You (admin+inwestor albo profil FY) — Finance You nie
+    // pośredniczy sama u siebie, więc kalkulator oferty pomija prowizję FY
+    // we wszystkich jego Zleceniach (także złożonych przed tą zmianą).
+    const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    if (await isFinanceYouInvestorUser(userId)) {
+      for (const o of orders ?? []) (o as any).fy_commission_enabled = false;
+    }
     // Przeterminowane teasery/rezerwacje (także u innych) — zanim policzymy zajętość.
     await (await srv()).expireStaleMatches(supabaseAdmin);
     const now = Date.now();

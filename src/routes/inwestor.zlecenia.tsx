@@ -9,6 +9,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 import {
   AlertTriangle,
   BarChart3,
@@ -581,6 +582,7 @@ function OfferPanel({
 }) {
   const submitFn = useServerFn(submitOrderProjectOffer);
   const [calc, setCalc] = useState<LoanCalculatorState | null>(null);
+  const fyInvestor = useIsFinanceYouInvestor();
   const [note, setNote] = useState("");
   const maxAnnualRate = maxCapitalRate();
 
@@ -639,7 +641,7 @@ function OfferPanel({
         initialAmount={Number(p.loanAmount) || 100_000}
         initialMonths={12}
         initialAnnualRate={Math.round(maxAnnualRate * 10) / 10}
-        hideFinanceYouFee={p.fyCommissionEnabled === false}
+        hideFinanceYouFee={fyInvestor || p.fyCommissionEnabled === false}
         onChange={setCalc}
       />
       {block.blocked ? (

@@ -48,11 +48,7 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     const fresh =
       existing?.created_at &&
       Date.now() - new Date(existing.created_at).getTime() < 6 * 24 * 3600 * 1000;
-    if (
-      existing &&
-      fresh &&
-      ["Not Started", "In Progress"].includes(existing.status)
-    ) {
+    if (existing && fresh && ["Not Started", "In Progress"].includes(existing.status)) {
       return {
         status: "ok" as const,
         sessionId: existing.session_id,

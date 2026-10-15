@@ -17,11 +17,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import {
-  canToggleFyCommission,
-  orderLimitsFromSettings,
-  resolveFyCommissionEnabled,
-} from "./order-cycle-core";
+import { orderLimitsFromSettings } from "./order-cycle-core";
 
 const loose = (c: unknown) => c as any;
 
@@ -154,10 +150,9 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
         .in("id", staleIds);
     }
 
-    // Czy pokazać przełącznik prowizji Finance You przy składaniu Zlecenia
-    // (uprawnienia inwestora + administratora razem).
-    const { getUserRoles } = await import("@/lib/access/guards.server");
-    const canToggleFyCommissionFlag = canToggleFyCommission(await getUserRoles(userId));
+    // Inwestor = Finance You (admin+inwestor albo profil FY) — bez prowizji FY.
+    const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    const canToggleFyCommissionFlag = await isFinanceYouInvestorUser(userId);
 
     return {
       packActive,
@@ -167,9 +162,12 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       documents: docsState,
       deliveries: deliveries ?? [],
       hasDelivery,
-      orders: (orders ?? []).map((o: any) =>
-        staleIds.includes(o.id) ? { ...o, status: "wygasle" } : o,
-      ),
+      orders: (orders ?? []).map((o: any) => ({
+        ...o,
+        ...(staleIds.includes(o.id) ? { status: "wygasle" } : {}),
+        // Administrator-inwestor: zawsze bez prowizji FY (finansowanie własne).
+        ...(canToggleFyCommissionFlag ? { fy_commission_enabled: false } : {}),
+      })),
       didit: didit
         ? {
             status: didit.status as string,
@@ -537,14 +535,11 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Przełącznik prowizji Finance You: honorujemy go wyłącznie, gdy składający
-    // Zlecenie ma JEDNOCZEŚNIE uprawnienia inwestora i administratora. Dla
-    // każdego innego inwestora Prowizja od Pożyczkobiorcy zostaje włączona.
-    const { getUserRoles } = await import("@/lib/access/guards.server");
-    const fyCommissionEnabled = resolveFyCommissionEnabled(
-      await getUserRoles(userId),
-      data.fyCommissionEnabled,
-    );
+    // Prowizja Finance You: gdy inwestorem jest Finance You (admin+inwestor albo
+    // profil inwestora FY), Zlecenia są zawsze bez prowizji FY. Dla każdego innego inwestora
+    // Prowizja od Pożyczkobiorcy zostaje włączona.
+    const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    const fyCommissionEnabled = !(await isFinanceYouInvestorUser(userId));
 
     const { ip, userAgent } = requestMeta();
     const { data: inserted, error } = await loose(supabaseAdmin)
