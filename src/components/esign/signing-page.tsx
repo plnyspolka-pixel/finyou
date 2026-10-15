@@ -452,6 +452,23 @@ function IdentityStep({
   });
 
   const done = s.status === "zweryfikowany";
+  // Klient pożyczkowy: bez Didit — tożsamość potwierdza kod SMS w kroku podpisu.
+  if (s.smsOnly) {
+    return (
+      <section className="space-y-3">
+        <StepHeader n={1} title="Potwierdź tożsamość" done={done} active={!done} />
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          <div className="flex items-center gap-2 font-medium">
+            <Smartphone className="h-4 w-4" /> Potwierdzenie kodem SMS
+          </div>
+          <p className="mt-1 text-emerald-900/80">
+            Nie potrzebujesz dokumentu ani selfie. Podpis potwierdzisz kodem SMS wysłanym na numer{" "}
+            {s.phoneMasked ?? "z Twojego wniosku"}.
+          </p>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="space-y-3">
       <StepHeader n={1} title="Potwierdź tożsamość" done={done} active={!done} />
@@ -642,7 +659,9 @@ function SignStep({
   // § 15 ust. 7 — checkboxy startują PUSTE.
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [code, setCode] = useState("");
-  const [channel, setChannel] = useState<"sms" | "email">(s.hasPhone ? "sms" : "email");
+  const [channel, setChannel] = useState<"sms" | "email">(
+    s.smsOnly || s.hasPhone ? "sms" : "email",
+  );
   const allChecked = required.every((k) => checked[k]);
 
   const otpMut = useMutation({
@@ -689,7 +708,11 @@ function SignStep({
         <p className="text-xs text-muted-foreground">
           Potwierdza, że to Ty kontrolujesz wskazany kanał kontaktu. Kod jest ważny 10 minut.
         </p>
-        {s.hasPhone ? (
+        {s.smsOnly ? (
+          <p className="mt-2 flex items-center gap-2 text-sm">
+            <Smartphone className="h-4 w-4" /> Kod przyjdzie SMS-em na {s.phoneMasked}.
+          </p>
+        ) : s.hasPhone ? (
           <RadioGroup
             value={channel}
             onValueChange={(v) => setChannel(v as "sms" | "email")}

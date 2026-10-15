@@ -32,6 +32,7 @@ import {
   describeIdentity,
   formatSignedAt,
   formatSignedAtShort,
+  SMS_ONLY_IDENTITY_DESCRIPTION,
   type IdentitySnapshot,
   type SignedCapacity,
   type SigningMode,
@@ -61,6 +62,8 @@ export interface StampSigner {
   phone: string | null;
   capacity: SignedCapacity | null;
   identity: IdentitySnapshot | null;
+  /** Klient pożyczkowy — tożsamość potwierdzona wyłącznie kodem SMS (bez Didit). */
+  smsOnly?: boolean;
   otpChannel: string | null;
   /** Zamaskowany cel kodu (np. „*********800”). */
   otpTarget: string | null;
@@ -296,7 +299,7 @@ function drawBands(
   } else if (input.signers.length <= 2) {
     for (const s of input.signers) {
       const base = `${capacityLabel(s.fullName, s.capacity)} — podpisano ${formatSignedAtShort(s.signedAt)}`;
-      const full = `${base} · ${identityShort(s.identity)}`;
+      const full = `${base} · ${s.smsOnly && !s.identity ? "tożsamość: kod SMS" : identityShort(s.identity)}`;
       // Gdy pełny opis się nie mieści, zostaje część kluczowa (kto, kiedy).
       lines.push(fonts.regular.widthOfTextAtSize(c(full), 6.4) <= maxW ? full : base);
     }
@@ -432,7 +435,11 @@ function signerBlock(wr: Writer, index: number, s: StampSigner): void {
   }
   kv(wr, "E-mail", s.email);
   if (s.phone) kv(wr, "Telefon", s.phone);
-  kv(wr, "Weryfikacja tożsamości", describeIdentity(s.identity));
+  kv(
+    wr,
+    "Weryfikacja tożsamości",
+    s.smsOnly && !s.identity ? SMS_ONLY_IDENTITY_DESCRIPTION : describeIdentity(s.identity),
+  );
   kv(
     wr,
     "Kod jednorazowy",

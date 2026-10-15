@@ -28,6 +28,8 @@ import {
   OTP_TTL_MS,
   randomOtp,
   randomToken,
+  isSmsOnlySigner,
+  SMS_ONLY_IDENTITY_DESCRIPTION,
   signatureHash,
   signerTurnActive,
   STATEMENTS,
@@ -140,13 +142,19 @@ function publicSigner(s: SignerRow, envelope: EnvelopeRow, all: SignerRow[]) {
     hasPhone: Boolean(s.phone),
     roleLabel: s.role_label,
     kind: s.signer_kind,
+    /** Klient pożyczkowy: bez Didit, podpis wyłącznie kodem SMS. */
+    smsOnly: isSmsOnlySigner(s),
     status: s.status,
     turnActive: signerTurnActive(envelope.signing_mode, s, all),
     capacityMode: s.capacity_mode,
     company: s.company,
     signedCapacity: s.signed_capacity,
     identity: s.identity,
-    identityDescription: s.identity ? describeIdentity(s.identity) : null,
+    identityDescription: s.identity
+      ? describeIdentity(s.identity)
+      : isSmsOnlySigner(s)
+        ? SMS_ONLY_IDENTITY_DESCRIPTION
+        : null,
     identityVerifiedAt: s.identity_verified_at,
     identityMismatchNote: s.identity_mismatch_note,
     diditStatus: s.didit_status,
@@ -232,6 +240,30 @@ async function adoptPipelineIdentity(signer: SignerRow, envelope: EnvelopeRow): 
   return (upd as SignerRow) ?? signer;
 }
 
+/**
+ * Klient pożyczkowy — ścieżka wyjątkowa: pomijamy Didit, podpisujący od razu
+ * przechodzi do oświadczeń i kodu SMS (tożsamość = kontrola numeru z karty).
+ */
+async function adoptSmsOnlyPath(signer: SignerRow, envelope: EnvelopeRow): Promise<SignerRow> {
+  if (!["oczekuje", "otwarty", "weryfikacja"].includes(signer.status)) return signer;
+  const { data: upd } = await db()
+    .from("esign_signers")
+    .update({ status: "zweryfikowany", identity_source: "sms_klient" })
+    .eq("id", signer.id)
+    .in("status", ["oczekuje", "otwarty", "weryfikacja"])
+    .select("*")
+    .maybeSingle();
+  if (!upd) return signer;
+  await logEsignEvent({
+    envelopeId: envelope.id,
+    signerId: signer.id,
+    eventType: "sciezka_sms",
+    actorKind: "system",
+    payload: { reason: "klient pożyczkowy — podpis kodem SMS bez Didit" },
+  });
+  return upd as SignerRow;
+}
+
 // ── sesja podpisującego ────────────────────────────────────────────────────
 
 export async function getSigningSessionImpl(data: z.infer<typeof getSigningSessionInput>) {
@@ -254,7 +286,11 @@ export async function getSigningSessionImpl(data: z.infer<typeof getSigningSessi
       userAgent: meta.userAgent,
     });
   }
-  if (envelope.status === "wyslana") signer = await adoptPipelineIdentity(signer, envelope);
+  if (envelope.status === "wyslana") {
+    signer = isSmsOnlySigner(signer)
+      ? await adoptSmsOnlyPath(signer, envelope)
+      : await adoptPipelineIdentity(signer, envelope);
+  }
   const { hasDiditConfig } = await import("@/lib/didit.server");
   const capacityOptions = await investorCapacityOptions(signer);
   return {
@@ -525,7 +561,13 @@ export async function requestSigningOtpImpl(data: z.infer<typeof requestSigningO
   const { hasTwilioKeys } = await import("@/lib/twilio-api.server");
   const smsPossible =
     Boolean(signer.phone) && hasTwilioKeys() && Boolean(process.env.LOVABLE_API_KEY);
-  let channel: "sms" | "email" = data.channel ?? (smsPossible ? "sms" : "email");
+  const smsOnly = isSmsOnlySigner(signer);
+  if (smsOnly && !smsPossible) {
+    throw new Error("Wysyłka SMS jest chwilowo niedostępna — spróbuj za chwilę.");
+  }
+  let channel: "sms" | "email" = smsOnly
+    ? "sms"
+    : (data.channel ?? (smsPossible ? "sms" : "email"));
   if (channel === "sms" && !smsPossible) channel = "email";
 
   const code = randomOtp();
@@ -533,7 +575,8 @@ export async function requestSigningOtpImpl(data: z.infer<typeof requestSigningO
     channel === "sms"
       ? await sendOtpSms(signer, envelope, code)
       : await sendOtpEmail(signer, envelope, code);
-  if (!sent.ok && channel === "sms") {
+  // Klient pożyczkowy: tylko SMS — bez zapasowego e-maila.
+  if (!sent.ok && channel === "sms" && !smsOnly) {
     channel = "email";
     sent = await sendOtpEmail(signer, envelope, code);
   }
@@ -591,6 +634,8 @@ export async function confirmSignatureImpl(data: z.infer<typeof confirmSignature
   // Kod jednorazowy.
   if (!signer.otp_hash || !signer.otp_expires_at)
     throw new Error("Najpierw poproś o kod jednorazowy.");
+  if (isSmsOnlySigner(signer) && signer.otp_channel !== "sms")
+    throw new Error("Podpis wymaga kodu SMS — poproś o nowy kod.");
   if (new Date(signer.otp_expires_at).getTime() < Date.now())
     throw new Error("Kod wygasł — poproś o nowy.");
   if (signer.otp_attempts >= OTP_MAX_ATTEMPTS)
@@ -796,7 +841,11 @@ export async function getVerificationImpl(data: z.infer<typeof getVerificationIn
       capacity: s.signed_capacity
         ? capacityLabel(s.identity?.fullName || s.full_name, s.signed_capacity)
         : null,
-      identityMethod: s.identity ? `Didit — ${s.identity.checks.join(", ")}` : null,
+      identityMethod: s.identity
+        ? `Didit — ${s.identity.checks.join(", ")}`
+        : isSmsOnlySigner(s)
+          ? "kod SMS (klient pożyczkowy, bez Didit)"
+          : null,
       signatureHash: s.signature_hash,
     })),
   };

@@ -758,6 +758,11 @@ export async function createEnvelopeImpl(
       fullName = fullName || `${c.first_name ?? ""} ${c.last_name ?? ""}`.trim();
       email = email || (c.email ?? "").toLowerCase();
       phone = phone ?? c.phone ?? null;
+      // Ścieżka klienta pożyczkowego: podpis wyłącznie kodem SMS (bez Didit).
+      if (!phone || !String(phone).trim())
+        throw new Error(
+          `Klient „${fullName}” nie ma numeru telefonu — klient pożyczkowy podpisuje kodem SMS. Uzupełnij telefon w karcie klienta.`,
+        );
       if (capacity_mode === "firma" && !company) company = clientCompany(c);
     }
     if (!fullName || fullName.length < 3)

@@ -469,6 +469,7 @@ export const EVENT_LABELS: Record<string, string> = {
   weryfikacja_start: "Rozpoczęto weryfikację tożsamości (Didit)",
   weryfikacja_ok: "Tożsamość potwierdzona (Didit)",
   weryfikacja_pipeline: "Tożsamość potwierdzona wcześniej (KYC inwestora)",
+  sciezka_sms: "Klient pożyczkowy — podpis kodem SMS bez weryfikacji dokumentu",
   weryfikacja_odrzucona: "Weryfikacja tożsamości odrzucona",
   niezgodnosc: "Niezgodność danych z dokumentem tożsamości",
   niezgodnosc_zaakceptowana: "Niezgodność zaakceptowana przez nadawcę",
@@ -520,3 +521,22 @@ export function pagesLabel(n: number): string {
         : "stron";
   return `${n} ${word}`;
 }
+
+// ── ścieżka wyjątkowa: klient pożyczkowy podpisuje kodem SMS ──────────────
+
+/**
+ * Klient pożyczkowy z systemu (signer_kind „klient”) z numerem telefonu
+ * podpisuje BEZ weryfikacji dokumentu (Didit) — tożsamość potwierdza
+ * wyłącznie kod jednorazowy SMS na numer z karty klienta. Kanał e-mail jest
+ * dla niego wyłączony. Pozostali podpisujący — bez zmian (Didit + kod).
+ */
+export function isSmsOnlySigner(s: {
+  signer_kind?: string | null;
+  phone?: string | null;
+}): boolean {
+  return s.signer_kind === "klient" && Boolean(s.phone && String(s.phone).trim());
+}
+
+/** Opis metody potwierdzenia tożsamości na ścieżce SMS (Karta podpisów, weryfikacja). */
+export const SMS_ONLY_IDENTITY_DESCRIPTION =
+  "Ścieżka klienta pożyczkowego: bez weryfikacji dokumentu (Didit); tożsamość potwierdzona kodem jednorazowym SMS na numer telefonu z karty klienta";
