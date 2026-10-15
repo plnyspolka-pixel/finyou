@@ -33,10 +33,11 @@ describe("investorNavGroups", () => {
     expect(labels({ isConsumer: true, hasLiveOrder: false })).toContain("Złóż zlecenie");
   });
 
-  it("„E-podpis” is in the main menu right after „Moje oferty”", () => {
+  it("„Moje umowy” follow „Moje oferty”, then „E-podpis”", () => {
     const l = labels({ isConsumer: false, hasLiveOrder: true });
+    expect(l.indexOf("Moje umowy")).toBe(l.indexOf("Moje oferty") + 1);
     expect(l).toContain("E-podpis");
-    expect(l.indexOf("E-podpis")).toBe(l.indexOf("Moje oferty") + 1);
+    expect(l.indexOf("E-podpis")).toBe(l.indexOf("Moje umowy") + 1);
     const item = investorNavGroups(undefined)
       .flatMap((g) => g.items)
       .find((i) => i.label === "E-podpis");

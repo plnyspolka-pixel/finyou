@@ -163,7 +163,12 @@ function MyOrdersPage() {
         <p className="text-sm text-muted-foreground">
           Do każdego przyjętego Zlecenia pokazujemy Projekty w jego kwocie, utworzone w systemie od
           3 dni przed złożeniem Zlecenia. Zamów raport analityczny, a potem jednym przyciskiem
-          pobierz dane kontaktowe i zarezerwuj Projekt.
+          pobierz dane kontaktowe i zarezerwuj Projekt. Projekt, do którego wygenerujesz umowę,
+          przenosimy do{" "}
+          <Link to="/inwestor/moje-umowy" className="underline">
+            Moich umów
+          </Link>
+          .
         </p>
       </div>
 

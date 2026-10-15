@@ -125,6 +125,7 @@ import { Route as InwestorDokumentyRouteImport } from './routes/inwestor.dokumen
 import { Route as InwestorKalkulatorRouteImport } from './routes/inwestor.kalkulator'
 import { Route as InwestorKreatorDokumentowRouteImport } from './routes/inwestor.kreator-dokumentow'
 import { Route as InwestorKreatorUmowyRouteImport } from './routes/inwestor.kreator-umowy'
+import { Route as InwestorMojeUmowyRouteImport } from './routes/inwestor.moje-umowy'
 import { Route as InwestorOdstapienieRouteImport } from './routes/inwestor.odstapienie'
 import { Route as InwestorOfertyRouteImport } from './routes/inwestor.oferty'
 import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnosci'
@@ -898,6 +899,11 @@ const InwestorKreatorDokumentowRoute =
 const InwestorKreatorUmowyRoute = InwestorKreatorUmowyRouteImport.update({
   id: '/kreator-umowy',
   path: '/kreator-umowy',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorMojeUmowyRoute = InwestorMojeUmowyRouteImport.update({
+  id: '/moje-umowy',
+  path: '/moje-umowy',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorOdstapienieRoute = InwestorOdstapienieRouteImport.update({
@@ -2016,6 +2022,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/moje-umowy': typeof InwestorMojeUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
@@ -2313,6 +2320,7 @@ export interface FileRoutesByTo {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/moje-umowy': typeof InwestorMojeUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
@@ -2613,6 +2621,7 @@ export interface FileRoutesById {
   '/inwestor/kalkulator': typeof InwestorKalkulatorRoute
   '/inwestor/kreator-dokumentow': typeof InwestorKreatorDokumentowRoute
   '/inwestor/kreator-umowy': typeof InwestorKreatorUmowyRoute
+  '/inwestor/moje-umowy': typeof InwestorMojeUmowyRoute
   '/inwestor/odstapienie': typeof InwestorOdstapienieRoute
   '/inwestor/oferty': typeof InwestorOfertyRoute
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
@@ -2918,6 +2927,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/moje-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
@@ -3215,6 +3225,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/moje-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
@@ -3514,6 +3525,7 @@ export interface FileRouteTypes {
     | '/inwestor/kalkulator'
     | '/inwestor/kreator-dokumentow'
     | '/inwestor/kreator-umowy'
+    | '/inwestor/moje-umowy'
     | '/inwestor/odstapienie'
     | '/inwestor/oferty'
     | '/inwestor/platnosci'
@@ -4655,6 +4667,13 @@ declare module '@tanstack/react-router' {
       path: '/kreator-umowy'
       fullPath: '/inwestor/kreator-umowy'
       preLoaderRoute: typeof InwestorKreatorUmowyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/moje-umowy': {
+      id: '/inwestor/moje-umowy'
+      path: '/moje-umowy'
+      fullPath: '/inwestor/moje-umowy'
+      preLoaderRoute: typeof InwestorMojeUmowyRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/odstapienie': {
@@ -6236,6 +6255,7 @@ interface InwestorRouteChildren {
   InwestorKalkulatorRoute: typeof InwestorKalkulatorRoute
   InwestorKreatorDokumentowRoute: typeof InwestorKreatorDokumentowRoute
   InwestorKreatorUmowyRoute: typeof InwestorKreatorUmowyRoute
+  InwestorMojeUmowyRoute: typeof InwestorMojeUmowyRoute
   InwestorOdstapienieRoute: typeof InwestorOdstapienieRoute
   InwestorOfertyRoute: typeof InwestorOfertyRoute
   InwestorPlatnosciRoute: typeof InwestorPlatnosciRoute
@@ -6260,6 +6280,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorKalkulatorRoute: InwestorKalkulatorRoute,
   InwestorKreatorDokumentowRoute: InwestorKreatorDokumentowRoute,
   InwestorKreatorUmowyRoute: InwestorKreatorUmowyRoute,
+  InwestorMojeUmowyRoute: InwestorMojeUmowyRoute,
   InwestorOdstapienieRoute: InwestorOdstapienieRoute,
   InwestorOfertyRoute: InwestorOfertyRoute,
   InwestorPlatnosciRoute: InwestorPlatnosciRoute,
@@ -6570,13 +6591,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

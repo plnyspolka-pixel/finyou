@@ -18,6 +18,7 @@ import {
   BarChart3,
   Undo2,
   PenLine,
+  FileSignature,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
@@ -42,6 +43,9 @@ const MAIN_ITEMS: NavItem[] = [
   ORDER_PIPELINE_ITEM,
   { to: "/inwestor/zlecenia", label: "Moje zlecenia", icon: ClipboardList },
   { to: "/inwestor/oferty", label: "Moje oferty", icon: Tag },
+  // Umowy do Projektów (wygenerowane / w podpisywaniu / podpisane) — Projekt
+  // z umową znika z „Moich zleceń" i jest tutaj.
+  { to: "/inwestor/moje-umowy", label: "Moje umowy", icon: FileSignature },
   // E-podpis (forma dokumentowa): wysyłka umów do podpisu dowolnym osobom
   // (Didit + kod jednorazowy) i dokumenty do podpisu przez samego inwestora.
   { to: "/inwestor/podpisy", label: "E-podpis", icon: PenLine },

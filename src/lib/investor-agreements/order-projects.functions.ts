@@ -573,13 +573,17 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       }
     }
 
+    // Projekty, do których wygenerowałem / wysłałem umowę, są już w „Moich umowach".
+    const { myContractApplicationIds } = await import("./my-contracts.server");
+    const withContract = await myContractApplicationIds(supabaseAdmin, userId);
+
     const result: MyOrderProjectsResult["orders"] = [];
     for (const o of orders ?? []) {
       const projects: OrderProject[] = [];
       if (accepted.includes(o)) {
         const seen = new Set<string>();
         for (const app of apps) {
-          if (app.deleted_at || seen.has(app.id)) continue;
+          if (app.deleted_at || seen.has(app.id) || withContract.has(app.id)) continue;
           const match =
             (myMatches ?? []).find(
               (m: any) => m.order_id === o.id && m.application_id === app.id,
