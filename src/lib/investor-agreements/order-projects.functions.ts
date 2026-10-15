@@ -492,6 +492,17 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .select("application_id, order_id")
         .in("status", ACTIVE_MATCH_STATUSES),
     ]);
+    // Projekty odrzucone przez inwestora w danym Zleceniu — nie wracają na listę.
+    const { data: declinedRows } = orderIds.length
+      ? await loose(supabaseAdmin)
+          .from("investor_order_matches")
+          .select("order_id, application_id")
+          .in("order_id", orderIds)
+          .eq("status", "odrzucone")
+      : { data: [] };
+    const declined = new Set(
+      (declinedRows ?? []).map((m: any) => `${m.order_id}:${m.application_id}`),
+    );
     const myOrderIdSet = new Set(orderIds);
     const busyElsewhere = new Set(
       (busy ?? [])
@@ -589,6 +600,7 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
               (m: any) => m.order_id === o.id && m.application_id === app.id,
             ) ?? null;
           if (!match) {
+            if (declined.has(`${o.id}:${app.id}`)) continue;
             if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
             // Projekt aktywny w innym moim Zleceniu — pokazujemy tylko tam.
             if ((myMatches ?? []).some((m: any) => m.application_id === app.id)) continue;
@@ -1149,4 +1161,131 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
         };
       }),
     );
+  });
+
+/**
+ * Wycofanie złożonej propozycji przez inwestora (także zaakceptowanej —
+ * dopóki umowa nie poszła do podpisu). Zapis przez serwer: trigger w bazie
+ * nie pozwala inwestorowi zmieniać propozycji po decyzji drugiej strony.
+ */
+export const withdrawMyOffer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ offerId: z.string().uuid(), reason: z.string().max(500).optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = loose(supabaseAdmin);
+    const { canWithdrawOffer } = await import("@/lib/investor-offers/acceptance");
+    const { data: inv } = await db
+      .from("investors")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    const { data: offer } = inv
+      ? await db
+          .from("investor_offers")
+          .select("id, offer_status, loan_application_id, admin_note")
+          .eq("id", data.offerId)
+          .eq("investor_id", inv.id)
+          .maybeSingle()
+      : { data: null };
+    if (!offer) throw new Error("Nie znaleziono oferty.");
+    if (!canWithdrawOffer(offer.offer_status)) {
+      throw new Error("Tej oferty nie można już wycofać.");
+    }
+    const { data: envs } = await db
+      .from("esign_envelopes")
+      .select("id, status")
+      .eq("created_by", context.userId)
+      .eq("loan_application_id", offer.loan_application_id)
+      .in("status", ["wyslana", "zakonczona"]);
+    if ((envs ?? []).length > 0) {
+      throw new Error(
+        "Umowa do tego wniosku jest już w podpisywaniu albo podpisana — najpierw anuluj kopertę w E-podpisie.",
+      );
+    }
+    const now = new Date().toISOString();
+    const note = data.reason?.trim() || null;
+    const { data: updated, error } = await db
+      .from("investor_offers")
+      .update({
+        offer_status: "wycofana_przez_inwestora",
+        updated_at: now,
+        // Powód dopisujemy do notatki zespołu (bez nadpisywania).
+        ...(note
+          ? {
+              admin_note: [offer.admin_note, `Wycofana przez inwestora: ${note}`]
+                .filter(Boolean)
+                .join("\n"),
+            }
+          : {}),
+      })
+      .eq("id", offer.id)
+      .eq("offer_status", offer.offer_status)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!updated?.length) throw new Error("Stan oferty zmienił się w międzyczasie — odśwież.");
+    try {
+      const { notifyInvestorOfferWithdrawn } = await import("@/lib/investor-offer-notify.server");
+      await notifyInvestorOfferWithdrawn(offer.id, note);
+    } catch (e) {
+      console.error("[order-projects] withdraw notify failed:", e);
+    }
+    return { ok: true };
+  });
+
+/**
+ * „Odrzuć Projekt" dla Projektu z listy, który nie ma jeszcze obiegu
+ * (Dopasowania). Zapisujemy Dopasowanie od razu jako odrzucone — Projekt
+ * znika z listy tego Zlecenia, automat go nie dobierze, a ślad zostaje
+ * w dzienniku cyklu. Bez obiegu nie liczy się do limitu odrzuceń Zlecenia
+ * (Projekt aktywnego obiegu odrzuca declineMatch).
+ */
+export const dismissOrderProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ orderId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
+    const { data: active } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .select("id")
+      .eq("order_id", order.id)
+      .eq("application_id", data.applicationId)
+      .in("status", TEASER_VISIBLE_MATCH_STATUSES)
+      .limit(1);
+    if ((active ?? []).length > 0) {
+      throw new Error("Ten Projekt jest w obiegu — odrzuć go przyciskiem przy dopasowaniu.");
+    }
+    const s = await srv();
+    const { matchId, projectRef } = await s.insertMatch(supabaseAdmin, {
+      orderId: order.id,
+      applicationId: data.applicationId,
+      releaseTeaser: false,
+      actorId: userId,
+      actorKind: "system",
+    });
+    const { data: m } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .select("*")
+      .eq("id", matchId)
+      .maybeSingle();
+    await s.transition(supabaseAdmin, m, "odrzucone", {
+      decided_at: new Date().toISOString(),
+      decided_by: userId,
+      decision_reason: "odrzucony z listy Projektów (bez obiegu)",
+    });
+    await s.logCycleEvent(supabaseAdmin, {
+      matchId,
+      orderId: order.id,
+      type: "projekt_odrzucony",
+      payload: { reason: null, bez_obiegu: true, project_ref: projectRef },
+      actor: userId,
+      actorKind: "inwestor",
+    });
+    return { ok: true };
   });

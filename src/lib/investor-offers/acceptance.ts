@@ -59,3 +59,20 @@ export function statusAfterDecision(decider: OfferDecider, decision: OfferDecisi
 export function shouldAutoAccept(roles: readonly string[], hasInvestorProfile: boolean): boolean {
   return hasInvestorProfile && roles.includes("administrator");
 }
+
+/**
+ * Statusy, z których inwestor może wycofać propozycję: złożona, w weryfikacji,
+ * zaakceptowana albo wysłana do klienta. Po wysłaniu umowy do podpisu
+ * (koperta e-podpisu) wycofanie blokuje serwer — wtedy anuluje się umowę.
+ */
+export const OFFER_WITHDRAWABLE_STATUSES = [
+  "zlozona",
+  "w_trakcie_weryfikacji",
+  "zatwierdzona_przez_administratora",
+  "wyslana_do_klienta",
+  "zaakceptowana_przez_klienta",
+] as const;
+
+export function canWithdrawOffer(status: string | null | undefined): boolean {
+  return (OFFER_WITHDRAWABLE_STATUSES as readonly string[]).includes(status ?? "");
+}

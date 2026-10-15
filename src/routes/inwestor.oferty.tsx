@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Fragment, useState } from "react";
-import { isOfferAccepted } from "@/lib/investor-offers/acceptance";
-import { useQuery } from "@tanstack/react-query";
+import { canWithdrawOffer, isOfferAccepted } from "@/lib/investor-offers/acceptance";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +15,15 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileSignature, FileDown, FilePen, Loader2, MapPin, ShieldCheck } from "lucide-react";
+import {
+  FileSignature,
+  FileDown,
+  FilePen,
+  Loader2,
+  MapPin,
+  ShieldCheck,
+  Undo2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatPLN, offerStatusLabels, formatDate, propertyTypeLabels } from "@/lib/labels";
 import { downloadOfferPdf } from "@/lib/offer-pdf";
@@ -28,6 +36,7 @@ import {
 } from "@/components/inwestor/project-photo-gallery";
 import {
   getMyInvestorOffers,
+  withdrawMyOffer,
   type MyOfferRow,
 } from "@/lib/investor-agreements/order-projects.functions";
 
@@ -47,6 +56,25 @@ function InwestorOferty() {
     enabled: !!user,
   });
   const offers: MyOfferRow[] = offersQ.data ?? [];
+  const qc = useQueryClient();
+  const withdrawFn = useServerFn(withdrawMyOffer);
+  const withdrawMut = useMutation({
+    mutationFn: (v: { offerId: string; reason?: string }) => withdrawFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Oferta wycofana — autor wniosku dostał powiadomienie.");
+      void qc.invalidateQueries({ queryKey: ["my-investor-offers"] });
+      void qc.invalidateQueries({ queryKey: ["order-projects"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Nie udało się wycofać oferty."),
+  });
+  const withdraw = (offerId: string) => {
+    const reason = window.prompt(
+      "Wycofać tę ofertę? Autor wniosku dostanie e-mail. Możesz podać powód (opcjonalnie):",
+      "",
+    );
+    if (reason === null) return; // Anuluj
+    withdrawMut.mutate({ offerId, reason: reason.trim() || undefined });
+  };
 
   // „Stwórz umowę": pełne dane klienta + KW + złożona oferta → kreator umowy.
   const { createContract, pendingKey: creatingFor } = useCreateContract();
@@ -171,6 +199,18 @@ function InwestorOferty() {
                             >
                               <FileSignature className="mr-1 h-3.5 w-3.5" />
                               Umowa
+                            </Button>
+                          )}
+                          {canWithdrawOffer(o.offer_status) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400"
+                              disabled={withdrawMut.isPending}
+                              onClick={() => withdraw(o.id)}
+                            >
+                              <Undo2 className="mr-1 h-3.5 w-3.5" />
+                              Wycofaj ofertę
                             </Button>
                           )}
                         </div>

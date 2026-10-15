@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canWithdrawOffer,
   decidableFrom,
   isOfferAccepted,
   shouldAutoAccept,
@@ -40,5 +41,31 @@ describe("propozycje 1:1 — akceptacja", () => {
     expect(shouldAutoAccept(["inwestor"], true)).toBe(false);
     expect(shouldAutoAccept(["administrator"], false)).toBe(false);
     expect(shouldAutoAccept(["inwestor", "operator"], true)).toBe(false);
+  });
+});
+
+describe("canWithdrawOffer", () => {
+  it("pozwala wycofać złożoną i zaakceptowaną propozycję", () => {
+    for (const s of [
+      "zlozona",
+      "w_trakcie_weryfikacji",
+      "zatwierdzona_przez_administratora",
+      "wyslana_do_klienta",
+      "zaakceptowana_przez_klienta",
+    ]) {
+      expect(canWithdrawOffer(s)).toBe(true);
+    }
+  });
+  it("nie pozwala wycofać szkicu, odrzuconej, wygasłej ani już wycofanej", () => {
+    for (const s of [
+      "szkic",
+      "odrzucona_przez_administratora",
+      "odrzucona_przez_klienta",
+      "wygasla",
+      "wycofana_przez_inwestora",
+      null,
+    ]) {
+      expect(canWithdrawOffer(s)).toBe(false);
+    }
   });
 });

@@ -341,3 +341,68 @@ ${attachments.length ? "<p>Pełna kalkulacja z harmonogramem spłat — w załą
   });
   return result;
 }
+
+/**
+ * Inwestor wycofał propozycję — krótki e-mail do autora wniosku (ten sam
+ * odbiorca co przy złożeniu). Best-effort, bez Messengera i telefonu.
+ */
+export async function notifyInvestorOfferWithdrawn(
+  offerId: string,
+  reason: string | null,
+): Promise<OfferNotifyResult> {
+  const { data: offer } = await db
+    .from("investor_offers")
+    .select("id, loan_application_id, proposed_amount, period_months")
+    .eq("id", offerId)
+    .maybeSingle();
+  if (!offer) return { skipped: "offer_not_found" };
+  const { data: app } = await db
+    .from("loan_applications")
+    .select(
+      "id, client_id, created_by_partner_user_id, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
+    )
+    .eq("id", offer.loan_application_id)
+    .maybeSingle();
+  if (!app) return { skipped: "application_not_found" };
+  const r = await resolveRecipient(app);
+  if (!r?.email) return { skipped: "no_recipient" };
+
+  const { resolveAppBaseUrl } = await import("@/lib/access/urls.server");
+  const panelUrl = `${resolveAppBaseUrl()}${r.panelPath}`;
+  const forWhom = r.role === "klient" ? "na Twój wniosek" : "do wniosku, który dodałeś(-aś)";
+  const greeting = r.name ? `Dzień dobry ${r.name},` : "Dzień dobry,";
+  const what = `${fmtPln(offer.proposed_amount)}${offer.period_months ? `, ${offer.period_months} mies.` : ""}`;
+  const subject = "Finance You — inwestor wycofał ofertę finansowania";
+  const lines = [
+    `Inwestor wycofał ofertę finansowania ${forWhom} (${what}).`,
+    ...(reason ? [`Powód: ${reason}`] : []),
+    "Wniosek pozostaje aktywny — szukamy kolejnej oferty.",
+  ];
+  const text = [greeting, "", ...lines, "", `Szczegóły w panelu: ${panelUrl}`].join("\n");
+  const html = `<p>${escapeHtml(greeting)}</p>${lines
+    .map((l) => `<p>${escapeHtml(l)}</p>`)
+    .join("")}<p><a href="${escapeHtml(panelUrl)}">Zobacz szczegóły w panelu</a></p>`;
+  const { sendResendEmail } = await import("@/lib/resend-send.server");
+  const send = await sendResendEmail({
+    to: r.email,
+    subject,
+    text,
+    html,
+    category: "transactional",
+  });
+  const { logLeadCommunication } = await import("@/lib/lead-comms.server");
+  await logLeadCommunication({
+    loanApplicationId: app.id,
+    clientId: r.clientId,
+    email: r.email,
+    channel: "email",
+    direction: "outbound",
+    subject,
+    content: text,
+    externalId: send.id ?? null,
+    metadata: { source: "investor_offer_withdrawn", offer_id: offer.id, role: r.role },
+    status: send.ok ? "sent" : "error",
+    errorMessage: send.ok ? null : (send.error ?? null),
+  });
+  return { role: r.role, email: { ok: send.ok, error: send.error } };
+}

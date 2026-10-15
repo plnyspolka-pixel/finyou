@@ -67,6 +67,7 @@ import { withdrawInvestorOrder } from "@/lib/investor-agreements/legal-pack.func
 import { declineMatch, extendTeaser } from "@/lib/investor-agreements/order-cycle.functions";
 import { TEASER_EXTENSION_HOURS } from "@/lib/investor-agreements/order-cycle-core";
 import {
+  dismissOrderProject,
   getMyOrderProjects,
   getOrderProjectReportDetail,
   orderProjectReport,
@@ -336,8 +337,17 @@ function ProjectCard({
 
   const declineFn = useServerFn(declineMatch);
   const extendTeaserFn = useServerFn(extendTeaser);
+  const dismissFn = useServerFn(dismissOrderProject);
+  // W obiegu (teaser / Karta Leada / rezerwacja) — odrzucenie Dopasowania;
+  // bez obiegu — Projekt znika z listy tego Zlecenia.
+  const inCycle = Boolean(
+    p.match && ["teaser", "karta_leada", "rezerwacja"].includes(p.match.status),
+  );
   const declineMut = useMutation({
-    mutationFn: () => declineFn({ data: { matchId: p.match!.id } }),
+    mutationFn: () =>
+      inCycle
+        ? declineFn({ data: { matchId: p.match!.id } })
+        : dismissFn({ data: { orderId: p.orderId, applicationId: p.applicationId } }),
     onSuccess: () => {
       toast.success("Projekt odrzucony — dobierzemy kolejny.");
       onChanged();
@@ -455,7 +465,7 @@ function ProjectCard({
               <Send className="mr-2 h-4 w-4" />
               {showOffer ? "Ukryj kalkulator oferty" : "Złóż ofertę"}
             </Button>
-            {p.match && ["teaser", "karta_leada", "rezerwacja"].includes(p.match.status) ? (
+            {!p.match || inCycle ? (
               <Button
                 size="sm"
                 variant="ghost"
