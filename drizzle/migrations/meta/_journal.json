@@ -232,6 +232,13 @@
       "when": 1792047003842,
       "tag": "0032_teaser_wygasa_po_24h",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792079695735,
+      "tag": "0033_dedup_przenosi_operatora_partnera",
+      "breakpoints": true
     }
   ]
 }
