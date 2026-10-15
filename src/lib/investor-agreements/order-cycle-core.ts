@@ -226,23 +226,28 @@ export function clientProvisionPln(payoutAmountPln: number): number {
   return fyCommission(payoutAmountPln);
 }
 
-/** Role, które razem pozwalają sterować prowizją Finance You przy Zleceniu. */
+/** Role, które razem oznaczają finansowanie ze środków własnych Finance You
+ *  (administrator, który jest też inwestorem) — bez prowizji Finance You. */
 export const FY_COMMISSION_TOGGLE_ROLES = ["inwestor", "administrator"] as const;
 
-/** Czy użytkownik może włączać/wyłączać Prowizję od Pożyczkobiorcy przy
- *  składaniu Zlecenia — tylko uprawnienia inwestora I administratora razem. */
+/** Czy użytkownik ma JEDNOCZEŚNIE uprawnienia inwestora i administratora,
+ *  czyli finansuje Projekty sam (Finance You nie pośredniczy sama u siebie). */
 export function canToggleFyCommission(roles: readonly string[] | null | undefined): boolean {
   const set = new Set(roles ?? []);
   return FY_COMMISSION_TOGGLE_ROLES.every((r) => set.has(r));
 }
 
-/** Wartość flagi do zapisu w Zleceniu: bez uprawnień prowizja zostaje włączona. */
+/** Alias czytelniejszy w miejscach wyceny: finansowanie własne = bez prowizji FY. */
+export const isSelfFinancingInvestor = canToggleFyCommission;
+
+/** Wartość flagi do zapisu w Zleceniu. Administrator-inwestor finansuje sam —
+ *  prowizji Finance You nie ma nigdy (bez względu na żądanie). Pozostali
+ *  inwestorzy: prowizja zawsze włączona. */
 export function resolveFyCommissionEnabled(
   roles: readonly string[] | null | undefined,
-  requested: boolean | undefined,
+  _requested?: boolean,
 ): boolean {
-  if (!canToggleFyCommission(roles)) return true;
-  return requested !== false;
+  return !isSelfFinancingInvestor(roles);
 }
 
 /** Zlecenie: jedyny parametr to kwota maksymalna (Zał. 7) — Projekt pasuje,

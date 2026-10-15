@@ -43,7 +43,6 @@ import {
   withdrawInvestorOrder,
 } from "@/lib/investor-agreements/legal-pack.functions";
 import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
-import { FY_COMMISSION_LABEL, fyCommission } from "@/lib/contract-engine/fees";
 import { getMyInvestorPlan } from "@/lib/investor-plan/plan.functions";
 import {
   startInvestorSelfVerification,
@@ -691,7 +690,7 @@ function OrderForm({
 }: {
   canSubmit: boolean;
   isConsumer: boolean;
-  /** Uprawnienia inwestora + administratora: przełącznik prowizji Finance You. */
+  /** Uprawnienia inwestora + administratora: finansowanie własne, bez prowizji FY. */
   canToggleFyCommission: boolean;
   /** Limity z project_module_settings (null = jeszcze nie wczytane). */
   limits: OrderLimitsView | null;
@@ -703,8 +702,6 @@ function OrderForm({
   const [s1, setS1] = useState(false);
   const [s2, setS2] = useState(false);
   const [s3, setS3] = useState(false);
-  // Prowizja od Pożyczkobiorcy (prowizja Finance You) — standardowo włączona.
-  const [fyFeeOn, setFyFeeOn] = useState(true);
 
   const mut = useMutation({
     mutationFn: () =>
@@ -717,7 +714,8 @@ function OrderForm({
             projekty_tylko_w_wykonaniu_zlecenia: true as const,
           },
           consumerChoice: (isConsumer ? consumerChoice : "nie_dotyczy") as any,
-          fyCommissionEnabled: canToggleFyCommission ? fyFeeOn : true,
+          // Serwer i tak rozstrzyga po rolach (admin+inwestor = bez prowizji FY).
+          fyCommissionEnabled: !canToggleFyCommission,
         },
       }),
     onSuccess: (res: any) => {
@@ -727,7 +725,6 @@ function OrderForm({
       setS2(false);
       setS3(false);
       setConsumerChoice("");
-      setFyFeeOn(true);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -792,33 +789,14 @@ function OrderForm({
         ))}
       </div>
 
-      {/* Przełącznik prowizji Finance You — tylko uprawnienia inwestora + administratora. */}
+      {/* Administrator-inwestor finansuje sam — prowizji Finance You nie ma. */}
       {canToggleFyCommission ? (
-        <div className="space-y-2 rounded-md border border-dashed p-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <Label className="text-xs">Prowizja Finance You (Prowizja od Pożyczkobiorcy)</Label>
-              <p className="text-[11px] text-muted-foreground">
-                {FY_COMMISSION_LABEL} — potrącana z wypłaty. Przełącznik widzisz, bo masz
-                uprawnienia inwestora i administratora; dotyczy tylko tego Zlecenia.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant={fyFeeOn ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFyFeeOn((v) => !v)}
-            >
-              <Percent className="mr-2 h-4 w-4" />
-              {fyFeeOn ? "Prowizja włączona" : "Prowizja wyłączona"}
-            </Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground">
-            {fyFeeOn
-              ? Number(amount) > 0
-                ? `Dla kwoty ${Number(amount).toLocaleString("pl-PL")} zł prowizja wyniesie ${fyCommission(Number(amount)).toLocaleString("pl-PL")} zł — Klient otrzyma resztę wypłaty.`
-                : "Prowizję policzymy od Kwoty Udzielonej w ofercie do konkretnego Projektu."
-              : "Projekty w wykonaniu tego Zlecenia wycenimy bez prowizji Finance You — kalkulator oferty pokaże 0 zł, a cała Kwota Udzielona trafi do Klienta."}
+        <div className="flex items-start gap-2 rounded-md border border-dashed p-3 text-[11px] text-muted-foreground">
+          <Percent className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            <b className="text-foreground">Bez prowizji Finance You.</b> Masz uprawnienia inwestora
+            i administratora, czyli finansujesz ze środków własnych — kalkulator oferty pomija
+            prowizję, a cała Kwota Udzielona trafia do Klienta.
           </p>
         </div>
       ) : null}

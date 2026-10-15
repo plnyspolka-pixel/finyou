@@ -154,8 +154,7 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
         .in("id", staleIds);
     }
 
-    // Czy pokazać przełącznik prowizji Finance You przy składaniu Zlecenia
-    // (uprawnienia inwestora + administratora razem).
+    // Administrator-inwestor (oba uprawnienia) finansuje sam — bez prowizji FY.
     const { getUserRoles } = await import("@/lib/access/guards.server");
     const canToggleFyCommissionFlag = canToggleFyCommission(await getUserRoles(userId));
 
@@ -167,9 +166,12 @@ export const getMyLegalPackState = createServerFn({ method: "GET" })
       documents: docsState,
       deliveries: deliveries ?? [],
       hasDelivery,
-      orders: (orders ?? []).map((o: any) =>
-        staleIds.includes(o.id) ? { ...o, status: "wygasle" } : o,
-      ),
+      orders: (orders ?? []).map((o: any) => ({
+        ...o,
+        ...(staleIds.includes(o.id) ? { status: "wygasle" } : {}),
+        // Administrator-inwestor: zawsze bez prowizji FY (finansowanie własne).
+        ...(canToggleFyCommissionFlag ? { fy_commission_enabled: false } : {}),
+      })),
       didit: didit
         ? {
             status: didit.status as string,
@@ -537,9 +539,9 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Przełącznik prowizji Finance You: honorujemy go wyłącznie, gdy składający
-    // Zlecenie ma JEDNOCZEŚNIE uprawnienia inwestora i administratora. Dla
-    // każdego innego inwestora Prowizja od Pożyczkobiorcy zostaje włączona.
+    // Prowizja Finance You: administrator-inwestor finansuje ze środków własnych,
+    // więc jego Zlecenia są zawsze bez prowizji FY. Dla każdego innego inwestora
+    // Prowizja od Pożyczkobiorcy zostaje włączona.
     const { getUserRoles } = await import("@/lib/access/guards.server");
     const fyCommissionEnabled = resolveFyCommissionEnabled(
       await getUserRoles(userId),

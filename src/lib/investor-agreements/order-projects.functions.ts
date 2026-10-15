@@ -35,6 +35,7 @@ import {
   TEASER_VISIBLE_MATCH_STATUSES,
   amountMatchesOrder,
   consumerKaraStatement,
+  isSelfFinancingInvestor,
   orderLimitsFromSettings,
   projectFreshAt,
   projectWindowStart,
@@ -467,6 +468,13 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
     const limits = orderLimitsFromSettings(await getModuleSettings());
+    // Administrator-inwestor finansuje ze środków własnych — Finance You nie
+    // pośredniczy sama u siebie, więc kalkulator oferty pomija prowizję FY
+    // we wszystkich jego Zleceniach (także złożonych przed tą zmianą).
+    const { getUserRoles } = await import("@/lib/access/guards.server");
+    if (isSelfFinancingInvestor(await getUserRoles(userId))) {
+      for (const o of orders ?? []) (o as any).fy_commission_enabled = false;
+    }
     // Przeterminowane teasery/rezerwacje (także u innych) — zanim policzymy zajętość.
     await (await srv()).expireStaleMatches(supabaseAdmin);
     const now = Date.now();
