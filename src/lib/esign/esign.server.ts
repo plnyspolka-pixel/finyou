@@ -556,7 +556,20 @@ export async function envelopeObserver(
     .select("created_by_partner_user_id")
     .eq("id", envelope.loan_application_id)
     .maybeSingle();
-  const userId = (app?.created_by_partner_user_id as string | null) ?? null;
+  let userId = (app?.created_by_partner_user_id as string | null) ?? null;
+  if (!userId) {
+    // Klient dodany ponownie (np. przez operatora) trafia przez deduplikację do
+    // starszego wniosku bez autora — autorem jest wtedy ten, kto dodał scalony duplikat.
+    const { data: dup } = await db()
+      .from("loan_applications")
+      .select("created_by_partner_user_id")
+      .eq("merged_into_id", envelope.loan_application_id)
+      .not("created_by_partner_user_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    userId = (dup?.created_by_partner_user_id as string | null) ?? null;
+  }
   if (!userId || userId === envelope.created_by) return null;
   const [{ data: prof }, { data: roles }] = await Promise.all([
     db()
