@@ -50,8 +50,31 @@ export interface OfferNotifyResult {
   call?: { ok: boolean; error?: string; sid?: string };
 }
 
-async function resolveRecipient(app: any): Promise<Recipient | null> {
-  const authorId = app.created_by_partner_user_id as string | null;
+/**
+ * Kto „dodał" wniosek z perspektywy powiadomień (czysta funkcja — testowana):
+ * 1) created_by_partner_user_id wniosku,
+ * 2) twórca duplikatu scalonego w ten wniosek (merged_into_id = ten wniosek),
+ * 3) przypisany operator (assigned_operator).
+ * null → powiadamiamy klienta.
+ */
+export function pickStaffAuthorId(
+  app: { created_by_partner_user_id?: string | null; assigned_operator?: string | null },
+  mergedDuplicates: Array<{ created_by_partner_user_id?: string | null }> = [],
+): string | null {
+  if (app.created_by_partner_user_id) return app.created_by_partner_user_id;
+  const fromDup = mergedDuplicates.find((d) => d.created_by_partner_user_id);
+  if (fromDup?.created_by_partner_user_id) return fromDup.created_by_partner_user_id;
+  return app.assigned_operator ?? null;
+}
+
+async function resolveRecipient(app: any, staffOnly = false): Promise<Recipient | null> {
+  const { data: mergedDups } = await db
+    .from("loan_applications")
+    .select("created_by_partner_user_id, created_at")
+    .eq("merged_into_id", app.id)
+    .not("created_by_partner_user_id", "is", null)
+    .order("created_at", { ascending: false });
+  const authorId = pickStaffAuthorId(app, mergedDups ?? []);
   if (authorId) {
     const [{ data: profile }, { data: roles }] = await Promise.all([
       db
@@ -74,6 +97,7 @@ async function resolveRecipient(app: any): Promise<Recipient | null> {
       clientId: null,
     };
   }
+  if (staffOnly) return null;
   const client = app.client;
   if (!client) return null;
   return {
@@ -115,14 +139,17 @@ async function findMetaRecipient(
   return null;
 }
 
-export async function notifyInvestorOfferSubmitted(offerId: string): Promise<OfferNotifyResult> {
+export async function notifyInvestorOfferSubmitted(
+  offerId: string,
+  opts: { force?: boolean; staffOnly?: boolean } = {},
+): Promise<OfferNotifyResult> {
   const { data: already } = await db
     .from("automation_events")
     .select("id")
     .eq("automation_type", NOTIFY_TYPE)
     .filter("sent_payload->>offer_id", "eq", offerId)
     .limit(1);
-  if (already?.length) return { skipped: "already_notified" };
+  if (already?.length && !opts.force) return { skipped: "already_notified" };
 
   const { data: offer } = await db
     .from("investor_offers")
@@ -143,13 +170,13 @@ export async function notifyInvestorOfferSubmitted(offerId: string): Promise<Off
   const { data: app } = await db
     .from("loan_applications")
     .select(
-      "id, client_id, created_by_partner_user_id, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
+      "id, client_id, created_by_partner_user_id, assigned_operator, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
     )
     .eq("id", offer.loan_application_id)
     .maybeSingle();
   if (!app) return { skipped: "application_not_found" };
 
-  const r = await resolveRecipient(app);
+  const r = await resolveRecipient(app, !!opts.staffOnly);
   if (!r) return { skipped: "no_recipient" };
 
   const { normalizePolishPhone } = await import("@/lib/phone");
@@ -359,7 +386,7 @@ export async function notifyInvestorOfferWithdrawn(
   const { data: app } = await db
     .from("loan_applications")
     .select(
-      "id, client_id, created_by_partner_user_id, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
+      "id, client_id, created_by_partner_user_id, assigned_operator, client:clients(first_name, last_name, email, phone, phone_normalized, do_not_email)",
     )
     .eq("id", offer.loan_application_id)
     .maybeSingle();

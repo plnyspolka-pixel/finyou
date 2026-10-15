@@ -2280,6 +2280,7 @@ export type Database = {
           topic_id: string | null
           updated_at: string
           word_count: number | null
+          youtube_video_id: string | null
         }
         Insert: {
           audience?: string
@@ -2310,6 +2311,7 @@ export type Database = {
           topic_id?: string | null
           updated_at?: string
           word_count?: number | null
+          youtube_video_id?: string | null
         }
         Update: {
           audience?: string
@@ -2340,6 +2342,7 @@ export type Database = {
           topic_id?: string | null
           updated_at?: string
           word_count?: number | null
+          youtube_video_id?: string | null
         }
         Relationships: [
           {
@@ -4230,6 +4233,36 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      comms_suppressions: {
+        Row: {
+          channel: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          identifier: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          identifier: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          identifier?: string
+          metadata?: Json | null
+          reason?: string
         }
         Relationships: []
       }
@@ -6763,6 +6796,8 @@ export type Database = {
           counter_offer: boolean
           counter_to_offer_id: string | null
           created_at: string
+          decided_by_role: string | null
+          decided_by_user_id: string | null
           estimated_monthly_payment: number | null
           estimated_total_cost: number | null
           expected_yearly_yield: number | null
@@ -6790,6 +6825,8 @@ export type Database = {
           counter_offer?: boolean
           counter_to_offer_id?: string | null
           created_at?: string
+          decided_by_role?: string | null
+          decided_by_user_id?: string | null
           estimated_monthly_payment?: number | null
           estimated_total_cost?: number | null
           expected_yearly_yield?: number | null
@@ -6817,6 +6854,8 @@ export type Database = {
           counter_offer?: boolean
           counter_to_offer_id?: string | null
           created_at?: string
+          decided_by_role?: string | null
+          decided_by_user_id?: string | null
           estimated_monthly_payment?: number | null
           estimated_total_cost?: number | null
           expected_yearly_yield?: number | null
@@ -11012,6 +11051,134 @@ export type Database = {
         }
         Relationships: []
       }
+      pr_opportunities: {
+        Row: {
+          article_published_at: string | null
+          created_at: string
+          deadline: string | null
+          dedupe_hash: string
+          draft_body: string | null
+          draft_generated_at: string | null
+          draft_subject: string | null
+          id: string
+          matched_phrases: string[]
+          notes: string | null
+          recipient_email: string | null
+          snippet: string | null
+          source: string
+          status: string
+          topic: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          article_published_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          dedupe_hash: string
+          draft_body?: string | null
+          draft_generated_at?: string | null
+          draft_subject?: string | null
+          id?: string
+          matched_phrases?: string[]
+          notes?: string | null
+          recipient_email?: string | null
+          snippet?: string | null
+          source: string
+          status?: string
+          topic: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          article_published_at?: string | null
+          created_at?: string
+          deadline?: string | null
+          dedupe_hash?: string
+          draft_body?: string | null
+          draft_generated_at?: string | null
+          draft_subject?: string | null
+          id?: string
+          matched_phrases?: string[]
+          notes?: string | null
+          recipient_email?: string | null
+          snippet?: string | null
+          source?: string
+          status?: string
+          topic?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      pr_outreach_log: {
+        Row: {
+          body_text: string
+          bounced_at: string | null
+          clicked_at: string | null
+          created_at: string
+          delivered_at: string | null
+          error: string | null
+          id: string
+          opened_at: string | null
+          opportunity_id: string | null
+          recipient_email: string
+          replied_at: string | null
+          resend_id: string | null
+          sent_at: string
+          sent_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body_text: string
+          bounced_at?: string | null
+          clicked_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          opened_at?: string | null
+          opportunity_id?: string | null
+          recipient_email: string
+          replied_at?: string | null
+          resend_id?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body_text?: string
+          bounced_at?: string | null
+          clicked_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          opened_at?: string | null
+          opportunity_id?: string | null
+          recipient_email?: string
+          replied_at?: string | null
+          resend_id?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_outreach_log_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "pr_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -12071,6 +12238,60 @@ export type Database = {
         }
         Relationships: []
       }
+      rcn_transactions: {
+        Row: {
+          area_ha: number | null
+          area_m2: number | null
+          city: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          land_use: string | null
+          lat: number
+          lng: number
+          price_per_ha: number | null
+          price_per_m2: number | null
+          price_pln: number | null
+          property_kind: string
+          source: string
+          tx_date: string | null
+        }
+        Insert: {
+          area_ha?: number | null
+          area_m2?: number | null
+          city?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          land_use?: string | null
+          lat: number
+          lng: number
+          price_per_ha?: number | null
+          price_per_m2?: number | null
+          price_pln?: number | null
+          property_kind?: string
+          source?: string
+          tx_date?: string | null
+        }
+        Update: {
+          area_ha?: number | null
+          area_m2?: number | null
+          city?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          land_use?: string | null
+          lat?: number
+          lng?: number
+          price_per_ha?: number | null
+          price_per_m2?: number | null
+          price_pln?: number | null
+          property_kind?: string
+          source?: string
+          tx_date?: string | null
+        }
+        Relationships: []
+      }
       reminder_email_schedule: {
         Row: {
           cron_expression: string
@@ -12992,6 +13213,116 @@ export type Database = {
           },
         ]
       }
+      seo_location_pages: {
+        Row: {
+          content: Json
+          content_hash: string
+          created_at: string
+          generated_at: string
+          geo_unit_id: string | null
+          id: string
+          meta_description: string
+          meta_title: string
+          name: string
+          published_at: string | null
+          slug: string
+          status: string
+          teryt: string
+          updated_at: string
+          youtube_video_id: string | null
+        }
+        Insert: {
+          content: Json
+          content_hash: string
+          created_at?: string
+          generated_at?: string
+          geo_unit_id?: string | null
+          id?: string
+          meta_description: string
+          meta_title: string
+          name: string
+          published_at?: string | null
+          slug: string
+          status?: string
+          teryt: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Update: {
+          content?: Json
+          content_hash?: string
+          created_at?: string
+          generated_at?: string
+          geo_unit_id?: string | null
+          id?: string
+          meta_description?: string
+          meta_title?: string
+          name?: string
+          published_at?: string | null
+          slug?: string
+          status?: string
+          teryt?: string
+          updated_at?: string
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seo_location_pages_geo_unit_id_fkey"
+            columns: ["geo_unit_id"]
+            isOneToOne: false
+            referencedRelation: "geo_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seo_location_report_entries: {
+        Row: {
+          attractiveness: number | null
+          data_version: string
+          density_per_km2: number | null
+          fua_role: string
+          id: string
+          name: string
+          population: number | null
+          population_within_25km: number
+          population_within_45km: number
+          rank: number
+          teryt: string
+          updated_at: string
+          voivodeship: string
+        }
+        Insert: {
+          attractiveness?: number | null
+          data_version: string
+          density_per_km2?: number | null
+          fua_role?: string
+          id?: string
+          name: string
+          population?: number | null
+          population_within_25km?: number
+          population_within_45km?: number
+          rank: number
+          teryt: string
+          updated_at?: string
+          voivodeship: string
+        }
+        Update: {
+          attractiveness?: number | null
+          data_version?: string
+          density_per_km2?: number | null
+          fua_role?: string
+          id?: string
+          name?: string
+          population?: number | null
+          population_within_25km?: number
+          population_within_45km?: number
+          rank?: number
+          teryt?: string
+          updated_at?: string
+          voivodeship?: string
+        }
+        Relationships: []
+      }
       short_links: {
         Row: {
           click_count: number
@@ -13223,18 +13554,18 @@ export type Database = {
           attribution: string
           created_at: string
           created_by: string | null
+          duration_seconds: number | null
           id: string
           kind: string
           last_used_at: string | null
-          media_url: string
           media_type: string
-          duration_seconds: number | null
-          thumbnail_url: string | null
+          media_url: string
           orientation: string | null
           source: string
           source_query: string
           storage_path: string | null
           tags: string[]
+          thumbnail_url: string | null
           title: string
           updated_at: string
           use_count: number
@@ -13244,18 +13575,18 @@ export type Database = {
           attribution?: string
           created_at?: string
           created_by?: string | null
+          duration_seconds?: number | null
           id?: string
           kind?: string
           last_used_at?: string | null
-          media_url: string
           media_type?: string
-          duration_seconds?: number | null
-          thumbnail_url?: string | null
+          media_url: string
           orientation?: string | null
           source?: string
           source_query?: string
           storage_path?: string | null
           tags?: string[]
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string
           use_count?: number
@@ -13265,18 +13596,18 @@ export type Database = {
           attribution?: string
           created_at?: string
           created_by?: string | null
+          duration_seconds?: number | null
           id?: string
           kind?: string
           last_used_at?: string | null
-          media_url?: string
           media_type?: string
-          duration_seconds?: number | null
-          thumbnail_url?: string | null
+          media_url?: string
           orientation?: string | null
           source?: string
           source_query?: string
           storage_path?: string | null
           tags?: string[]
+          thumbnail_url?: string | null
           title?: string
           updated_at?: string
           use_count?: number
@@ -13519,6 +13850,7 @@ export type Database = {
       }
       text_agent_knowledge: {
         Row: {
+          audience: string
           content: string
           created_at: string
           created_by: string | null
@@ -13528,6 +13860,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audience?: string
           content: string
           created_at?: string
           created_by?: string | null
@@ -13537,6 +13870,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audience?: string
           content?: string
           created_at?: string
           created_by?: string | null
@@ -13798,6 +14132,92 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_pipeline: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          last_error: string | null
+          published_at: string | null
+          render_provider: string | null
+          render_video_id: string | null
+          rendered_at: string | null
+          script_generated_at: string | null
+          script_md: string | null
+          source_slug: string
+          source_title: string
+          source_type: string
+          source_url: string
+          status: string
+          updated_at: string
+          video_url: string | null
+          youtube_queue_id: string | null
+          youtube_video_id: string | null
+          yt_description: string | null
+          yt_tags: string[]
+          yt_title: string | null
+          yt_title_options: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          published_at?: string | null
+          render_provider?: string | null
+          render_video_id?: string | null
+          rendered_at?: string | null
+          script_generated_at?: string | null
+          script_md?: string | null
+          source_slug: string
+          source_title: string
+          source_type?: string
+          source_url: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+          youtube_queue_id?: string | null
+          youtube_video_id?: string | null
+          yt_description?: string | null
+          yt_tags?: string[]
+          yt_title?: string | null
+          yt_title_options?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          published_at?: string | null
+          render_provider?: string | null
+          render_video_id?: string | null
+          rendered_at?: string | null
+          script_generated_at?: string | null
+          script_md?: string | null
+          source_slug?: string
+          source_title?: string
+          source_type?: string
+          source_url?: string
+          status?: string
+          updated_at?: string
+          video_url?: string | null
+          youtube_queue_id?: string | null
+          youtube_video_id?: string | null
+          yt_description?: string | null
+          yt_tags?: string[]
+          yt_title?: string | null
+          yt_title_options?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_pipeline_youtube_queue_id_fkey"
+            columns: ["youtube_queue_id"]
+            isOneToOne: false
+            referencedRelation: "youtube_publish_queue"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_renditions: {
         Row: {
@@ -14628,6 +15048,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      investor_module_access_active: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       investor_offer_teasers: {
         Args: never
         Returns: {
@@ -14691,7 +15115,11 @@ export type Database = {
         }[]
       }
       match_text_agent_knowledge: {
-        Args: { match_count?: number; query_embedding: string }
+        Args: {
+          filter_audience?: string
+          match_count?: number
+          query_embedding: string
+        }
         Returns: {
           content: string
           id: string
