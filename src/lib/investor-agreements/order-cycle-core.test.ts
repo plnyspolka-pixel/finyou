@@ -17,6 +17,10 @@ import {
   DEFAULT_ORDER_LIMITS,
   orderLimitsFromSettings,
   hasLiveOrder,
+  teaserDeadline,
+  isMatchStale,
+  projectFreshAt,
+  projectWindowStart,
 } from "./order-cycle-core";
 import { fyCommission } from "@/lib/contract-engine/fees";
 
@@ -252,5 +256,60 @@ describe("przełącznik prowizji Finance You przy Zleceniu", () => {
     expect(resolveFyCommissionEnabled(["inwestor"], false)).toBe(true);
     expect(resolveFyCommissionEnabled(["administrator"], false)).toBe(true);
     expect(resolveFyCommissionEnabled([], false)).toBe(true);
+  });
+});
+
+describe("teaser — 24 h na decyzję + jednorazowo 12 h", () => {
+  const released = "2026-10-03T17:23:37.909Z";
+  it("bez kolumny terminu liczy udostępnienie + 24 h (+12 h po przedłużeniu)", () => {
+    expect(teaserDeadline({ teaser_released_at: released })?.toISOString()).toBe(
+      "2026-10-04T17:23:37.909Z",
+    );
+    expect(
+      teaserDeadline({ teaser_released_at: released, teaser_extended: true })?.toISOString(),
+    ).toBe("2026-10-05T05:23:37.909Z");
+  });
+  it("zapisany teaser_expires_at ma pierwszeństwo", () => {
+    expect(
+      teaserDeadline({
+        teaser_released_at: released,
+        teaser_expires_at: "2026-10-20T00:00:00Z",
+      })?.toISOString(),
+    ).toBe("2026-10-20T00:00:00.000Z");
+  });
+  it("teaser po terminie jest przeterminowany, przed — nie", () => {
+    const m = { status: "teaser", teaser_released_at: released };
+    expect(isMatchStale(m, new Date("2026-10-04T17:00:00Z"))).toBe(false);
+    expect(isMatchStale(m, new Date("2026-10-04T18:00:00Z"))).toBe(true);
+  });
+  it("rezerwacja po terminie jest przeterminowana; inne statusy nigdy", () => {
+    const now = new Date("2026-10-05T00:00:00Z");
+    expect(
+      isMatchStale({ status: "rezerwacja", reservation_expires_at: "2026-10-04T00:00:00Z" }, now),
+    ).toBe(true);
+    expect(
+      isMatchStale({ status: "rezerwacja", reservation_expires_at: "2026-10-06T00:00:00Z" }, now),
+    ).toBe(false);
+    expect(isMatchStale({ status: "karta_leada", teaser_released_at: released }, now)).toBe(false);
+  });
+  it("teaser może wygasnąć (przejście teaser → wygasle)", () => {
+    expect(canTransition("teaser", "wygasle")).toBe(true);
+  });
+});
+
+describe("świeżość Projektu (okno Zlecenia) i scalone duplikaty", () => {
+  it("okno zaczyna się 3 dni przed złożeniem Zlecenia", () => {
+    expect(projectWindowStart({ submitted_at: "2026-10-02T02:26:07Z" }).toISOString()).toBe(
+      "2026-09-29T02:26:07.000Z",
+    );
+  });
+  it("scalony nowszy duplikat odświeża datę Projektu", () => {
+    expect(projectFreshAt("2026-07-15T19:48:04Z", "2026-10-14T12:26:23Z")).toBe(
+      "2026-10-14T12:26:23Z",
+    );
+    expect(projectFreshAt("2026-10-14T12:26:23Z", "2026-07-15T19:48:04Z")).toBe(
+      "2026-10-14T12:26:23Z",
+    );
+    expect(projectFreshAt("2026-07-15T19:48:04Z", null)).toBe("2026-07-15T19:48:04Z");
   });
 });

@@ -44,6 +44,7 @@ import { useCreateContract } from "@/components/inwestor/use-create-contract";
 import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import {
   accent,
+  COMPACT_CARDS_MOBILE,
   CoOwnersStep,
   KwStep,
   StepCard,
@@ -63,6 +64,8 @@ import {
   ProjectPhotoThumbs,
 } from "@/components/inwestor/project-photo-gallery";
 import { withdrawInvestorOrder } from "@/lib/investor-agreements/legal-pack.functions";
+import { declineMatch, extendTeaser } from "@/lib/investor-agreements/order-cycle.functions";
+import { TEASER_EXTENSION_HOURS } from "@/lib/investor-agreements/order-cycle-core";
 import {
   getMyOrderProjects,
   getOrderProjectReportDetail,
@@ -108,6 +111,7 @@ function errMsg(e: unknown): string {
 }
 
 const PROJECTS_KEY = ["order-projects"];
+
 const reportKey = (orderId: string, applicationId: string) => [
   "order-project-report",
   orderId,
@@ -153,7 +157,7 @@ function MyOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", COMPACT_CARDS_MOBILE)}>
       <div>
         <h1 className="text-2xl font-semibold">Moje zlecenia</h1>
         <p className="text-sm text-muted-foreground">
@@ -325,6 +329,25 @@ function ProjectCard({
     onError: (e) => toast.error(errMsg(e)),
   });
 
+  const declineFn = useServerFn(declineMatch);
+  const extendTeaserFn = useServerFn(extendTeaser);
+  const declineMut = useMutation({
+    mutationFn: () => declineFn({ data: { matchId: p.match!.id } }),
+    onSuccess: () => {
+      toast.success("Projekt odrzucony — dobierzemy kolejny.");
+      onChanged();
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+  const extendTeaserMut = useMutation({
+    mutationFn: () => extendTeaserFn({ data: { matchId: p.match!.id } }),
+    onSuccess: () => {
+      toast.success(`Czas na decyzję przedłużony o ${TEASER_EXTENSION_HOURS} h`);
+      onChanged();
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+
   const [photoIdx, setPhotoIdx] = useState(0);
   const location = [p.city, p.voivodeship].filter(Boolean).join(", ");
   const typeLabel = p.propertyType ? (propertyTypeLabels[p.propertyType] ?? p.propertyType) : null;
@@ -332,7 +355,7 @@ function ProjectCard({
 
   return (
     <div className="rounded-lg border">
-      <div className="grid gap-4 p-4 sm:grid-cols-[160px_1fr]">
+      <div className="grid gap-4 p-3 sm:grid-cols-[160px_1fr] sm:p-4">
         <ProjectPhotoGallery photos={p.photos} index={photoIdx} onIndexChange={setPhotoIdx} />
         <div className="space-y-2 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -369,7 +392,37 @@ function ProjectCard({
       </div>
 
       {finished ? null : (
-        <div className="space-y-3 border-t p-4">
+        <div className="space-y-3 border-t p-3 sm:p-4">
+          {/* Teaser: 24 h na decyzję, jednorazowo +12 h; odrzucenie zwalnia Zlecenie. */}
+          {p.match?.status === "teaser" ? (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="flex items-start gap-1.5">
+                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Projekt czeka na Twoją decyzję
+                  {p.match.teaserExpiresAt
+                    ? ` do ${new Date(p.match.teaserExpiresAt).toLocaleString("pl-PL")}`
+                    : ""}
+                  . Bez decyzji wygaśnie i dobierzemy kolejny.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`teaser-ext-${p.match.id}`}
+                  checked={p.match.teaserExtended}
+                  disabled={p.match.teaserExtended || extendTeaserMut.isPending}
+                  onCheckedChange={(v) => {
+                    if (v === true) extendTeaserMut.mutate();
+                  }}
+                />
+                <Label htmlFor={`teaser-ext-${p.match.id}`} className="text-xs font-normal">
+                  {p.match.teaserExtended
+                    ? `Przedłużono o ${TEASER_EXTENSION_HOURS} h`
+                    : `Przedłuż o ${TEASER_EXTENSION_HOURS} h (jednorazowo)`}
+                </Label>
+              </div>
+            </div>
+          ) : null}
           {/* Raport analityczny */}
           <div className="flex flex-wrap items-center gap-2">
             {report.status === "done" || report.status === "running" ? (
@@ -397,6 +450,24 @@ function ProjectCard({
               <Send className="mr-2 h-4 w-4" />
               {showOffer ? "Ukryj kalkulator oferty" : "Złóż ofertę"}
             </Button>
+            {p.match && ["teaser", "karta_leada", "rezerwacja"].includes(p.match.status) ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400"
+                disabled={declineMut.isPending}
+                onClick={() => {
+                  if (
+                    window.confirm("Odrzucić ten Projekt? Wróci do puli, a my dobierzemy kolejny.")
+                  ) {
+                    declineMut.mutate();
+                  }
+                }}
+              >
+                {declineMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Odrzuć Projekt
+              </Button>
+            ) : null}
             {report.status === "running" ? (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
@@ -546,7 +617,7 @@ function OfferPanel({
   });
 
   return (
-    <div className="space-y-3 rounded-md border p-3">
+    <div className="space-y-3 sm:rounded-md sm:border sm:p-3">
       {/* Zlecenie z wyłączoną prowizją Finance You (przełącznik admin+inwestor):
           kalkulator oferty liczy wypłatę bez prowizji. */}
       <LoanCalculator
@@ -638,7 +709,7 @@ function MatchBadge({ status }: { status: string }) {
     transakcja: { label: "Transakcja", tone: "bg-emerald-100 text-emerald-800" },
     odrzucone: { label: "Odrzucony", tone: "bg-slate-100 text-slate-600" },
     przekazane: { label: "Przekazany dalej", tone: "bg-slate-100 text-slate-600" },
-    wygasle: { label: "Rezerwacja wygasła", tone: "bg-slate-100 text-slate-600" },
+    wygasle: { label: "Wygasł", tone: "bg-slate-100 text-slate-600" },
   };
   const s = map[status] ?? { label: status, tone: "bg-slate-100" };
   return <Badge className={s.tone}>{s.label}</Badge>;
@@ -754,7 +825,7 @@ function ReportPanel({
   return (
     <div className="space-y-4">
       {/* Nagłówek raportu: postęp czterech kroków + kluczowe liczby */}
-      <div className="rounded-3xl border bg-card p-5 shadow-sm">
+      <div className="rounded-3xl border bg-card p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="flex items-center gap-2 text-lg font-black leading-tight">

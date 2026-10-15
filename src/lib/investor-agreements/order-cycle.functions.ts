@@ -21,6 +21,10 @@ import {
   orderLimitsFromSettings,
   withdrawalDeadline,
   amountMatchesOrder,
+  isMatchStale,
+  teaserDeadline,
+  TEASER_EXTENSION_HOURS,
+  TEASER_HOURS,
 } from "./order-cycle-core";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
@@ -40,7 +44,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
 
     const { data: orders } = await loose(supabaseAdmin)
       .from("investor_orders")
-      .select("id, order_seq, amount_pln, status, expires_at")
+      .select("id, order_seq, amount_pln, status, expires_at, submitted_at")
       .eq("user_id", userId)
       .order("submitted_at", { ascending: false });
     // Zlecenia nie wymagają decyzji admina — wcześniej złożone przyjmujemy teraz.
@@ -62,6 +66,9 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
         }
       }
     }
+    // Najpierw wygaszamy przeterminowane teasery/rezerwacje — dopiero wtedy
+    // automat widzi Zlecenie jako wolne i może dobrać kolejny Projekt.
+    await (await srv()).expireStaleMatches(supabaseAdmin);
     // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
     try {
       await (await srv()).autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
@@ -75,12 +82,11 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       const { data } = await loose(supabaseAdmin)
         .from("investor_order_matches")
         .select(
-          "id, order_id, application_id, project_ref, status, teaser, teaser_released_at, karta_leada, karta_leada_accepted_at, kara_consumer_accepted_at, transfer_card_approved_at, disclosed_at, reservation_expires_at, reservation_extended, decided_at, created_at",
+          "id, order_id, application_id, project_ref, status, teaser, teaser_released_at, teaser_expires_at, teaser_extended, karta_leada, karta_leada_accepted_at, kara_consumer_accepted_at, transfer_card_approved_at, disclosed_at, reservation_expires_at, reservation_extended, decided_at, created_at",
         )
         .in("order_id", orderIds)
         .order("created_at", { ascending: false });
       matches = data ?? [];
-      await (await srv()).expireStaleReservations(supabaseAdmin, matches);
     }
 
     const { data: investor } = await loose(supabaseAdmin)
@@ -168,6 +174,9 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
     if (m.status !== "teaser") throw new Error("Karta Leada nie jest w tym kroku dostępna.");
+    if (isMatchStale(m, new Date())) {
+      throw new Error("Teaser wygasł (24 h na decyzję) — odśwież listę Projektów.");
+    }
 
     // Bramka: komplet dokumentów pakietu (kroki 1–5).
     const { data: complete } = await loose(supabaseAdmin).rpc("investor_legal_pack_complete", {
@@ -306,6 +315,46 @@ export const extendReservation = createServerFn({ method: "POST" })
       actorKind: "inwestor",
     });
     return { ok: true, reservationExpiresAt: newDeadline.toISOString() };
+  });
+
+/** Jednorazowe przedłużenie teasera o 12 h (24 h na decyzję → 36 h). */
+export const extendTeaser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
+    if (m.status !== "teaser") throw new Error("Ten Projekt nie czeka już na decyzję.");
+    if (m.teaser_extended)
+      throw new Error(`Teaser można przedłużyć tylko raz (+${TEASER_EXTENSION_HOURS} h).`);
+    const current = teaserDeadline(m);
+    if (!current || current.getTime() < Date.now()) throw new Error("Teaser już wygasł.");
+    const newDeadline = new Date(current.getTime() + TEASER_EXTENSION_HOURS * 3600_000);
+    const { data: updated, error } = await loose(supabaseAdmin)
+      .from("investor_order_matches")
+      .update({
+        teaser_expires_at: newDeadline.toISOString(),
+        teaser_extended: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", m.id)
+      .eq("status", "teaser")
+      .eq("teaser_extended", false)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!updated?.length) throw new Error("Stan Projektu zmienił się w międzyczasie — odśwież.");
+    await (
+      await srv()
+    ).logCycleEvent(supabaseAdmin, {
+      matchId: m.id,
+      orderId: m.order_id,
+      type: "teaser_przedluzony",
+      payload: { teaser_expires_at: newDeadline.toISOString() },
+      actor: userId,
+      actorKind: "inwestor",
+    });
+    return { ok: true, teaserExpiresAt: newDeadline.toISOString() };
   });
 
 /** Odrzucenie Projektu przez inwestora (zwalnia go dla kolejnego Zlecenia). */
@@ -547,7 +596,7 @@ export const getOrderCycleAdminState = createServerFn({ method: "GET" })
         .order("submitted_at", { ascending: false })
         .limit(50),
     ]);
-    await (await srv()).expireStaleReservations(supabaseAdmin, matches ?? []);
+    await (await srv()).expireStaleMatches(supabaseAdmin, matches ?? []);
 
     // Sugestie Dopasowań: kompletne wnioski do kwoty maksymalnej Zlecenia,
     // bez aktywnego obiegu (wyłączność sekwencyjna).
@@ -627,7 +676,10 @@ export const releaseTeaser = createServerFn({ method: "POST" })
     if (!m) throw new Error("Nie znaleziono Dopasowania.");
     await (
       await srv()
-    ).transition(supabaseAdmin, m, "teaser", { teaser_released_at: new Date().toISOString() });
+    ).transition(supabaseAdmin, m, "teaser", {
+      teaser_released_at: new Date().toISOString(),
+      teaser_expires_at: new Date(Date.now() + TEASER_HOURS * 3600_000).toISOString(),
+    });
     await (
       await srv()
     ).logCycleEvent(supabaseAdmin, {

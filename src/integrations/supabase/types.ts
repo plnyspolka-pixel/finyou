@@ -6982,6 +6982,8 @@ export type Database = {
           reservation_extended: boolean
           status: string
           teaser: Json | null
+          teaser_expires_at: string | null
+          teaser_extended: boolean
           teaser_released_at: string | null
           transfer_card: Json | null
           transfer_card_approved_at: string | null
@@ -7014,6 +7016,8 @@ export type Database = {
           reservation_extended?: boolean
           status?: string
           teaser?: Json | null
+          teaser_expires_at?: string | null
+          teaser_extended?: boolean
           teaser_released_at?: string | null
           transfer_card?: Json | null
           transfer_card_approved_at?: string | null
@@ -7046,6 +7050,8 @@ export type Database = {
           reservation_extended?: boolean
           status?: string
           teaser?: Json | null
+          teaser_expires_at?: string | null
+          teaser_extended?: boolean
           teaser_released_at?: string | null
           transfer_card?: Json | null
           transfer_card_approved_at?: string | null

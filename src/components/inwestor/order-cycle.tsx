@@ -4,7 +4,12 @@
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
 import { COMPANY_DATA } from "@/lib/company";
 import { useState } from "react";
-import { DEFAULT_ORDER_LIMITS, type OrderLimits } from "@/lib/investor-agreements/order-cycle-core";
+import {
+  DEFAULT_ORDER_LIMITS,
+  TEASER_EXTENSION_HOURS,
+  teaserDeadline,
+  type OrderLimits,
+} from "@/lib/investor-agreements/order-cycle-core";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -22,6 +27,7 @@ import {
   acceptKartaLeada,
   requestDisclosure,
   extendReservation,
+  extendTeaser,
   declineMatch,
   submitConsumerWithdrawal,
   submitNdaAccession,
@@ -38,7 +44,7 @@ const MATCH_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   transakcja: { label: "Transakcja", tone: "bg-emerald-100 text-emerald-800" },
   odrzucone: { label: "Odrzucone", tone: "bg-slate-100 text-slate-600" },
   przekazane: { label: "Przekazane dalej", tone: "bg-slate-100 text-slate-600" },
-  wygasle: { label: "Rezerwacja wygasła", tone: "bg-slate-100 text-slate-600" },
+  wygasle: { label: "Wygasło bez decyzji", tone: "bg-slate-100 text-slate-600" },
 };
 
 export function OrderCycleSection({ hideMatches = false }: { hideMatches?: boolean } = {}) {
@@ -135,6 +141,7 @@ function MatchCard({
   const disclose = useServerFn(requestDisclosure);
   const extend = useServerFn(extendReservation);
   const decline = useServerFn(declineMatch);
+  const extendTeaserFn = useServerFn(extendTeaser);
   const [confirmed, setConfirmed] = useState(false); // startuje PUSTY (§ 15 ust. 7)
   const [karaConfirmed, setKaraConfirmed] = useState(false);
   const [kartaOpen, setKartaOpen] = useState(false);
@@ -166,6 +173,14 @@ function MatchCard({
     },
     onError: (e) => toast.error(errMsg(e)),
   });
+  const extendTeaserMut = useMutation({
+    mutationFn: () => extendTeaserFn({ data: { matchId: match.id } }),
+    onSuccess: () => {
+      toast.success(`Czas na decyzję przedłużony o ${TEASER_EXTENSION_HOURS} h`);
+      onDone();
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  });
   const declineMut = useMutation({
     mutationFn: () => decline({ data: { matchId: match.id } }),
     onSuccess: () => {
@@ -177,9 +192,10 @@ function MatchCard({
 
   const st = MATCH_STATUS_LABELS[match.status] ?? { label: match.status, tone: "bg-slate-100" };
   const karta = match.karta_leada;
+  const teaserUntil = match.status === "teaser" ? teaserDeadline(match) : null;
 
   return (
-    <div className="space-y-3 rounded-md border p-4">
+    <div className="space-y-3 rounded-md border p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 font-medium">
           <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -195,10 +211,44 @@ function MatchCard({
 
       {match.status === "teaser" ? (
         <div className="space-y-3 border-t pt-3">
+          {/* 24 h na decyzję, jednorazowo +12 h — potem teaser wygasa. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            {teaserUntil ? (
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                Decyzja do {teaserUntil.toLocaleString("pl-PL")}
+              </span>
+            ) : null}
+            <span className="flex items-center gap-2">
+              <Checkbox
+                id={`teaser-ext-${match.id}`}
+                checked={Boolean(match.teaser_extended)}
+                disabled={Boolean(match.teaser_extended) || extendTeaserMut.isPending}
+                onCheckedChange={(v) => {
+                  if (v === true) extendTeaserMut.mutate();
+                }}
+              />
+              <Label htmlFor={`teaser-ext-${match.id}`} className="text-xs font-normal">
+                {match.teaser_extended
+                  ? `Przedłużono o ${TEASER_EXTENSION_HOURS} h`
+                  : `Przedłuż o ${TEASER_EXTENSION_HOURS} h (jednorazowo)`}
+              </Label>
+            </span>
+          </div>
           {!kartaOpen ? (
-            <Button size="sm" variant="outline" onClick={() => setKartaOpen(true)}>
-              <FileSignature className="mr-2 h-4 w-4" /> Wyświetl Kartę Leada (Załącznik nr 1)
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setKartaOpen(true)}>
+                <FileSignature className="mr-2 h-4 w-4" /> Wyświetl Kartę Leada (Załącznik nr 1)
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={declineMut.isPending}
+                onClick={() => declineMut.mutate()}
+              >
+                Odrzuć Projekt
+              </Button>
+            </div>
           ) : (
             <>
               <div className="max-h-72 overflow-y-auto rounded-md border bg-muted/30 p-3 text-xs leading-relaxed">
@@ -263,7 +313,7 @@ function MatchCard({
                   </Label>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   disabled={!confirmed || (isConsumer && !karaConfirmed) || acceptMut.isPending}
