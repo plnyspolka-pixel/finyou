@@ -391,7 +391,7 @@ export async function notifyInvestorOfferWithdrawn(
     .eq("id", offer.loan_application_id)
     .maybeSingle();
   if (!app) return { skipped: "application_not_found" };
-  const r = await resolveRecipient(app, !!opts.staffOnly);
+  const r = await resolveRecipient(app);
   if (!r?.email) return { skipped: "no_recipient" };
 
   const { resolveAppBaseUrl } = await import("@/lib/access/urls.server");
