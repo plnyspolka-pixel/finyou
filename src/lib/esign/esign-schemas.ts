@@ -94,6 +94,12 @@ export const getEnvelopeFileUrlInput = z.object({
   which: z.enum(["zrodlo", "podpisany"]),
 });
 
+export const sendInterimCopyInput = z.object({
+  envelopeId: z.string().uuid(),
+  recipients: z.array(z.string().trim().email().max(255)).min(1).max(5),
+  note: z.string().trim().max(2000).optional(),
+});
+
 export const cancelEnvelopeInput = z.object({
   envelopeId: z.string().uuid(),
   reason: z.string().trim().max(500).optional(),

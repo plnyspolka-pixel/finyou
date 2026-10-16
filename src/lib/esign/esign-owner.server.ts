@@ -20,6 +20,7 @@ import {
   getEnvelopeDetailsInput,
   getEnvelopeFileUrlInput,
   cancelEnvelopeInput,
+  sendInterimCopyInput,
   resolveIdentityMismatchInput,
   CompanySchema,
   SignerInput,
@@ -1197,6 +1198,20 @@ export async function getEnvelopeFileUrlImpl(
     url,
     filename: data.which === "podpisany" ? `${env.public_id}-podpisany.pdf` : env.source_filename,
   };
+}
+
+export async function sendInterimCopyImpl(
+  data: z.infer<typeof sendInterimCopyInput>,
+  context: AuthCtx,
+) {
+  const { env } = await requireManaged(context.supabase, context.userId, data.envelopeId);
+  const live = await expireIfNeeded(env);
+  const { sendInterimCopy } = await import("./esign.server");
+  return sendInterimCopy(live, {
+    recipients: data.recipients,
+    note: data.note ?? null,
+    actorUserId: context.userId,
+  });
 }
 
 export async function cancelEnvelopeImpl(

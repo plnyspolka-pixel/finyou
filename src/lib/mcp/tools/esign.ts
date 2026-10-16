@@ -180,6 +180,32 @@ export const resendEsignLink = defineTool({
     ),
 });
 
+export const sendEsignInterimCopy = defineTool({
+  name: "send_esign_interim_copy",
+  title: "Send partially signed e-signature copy",
+  description:
+    "Wysyła wskazanym adresom (1–5) kopię dokumentu z koperty W TRAKCIE podpisywania, gdy część stron już podpisała: PDF ze znacznikiem na każdej stronie i Kartą podpisów w wariancie „podpisano częściowo n z N” — kto podpisał (z pełnym śladem) i kto jeszcze NIE. Koperta zostaje otwarta; plik końcowy pójdzie automatycznie po ostatnim podpisie. Plik zapisuje się obok koperty, wysyłka trafia do historii dokumentu. Realna wiadomość — tylko po pokazaniu adresów i treści i wyraźnym poleceniu użytkownika.",
+  inputSchema: {
+    envelope_id: z.string().uuid(),
+    recipients: z.array(z.string().trim().email().max(255)).min(1).max(5),
+    note: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .describe("Krótki wstęp na początku maila (opcjonalnie)."),
+  },
+  annotations: SENDS,
+  handler: ({ envelope_id, recipients, note }, ctx: ToolContext) =>
+    handle(async () =>
+      ok(
+        await (
+          await owner()
+        ).sendInterimCopyImpl({ envelopeId: envelope_id, recipients, note }, esignCtx(ctx)),
+      ),
+    ),
+});
+
 export const cancelEsignEnvelope = defineTool({
   name: "cancel_esign_envelope",
   title: "Cancel e-signature envelope",
@@ -207,5 +233,6 @@ export const esignTools = [
   getEsignEnvelope,
   getEsignEnvelopeFile,
   resendEsignLink,
+  sendEsignInterimCopy,
   cancelEsignEnvelope,
 ];
