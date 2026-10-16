@@ -28,6 +28,7 @@ describe("narzędzia e-podpisu w MCP", () => {
       "get_esign_envelope",
       "get_esign_envelope_file",
       "resend_esign_link",
+      "send_esign_interim_copy",
       "cancel_esign_envelope",
     ]);
   });

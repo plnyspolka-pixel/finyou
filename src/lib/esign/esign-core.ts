@@ -487,6 +487,7 @@ export const EVENT_LABELS: Record<string, string> = {
   pobranie_podpisanego: "Pobrano podpisany dokument",
   powiadomienie_obserwatora: "Obserwator (autor wniosku) powiadomiony e-mailem",
   pobranie_przez_obserwatora: "Obserwator (autor wniosku) pobrał dokument",
+  kopia_posrednia: "Wysłano kopię dokumentu podpisanego częściowo (stan pośredni)",
 };
 
 export function eventLabel(type: string): string {

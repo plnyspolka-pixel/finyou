@@ -2806,6 +2806,48 @@
         "outputSchema": null
       },
       {
+        "name": "send_esign_interim_copy",
+        "title": "Send partially signed e-signature copy",
+        "description": "Wysyła wskazanym adresom (1–5) kopię dokumentu z koperty W TRAKCIE podpisywania, gdy część stron już podpisała: PDF ze znacznikiem na każdej stronie i Kartą podpisów w wariancie „podpisano częściowo n z N” — kto podpisał (z pełnym śladem) i kto jeszcze NIE. Koperta zostaje otwarta; plik końcowy pójdzie automatycznie po ostatnim podpisie. Plik zapisuje się obok koperty, wysyłka trafia do historii dokumentu. Realna wiadomość — tylko po pokazaniu adresów i treści i wyraźnym poleceniu użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "recipients": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email",
+                "maxLength": 255
+              },
+              "minItems": 1,
+              "maxItems": 5
+            },
+            "note": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Krótki wstęp na początku maila (opcjonalnie)."
+            }
+          },
+          "required": [
+            "envelope_id",
+            "recipients"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "cancel_esign_envelope",
         "title": "Cancel e-signature envelope",
         "description": "Anuluje kopertę e-podpisu (linki przestają działać). Tylko na wyraźne polecenie użytkownika.",

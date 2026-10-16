@@ -120,6 +120,20 @@ describe("stampSignedPdf", () => {
     expect(p0.getWidth()).toBeGreaterThan(p0.getHeight());
   });
 
+  it("wariant pośredni oznacza brakujące podpisy w tytule i Karcie", async () => {
+    const src = await samplePdf(2);
+    const res = await stampSignedPdf({
+      ...input(src, [signer(1)]),
+      completedAt: null,
+      pendingSigners: [
+        { fullName: "Osoba Testowa 2", roleLabel: "Pożyczkobiorca", email: "o2@example.com" },
+      ],
+    });
+    const out = await PDFDocument.load(res.bytes);
+    expect(out.getPageCount()).toBe(2 + res.kartaPages);
+    expect(out.getTitle()).toContain("podpisany częściowo, 1 z 2");
+  });
+
   it("inspectPdf liczy strony; describeIdentity opisuje weryfikację po polsku", async () => {
     const src = await samplePdf(5);
     expect(await inspectPdf(src)).toEqual({ pages: 5, encrypted: false });
