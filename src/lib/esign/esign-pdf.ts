@@ -14,6 +14,11 @@
  *  • na końcu „Karta podpisów”: dane dokumentu, każdego podpisującego
  *    (tożsamość Didit, kod jednorazowy, czas, IP, urządzenie, oświadczenia,
  *    identyfikator podpisu), „Historia dokumentu” i informacja prawna.
+ *
+ * Wariant pośredni (`pendingSigners` niepuste): ten sam układ, ale pasek,
+ * stopka i Karta wprost mówią „podpisano częściowo — n z N” i wymieniają
+ * osoby, które jeszcze NIE podpisały. Służy do przekazania dokumentu przed
+ * zamknięciem koperty, bez sugerowania, że podpisały wszystkie strony.
  */
 import {
   PDFDocument,
@@ -52,6 +57,7 @@ const INK = rgb(0.12, 0.12, 0.14);
 const GRAY = rgb(0.42, 0.44, 0.5);
 const LIGHT = rgb(0.86, 0.88, 0.92);
 const GREEN = rgb(0.13, 0.6, 0.33);
+const AMBER = rgb(0.75, 0.45, 0.05);
 const WHITE = rgb(1, 1, 1);
 
 export interface StampSigner {
@@ -75,6 +81,13 @@ export interface StampSigner {
   signatureHash: string;
 }
 
+/** Strona, która jeszcze nie podpisała (tylko wariant pośredni). */
+export interface StampPendingSigner {
+  fullName: string;
+  roleLabel: string | null;
+  email: string;
+}
+
 export interface StampEvent {
   at: string;
   label: string;
@@ -96,9 +109,12 @@ export interface StampInput {
   operatorName: string;
   createdAt: string;
   sentAt: string | null;
-  completedAt: string;
+  /** Czas ostatniego podpisu; `null` w wariancie pośrednim. */
+  completedAt: string | null;
   signingMode: SigningMode;
   signers: StampSigner[];
+  /** Strony, które jeszcze nie podpisały — niepuste = plik pośredni. */
+  pendingSigners?: StampPendingSigner[];
   events: StampEvent[];
   fonts?: { regular: string | Uint8Array; bold: string | Uint8Array };
   now?: Date;
@@ -208,11 +224,24 @@ export async function inspectPdf(
   return { pages: doc.getPageCount(), encrypted: doc.isEncrypted };
 }
 
+function pendingOf(input: StampInput): StampPendingSigner[] {
+  return input.pendingSigners ?? [];
+}
+
+function partyCount(input: StampInput): number {
+  return input.signers.length + pendingOf(input).length;
+}
+
 // ── pasek górny i stopka na każdej stronie ─────────────────────────────────
 
-function bottomBandHeight(signers: StampSigner[]): number {
-  const lines = signers.length === 0 ? 1 : signers.length <= 2 ? signers.length : 1;
+function bottomBandHeight(input: StampInput): number {
+  const n = partyCount(input);
+  const lines = n === 0 ? 1 : n <= 2 ? n : 1;
   return BOTTOM_BASE + BOTTOM_LINE * lines;
+}
+
+function drawPendingMark(page: PDFPage, cx: number, cy: number, r: number): void {
+  page.drawCircle({ x: cx, y: cy, size: r, borderColor: AMBER, borderWidth: 0.9 });
 }
 
 function drawMark(page: PDFPage, x: number, y: number, size: number, logo: PDFImage): void {
@@ -272,12 +301,16 @@ function drawBands(
   });
 
   const maxLeft = Math.min(rightX, w - 12 - legalW) - leftX - 10;
-  page.drawText(c(truncate("Podpisano elektronicznie w Finance You", fonts.bold, 8.5, maxLeft)), {
+  const pending = pendingOf(input);
+  const headline = pending.length
+    ? `Podpisano częściowo (${input.signers.length} z ${partyCount(input)}) — dokument w trakcie podpisywania`
+    : "Podpisano elektronicznie w Finance You";
+  page.drawText(c(truncate(headline, fonts.bold, 8.5, maxLeft)), {
     x: leftX,
     y: h - 15,
     size: 8.5,
     font: fonts.bold,
-    color: NAVY,
+    color: pending.length ? AMBER : NAVY,
   });
   const line2 = `ID dokumentu: ${input.publicId}  ·  Weryfikacja: ${input.verifyUrlShort}  ·  SHA-256 oryginału: ${input.sourceSha256.slice(0, 16)}…`;
   page.drawText(c(truncate(line2, fonts.regular, 6.3, maxLeft)), {
@@ -289,29 +322,46 @@ function drawBands(
   });
 
   // Stopka z podpisami.
-  const bh = bottomBandHeight(input.signers);
+  const bh = bottomBandHeight(input);
   page.drawLine({ start: { x: 0, y: bh }, end: { x: w, y: bh }, thickness: 0.6, color: LIGHT });
   const textX = 24;
   const maxW = w - textX - 12;
-  const lines: string[] = [];
-  if (input.signers.length === 0) {
-    lines.push("Dokument w trakcie podpisywania.");
-  } else if (input.signers.length <= 2) {
+  const lines: Array<{ text: string; signed: boolean }> = [];
+  const parties = partyCount(input);
+  if (parties === 0) {
+    lines.push({ text: "Dokument w trakcie podpisywania.", signed: false });
+  } else if (parties <= 2) {
     for (const s of input.signers) {
       const base = `${capacityLabel(s.fullName, s.capacity)} — podpisano ${formatSignedAtShort(s.signedAt)}`;
       const full = `${base} · ${s.smsOnly && !s.identity ? "tożsamość: kod SMS" : identityShort(s.identity)}`;
       // Gdy pełny opis się nie mieści, zostaje część kluczowa (kto, kiedy).
-      lines.push(fonts.regular.widthOfTextAtSize(c(full), 6.4) <= maxW ? full : base);
+      lines.push({
+        text: fonts.regular.widthOfTextAtSize(c(full), 6.4) <= maxW ? full : base,
+        signed: true,
+      });
     }
+    for (const p of pending) {
+      lines.push({
+        text: `${p.fullName}${p.roleLabel ? ` (${p.roleLabel})` : ""} — NIE PODPISANO, oczekuje na podpis`,
+        signed: false,
+      });
+    }
+  } else if (pending.length) {
+    lines.push({
+      text: `Podpisało ${input.signers.length} z ${parties} osób: ${input.signers.map((s) => s.fullName).join(", ")}; oczekuje: ${pending.map((p) => p.fullName).join(", ")} — szczegóły w Karcie podpisów (str. ${kartaRange[0]}–${kartaRange[1]})`,
+      signed: false,
+    });
   } else {
     const names = input.signers.map((s) => s.fullName).join(", ");
-    lines.push(
-      `Podpisano elektronicznie przez ${input.signers.length} osoby: ${names} — szczegóły w Karcie podpisów (str. ${kartaRange[0]}–${kartaRange[1]})`,
-    );
+    lines.push({
+      text: `Podpisano elektronicznie przez ${input.signers.length} osoby: ${names} — szczegóły w Karcie podpisów (str. ${kartaRange[0]}–${kartaRange[1]})`,
+      signed: true,
+    });
   }
-  lines.forEach((ln, i) => {
+  lines.forEach(({ text: ln, signed }, i) => {
     const y = bh - 8 - i * BOTTOM_LINE + 1.5;
-    drawCheck(page, 12, y + 2.2, 3.4);
+    if (signed) drawCheck(page, 12, y + 2.2, 3.4);
+    else drawPendingMark(page, 12, y + 2.2, 3.4);
     page.drawText(c(truncate(ln, fonts.regular, 6.4, maxW)), {
       x: textX,
       y,
@@ -468,6 +518,23 @@ function signerBlock(wr: Writer, index: number, s: StampSigner): void {
   wr.y -= 10;
 }
 
+function pendingBlock(wr: Writer, index: number, p: StampPendingSigner): void {
+  ensure(wr, 60);
+  wr.y -= 4;
+  const who = `${index + 1}. ${p.fullName}${p.roleLabel ? ` — ${p.roleLabel}` : ""}`;
+  para(wr, who, { size: 10, bold: true, color: NAVY, after: 4 });
+  kv(wr, "E-mail", p.email);
+  kv(wr, "Status", "NIE PODPISANO — oczekuje na podpis (stan na chwilę wygenerowania karty)");
+  wr.y -= 2;
+  wr.page.drawLine({
+    start: { x: KARTA_MARGIN, y: wr.y },
+    end: { x: A4.w - KARTA_MARGIN, y: wr.y },
+    thickness: 0.5,
+    color: LIGHT,
+  });
+  wr.y -= 10;
+}
+
 function eventsTable(wr: Writer, events: StampEvent[]): void {
   const size = 7.6;
   const lh = size * 1.35;
@@ -562,16 +629,31 @@ function eventsTable(wr: Writer, events: StampEvent[]): void {
 }
 
 function buildKarta(doc: PDFDocument, fonts: Fonts, input: StampInput): PDFPage[] {
-  const bottomLimit = bottomBandHeight(input.signers) + 28;
+  const bottomLimit = bottomBandHeight(input) + 28;
   const wr: Writer = { doc, page: null as unknown as PDFPage, y: 0, fonts, bottomLimit, pages: [] };
   newKartaPage(wr);
+  const pending = pendingOf(input);
+  const total = partyCount(input);
+  const now = input.now ?? new Date();
 
-  para(wr, "KARTA PODPISÓW", { size: 17, bold: true, color: NAVY, after: 2 });
+  para(wr, pending.length ? "KARTA PODPISÓW — STAN POŚREDNI" : "KARTA PODPISÓW", {
+    size: 17,
+    bold: true,
+    color: NAVY,
+    after: 2,
+  });
   para(
     wr,
     `Protokół złożenia podpisów w formie dokumentowej (art. 77² Kodeksu cywilnego). Karta stanowi integralną część dokumentu ${input.publicId} i została dołączona przez system ${input.operatorName}.`,
     { size: 8.5, color: GRAY, after: 6 },
   );
+  if (pending.length) {
+    para(
+      wr,
+      `UWAGA: dokument jest w trakcie podpisywania. Na dzień ${formatSignedAt(now.toISOString())} podpisy złożyło ${input.signers.length} z ${total} stron. Nie podpisali jeszcze: ${pending.map((p) => p.fullName).join(", ")}. Niniejszy wydruk poświadcza wyłącznie podpisy wymienione poniżej jako złożone; aktualny stan dokumentu pokazuje strona weryfikacji.`,
+      { size: 8.8, bold: true, color: AMBER, after: 6 },
+    );
+  }
 
   heading(wr, "Dokument");
   kv(wr, "Identyfikator", input.publicId);
@@ -587,31 +669,45 @@ function buildKarta(doc: PDFDocument, fonts: Fonts, input: StampInput): PDFPage[
   );
   kv(wr, "Utworzono", formatSignedAt(input.createdAt));
   kv(wr, "Wysłano do podpisu", formatSignedAt(input.sentAt));
-  kv(wr, "Zamknięto (ostatni podpis)", formatSignedAt(input.completedAt));
+  if (pending.length) {
+    kv(
+      wr,
+      "Stan dokumentu",
+      `W TRAKCIE PODPISYWANIA — podpisało ${input.signers.length} z ${total} (stan na ${formatSignedAt(now.toISOString())})`,
+    );
+  } else {
+    kv(wr, "Zamknięto (ostatni podpis)", formatSignedAt(input.completedAt));
+  }
   kv(
     wr,
     "Tryb podpisywania",
     input.signingMode === "kolejno" ? "kolejno (wg kolejności)" : "równolegle",
   );
-  kv(wr, "Liczba podpisujących", String(input.signers.length));
+  kv(
+    wr,
+    "Liczba podpisujących",
+    pending.length ? `${total} (podpisało: ${input.signers.length})` : String(total),
+  );
   kv(wr, "Strona weryfikacji", input.verifyUrl);
 
   heading(wr, "Podpisujący");
   input.signers.forEach((s, i) => signerBlock(wr, i, s));
+  pending.forEach((p, i) => pendingBlock(wr, input.signers.length + i, p));
 
   heading(wr, "Historia dokumentu");
   eventsTable(wr, input.events);
 
   heading(wr, "Informacje prawne i weryfikacja");
   const legal = [
-    "1. Dokument został podpisany podpisem elektronicznym w rozumieniu art. 3 pkt 10 rozporządzenia Parlamentu Europejskiego i Rady (UE) nr 910/2014 (eIDAS). Zgodnie z art. 25 ust. 1 eIDAS podpisowi elektronicznemu nie można odmówić skutku prawnego ani dopuszczalności jako dowodu w postępowaniu sądowym wyłącznie z tego powodu, że ma postać elektroniczną lub nie spełnia wymogów kwalifikowanego podpisu elektronicznego.",
+    pending.length
+      ? "1. Podpisy wymienione w Karcie jako złożone są podpisami elektronicznymi w rozumieniu art. 3 pkt 10 rozporządzenia Parlamentu Europejskiego i Rady (UE) nr 910/2014 (eIDAS). Zgodnie z art. 25 ust. 1 eIDAS podpisowi elektronicznemu nie można odmówić skutku prawnego ani dopuszczalności jako dowodu w postępowaniu sądowym wyłącznie z tego powodu, że ma postać elektroniczną lub nie spełnia wymogów kwalifikowanego podpisu elektronicznego. Strony oznaczone „NIE PODPISANO” nie złożyły jeszcze oświadczenia w tym dokumencie."
+      : "1. Dokument został podpisany podpisem elektronicznym w rozumieniu art. 3 pkt 10 rozporządzenia Parlamentu Europejskiego i Rady (UE) nr 910/2014 (eIDAS). Zgodnie z art. 25 ust. 1 eIDAS podpisowi elektronicznemu nie można odmówić skutku prawnego ani dopuszczalności jako dowodu w postępowaniu sądowym wyłącznie z tego powodu, że ma postać elektroniczną lub nie spełnia wymogów kwalifikowanego podpisu elektronicznego.",
     "2. Oświadczenia woli złożono w formie dokumentowej (art. 77² KC): w postaci dokumentu (art. 77³ KC) i w sposób umożliwiający ustalenie osoby składającej oświadczenie. Tożsamość każdego podpisującego potwierdzono zdalną weryfikacją dokumentu tożsamości z testem żywotności i porównaniem twarzy (Didit), a wyłączną kontrolę nad kanałem komunikacji — kodem jednorazowym doręczonym na wskazany numer telefonu albo adres e-mail. Każdy podpisujący przed podpisem złożył oświadczenia wymienione przy jego danych.",
     "3. Integralność: skrót SHA-256 dokumentu źródłowego podano wyżej. Skrót SHA-256 niniejszego pliku (ze znacznikami na stronach i Kartą podpisów) jest opublikowany na stronie weryfikacji; każda zmiana pliku zmienia jego skrót. Historia dokumentu jest rejestrem tylko-do-dopisywania z łańcuchem skrótów (każde zdarzenie wiąże poprzednie).",
-    `4. Weryfikacja: ${input.verifyUrl} — strona pokazuje status dokumentu, podpisujących, czas złożenia podpisów oraz pozwala porównać skrót posiadanego pliku z oryginałem przechowywanym przez ${input.operatorName}. Podpisany dokument doręczono każdemu podpisującemu na adres e-mail (trwały nośnik).`,
+    `4. Weryfikacja: ${input.verifyUrl} — strona pokazuje status dokumentu, podpisujących, czas złożenia podpisów oraz pozwala porównać skrót posiadanego pliku z oryginałem przechowywanym przez ${input.operatorName}. ${pending.length ? "Niniejszy wydruk dokumentuje stan pośredni; po złożeniu wszystkich podpisów system wygeneruje plik końcowy z pełną Kartą podpisów i doręczy go stronom." : "Podpisany dokument doręczono każdemu podpisującemu na adres e-mail (trwały nośnik)."}`,
     "5. Podpis dokumentowy nie jest kwalifikowanym podpisem elektronicznym (art. 78¹ KC) i nie zastępuje formy pisemnej, formy z podpisami notarialnie poświadczonymi ani aktu notarialnego tam, gdzie ustawa wymaga ich pod rygorem nieważności (np. poręczenie, przeniesienie własności nieruchomości, ustanowienie hipoteki). Jest właściwy m.in. dla umowy pożyczki (art. 720 § 2 KC), umów o świadczenie usług, oświadczeń, zgód i porozumień, dla których ustawa nie zastrzega formy szczególnej.",
   ];
   for (const p of legal) para(wr, p, { size: 7.8, after: 3.5 });
-  const now = input.now ?? new Date();
   para(
     wr,
     `Kartę wygenerował system ${input.operatorName} — ${formatSignedAt(now.toISOString())}.`,
@@ -643,7 +739,7 @@ export async function stampSignedPdf(input: StampInput): Promise<StampResult> {
   const logo = await out.embedPng(FY_ROUND_LOGO_PNG_BASE64);
   const fonts: Fonts = { regular, bold, charset: new Set(regular.getCharacterSet()), logo };
 
-  const bottom = bottomBandHeight(input.signers);
+  const bottom = bottomBandHeight(input);
   const srcPages = src.getPages();
   const embedded = await out.embedPdf(
     src,
@@ -700,7 +796,12 @@ export async function stampSignedPdf(input: StampInput): Promise<StampResult> {
   all.forEach((page, i) => drawBands(page, i, total, input, fonts, [kartaStart, total]));
 
   const now = input.now ?? new Date();
-  out.setTitle(`${input.title} — podpisany elektronicznie (${input.publicId})`);
+  const pendingCount = pendingOf(input).length;
+  out.setTitle(
+    pendingCount
+      ? `${input.title} — podpisany częściowo, ${input.signers.length} z ${partyCount(input)} (${input.publicId})`
+      : `${input.title} — podpisany elektronicznie (${input.publicId})`,
+  );
   out.setSubject(
     `Podpis dokumentowy Finance You · ${input.publicId} · SHA-256 oryginału ${input.sourceSha256}`,
   );
