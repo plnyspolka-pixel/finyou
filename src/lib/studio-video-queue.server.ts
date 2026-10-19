@@ -943,6 +943,34 @@ export async function pollStudioRenderingJobs(): Promise<{
 export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
   if (!job.auto_publish_platforms.length || !job.video_url || job.auto_published_at) return false;
 
+  // Bramka compliance – reguły twarde także dla auto-publikacji ze Studia
+  // (brief 5.7: brak ścieżki ominięcia). Blokada = brak publikacji + powód.
+  const { checkHardRules, COMPLIANCE_RULES_VERSION } = await import("./autopilot/compliance-rules");
+  const blocks = checkHardRules(
+    `${fallbackTitle(job)}\n${job.publish_description ?? ""}\n${job.script ?? ""}`,
+    {
+      kind: "description",
+      // Tor z odbiorcy materiału: reguły toru (B2B / inwestor) też obowiązują.
+      track:
+        job.material_audience === "inwestor"
+          ? "inwestor"
+          : job.material_audience === "klient"
+            ? "pozyczkobiorca"
+            : null,
+    },
+  ).filter((h) => h.severity === "block");
+  if (blocks.length) {
+    await supabaseAdmin
+      .from("studio_video_jobs")
+      .update({
+        last_error:
+          `Auto-publikacja wstrzymana przez reguły compliance (${COMPLIANCE_RULES_VERSION}): ` +
+          blocks.map((b) => `${b.message}${b.match ? ` [„${b.match}”]` : ""}`).join(" "),
+      })
+      .eq("id", job.id);
+    return false;
+  }
+
   const { data: stamped } = await supabaseAdmin
     .from("studio_video_jobs")
     .update({ auto_published_at: new Date().toISOString() })

@@ -96,6 +96,9 @@ describe("compliance – tory", () => {
     expect(codes("Odkupimy Twoje udziały w każdej chwili", ctx)).toContain("gwarancja_odkupu");
     expect(codes("Sam też inwestuję w te pożyczki", ctx)).toContain("sam_inwestuje");
     expect(codes("To drukarka do pieniędzy", ctx)).toContain("drukarka_bez_ryzyka");
+    expect(codes("Pokażę Ci, jak działa drukarka, o której banki nie mówią", ctx)).toContain(
+      "drukarka_bez_ryzyka",
+    );
     expect(
       codes("To drukarka do pieniędzy? Nie – każda pożyczka niesie ryzyko.", ctx),
     ).not.toContain("drukarka_bez_ryzyka");

@@ -164,7 +164,7 @@ const PATTERNS: PatternRule[] = [
   },
   {
     code: "drukarka_bez_ryzyka",
-    re: re("drukark\\p{L}*\\s+do\\s+pieniędzy|maszynk\\p{L}*\\s+do\\s+(?:pieniędzy|zarabiania)"),
+    re: re("drukark\\p{L}*|maszynk\\p{L}*\\s+do\\s+(?:pieniędzy|zarabiania)"),
     message: "„Drukarka do pieniędzy” wymaga zdania równoważącego ryzyko.",
     tracks: ["inwestor"],
     unlessText: /ryzyk/iu,
