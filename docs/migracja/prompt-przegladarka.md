@@ -37,5 +37,6 @@ STREFA_financeyou.pl: jest w Cloudflare / nie ma (DNS u: ...)
 
 Po wklejeniu tych wartości do sesji migracyjnej reszta (wdrożenie Workera,
 klucz service_role, konfiguracja Auth, sekrety funkcji Edge, sprzątanie historii
-migracji) idzie automatycznie. Krok 2 (przepisanie sekretów z Lovable do
+migracji) idzie automatycznie — jednym skryptem `scripts/migracja/po-tokenach.sh`
+(wartości tylko w zmiennych środowiskowych, nic nie trafia do repo). Krok 2 (przepisanie sekretów z Lovable do
 Workera i klient Google OAuth) dostanie osobny prompt po wdrożeniu Workera.
