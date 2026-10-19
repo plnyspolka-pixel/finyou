@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { canWithdrawOffer, isOfferAccepted } from "@/lib/investor-offers/acceptance";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -79,6 +79,82 @@ function InwestorOferty() {
   // „Stwórz umowę": pełne dane klienta + KW + złożona oferta → kreator umowy.
   const { createContract, pendingKey: creatingFor } = useCreateContract();
   const accepted = offers.filter((o) => isOfferAccepted(o.offer_status));
+  const renderActions = (o: MyOfferRow) => (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        title="Pobierz PDF oferty z pełnym harmonogramem spłat"
+        onClick={() => {
+          if (!downloadOfferPdf(o)) {
+            toast.error("Oferta nie ma kompletu danych do wygenerowania PDF.");
+          }
+        }}
+      >
+        <FileDown className="mr-1 h-3.5 w-3.5" />
+        PDF
+      </Button>
+      {o.offer_status !== "szkic" && (
+        <Button
+          size="sm"
+          variant="outline"
+          title={
+            o.contractUnlocked
+              ? "Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
+              : "Dostępne po akceptacji Twojej propozycji przez uprawnioną stronę (administratora, operatora, pożyczkobiorcę albo pośrednika)"
+          }
+          disabled={!o.contractUnlocked || creatingFor === o.id}
+          onClick={() => void createContract({ offerId: o.id })}
+        >
+          {creatingFor === o.id ? (
+            <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FilePen className="mr-1 h-3.5 w-3.5" />
+          )}
+          Stwórz umowę
+        </Button>
+      )}
+      {isOfferAccepted(o.offer_status) && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            void navigate({
+              to: "/inwestor/umowa/$offerId",
+              params: { offerId: o.id },
+            })
+          }
+        >
+          <FileSignature className="mr-1 h-3.5 w-3.5" />
+          Umowa
+        </Button>
+      )}
+      {canWithdrawOffer(o.offer_status) && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400"
+          disabled={withdrawMut.isPending}
+          onClick={() => withdraw(o.id)}
+        >
+          <Undo2 className="mr-1 h-3.5 w-3.5" />
+          Wycofaj ofertę
+        </Button>
+      )}
+    </>
+  );
+  const renderDetails = (o: MyOfferRow) =>
+    o.loan_application ? (
+      <>
+        {o.project ? <OfferProject project={o.project} /> : null}
+        <ApplicationInfoBadges
+          app={o.loan_application}
+          client={o.loan_application.client}
+          loanApplicationId={o.loan_application.id}
+          variant="compact"
+        />
+      </>
+    ) : null;
   return (
     <div className="space-y-6">
       <FancyPageHeader
@@ -120,7 +196,31 @@ function InwestorOferty() {
       )}
       <Card>
         <CardContent className="pt-6">
-          <div className="overflow-x-auto">
+          {/* Telefon: karty zamiast 8-kolumnowej tabeli (kolumny ściskały się do pojedynczych liter). */}
+          <div className="divide-y md:hidden">
+            {offers.map((o) => (
+              <div key={o.id} className="space-y-3 py-4 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">{formatDate(o.created_at)}</span>
+                  <Badge variant={isOfferAccepted(o.offer_status) ? "default" : "secondary"}>
+                    {offerStatusLabels[o.offer_status]}
+                  </Badge>
+                </div>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <OfferField label="Kwota">{formatPLN(o.proposed_amount)}</OfferField>
+                  <OfferField label="Okres">{o.period_months} mies.</OfferField>
+                  <OfferField label="Zysk">{o.expected_yearly_yield ?? "—"}%</OfferField>
+                  <OfferField label="Rata">{formatPLN(o.estimated_monthly_payment)}</OfferField>
+                  <OfferField label="Prowizja" wide>
+                    <Commission amount={o.proposed_amount} commission={o.commission} />
+                  </OfferField>
+                </dl>
+                <div className="flex flex-wrap gap-1.5">{renderActions(o)}</div>
+                {renderDetails(o)}
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -138,11 +238,19 @@ function InwestorOferty() {
                 {offers.map((o) => (
                   <Fragment key={o.id}>
                     <TableRow>
-                      <TableCell>{formatDate(o.created_at)}</TableCell>
-                      <TableCell>{formatPLN(o.proposed_amount)}</TableCell>
-                      <TableCell>{o.period_months} mies.</TableCell>
-                      <TableCell>{o.expected_yearly_yield ?? "—"}%</TableCell>
-                      <TableCell>{formatPLN(o.estimated_monthly_payment)}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(o.created_at)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatPLN(o.proposed_amount)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">{o.period_months} mies.</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {o.expected_yearly_yield ?? "—"}%
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatPLN(o.estimated_monthly_payment)}
+                      </TableCell>
                       <TableCell>
                         <Commission amount={o.proposed_amount} commission={o.commission} />
                       </TableCell>
@@ -152,80 +260,13 @@ function InwestorOferty() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="Pobierz PDF oferty z pełnym harmonogramem spłat"
-                            onClick={() => {
-                              if (!downloadOfferPdf(o)) {
-                                toast.error("Oferta nie ma kompletu danych do wygenerowania PDF.");
-                              }
-                            }}
-                          >
-                            <FileDown className="mr-1 h-3.5 w-3.5" />
-                            PDF
-                          </Button>
-                          {o.offer_status !== "szkic" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              title={
-                                o.contractUnlocked
-                                  ? "Otwórz kreator umowy z danymi klienta, KW i parametrami tej oferty"
-                                  : "Dostępne po akceptacji Twojej propozycji przez uprawnioną stronę (administratora, operatora, pożyczkobiorcę albo pośrednika)"
-                              }
-                              disabled={!o.contractUnlocked || creatingFor === o.id}
-                              onClick={() => void createContract({ offerId: o.id })}
-                            >
-                              {creatingFor === o.id ? (
-                                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <FilePen className="mr-1 h-3.5 w-3.5" />
-                              )}
-                              Stwórz umowę
-                            </Button>
-                          )}
-                          {isOfferAccepted(o.offer_status) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                void navigate({
-                                  to: "/inwestor/umowa/$offerId",
-                                  params: { offerId: o.id },
-                                })
-                              }
-                            >
-                              <FileSignature className="mr-1 h-3.5 w-3.5" />
-                              Umowa
-                            </Button>
-                          )}
-                          {canWithdrawOffer(o.offer_status) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400"
-                              disabled={withdrawMut.isPending}
-                              onClick={() => withdraw(o.id)}
-                            >
-                              <Undo2 className="mr-1 h-3.5 w-3.5" />
-                              Wycofaj ofertę
-                            </Button>
-                          )}
-                        </div>
+                        <div className="flex justify-end gap-1.5">{renderActions(o)}</div>
                       </TableCell>
                     </TableRow>
                     {o.loan_application && (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={8} className="pt-0 pb-4">
-                          {o.project ? <OfferProject project={o.project} /> : null}
-                          <ApplicationInfoBadges
-                            app={o.loan_application}
-                            client={o.loan_application.client}
-                            loanApplicationId={o.loan_application.id}
-                            variant="compact"
-                          />
+                          {renderDetails(o)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -236,6 +277,23 @@ function InwestorOferty() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function OfferField({
+  label,
+  wide,
+  children,
+}: {
+  label: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className={wide ? "col-span-2" : undefined}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-medium tabular-nums">{children}</dd>
     </div>
   );
 }
