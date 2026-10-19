@@ -271,6 +271,7 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     channel: platform,
     userMessage: userText || "[Klient przesłał załącznik]",
     attachmentsSummary,
+    channelIdentity: { kind: platform, value: senderId },
   });
 
   let replyText = agent.reply;
@@ -463,6 +464,7 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     channel: "messenger",
     userMessage: text,
     attachmentsSummary: null,
+    channelIdentity: { kind: "messenger", value: fromId },
   });
 
   let fullReply = agent.reply;

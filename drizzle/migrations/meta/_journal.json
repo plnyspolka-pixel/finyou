@@ -239,6 +239,20 @@
       "when": 1792079695735,
       "tag": "0033_dedup_przenosi_operatora_partnera",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792079755735,
+      "tag": "0034_agenci_narzedzia_sesje",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792079815735,
+      "tag": "0035_agent_fleet",
+      "breakpoints": true
     }
   ]
 }
