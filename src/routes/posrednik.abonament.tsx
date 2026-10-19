@@ -35,7 +35,7 @@ const FEATURES: Record<number, string[]> = {
     "Bez limitu liczby ofert",
     "Leady Finance You i pełny CRM",
     "Skrzynka, kampanie i automatyzacje",
-    "Akademia Pośrednika i program partnerski",
+    "Akademia Pośrednika i program poleceń",
   ],
   365: [
     "Wszystko z pakietu 30-dniowego",

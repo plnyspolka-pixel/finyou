@@ -51,15 +51,15 @@ function ProgramDashboard() {
         </h1>
         <Card>
           <CardHeader>
-            <CardTitle>Nie jesteś jeszcze partnerem</CardTitle>
+            <CardTitle>Nie jesteś jeszcze w sieci pośredników</CardTitle>
             <CardDescription>
-              Dołącz do sieci partnerskiej Finance You, aby naliczać prowizje sieciowe.
+              Dołącz do sieci pośredników Finance You, aby naliczać prowizje sieciowe.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
               <Link to="/posrednicy/rejestracja" search={{ ref: "" }}>
-                Zarejestruj się jako partner
+                Zarejestruj się w sieci pośredników
               </Link>
             </Button>
           </CardContent>
@@ -104,7 +104,7 @@ function ProgramDashboard() {
             <Network className="h-6 w-6" /> Program pośredników
           </h1>
           <p className="text-sm text-muted-foreground">
-            Twoja sieć partnerska i prowizje sieciowe do 3 poziomów.
+            Twoja sieć poleceń i prowizje sieciowe do 3 poziomów.
           </p>
         </div>
         <Badge className={partnerStatusColors[me.status] ?? "bg-slate-100"} variant="secondary">
@@ -135,7 +135,7 @@ function ProgramDashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Twój link polecający</CardTitle>
           <CardDescription>
-            Udostępniaj, aby budować strukturę partnerską. Kod: <b>{me.referral_code}</b>
+            Udostępniaj, aby budować swoją sieć poleceń. Kod: <b>{me.referral_code}</b>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-2">

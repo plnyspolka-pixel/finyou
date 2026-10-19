@@ -33,7 +33,7 @@ const PRICING_FEATURES: Record<number, string[]> = {
     "Bez limitu liczby ofert",
     "Leady Finance You i pełny CRM",
     "Skrzynka, kampanie i automatyzacje",
-    "Akademia Pośrednika i program partnerski",
+    "Akademia Pośrednika i program poleceń",
   ],
   365: [
     "Wszystko z pakietu 30-dniowego",
@@ -192,11 +192,11 @@ const FAQS = [
   },
   {
     q: "Jak działa CRM?",
-    a: "CRM porządkuje klientów, dokumenty, nieruchomości, komunikację, statusy i prowizje w jednym panelu partnera.",
+    a: "CRM porządkuje klientów, dokumenty, nieruchomości, komunikację, statusy i prowizje w jednym panelu pośrednika.",
   },
   {
     q: "Jak rozliczana jest prowizja?",
-    a: "Po uruchomieniu finansowania powstaje prowizja, rozliczana transparentnie przez Finance You zgodnie z zasadami współpracy. Szczegóły określa umowa partnerska.",
+    a: "Po uruchomieniu finansowania powstaje prowizja, rozliczana transparentnie przez Finance You zgodnie z zasadami współpracy. Szczegóły określa umowa o współpracy.",
   },
   {
     q: "Czy mogę obsługiwać własnych klientów?",
@@ -324,7 +324,7 @@ function BrokerLanding() {
           <FeatureGrid items={EARN.map((e) => ({ icon: "check", t: e.t, d: e.d }))} />
         </div>
         <ComplianceNote style={{ marginTop: "2rem" }}>
-          Warunki współpracy i rozliczeń prowizyjnych określa umowa partnerska. Nie gwarantujemy
+          Warunki współpracy i rozliczeń prowizyjnych określa umowa o współpracy. Nie gwarantujemy
           konkretnych kwot.
         </ComplianceNote>
       </Section>
@@ -462,17 +462,17 @@ function BrokerLanding() {
                 title="Pełny dostęp pośrednika"
                 price="499 zł"
                 period="/ 30 dni"
-                cta="Załóż konto partnera"
+                cta="Załóż konto pośrednika"
                 href={JOIN}
                 features={[
-                  "CRM + panel partnera",
+                  "CRM + panel pośrednika",
                   "Szkolenie wdrożeniowe",
                   "Kampanie AI i materiały",
                   "Dostęp do bazy inwestorów",
                   "Wzory dokumentów i procedury",
                   "Transparentny model prowizyjny",
                 ]}
-                note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa partnerska."
+                note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa o współpracy."
               />
             }
           />
@@ -480,7 +480,7 @@ function BrokerLanding() {
         <ComplianceNote style={{ marginTop: "2rem" }}>
           Ceny brutto (PLN). Zakup wymaga konta pośrednika — po wybraniu pakietu przejdziesz do
           bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Warunki
-          współpracy i rozliczeń prowizyjnych określa umowa partnerska.
+          współpracy i rozliczeń prowizyjnych określa umowa o współpracy.
         </ComplianceNote>
       </Section>
 

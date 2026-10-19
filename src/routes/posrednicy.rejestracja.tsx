@@ -19,7 +19,7 @@ import { SocialSignIn, AuthDivider } from "@/components/auth/social-sign-in";
 export const Route = createFileRoute("/posrednicy/rejestracja")({
   validateSearch: (s: Record<string, unknown>) => ({ ref: typeof s.ref === "string" ? s.ref : "" }),
   head: () => ({
-    meta: [{ title: "Rejestracja partnera — Program pośredników Finance You" }],
+    meta: [{ title: "Rejestracja pośrednika — Program pośredników Finance You" }],
     links: [{ rel: "canonical", href: "https://financeyou.pl/posrednicy/rejestracja" }],
   }),
   component: RejestracjaPartnera,
@@ -99,7 +99,7 @@ function RejestracjaPartnera() {
           termsVersion: "1.0",
         },
       });
-      toast.success("Zgłoszenie wysłane! Konto partnera czeka na akceptację administratora.");
+      toast.success("Zgłoszenie wysłane! Konto pośrednika czeka na akceptację administratora.");
       void navigate({ to: "/posrednik" });
     } catch (err) {
       toast.error("Rejestracja nie powiodła się", { description: (err as Error).message });
@@ -120,10 +120,10 @@ function RejestracjaPartnera() {
           <Link to="/posrednicy" className="text-sm text-primary hover:underline">
             ← Program pośredników
           </Link>
-          <h1 className="text-2xl md:text-3xl font-bold">Rejestracja partnera</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Rejestracja pośrednika</h1>
           {ref && (
             <p className="text-sm text-muted-foreground">
-              Polecenie od partnera: <b>{ref}</b>
+              Polecenie od pośrednika: <b>{ref}</b>
             </p>
           )}
         </div>
@@ -135,7 +135,7 @@ function RejestracjaPartnera() {
             <CardHeader>
               <CardTitle>Najpierw załóż konto lub zaloguj się</CardTitle>
               <CardDescription>
-                Wyślemy link logujący na Twój e-mail. Po powrocie dokończysz rejestrację partnera.
+                Wyślemy link logujący na Twój e-mail. Po powrocie dokończysz rejestrację pośrednika.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -213,7 +213,7 @@ function RejestracjaPartnera() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Dane partnera</CardTitle>
+                <CardTitle className="text-base">Dane pośrednika</CardTitle>
               </CardHeader>
               <CardContent className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1">

@@ -76,7 +76,7 @@ function RozliczeniaPage() {
           <Wallet className="h-6 w-6" /> Rozliczenia i wypłaty
         </h1>
         <p className="text-muted-foreground">
-          Nie jesteś jeszcze zarejestrowany jako partner programu pośredników.
+          Nie jesteś jeszcze zarejestrowany w programie pośredników.
         </p>
       </div>
     );
