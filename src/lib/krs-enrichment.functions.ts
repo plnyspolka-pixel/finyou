@@ -126,7 +126,7 @@ async function gatherWebEvidence(input: z.infer<typeof InputSchema>): Promise<st
 }
 
 async function findCandidatesOnWeb(input: z.infer<typeof InputSchema>): Promise<CandidateFromAI[]> {
-  if (!process.env.LOVABLE_API_KEY) return [];
+  if (!process.env.ANTHROPIC_API_KEY) return [];
   const evidence = await gatherWebEvidence(input);
   if (!evidence) return [];
 

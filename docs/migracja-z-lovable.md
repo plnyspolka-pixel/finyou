@@ -516,6 +516,37 @@ to znalezisko ma jeden głos).
   w `loan_applications_block_internal_updates`, zakres `dedup_leads` do wstawionego wiersza, audyt `exec_admin_*`.
   Pełny raport (113 wpisów z dowodami): plik wyjściowy workflow w tej sesji; skrót powyżej.
 
+### Kod bez Lovable (2026-10-19, gałąź `claude/dazzling-ritchie-qn9w8w`)
+
+Właściciel: „zgoda na wszystko”, priorytet: nieprzerwane działanie aplikacji. Wykonane w kodzie
+(typy czyste, 1 791 testów przechodzi):
+- **AI**: nowa warstwa `src/lib/ai.server.ts` (Claude przez `@anthropic-ai/sdk`; `aiFetch` udaje
+  dawną bramkę w formacie OpenAI, więc ~40 miejsc wywołań zmieniło tylko transport). Embeddingi i
+  transkrypcja: OpenAI API (ten sam model, wektory w bazie zgodne). Grafiki: Gemini API. Modele
+  domyślnie `claude-opus-5-5` (zmienne `AI_MODEL_FAST`/`AI_MODEL_PRO`, `AI_EFFORT=low`).
+- **Bramki konektorów** → API dostawców: Resend, Mailgun, Twilio (Basic auth na koncie), Google
+  Sheets/Drive/Docs (konto usługi przez istniejący `google-auth.server.ts`), Stripe (klient bez
+  bramki). Pakiety `@lovable.dev/cloud-auth-js`, `email-js`, `webhooks-js` usunięte; zostają
+  `@lovable.dev/mcp-js` (biblioteka MCP; wysyła statystyki użycia do `api.lovable.dev`, nieszkodliwe)
+  i `@lovable.dev/vite-tanstack-config` (konfiguracja builda).
+- **Logowanie społecznościowe**: `src/integrations/lovable/index.ts` → `supabase.auth.signInWithOAuth`
+  (ta sama nazwa eksportu). W nowym projekcie trzeba włączyć dostawcę Google (własny klient OAuth).
+- **Maile Auth**: `src/routes/lovable/email/auth/webhook.ts` to teraz hook Supabase „Send Email”
+  (podpis Standard Webhooks, sekret `SEND_EMAIL_HOOK_SECRET`), wysyłka przez Resend z dotychczasowymi
+  szablonami. Alternatywa bez hooka: SMTP Resend w ustawieniach Auth.
+- **7% wszędzie**: cofnięte zmiany „5%” z 1.10 w kodzie, testach, dokumentach i migracjach (stała
+  `FY_COMMISSION_PCT = 7`; logika MPKK bez zmian). Repo i produkcja znów mają te same teksty umów.
+- **Konfiguracja**: `.env`, `wrangler.jsonc`, `supabase/config.toml`, `.lovable/mcp/manifest.json`
+  wskazują nowy projekt `vkzndnaoxhdxrxlpntcb`. Pełna lista sekretów do wpisania:
+  `docs/migracja/sekrety-aplikacji.md`.
+- **Nowy projekt**: cron-y przepisane na `https://app.financeyou.pl` (nadal wyłączone), funkcja Edge
+  `didit-webhook` wdrożona (czeka na sekret), granty RPC utwardzone (migracja 20261010130000
+  zastosowana i wpisana do historii), produkcja Lovable też załatana tymi samymi `revoke`.
+
+**Nadal po stronie właściciela / wymaga dostępu do paneli:** sekrety (lista wyżej), token
+Management API Supabase (klucz service_role, Auth: SMTP/redirecty/Google, sekrety funkcji, DROP-y i
+baseline historii), Cloudflare (wdrożenie Workera, DNS), kopia Storage.
+
 ## Do sprawdzenia w kodzie (osobno)
 
 - Zabezpieczenie przed pętlą mailową (odpowiedzi na własną domenę / autorespondery).

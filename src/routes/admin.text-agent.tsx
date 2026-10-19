@@ -374,7 +374,7 @@ function KnowledgeTab() {
       toast.success(
         res.embedded
           ? "Zapisano (z embeddingiem)"
-          : "Zapisano (bez embeddingu — sprawdź LOVABLE_API_KEY)",
+          : "Zapisano (bez embeddingu — sprawdź OPENAI_API_KEY)",
       );
       setEditing(null);
       reload();

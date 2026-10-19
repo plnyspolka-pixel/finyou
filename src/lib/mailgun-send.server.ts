@@ -9,7 +9,8 @@ import {
   type EmailCategory,
 } from "./email-unsubscribe.server";
 
-const GATEWAY = "https://connector-gateway.lovable.dev/mailgun";
+// API Mailgun bezpośrednio (domeny EU: MAILGUN_API_BASE=https://api.eu.mailgun.net/v3).
+const MAILGUN_API = process.env.MAILGUN_API_BASE ?? "https://api.mailgun.net/v3";
 
 export async function sendMailgunEmail(opts: {
   to: string;
@@ -22,13 +23,12 @@ export async function sendMailgunEmail(opts: {
   noBranding?: boolean;
   category?: EmailCategory;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.MAILGUN_API_KEY;
   const domain = process.env.MAILGUN_DOMAIN;
-  if (!lovableKey || !connKey || !domain) {
+  if (!connKey || !domain) {
     return {
       ok: false,
-      error: "Mailgun env missing (LOVABLE_API_KEY / MAILGUN_API_KEY / MAILGUN_DOMAIN)",
+      error: "Mailgun env missing (MAILGUN_API_KEY / MAILGUN_DOMAIN)",
     };
   }
   const subject = (opts.subject ?? "").trim();
@@ -75,12 +75,11 @@ export async function sendMailgunEmail(opts: {
   if (opts.references) form.set("h:References", opts.references);
   for (const [k, v] of Object.entries(listHeaders)) form.set(`h:${k}`, v);
 
-  const res = await fetch(`${GATEWAY}/${encodeURIComponent(domain)}/messages`, {
+  const res = await fetch(`${MAILGUN_API}/${encodeURIComponent(domain)}/messages`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": connKey,
+      Authorization: `Basic ${btoa(`api:${connKey}`)}`,
     },
     body: form.toString(),
   });

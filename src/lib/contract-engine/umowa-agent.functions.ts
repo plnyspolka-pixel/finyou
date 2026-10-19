@@ -26,6 +26,7 @@ import { zapiszUmoweDocx } from "./umowa-storage.server";
 import { kalkulacjaDoSzkicu, wyglądaJakKalkulacja } from "./calc-to-umowa";
 import type { LoanCalcPayload } from "../loan-calc-pdf";
 
+import { aiFetch } from "@/lib/ai.server";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const GEMINI_PRO = "google/gemini-2.5-pro";
 
@@ -80,7 +81,7 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
     return { messages, umowa: d?.umowa ?? {}, calc };
   })
   .handler(async ({ data }): Promise<UmowaAgentResult> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("Agent umowy jest chwilowo niedostępny.");
 
     let szkic = data.umowa && typeof data.umowa === "object" ? structuredClone(data.umowa) : {};
@@ -111,7 +112,7 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const res = await fetch(GATEWAY, {
+    const res = await aiFetch(GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

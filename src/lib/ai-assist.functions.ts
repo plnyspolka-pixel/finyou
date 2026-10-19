@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -16,8 +17,8 @@ export const assistBusinessDescription = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY nie skonfigurowany");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY nie skonfigurowany");
 
     // Pobierz fakty z wniosku, żeby AI używało prawdziwych liczb (a nie X/Y/Z).
     let factsBlock = "";
@@ -78,7 +79,7 @@ export const assistBusinessDescription = createServerFn({ method: "POST" })
           ? `Rozwiń poniższy opis o brakujące elementy (cel, efekt, źródła spłaty), zachowaj sens:\n\n${data.currentText}\n\nDodatkowe wskazówki: ${data.hint || "brak"}${factsBlock}`
           : `Popraw i doszlifuj poniższy opis celu pożyczki, zachowaj fakty i intencję klienta. Jeśli w tekście są placeholdery typu X/Y/Z lub [kwota], zastąp je realnymi wartościami z wniosku albo usuń:\n\n${data.currentText}\n\nDodatkowe wskazówki: ${data.hint || "brak"}${factsBlock}`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

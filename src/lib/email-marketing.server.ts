@@ -1,10 +1,11 @@
+import { aiFetch } from "@/lib/ai.server";
 // Server-only helpers for email marketing (Resend + AI + segments)
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { wrapBrandedEmail, isAlreadyBranded } from "./email-branding.server";
 import { fetchAllPaged } from "./supabase-paging.server";
 import { canSendEmail, unsubscribeUrlFor, unsubscribeHeaders } from "./email-unsubscribe.server";
 
-const RESEND_GATEWAY = "https://connector-gateway.lovable.dev/resend";
+const RESEND_API = "https://api.resend.com";
 
 export type SegmentFilters = {
   tags?: string[];
@@ -47,9 +48,7 @@ export async function sendViaResend(payload: {
   tags?: { name: string; value: string }[];
   headers?: Record<string, string>;
 }): Promise<{ id: string; blocked?: true; reason?: string }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
   const resendKey = process.env.RESEND_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
   if (!resendKey) throw new Error("RESEND_API_KEY missing");
 
   // Kampanie i mailingi to zawsze kategoria `automated` — wypisany adres nie
@@ -72,12 +71,11 @@ export async function sendViaResend(payload: {
     : wrapBrandedEmail({ innerHtml: rawHtml, unsubscribeUrl });
   const headers = { ...(await unsubscribeHeaders(payload.to)), ...(payload.headers ?? {}) };
 
-  const res = await fetch(`${RESEND_GATEWAY}/emails`, {
+  const res = await fetch(`${RESEND_API}/emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": resendKey,
+      Authorization: `Bearer ${resendKey}`,
     },
     body: JSON.stringify({
       from: payload.from,
@@ -101,12 +99,12 @@ export async function generateEmailCopy(brief: string): Promise<{
   preview_text: string;
   html: string;
 }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
+  const lovableKey = process.env.ANTHROPIC_API_KEY;
+  if (!lovableKey) throw new Error("ANTHROPIC_API_KEY missing");
 
   const sys = `Jesteś copywriterem email marketingu w branży finansowej (pożyczki pod nieruchomość, inwestowanie w wierzytelności). Pisz po polsku, konkretnie, bez clickbaitu. Zwracaj WYŁĄCZNIE JSON: {"subject": "...", "preview_text": "...", "html": "<treść HTML>"}. HTML ma być prosty: <p>, <h2>, <ul>, <a href>, bez stylów inline, bez obrazków. Maks 300 słów. Na końcu dodaj <p style="font-size:12px;color:#888">Otrzymałeś tego maila bo zapisałeś się na newsletter FinanceYou. <a href="{{unsubscribe_url}}">Wypisz się</a>.</p>`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

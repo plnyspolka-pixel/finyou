@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { z } from "zod";
 import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
 import {
@@ -121,7 +122,7 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<WindOcrResult> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return empty("no_key");
 
     const isPdf = data.mimeType === "application/pdf" || /\.pdf$/i.test(data.fileName ?? "");
@@ -138,7 +139,7 @@ export const analyzeWindDocument = createServerFn({ method: "POST" })
 
     let text = "";
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
@@ -249,7 +250,7 @@ export const analyzeWindContract = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<WindContractData> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return emptyWindContract("no_key");
 
     const isPdf = data.mimeType === "application/pdf" || /\.pdf$/i.test(data.fileName ?? "");
@@ -266,7 +267,7 @@ export const analyzeWindContract = createServerFn({ method: "POST" })
 
     let text = "";
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({

@@ -1,26 +1,43 @@
 /**
- * Klient REST Twilio przez bramkę konektora Lovable (tak samo jak wysyłka SMS
- * w `voicebot.functions.ts`): `LOVABLE_API_KEY` + `TWILIO_API_KEY`, ścieżki
- * względem konta (`Messages.json`, `Calls.json`, `Recordings/{sid}.mp3`…).
+ * Klient REST Twilio bezpośrednio (api.twilio.com, Basic auth): `TWILIO_ACCOUNT_SID`
+ * + `TWILIO_AUTH_TOKEN` albo klucz API `TWILIO_API_KEY_SID` / `TWILIO_API_KEY_SECRET`;
+ * ścieżki względem konta (`Messages.json`, `Calls.json`, `Recordings/{sid}.mp3`…).
  *
  * Używany przez narzędzia MCP (`src/lib/mcp/tools/twilio.ts`) i dostępny dla
  * panelu. `twilioRequest` to ogólne wywołanie — każdy zasób REST Twilio jest
  * dostępny bez zmiany kodu.
  */
 
-const GATEWAY = "https://connector-gateway.lovable.dev/twilio/";
+const TWILIO_API = "https://api.twilio.com/2010-04-01/Accounts/";
 const DEFAULT_TIMEOUT_MS = 60_000;
 
-export function hasTwilioKeys(): boolean {
-  return Boolean(process.env.LOVABLE_API_KEY && process.env.TWILIO_API_KEY);
+/** Dane logowania Twilio z env: konto + token albo klucz API (SID + sekret). */
+export function twilioCredentials(): { accountSid: string; user: string; secret: string } | null {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  if (!accountSid) return null;
+  const keySid = process.env.TWILIO_API_KEY_SID;
+  const keySecret = process.env.TWILIO_API_KEY_SECRET;
+  if (keySid && keySecret) return { accountSid, user: keySid, secret: keySecret };
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (token) return { accountSid, user: accountSid, secret: token };
+  return null;
 }
 
-function keys(): { lovable: string; twilio: string } {
-  const lovable = process.env.LOVABLE_API_KEY;
-  const twilio = process.env.TWILIO_API_KEY;
-  if (!lovable) throw new Error("Brak LOVABLE_API_KEY w środowisku serwera.");
-  if (!twilio) throw new Error("Twilio nie jest podłączone (brak TWILIO_API_KEY).");
-  return { lovable, twilio };
+export function hasTwilioKeys(): boolean {
+  return twilioCredentials() !== null;
+}
+
+/** Bazowy adres zasobów konta i nagłówek Basic auth. */
+export function twilioAuth(): { base: string; headers: Record<string, string> } {
+  const c = twilioCredentials();
+  if (!c)
+    throw new Error(
+      "Twilio nie jest podłączone (brak TWILIO_ACCOUNT_SID i TWILIO_AUTH_TOKEN albo klucza API).",
+    );
+  return {
+    base: `${TWILIO_API}${c.accountSid}/`,
+    headers: { Authorization: `Basic ${btoa(`${c.user}:${c.secret}`)}` },
+  };
 }
 
 export type TwilioResponse = {
@@ -52,16 +69,13 @@ export async function twilioRequest(
   if (!/^[A-Za-z0-9/._-]+$/.test(clean) || clean.includes("..")) {
     throw new Error("Nieprawidłowa ścieżka zasobu Twilio.");
   }
-  const { lovable, twilio } = keys();
-  const url = new URL(GATEWAY + clean);
+  const auth = twilioAuth();
+  const url = new URL(auth.base + clean);
   for (const [k, v] of Object.entries(opts.query ?? {})) {
     if (v === undefined || v === null || v === "") continue;
     url.searchParams.set(k, String(v));
   }
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${lovable}`,
-    "X-Connection-Api-Key": twilio,
-  };
+  const headers: Record<string, string> = { ...auth.headers };
   let body: BodyInit | undefined;
   if (opts.form) {
     headers["Content-Type"] = "application/x-www-form-urlencoded";

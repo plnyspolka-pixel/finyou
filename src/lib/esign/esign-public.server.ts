@@ -523,7 +523,7 @@ export async function requestSigningOtpImpl(data: z.infer<typeof requestSigningO
   }
   const { hasTwilioKeys } = await import("@/lib/twilio-api.server");
   const smsPossible =
-    Boolean(signer.phone) && hasTwilioKeys() && Boolean(process.env.LOVABLE_API_KEY);
+    Boolean(signer.phone) && hasTwilioKeys();
   let channel: "sms" | "email" = data.channel ?? (smsPossible ? "sms" : "email");
   if (channel === "sms" && !smsPossible) channel = "email";
 

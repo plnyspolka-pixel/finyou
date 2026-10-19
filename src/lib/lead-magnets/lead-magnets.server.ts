@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Lead magnety — logika serwerowa: zapis e-maila (subskrybent + osobisty
 // link), mail z plikiem, podpisany link do pobrania, odpowiedzi na komentarze
 // pod postami (Facebook / Instagram przez webhook, YouTube przez tick).
@@ -1009,8 +1010,8 @@ export async function generateLeadMagnetContent(
   brief: string,
   audience: LeadMagnetAudience,
 ): Promise<GeneratedLeadMagnetCopy> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
+  const lovableKey = process.env.ANTHROPIC_API_KEY;
+  if (!lovableKey) throw new Error("ANTHROPIC_API_KEY missing");
   const kto =
     audience === "inwestor"
       ? "inwestorzy prywatni lokujący kapitał w pożyczki zabezpieczone hipoteką"
@@ -1027,7 +1028,7 @@ Zwracaj WYŁĄCZNIE JSON:
   "trigger_keywords": ["1-3 krótkie hasła do komentarza, WIELKIMI LITERAMI, np. PRZEWODNIK"],
   "caption": "post na Facebooka/Instagram (do 600 znaków): zachęta, by polubić i napisać hasło w komentarzu"
 }`;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
     body: JSON.stringify({

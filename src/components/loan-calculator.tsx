@@ -247,7 +247,7 @@ export function LoanCalculator({
   // ŹRÓDŁO PRAWDY: Kwota Udzielona (kwota pożyczki z umowy) — od niej liczone są
   // odsetki i raty. Model silnika (fees.ts / loan-schedule.ts):
   //  • prowizja INWESTORA jest rozłożona równo na raty,
-  //  • prowizja Finance You (5 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
+  //  • prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
   //    — inwestor przelewa ją na rachunek FY, resztę klientowi; NIE wchodzi do rat.
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
   const amount = onHand;
@@ -301,7 +301,7 @@ export function LoanCalculator({
     investorGuidance && nbpOverride != null ? maxInterestRate(nbpOverride) : maxCapitalRate();
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You: 5 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
+  // Prowizja Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
   // POTRĄCANA z wypłaty (nie wchodzi do rat).
   const financeYouFeePln = hideFinanceYouFee ? 0 : fyCommission(amount);
   // Kapitał, od którego liczone są odsetki i raty = Kwota Udzielona.

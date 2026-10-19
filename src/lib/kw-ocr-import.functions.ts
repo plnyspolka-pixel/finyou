@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizeKwNumber } from "@/lib/kw-fetch.server";
 import { formatKwNumber } from "@/lib/kw";
 
+import { aiFetch } from "@/lib/ai.server";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 const MAX_TEXT = 200_000;
@@ -98,10 +99,10 @@ export const importKwFromScreenshots = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Brak konfiguracji AI (LOVABLE_API_KEY).");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("Brak konfiguracji AI (ANTHROPIC_API_KEY).");
 
-    const r = await fetch(AI_GATEWAY, {
+    const r = await aiFetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

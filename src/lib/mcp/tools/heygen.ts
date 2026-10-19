@@ -160,7 +160,7 @@ export const heygenStatus = defineTool({
       const out: Record<string, unknown> = {
         api_key_configured: hg.hasHeygenApiKey(),
         elevenlabs_configured: Boolean(process.env.ELEVENLABS_API_KEY),
-        ai_configured: Boolean(process.env.LOVABLE_API_KEY),
+        ai_configured: Boolean(process.env.ANTHROPIC_API_KEY),
         // Własne style napisów (rozmiar, pozycja) — usługa FFmpeg poza HeyGenem.
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()

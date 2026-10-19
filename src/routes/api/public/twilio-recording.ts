@@ -4,18 +4,18 @@
 // zalogowanego przez /api/public/twilio-voice.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { aiFetch } from "@/lib/ai.server";
+import { twilioAuth, twilioCredentials } from "@/lib/twilio-api.server";
 
 async function transcribeAudio(audio: Blob, filename: string): Promise<string | null> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return null;
+  if (!process.env.OPENAI_API_KEY) return null;
   const fd = new FormData();
   fd.append("model", "openai/gpt-4o-transcribe");
   fd.append("file", audio, filename);
   fd.append("language", "pl");
   try {
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+    const r = await aiFetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
       body: fd,
     });
     if (!r.ok) {
@@ -55,19 +55,12 @@ export const Route = createFileRoute("/api/public/twilio-recording")({
         // 1) Pobierz nagranie przez connector gateway Twilio (auth robi gateway).
         let transcript: string | null = null;
         if (recordingSid) {
-          const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-          const TWILIO_API_KEY = process.env.TWILIO_API_KEY;
-          if (LOVABLE_API_KEY && TWILIO_API_KEY) {
+          if (twilioCredentials()) {
             try {
-              const audioResp = await fetch(
-                `https://connector-gateway.lovable.dev/twilio/Recordings/${recordingSid}.mp3`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                    "X-Connection-Api-Key": TWILIO_API_KEY,
-                  },
-                },
-              );
+              const twilio = twilioAuth();
+              const audioResp = await fetch(`${twilio.base}Recordings/${recordingSid}.mp3`, {
+                headers: twilio.headers,
+              });
               if (audioResp.ok) {
                 const buf = await audioResp.arrayBuffer();
                 const blob = new Blob([buf], { type: "audio/mpeg" });

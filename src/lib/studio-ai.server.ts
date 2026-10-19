@@ -8,17 +8,18 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sanitizeOverlayCards, type OverlayCard } from "./caption-style";
 import { MIN_SCENES_FOR_BROLL, type SceneDecision } from "./studio-scenes";
 
+import { aiFetch } from "@/lib/ai.server";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const STORAGE_BUCKET = "studio-media";
 
 function lovableKey(): string {
-  const k = process.env.LOVABLE_API_KEY;
-  if (!k) throw new Error("LOVABLE_API_KEY missing");
+  const k = process.env.ANTHROPIC_API_KEY;
+  if (!k) throw new Error("ANTHROPIC_API_KEY missing");
   return k;
 }
 
 async function chatJson(system: string, user: string): Promise<Record<string, unknown>> {
-  const res = await fetch(GATEWAY, {
+  const res = await aiFetch(GATEWAY, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey()}` },
     body: JSON.stringify({
@@ -204,7 +205,7 @@ export async function generateStudioImage(
   prompt: string,
   userId: string | null,
 ): Promise<{ id: string; image_url: string }> {
-  const res = await fetch(GATEWAY, {
+  const res = await aiFetch(GATEWAY, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey()}` },
     body: JSON.stringify({

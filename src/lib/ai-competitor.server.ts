@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Monitoring konkurencji — logika wyniesiona z ai-competitor.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -46,7 +47,7 @@ async function scrapeUrl(url: string) {
 }
 
 async function aiAnalyzeChange(before: string, after: string, url: string) {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { summary: "Wykryto zmiany (brak AI key).", analysis: {} };
   const prompt = `Jesteś analitykiem konkurencji. Porównaj dwie wersje strony konkurenta i wskaż KLUCZOWE zmiany istotne biznesowo.
 
@@ -66,7 +67,7 @@ Zwróć JSON:
   "key_changes": ["...", "..."],
   "competitive_threat": "..."
 }`;
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
