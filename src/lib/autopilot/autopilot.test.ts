@@ -509,3 +509,35 @@ describe("sekwencje powitalne", () => {
     expect(nextSequenceStep({ ...base, tags: ["lead-magnet"] }, NOW, 3)).toBeNull();
   });
 });
+
+describe("import metryk", () => {
+  it("mapuje insights IG i statystyki YouTube", async () => {
+    const { igMetricRow, insightsMap, ytMetricRow, isoDurationSeconds } =
+      await import("./metrics-import");
+    const ins = insightsMap([
+      { name: "views", values: [{ value: 120 }] },
+      { name: "reach", total_value: { value: 90 } },
+      { name: "saved", values: [{ value: 3 }] },
+    ]);
+    const ig = igMetricRow(
+      { id: "1", timestamp: "2026-10-01T10:00:00Z", like_count: 4, comments_count: 1 },
+      ins,
+    );
+    expect(ig).toMatchObject({
+      platform: "instagram_reels",
+      views: 120,
+      reach: 90,
+      saves: 3,
+      likes: 4,
+      comments: 1,
+    });
+    const yt = ytMetricRow({
+      id: "v",
+      statistics: { viewCount: "55", likeCount: "2" },
+      contentDetails: { duration: "PT45S" },
+    });
+    expect(yt).toMatchObject({ views: 55, likes: 2, comments: null, duration_s: 45 });
+    expect(isoDurationSeconds("PT1M5S")).toBe(65);
+    expect(isoDurationSeconds("bad")).toBeNull();
+  });
+});

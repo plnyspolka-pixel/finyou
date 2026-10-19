@@ -22,6 +22,11 @@ async function runTick(force?: string | null): Promise<Response> {
       }).format(now),
     );
     const reports: Record<string, unknown> = {};
+    // Import metryk publikacji raz na dobę (tylko odczyt z platform).
+    if (hour === 5 || force === "metrics") {
+      const { importPublicationMetrics } = await import("@/lib/autopilot/metrics-import.server");
+      reports.metrics = await importPublicationMetrics();
+    }
     // Sekwencje powitalne – tylko w ciągu dnia (8–20), tylko full_autopilot.
     if (hour >= 8 && hour <= 20) {
       const { runWelcomeSequences } = await import("@/lib/autopilot/sequences.server");
@@ -65,7 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/autopilot-tick")({
         const url = new URL(request.url);
         if (url.searchParams.get("run") !== "1") {
           return new Response(
-            JSON.stringify({ ok: true, hint: "POST or GET ?run=1[&report=daily|weekly]" }),
+            JSON.stringify({ ok: true, hint: "POST or GET ?run=1[&report=daily|weekly|metrics]" }),
             {
               status: 200,
               headers: { "Content-Type": "application/json" },
