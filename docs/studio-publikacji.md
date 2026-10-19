@@ -198,6 +198,38 @@ platformę wideo przechodzi przez kompresję do wspólnego profilu publikacji
 ≤ 3 min, X ≤ 2:20 na koncie bez Premium, TikTok wg `max_video_post_duration_sec`
 z `get_tiktok_creator_info`) — kompresja nie tnie treści.
 
+## Bramka agenta publikującego (compliance) przed każdą publikacją
+
+Od 19.10.2026 każdy publikator (Meta: post / FB Reels / IG Reels, TikTok, X,
+YouTube) po przejęciu wpisu, a przed pierwszym wywołaniem platformy, woła
+`guardQueuePublication` (`src/lib/publishing-agent/publish-guard.server.ts`).
+Obejmuje to panel, MCP, „Publikuj” przy materiale i auto-publikację — nie ma
+ścieżki ominięcia.
+
+- **Reguły twarde** (`src/lib/publishing-agent/compliance-rules.ts`, wersja
+  `COMPLIANCE_RULES_VERSION`): gwarancje, „bez ryzyka”, pewny/stabilny zysk,
+  stopy zwrotu, „podwój”, superlatywy, zamknięte grupy w wideo, instytucje jako
+  rekomendacja, ceny w wideo, dane identyfikujące; tor pożyczkobiorcy: cele
+  konsumenckie, „bez BIK / dla każdego”, presja czasu, koszt jako hasło; tor
+  inwestora: gwarancja odkupu, „drukarka pieniędzy” bez ryzyka, „sam
+  inwestuję”. Naruszenie → wpis `failed` z powodem po polsku, bez ponowień
+  („Popraw treść i kliknij Ponów”).
+- **Elementy obowiązkowe** dopisywane do opisu materiałów AI / wideo:
+  oznaczenie AI, „Finance You sp. z o.o., KRS 0000635207”, linia ryzyka toru.
+  TikTok (podpis = sam tytuł) dostaje flagę `is_aigc`, YouTube
+  `status.containsSyntheticMedia`.
+- **Wyłączone platformy** (`publishing_agent_settings.disabled_platforms`,
+  domyślnie `x`): tick X nic nie wysyła, „Publikuj teraz” zwraca powód.
+- **Pauza agenta** (wyłącznik / automatyczna pauza) wstrzymuje wpisy z
+  `origin = 'agent'`; wpisy ludzi idą normalnie.
+- Każda decyzja ląduje w `ai_compliance_checks` (wersja reguł, naruszenia,
+  dopisane elementy, finalny tekst).
+
+**Zawieszone wpisy Meta** (`publishing` po awarii workera): IG bez kontenera
+wraca do kolejki po 30 min (do Meta nic nie poszło); FB post / FB Reel po 6 h
+dostaje `failed` z prośbą o sprawdzenie strony i „Ponów” — bez automatycznego
+ponowienia, żeby nie zdublować posta (`reclaimStalledMetaItems`).
+
 ## Kompresja wideo przed publikacją (`video_renditions`)
 
 **Problem.** Każda platforma ma inne limity i wymagania, a do tego nasze
