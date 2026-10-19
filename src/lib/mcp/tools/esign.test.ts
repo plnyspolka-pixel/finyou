@@ -23,6 +23,7 @@ describe("narzędzia e-podpisu w MCP", () => {
     const names = esignTools.map((t: any) => t.name);
     expect(names).toEqual([
       "create_esign_envelope",
+      "preview_esign_document",
       "send_esign_envelope",
       "list_esign_envelopes",
       "get_esign_envelope",
@@ -41,7 +42,7 @@ describe("narzędzia e-podpisu w MCP", () => {
       signers: [{ kind: "ja" }],
     });
     expect(r.isError).toBe(true);
-    expect(r.content[0].text).toContain("Wgraj plik PDF albo wskaż wygenerowaną umowę.");
+    expect(r.content[0].text).toContain("dokładnie jedno źródło");
   });
 
   it("niezalogowany użytkownik nie utworzy koperty", async () => {

@@ -48,6 +48,9 @@ export interface PdfZBlokowOpts extends Omit<PdfZTekstuOpts, "contentText" | "fo
   bloki: Blok[];
   /** Domyślnie Liberation Serif (metryka Times New Roman — jak w .docx). */
   fonts?: FontyPdf;
+  /** Opt-in for Markdown documents; existing DOCX paths stay unchanged. */
+  pageBreakBefore?: number[];
+  documentHeader?: string;
 }
 
 /** Nazwa załącznika PDF z nazwy pliku .docx (`x.docx` → `x.pdf`). */
@@ -453,6 +456,8 @@ interface BudujOpts extends Omit<PdfZTekstuOpts, "contentText" | "fonts"> {
   bloki: Blok[];
   fonts: FontyPdf;
   umowa: boolean;
+  pageBreakBefore?: number[];
+  documentHeader?: string;
 }
 
 async function budujPdf(opts: BudujOpts): Promise<PDFDocument> {
@@ -476,7 +481,10 @@ async function budujPdf(opts: BudujOpts): Promise<PDFDocument> {
     umowa: opts.umowa,
   };
 
-  for (const blok of opts.bloki) rysujBlok(ctx, blok);
+  for (const [index, blok] of opts.bloki.entries()) {
+    if (opts.pageBreakBefore?.includes(index)) nowaStrona(ctx);
+    rysujBlok(ctx, blok);
+  }
 
   if (opts.sha256) {
     const id = [
@@ -490,6 +498,13 @@ async function budujPdf(opts: BudujOpts): Promise<PDFDocument> {
   }
 
   rysujStopki(ctx, opts.title, opts.version);
+  if (opts.documentHeader) {
+    const header = oczysc(opts.documentHeader, obslugiwane);
+    const size = Math.min(9, TEXT_W / Math.max(1, regular.widthOfTextAtSize(header, 1)));
+    for (const page of doc.getPages()) {
+      page.drawText(header, { x: MARGIN.left, y: A4.h - 36, font: regular, size, color: GRAY });
+    }
+  }
 
   const date = opts.date ?? new Date();
   doc.setTitle(opts.title);

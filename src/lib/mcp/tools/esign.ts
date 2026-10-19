@@ -6,6 +6,8 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { actorId, DESTRUCTIVE, handle, ok, requireUser, SENDS, userClient } from "../_helpers";
 import type { AuthCtx } from "@/lib/esign/esign.server";
+import { documentMarkdownSchema, documentHeaderSchema } from "@/lib/esign/esign-markdown";
+import previewEsignDocument from "./preview-esign-document";
 
 /** Kontekst nadawcy jak w server functions panelu: klient z tokenem użytkownika + id + claims. */
 function esignCtx(ctx: ToolContext): AuthCtx {
@@ -45,7 +47,7 @@ export const createEsignEnvelope = defineTool({
   name: "create_esign_envelope",
   title: "Create e-signature envelope",
   description:
-    "Tworzy kopertę podpisu dokumentowego (e-podpis Finance You) z wygenerowanej umowy (`generated_document_id` z `generate_contract_docx` / `list_generated_documents`; DOCX zamieniany na PDF) albo z wgranego PDF (`file_base64`). Podpisujący: `ja` (Ty), `klient` (klient pożyczkowy z systemu — dane i e-mail z karty klienta), `inwestor`, `zewnetrzny`. Każdy podpisujący przechodzi weryfikację tożsamości (Didit) i kod jednorazowy. Domyślnie zapisuje SZKIC (`send_now=false`) — pokaż użytkownikowi tytuł, dokument i listę podpisujących, a po potwierdzeniu wyślij `send_esign_envelope` albo od razu `send_now=true`. Zwraca id koperty, kod i link weryfikacji oraz adresy, na które poszły zaproszenia.",
+    "Tworzy kopertę e-podpisu z dokładnie jednego źródła: generated_document_id XOR file_base64 XOR document_markdown (maks. 200 000 znaków, PDF A4). Markdown i opcjonalny document_header na każdej stronie są dostępne tylko administratorowi. Obsługuje nagłówki, bold/italic, listy, tabele, ->tytuł<- i \\pagebreak. Przed utworzeniem można użyć preview_esign_document. Podpisujący: ja, klient, inwestor, zewnetrzny. Zachowuje standardową weryfikację tożsamości i kod podpisu. Domyślnie SZKIC (send_now=false); wysyłka tylko po zgodzie przez send_esign_envelope lub send_now=true. Zwraca id, kod weryfikacji i adresy zaproszeń.",
   inputSchema: {
     title: z.string().trim().min(3).max(200),
     message: z
@@ -61,6 +63,8 @@ export const createEsignEnvelope = defineTool({
       .describe("Wygenerowana umowa (generated_documents.id)."),
     file_name: z.string().trim().min(1).max(200).optional(),
     file_base64: z.string().min(16).optional().describe("PDF w base64 (zamiast umowy z rejestru)."),
+    document_markdown: documentMarkdownSchema.optional().describe("Treść dokumentu Markdown, do 200 000 znaków; alternatywa dla pliku i generated_document_id. Tylko administrator."),
+    document_header: documentHeaderSchema.optional().describe("Krótki nagłówek każdej strony PDF, tylko z document_markdown."),
     client_id: z.string().uuid().optional(),
     loan_application_id: z.string().uuid().optional(),
     signing_mode: z
@@ -84,6 +88,8 @@ export const createEsignEnvelope = defineTool({
         fileName: args.file_name ?? null,
         fileBase64: args.file_base64 ?? null,
         generatedDocumentId: args.generated_document_id ?? null,
+        documentMarkdown: args.document_markdown ?? null,
+        documentHeader: args.document_header ?? null,
         clientId: args.client_id ?? null,
         loanApplicationId: args.loan_application_id ?? null,
         context: { zrodlo: "mcp" },
@@ -228,6 +234,7 @@ export const cancelEsignEnvelope = defineTool({
 
 export const esignTools = [
   createEsignEnvelope,
+  previewEsignDocument,
   sendEsignEnvelope,
   listEsignEnvelopes,
   getEsignEnvelope,
