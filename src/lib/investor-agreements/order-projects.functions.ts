@@ -221,7 +221,8 @@ function appFitsOrder(order: any, app: any): boolean {
   return new Date(freshAt).getTime() >= projectWindowStart(order).getTime();
 }
 
-/** Zdjęcia i pliki klienta — podpisane po stronie serwera (bucket prywatny). */
+/** Zdjęcia i pliki klienta — podpisane po stronie serwera (bucket prywatny).
+ *  Bez plików sprzed migracji na wspólny bucket (nie dają się pobrać). */
 async function loadProjectFiles(
   db: any,
   appId: string,
@@ -232,10 +233,13 @@ async function loadProjectFiles(
     .select("file_path, file_url, file_name")
     .eq("loan_application_id", appId)
     .order("created_at", { ascending: true });
-  const { collectClientFileRefs, isShowablePropertyPhoto, IMAGE_EXT } =
+  const { collectClientFileRefs, dropLegacyClientFiles, isShowablePropertyPhoto, IMAGE_EXT } =
     await import("@/lib/property-photos");
   const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
-  const refs = collectClientFileRefs(photoPaths ?? null, docRows ?? []);
+  const refs = await dropLegacyClientFiles(
+    db,
+    collectClientFileRefs(photoPaths ?? null, docRows ?? []),
+  );
 
   const urlByPath = new Map<string, string>();
   let unsigned = refs.map((f) => f.src).filter((s) => !/^https?:\/\//i.test(s));
