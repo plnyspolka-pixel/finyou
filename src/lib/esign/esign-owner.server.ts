@@ -682,6 +682,27 @@ export async function createEnvelopeImpl(
     loanApplicationId = loanApplicationId ?? src.loanApplicationId;
   } else if (data.fileBase64) {
     bytes = base64ToBytes(data.fileBase64);
+  } else if (data.documentBlocks?.length) {
+    // Treść w blokach → PDF tym samym rendererem co umowy z .docx. SHA-256
+    // w stopce liczony z kanonicznego JSON bloków (powtarzalny identyfikator treści).
+    const { pdfZBlokow } = await import("@/lib/legal/pdf-z-tekstu");
+    bytes = await pdfZBlokow({
+      bloki: data.documentBlocks as any,
+      title: data.title,
+      version: "do podpisu",
+      sha256: await sha256Hex(JSON.stringify(data.documentBlocks)),
+    });
+    if (!data.fileName) {
+      const slug = data.title
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/ł/g, "l")
+        .replace(/Ł/g, "L")
+        .replace(/[^A-Za-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 120);
+      fileName = `${slug || "dokument"}.pdf`;
+    }
   } else {
     throw new Error("Wgraj plik PDF albo wskaż wygenerowaną umowę.");
   }

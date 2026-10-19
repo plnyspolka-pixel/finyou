@@ -3,6 +3,52 @@
 import { z } from "zod";
 import { TOKEN_TTL_DAYS } from "./esign-core";
 
+// Bloki treści dokumentu — ten sam model co `Blok` w silniku umów
+// (src/lib/contract-engine/umowa-docx.ts), renderowany przez `pdfZBlokow`.
+const RunSchema = z.object({
+  tekst: z.string().max(20000),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+});
+const KomorkaSchema = z.object({
+  tekst: z.union([z.string().max(5000), z.array(RunSchema).max(50)]),
+  bold: z.boolean().optional(),
+  align: z.enum(["left", "center", "right"]).optional(),
+});
+export const BlokSchema = z.discriminatedUnion("t", [
+  z.object({ t: z.literal("tytul"), tekst: z.string().max(300), nowaStrona: z.boolean().optional() }),
+  z.object({ t: z.literal("podtytul"), tekst: z.string().max(1000) }),
+  z.object({ t: z.literal("naglowek"), tekst: z.string().max(300) }),
+  z.object({
+    t: z.literal("akapit"),
+    runs: z.array(RunSchema).min(1).max(100),
+    wciecie: z.enum(["ustep", "podpunkt", "lista"]).optional(),
+    etykieta: z.string().max(20).optional(),
+    align: z.enum(["both", "left", "center"]).optional(),
+  }),
+  z.object({
+    t: z.literal("tabela"),
+    szerokosci: z.array(z.number().positive()).min(1).max(12),
+    wiersze: z
+      .array(z.object({ komorki: z.array(KomorkaSchema).min(1).max(12), naglowek: z.boolean().optional() }))
+      .min(1)
+      .max(200),
+  }),
+  z.object({
+    t: z.literal("podpisy"),
+    osoby: z
+      .array(
+        z.object({
+          rola: z.string().max(120),
+          nazwa: z.string().max(300).optional(),
+          wImieniu: z.array(z.string().max(160)).max(5).optional(),
+        }),
+      )
+      .min(1)
+      .max(6),
+  }),
+]);
+
 export const CompanySchema = z.object({
   name: z.string().trim().min(2).max(300),
   nip: z.string().trim().max(20).optional().nullable(),
@@ -40,6 +86,11 @@ export const CreateInput = z
     fileBase64: z.string().min(16).optional().nullable(),
     /** Źródło B: wygenerowana umowa (generated_documents.id; PDF albo DOCX → PDF). */
     generatedDocumentId: z.string().uuid().optional().nullable(),
+    /**
+     * Źródło C: treść dokumentu jako bloki (model jak w silniku umów) — PDF
+     * składany po stronie serwera tym samym rendererem co umowy z .docx.
+     */
+    documentBlocks: z.array(BlokSchema).min(1).max(800).optional().nullable(),
     /** Powiązania koperty z klientem pożyczkowym i wnioskiem. */
     clientId: z.string().uuid().optional().nullable(),
     loanApplicationId: z.string().uuid().optional().nullable(),
@@ -47,9 +98,16 @@ export const CreateInput = z
     signers: z.array(SignerInput).min(1).max(10),
     sendNow: z.boolean().default(true),
   })
-  .refine((v) => Boolean(v.fileBase64) || Boolean(v.generatedDocumentId), {
-    message: "Wgraj plik PDF albo wskaż wygenerowaną umowę.",
-  });
+  .refine(
+    (v) => Boolean(v.fileBase64) || Boolean(v.generatedDocumentId) || Boolean(v.documentBlocks?.length),
+    { message: "Wgraj plik PDF albo wskaż wygenerowaną umowę." },
+  )
+  .refine(
+    (v) =>
+      [Boolean(v.fileBase64), Boolean(v.generatedDocumentId), Boolean(v.documentBlocks?.length)].filter(Boolean)
+        .length <= 1,
+    { message: "Podaj dokładnie jedno źródło dokumentu: plik PDF, wygenerowaną umowę albo bloki treści." },
+  );
 
 export type CreateEnvelopeInput = z.infer<typeof CreateInput>;
 
