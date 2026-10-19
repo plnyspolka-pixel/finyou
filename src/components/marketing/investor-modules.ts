@@ -87,9 +87,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "inwestora",
     menuLabel: "Szkolenie inwestora",
     tagline: "7 modułów: od strategii i prawa po analizę, umowę i windykację",
-    image: "/marketing/akademia/modul-1.png",
+    image: "/marketing/moduly/szkolenie-1.webp",
+    slides: ["/marketing/moduly/szkolenie-2.webp", "/marketing/moduly/szkolenie-3.webp"],
     imageAlt:
-      "Szkolenie inwestora — program siedmiu modułów o pożyczkach zabezpieczonych na nieruchomościach",
+      "Szkolenie inwestora — inwestor przy biurku ogląda lekcję wideo, obok program siedmiu modułów",
     metaTitle: "Szkolenie inwestora — pożyczki zabezpieczone hipoteką od podstaw | Finance You",
     metaDescription:
       "Szkolenie w 7 modułach: strategia, prawo, operacje, analiza nieruchomości i klienta, case study i windykacja. Uczysz się na narzędziach, z których korzystasz.",
@@ -178,9 +179,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "AI",
     menuLabel: "Analityk AI",
     tagline: "Ocena ryzyka A–E i wycena w ok. 15 minut",
-    image: "/marketing/moduly/analityk-ai.webp",
+    image: "/marketing/moduly/analityk-ai-1.webp",
+    slides: ["/marketing/moduly/analityk-ai-2.webp", "/marketing/moduly/analityk-ai-3.webp"],
     imageAlt:
-      "Analityk AI — karty analizy nieruchomości: LTV, wartość rynkowa i ocena ryzyka na ekranie laptopa",
+      "Analityk — ocena ryzyka A–E i wycena nieruchomości na tablecie inwestora",
     metaTitle: "Analityk AI — analiza zabezpieczenia i ryzyka dla inwestora | Finance You",
     metaDescription:
       "Ocena ryzyka i wycena w ok. 15 minut: ponad 400 punktów danych, księga wieczysta, LTV, płynność, klasa A–E i raport PDF. Poznaj Analityka AI.",
@@ -283,9 +285,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "AI",
     menuLabel: "Kancelaria AI",
     tagline: "Umowa pożyczki i 30 wzorów — od aneksu po wniosek do komornika",
-    image: "/marketing/moduly/kancelaria-ai.webp",
+    image: "/marketing/moduly/kancelaria-ai-1.webp",
+    slides: ["/marketing/moduly/kancelaria-ai-2.webp", "/marketing/moduly/kancelaria-ai-3.webp"],
     imageAlt:
-      "Kancelaria AI — umowa, wezwanie i inne dokumenty generowane na ekranie laptopa obok wagi Temidy",
+      "Kancelaria — umowa pożyczki i wzory dokumentów na biurku z wagą Temidy",
     metaTitle: "Kancelaria AI — 30 wzorów dokumentów i umowa pożyczki dla inwestora | Finance You",
     metaDescription:
       "Umowa pożyczki z biblioteki klauzul i 30 wzorów — od aneksu i wezwania po wniosek do komornika — z danymi z GUS i KRS oraz e-podpisem. Poznaj Kancelarię AI.",
@@ -362,9 +365,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "AML/compliance",
     menuLabel: "Moduł AML/compliance",
     tagline: "Obowiązki AML w jednym miejscu — od weryfikacji klienta po GIIF",
-    image: "/marketing/moduly/aml-compliance.webp",
+    image: "/marketing/moduly/aml-compliance-1.webp",
+    slides: ["/marketing/moduly/aml-compliance-2.webp", "/marketing/moduly/aml-compliance-3.webp"],
     imageAlt:
-      "Moduł AML/compliance — tarcza ze znakiem zatwierdzenia, lista kontrolna oraz ekrany KYC i list sankcyjnych PEP",
+      "Moduł AML — weryfikacja klienta: KYC, listy sankcyjne i PEP",
     metaTitle: "Moduł AML/compliance — GIIF, sankcje i rejestr ponadprogowy | Finance You",
     metaDescription:
       "Wsparcie raportowania do GIIF, screening list sankcyjnych i PEP oraz rejestr transakcji powyżej 15 000 EUR — w jednym miejscu. Poznaj moduł AML/compliance.",
@@ -457,9 +461,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "AI",
     menuLabel: "Windykator AI",
     tagline: "Od pierwszego upomnienia aż na biurko komornika — jednym kliknięciem",
-    image: "/marketing/moduly/windykator-ai.webp",
+    image: "/marketing/moduly/windykator-ai-1.webp",
+    slides: ["/marketing/moduly/windykator-ai-2.webp", "/marketing/moduly/windykator-ai-3.webp"],
     imageAlt:
-      "Windykator AI — robot AI z wezwaniem do zapłaty, kalendarzem terminów i segregatorami spraw windykacyjnych",
+      "Windykator — etapy windykacji od upomnienia po egzekucję",
     metaTitle: "Windykator AI — windykacja pożyczek jednym kliknięciem dla inwestora | Finance You",
     metaDescription:
       "Wszystkie procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Poznaj Windykatora AI.",
@@ -554,9 +559,10 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     nameAccent: "sieć sprzedaży",
     menuLabel: "BONUS: ogólnopolska sieć sprzedaży",
     tagline: "Projekty z całej Polski dopasowane do Twojej kwoty",
-    image: "/marketing/moduly/siec-sprzedazy.webp",
+    image: "/marketing/moduly/siec-sprzedazy-1.webp",
+    slides: ["/marketing/moduly/siec-sprzedazy-2.webp", "/marketing/moduly/siec-sprzedazy-3.webp"],
     imageAlt:
-      "Ogólnopolska sieć sprzedaży — mapa Polski z połączonymi punktami partnerów, dom, klucze i uścisk dłoni",
+      "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",
     metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
     metaDescription:
       "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty z całej Polski dopasowane do Twojego Zlecenia — bez opłat za Projekt.",
