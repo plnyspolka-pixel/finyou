@@ -86,17 +86,30 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
     const baseName = (p: string) =>
       decodeURIComponent(p.split("/").pop() ?? p).split("?")[0] || "plik";
 
+    // Pliki sprzed migracji na wspólny bucket nie dają się pobrać (404) — nie
+    // wysyłamy ich inwestorom, tak jak nie pokazujemy ich w Panelu inwestora.
+    const { dropLegacyClientFiles } = await import("@/lib/property-photos");
+    const docRefs = await dropLegacyClientFiles(
+      supabaseAdmin,
+      (docs ?? []).flatMap((d: any) => {
+        const src = d.file_path ?? d.file_url;
+        if (!src) return [];
+        return [
+          { src: String(src), name: d.file_name ?? d.document_type ?? baseName(String(src)) },
+        ];
+      }),
+    );
+    const photoRefs = await dropLegacyClientFiles(
+      supabaseAdmin,
+      photos.map((u) => ({ src: u, name: baseName(u) })),
+    );
+
     const attachments: Array<{ name: string; path?: string | null; url?: string | null }> = [];
-    for (const d of docs ?? []) {
-      const src = (d as any).file_path ?? (d as any).file_url;
-      if (!src) continue;
-      const name = (d as any).file_name ?? (d as any).document_type ?? baseName(String(src));
-      attachments.push(
-        isHttp(String(src)) ? { name, url: String(src) } : { name, path: String(src) },
-      );
+    for (const { src, name } of docRefs) {
+      attachments.push(isHttp(src) ? { name, url: src } : { name, path: src });
     }
-    const photoAttachments = photos.map((u) =>
-      isHttp(u) ? { name: baseName(u), url: u } : { name: baseName(u), path: u },
+    const photoAttachments = photoRefs.map(({ src, name }) =>
+      isHttp(src) ? { name, url: src } : { name, path: src },
     );
     const docsAttachedCount = attachments.length;
     attachments.push(...photoAttachments);
