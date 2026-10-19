@@ -543,6 +543,13 @@ Właściciel: „zgoda na wszystko”, priorytet: nieprzerwane działanie aplika
   `didit-webhook` wdrożona (czeka na sekret), granty RPC utwardzone (migracja 20261010130000
   zastosowana i wpisana do historii), produkcja Lovable też załatana tymi samymi `revoke`.
 
+- **Build**: `bun run build` (Vite 7 + TanStack Start + Nitro/Cloudflare) przechodzi; paczka gotowa do
+  `wrangler deploy` po wpisaniu sekretów i tokenu Cloudflare.
+- **Historia migracji w nowej bazie**: archiwum `_mig.lovable_schema_migrations` (233 wiersze) i 304
+  wersje z repo wpisane (`on conflict` — razem 514); do zrobienia przez Management API albo panel SQL:
+  `delete from supabase_migrations.schema_migrations where version not in (…)` z
+  `baseline-historii.sql` (208 wierszy Lovable) oraz 4 `DROP FUNCTION` z `20261010120100`.
+
 **Nadal po stronie właściciela / wymaga dostępu do paneli:** sekrety (lista wyżej), token
 Management API Supabase (klucz service_role, Auth: SMTP/redirecty/Google, sekrety funkcji, DROP-y i
 baseline historii), Cloudflare (wdrożenie Workera, DNS), kopia Storage.
