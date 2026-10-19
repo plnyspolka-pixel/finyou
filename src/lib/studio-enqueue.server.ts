@@ -64,6 +64,14 @@ export async function enqueuePublication(
   if (data.platforms.includes("facebook_post") && !message && !imageUrl && !videoUrl) {
     throw new Error("Post na Facebooku wymaga treści lub mediów.");
   }
+  if (data.platforms.includes("x")) {
+    const { isXPublishingEnabled } = await import("./x.server");
+    if (!isXPublishingEnabled()) {
+      throw new Error(
+        "Kanał X jest wyłączony do czasu decyzji o kredytach API (X_PUBLISHING_ENABLED). Wybierz inne platformy.",
+      );
+    }
+  }
   // X wymaga tekstu zawsze — sam materiał bez treści to na X pusty post.
   if (data.platforms.includes("x") && !message && !title) {
     throw new Error("Post na X wymaga treści (lub tytułu, który ją zastąpi).");

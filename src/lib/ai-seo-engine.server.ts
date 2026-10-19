@@ -1,6 +1,7 @@
 // AI SEO (plan tematów, artykuły z AI) — logika wyniesiona z ai-seo.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { currentDateContextPl, fixStaleYearInTitle } from "@/lib/autopilot/date-context";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
 import {
@@ -33,7 +34,8 @@ async function callAI(apiKey: string, model: string, system: string, user: strin
   const body: any = {
     model,
     messages: [
-      { role: "system", content: system },
+      // Bez daty model brał rok z danych treningowych (tytuły „… 2024”).
+      { role: "system", content: `${currentDateContextPl()}\n${system}` },
       { role: "user", content: user },
     ],
   };
@@ -116,7 +118,7 @@ export async function planSeoTopics(
   );
   const args = JSON.parse(json.choices[0].message.tool_calls[0].function.arguments);
   const rows = args.topics.map((t: any) => ({
-    title: t.title,
+    title: fixStaleYearInTitle(String(t.title ?? "")).text,
     primary_keyword: t.primary_keyword,
     secondary_keywords: t.secondary_keywords ?? [],
     search_intent: t.search_intent,
@@ -230,8 +232,8 @@ Dodatkowe notatki: ${topic.notes ?? "brak"}`,
     .insert({
       topic_id: topic.id,
       slug,
-      title: a.title,
-      meta_title: a.meta_title,
+      title: fixStaleYearInTitle(String(a.title ?? "")).text,
+      meta_title: fixStaleYearInTitle(String(a.meta_title ?? "")).text,
       meta_description: a.meta_description,
       excerpt: a.excerpt,
       content_md: a.content_md,

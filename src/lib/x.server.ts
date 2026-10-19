@@ -757,6 +757,11 @@ export async function processXQueueItem(id: string): Promise<{
       return { ok: true, preparing: true };
     }
     const msg = err instanceof Error ? err.message : String(err);
+    // HTTP 402 = brak kredytów API X – ponawianie nic nie da, a mieli limity.
+    if (isXCreditsError(msg)) {
+      await markFailed(item, `${X_CREDITS_MESSAGE} (${msg})`, { noRetry: true });
+      return { ok: false, error: X_CREDITS_MESSAGE };
+    }
     await markFailed(item, msg);
     return { ok: false, error: msg };
   }
@@ -885,6 +890,21 @@ async function processProcessingItems(): Promise<{ published: number; errors: st
  * YouTube/FB/IG/TikTok). Najpierw odświeżenie tokena, potem domknięcie wpisów
  * po uploadzie, na końcu JEDNA nowa publikacja.
  */
+/**
+ * Kanał X jest WYŁĄCZONY, dopóki właściciel nie zdecyduje o kredytach API
+ * (brief p. 8.4). Włączenie: zmienna środowiskowa X_PUBLISHING_ENABLED=true.
+ */
+export function isXPublishingEnabled(): boolean {
+  return (process.env.X_PUBLISHING_ENABLED ?? "").trim().toLowerCase() === "true";
+}
+
+export const X_CREDITS_MESSAGE =
+  "X: brak kredytów API (HTTP 402) – kanał wymaga doładowania planu API; wpis nie będzie ponawiany.";
+
+export function isXCreditsError(msg: string): boolean {
+  return /\(HTTP 402\)|HTTP 402\b/.test(msg);
+}
+
 export async function runXPublishTick(): Promise<{
   ok: boolean;
   processed: number;
@@ -903,6 +923,7 @@ export async function runXPublishTick(): Promise<{
   };
   const { configured } = getXEnv();
   if (!configured) return empty;
+  if (!isXPublishingEnabled()) return empty;
 
   const row = await getIntegrationRow();
   if (!row.refresh_token) return empty;

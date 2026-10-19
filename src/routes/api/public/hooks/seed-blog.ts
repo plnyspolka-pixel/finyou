@@ -3,6 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
+import { currentDateContextPl } from "@/lib/autopilot/date-context";
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const IMAGE_URL = "https://ai.gateway.lovable.dev/v1/images/generations";
@@ -127,7 +128,8 @@ async function seed(count: number) {
   };
   const plan: any = await aiJSON(
     key,
-    "Jesteś strategiem SEO dla Finance You (pożyczki pod zastaw nieruchomości w PL). Tematy realistyczne, polski long-tail, mieszanka intencji info+commercial. Tytuły konkretne, bez clickbaitu.",
+    `${currentDateContextPl()}\n` +
+      "Jesteś strategiem SEO dla Finance You (pożyczki pod zastaw nieruchomości w PL). Tematy realistyczne, polski long-tail, mieszanka intencji info+commercial. Tytuły konkretne, bez clickbaitu.",
     `Zaplanuj ${count} ZRÓŻNICOWANYCH tematów blogowych evergreen wokół: pożyczka pod zastaw mieszkania/domu/działki, pożyczka pozabankowa pod hipotekę, refinansowanie, oddłużenie, zakup nieruchomości pod inwestycję, koszty pożyczki, jak banki/firmy pożyczkowe oceniają zdolność, ryzyka, alternatywy. Różne intencje i różne keywordy.`,
     planTool,
   );
@@ -170,7 +172,7 @@ async function seed(count: number) {
       };
       const a: any = await aiJSON(
         key,
-        `Jesteś senior copywriterem SEO dla Finance You. Po polsku, konkretnie, bez "AI-słów". H2/H3, listy, krótkie akapity. Naturalnie umieść słowo kluczowe (3-6 razy). NIE wymyślaj liczb. Wpleć 1-2 razy CTA "[złóż bezpłatny wniosek](${CTA_URL})". ZGODNOŚĆ Z SERWISEM: Finance You nie gwarantuje finansowania ani zysku — zaznacz, że kalkulacje są orientacyjne, a decyzja należy do finansujących. ZAKAZANE frazy: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka". Linki do serwisu wyłącznie: https://financeyou.pl/dla-klienta, https://financeyou.pl/dla-inwestora, https://financeyou.pl/oferty (nigdy /klient ani /inwestor).`,
+        `${currentDateContextPl()}\nJesteś senior copywriterem SEO dla Finance You. Po polsku, konkretnie, bez "AI-słów". H2/H3, listy, krótkie akapity. Naturalnie umieść słowo kluczowe (3-6 razy). NIE wymyślaj liczb. Wpleć 1-2 razy CTA "[złóż bezpłatny wniosek](${CTA_URL})". ZGODNOŚĆ Z SERWISEM: Finance You nie gwarantuje finansowania ani zysku — zaznacz, że kalkulacje są orientacyjne, a decyzja należy do finansujących. ZAKAZANE frazy: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka". Linki do serwisu wyłącznie: https://financeyou.pl/dla-klienta, https://financeyou.pl/dla-inwestora, https://financeyou.pl/oferty (nigdy /klient ani /inwestor).`,
         `Napisz artykuł SEO.
 Tytuł (H1 punkt wyjścia): ${t.title}
 Słowo kluczowe główne: ${t.primary_keyword}

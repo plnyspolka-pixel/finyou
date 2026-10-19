@@ -317,6 +317,11 @@ async function uploadShort(item: QueueRow): Promise<string> {
       status: {
         privacyStatus: item.privacy_status,
         selfDeclaredMadeForKids: false,
+        // Ujawnienie treści zmienionej/syntetycznej (awatar AI, lektor AI) –
+        // wymóg YouTube i AI Act art. 50. Domyślnie true: kolejka zasilana jest
+        // ze Studia (100% AI); materiał nagrany przez człowieka ma flagę false.
+        containsSyntheticMedia: (item as { contains_synthetic_media?: boolean | null })
+          .contains_synthetic_media !== false,
       },
     }),
   });

@@ -526,6 +526,9 @@ async function uploadVideo(
       // Ujawnienie treści komercyjnej („Your brand" / „Branded content").
       brand_organic_toggle: effective.brandOrganic,
       brand_content_toggle: effective.brandedContent,
+      // Oznaczenie treści wygenerowanej przez AI (TikTok AIGC label).
+      is_aigc:
+        (item as { contains_synthetic_media?: boolean | null }).contains_synthetic_media !== false,
     },
     source_info: {
       source: "FILE_UPLOAD",
