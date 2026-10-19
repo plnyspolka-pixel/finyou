@@ -416,6 +416,13 @@ publikacja Realtime pusta po obu stronach, brak webhooków bazodanowych (`supaba
 i triggerów `pg_net`, brak kolejek pgmq (rozszerzenie jest, kolejek nie ma), Vault w starej bazie
 zawiera tylko `migration_target`, brak hooków Auth (custom access token itp.).
 
+**Stan 19.10.2026:** konektor Supabase nie wykonuje DELETE/DROP bez potwierdzenia w czacie
+(operacje „cancelled”) i nie zapisuje sekretów funkcji z sesji automatycznej, a sesja chmurowa nie ma
+przeglądarki — dlatego punkty 1 (sekrety), 4 (Auth), sprzątanie historii migracji i wdrożenie Workera
+zbiera jeden skrypt **`scripts/migracja/po-tokenach.sh`** (Management API + wrangler), który potrzebuje
+tylko `SUPABASE_PAT`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` w środowisku
+(prompt na założenie tokenów: `docs/migracja/prompt-przegladarka.md`).
+
 **Do zrobienia przed przełączeniem (decyzje/akcje właściciela, wszystko przygotowane):**
 1. **Funkcje Edge** — repo ma 4 (`supabase/functions/`: `didit-webhook`, `rcn-proxy`, `registry-proxy`,
    `tpay-proxy`) — **wszystkie 4 wdrożone w nowym projekcie (19.10.2026, `deploy_edge_function`
