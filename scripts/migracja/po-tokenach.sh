@@ -110,7 +110,8 @@ if run 5; then
     | jq -e '.success and .result.status=="active"' >/dev/null || { echo "token Cloudflare nieaktywny"; exit 1; }
   log "5a. Build + wrangler deploy (adres tymczasowy *.workers.dev)"
   # bez `npm run build`: skrypt w package.json ma składnię POSIX (NODE_OPTIONS=…), której cmd na Windows nie zna
-  [ -d dist ] && [ -z "${REBUILD:-}" ] || NODE_OPTIONS=--max-old-space-size=8192 ./node_modules/.bin/vite build
+  # wynik buildu Nitro: .output/server (wrangler deploy czyta go przez .wrangler/deploy/config.json)
+  [ -f .output/server/index.mjs ] && [ -z "${REBUILD:-}" ] || NODE_OPTIONS=--max-old-space-size=8192 ./node_modules/.bin/vite build
   wrangler deploy 2>&1 | tee "$STATE/deploy.log" | tail -n 15
   WORKER_URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' "$STATE/deploy.log" | head -1 || true)
 
