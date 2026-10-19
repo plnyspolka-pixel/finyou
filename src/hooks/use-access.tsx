@@ -29,7 +29,7 @@ export function useAccessState(audience: AccessAudience) {
     void refresh();
   }, [refresh]);
 
-  // Inwestor: aktywny abonament (Umowa ramowa v7 § 7), dostęp modułowy nadany
+  // Inwestor: aktywny abonament (Umowa ramowa § 7), dostęp modułowy nadany
   // przez zespół albo bypass personelu. Pośrednik: wykupiony pakiet / bypass.
   const hasFullAccess = Boolean(state?.hasPaidAccess || state?.isBypass || state?.hasModuleAccess);
   return { state, loading, refresh, hasFullAccess };

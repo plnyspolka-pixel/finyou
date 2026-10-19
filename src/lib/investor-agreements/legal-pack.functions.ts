@@ -1,8 +1,8 @@
-// Pakiet umów inwestora (FY-LEGAL-2026-09-29: umowa ramowa v7, NDA v6, RODO v5) — Etap U1.
+// Pakiet umów inwestora (FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0) — Etap U1.
 //
 // Sekwencja z pliku 00 paczki prawnika: (1) konto i identyfikacja →
 // (2) informacje przedumowne dla Konsumenta na trwałym nośniku →
-// (3) Umowa ramowa v7 → (4) NDA v6 → (5) Umowa RODO v5 (Moduł A) →
+// (3) Umowa ramowa → (4) NDA → (5) Umowa RODO (Moduł A) →
 // (7) Formularz Zlecenia (Zał. 7). Bez kompletu 1–5 formularz Zlecenia
 // jest nieaktywny. Każda akceptacja: wersja + skrót SHA-256 dokumentu,
 // konto, czas, metoda uwierzytelnienia, treść oświadczeń, IP i urządzenie
@@ -506,7 +506,7 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Bramka: aktywny abonament (Umowa ramowa v7 § 5 i § 7 — Zlecenia
+    // Bramka: aktywny abonament (Umowa ramowa § 5 i § 7 — Zlecenia
     // przyjmujemy w aktywnym Okresie Abonamentowym).
     const { investorHasFullAccess } = await import("@/lib/access/guards.server");
     if (!(await investorHasFullAccess(userId))) {
@@ -522,7 +522,7 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Limit z project_module_settings (§ 5 Umowy ramowej v7): aktywnych Zleceń (złożone + przyjęte) ≤ max_active_assignments.
+    // Limit z project_module_settings (§ 5 Umowy ramowej): aktywnych Zleceń (złożone + przyjęte) ≤ max_active_assignments.
     const limits = orderLimitsFromSettings(await getModuleSettings());
     const { count: activeOrders } = await loose(supabaseAdmin)
       .from("investor_orders")
@@ -721,7 +721,7 @@ export const decideInvestorOrder = createServerFn({ method: "POST" })
     if (order.status !== "zlozone") throw new Error(`Zlecenie ma status ${order.status}`);
 
     if (data.decision === "przyjmij") {
-      // § 5 ust. 1 (v7): nie więcej niż max_active_assignments przyjętych Zleceń naraz.
+      // § 5 ust. 1 : nie więcej niż max_active_assignments przyjętych Zleceń naraz.
       const limits = orderLimitsFromSettings(await getModuleSettings());
       const { count } = await loose(supabaseAdmin)
         .from("investor_orders")

@@ -1,6 +1,6 @@
 # POLITYKA PRYWATNOŚCI SERWISU FINANCE YOU
 
-**wersja 3 — obowiązuje od dnia 19 października 2026 r.**
+**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
 
 ---
 
@@ -451,7 +451,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 1. Finance You może korzystać z narzędzi analitycznych, reklamowych, hostingowych, komunikacyjnych, CRM, formularzy, automatyzacji, systemów mailingowych i innych narzędzi wspierających działanie Serwisu.
 
-2. Narzędzia te mogą przetwarzać dane techniczne, dane o aktywności użytkownika, identyfikatory cookies, adres IP, informacje o urządzeniu, źródle wizyty lub interakcjach z Platformą.
+2. Narzędzia te mogą przetwarzać dane techniczne, dane o aktywności użytkownika, identyfikatory cookies, adres IP, informacje o urządzeniu, źródle wizyty lub interakcjach z Serwisem.
 
 3. Zakres działania poszczególnych narzędzi może zależeć od aktualnej konfiguracji Serwisu oraz zgód udzielonych przez użytkownika.
 
@@ -475,7 +475,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 3. Finance You nie podejmuje wobec użytkownika decyzji opartych wyłącznie na zautomatyzowanym przetwarzaniu, które wywoływałyby wobec niego skutki prawne lub w podobny sposób istotnie na niego wpływały, chyba że użytkownik zostanie o tym wyraźnie poinformowany i zostaną spełnione wymagania wynikające z RODO.
 
-4. Decyzja o udzieleniu finansowania, odmowie finansowania albo zaproponowaniu określonych warunków finansowania nie jest podejmowana automatycznie przez Platformę Finance You. Decyzje te mogą zależeć od indywidualnej analizy sprawy przez Finance You, inwestora, finansującego lub partnera.
+4. Decyzja o udzieleniu finansowania, odmowie finansowania albo zaproponowaniu określonych warunków finansowania nie jest podejmowana automatycznie przez Serwis Finance You. Decyzje te mogą zależeć od indywidualnej analizy sprawy przez Finance You, inwestora, finansującego lub partnera.
 
 5. Narzędzia automatyczne Serwisu, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku (np. kompletność dokumentów, relacja kwoty do wartości zabezpieczenia) albo zaproponować status wniosku, w tym propozycję jego odrzucenia. Propozycja nie wywołuje skutków wobec użytkownika. Decyzję o odrzuceniu wniosku albo odmowie dalszej obsługi zawsze podejmuje człowiek – pracownik Finance You – po weryfikacji propozycji.
 
@@ -630,7 +630,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 3. Jeżeli zmiana Polityki prywatności istotnie wpływa na prawa użytkowników lub sposób przetwarzania danych, Finance You może poinformować użytkowników o zmianie drogą elektroniczną.
 
-4. Polityka prywatności w wersji 3 obowiązuje od dnia 19 października 2026 r.
+4. Polityka prywatności w wersji 1.0 obowiązuje od dnia 19 października 2026 r.
 
 ---
 

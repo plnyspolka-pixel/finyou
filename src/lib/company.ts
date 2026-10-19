@@ -18,11 +18,11 @@ export const COMPANY_DATA = {
   shareCapital: "389 600,00 zł",
   representative: "Filip Bielak – Prezes Zarządu",
   website: "https://financeyou.pl",
-  /** Jedyny publiczny adres e-mail (także w dokumentach od pakietu v7). */
+  /** Jedyny publiczny adres e-mail (także w dokumentach od pakietu 1.0). */
   email: "kontakt@financeyou.pl",
   /** Infolinia i numer botów (Twilio) — strona, stopki, JSON-LD. */
   phone: { display: "+48 732 059 898", e164: "+48732059898" },
-  /** Telefon kontaktowy wpisany w umowach inwestora (pakiet v7). */
+  /** Telefon kontaktowy wpisany w umowach inwestora (pakiet 1.0). */
   phoneContracts: { display: "889 888 700", e164: "+48889888700" },
   /**
    * JEDYNY rachunek Finance You (potwierdzone 2026-09-29): spłaty pożyczek

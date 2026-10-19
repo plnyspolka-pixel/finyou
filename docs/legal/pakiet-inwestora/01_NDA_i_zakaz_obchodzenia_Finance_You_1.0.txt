@@ -2,7 +2,7 @@ PAKIET UMOWNY
 Umowa o zachowaniu poufności i zakazie obchodzenia
 Ochrona danych klientów, nieruchomości, modeli finansowania i relacji handlowych
 Wersja
-FY-LEGAL-2026-09-29.v6 • 29 września 2026 r.
+FY-LEGAL-1.0 • 19 października 2026 r.
 Zakres
 Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
 Forma
@@ -121,7 +121,7 @@ ________________________________________________________________
 Identyfikatory Projektów
 ________________________________________________________________
 Wersja NDA / SHA-256
-FY-LEGAL-2026-09-29.v6 / ____________________________________________________________
+FY-LEGAL-1.0 / ____________________________________________________________
 Data skutku
 ________________________________________________________________
 § A. Oświadczenia przystępującego podmiotu

@@ -2,7 +2,7 @@ PAKIET UMOWNY
 Umowa udostępniania i ochrony danych osobowych oraz warunkowego powierzenia przetwarzania
 Moduł A: odrębni administratorzy • Moduł B: procesor wyłącznie na udokumentowane polecenie
 Wersja
-FY-LEGAL-2026-09-29.v5 • 29 września 2026 r.
+FY-LEGAL-1.0 • 19 października 2026 r.
 Zakres
 Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
 Forma
@@ -70,7 +70,7 @@ Finance You przed ujawnieniem usuwa lub maskuje dane niezwiązane z Projektem, w
 MODUŁ A — UDOSTĘPNIENIE MIĘDZY ODRĘBNYMI ADMINISTRATORAMI
 Reguła.  Ten Moduł stosuje się domyślnie, gdy Inwestor otrzymuje dane, aby podjąć własną decyzję o Finansowaniu.
 § 4. Odrębność administratorów
-Finance You jest Administratorem w zakresie pozyskania i kwalifikacji Projektu, prowadzenia platformy, przedstawienia relacji, dokumentowania usługi, rozliczeń, bezpieczeństwa i ochrony roszczeń.
+Finance You jest Administratorem w zakresie pozyskania i kwalifikacji Projektu, prowadzenia systemu, przedstawienia relacji, dokumentowania usługi, rozliczeń, bezpieczeństwa i ochrony roszczeń.
 Inwestor staje się odrębnym Administratorem w zakresie własnej analizy Klienta i nieruchomości, decyzji o Finansowaniu, negocjacji, zawarcia, obsługi, zabezpieczenia, monitoringu, windykacji i ochrony własnych roszczeń.
 Każda Strona samodzielnie ustala własne cele, podstawy prawne, okresy przechowywania i środki, odpowiada za obowiązki wobec osób i nie może przerzucić tej odpowiedzialności na drugą Stronę samą treścią Umowy.
 Umowa nie ustanawia współadministrowania. Jeżeli Strony zaczną wspólnie ustalać cele i zasadnicze sposoby Przetwarzania, przed takim działaniem zawrą odrębne uzgodnienie zgodne z art. 26 RODO.

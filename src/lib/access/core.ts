@@ -32,7 +32,7 @@ export interface AccessProduct {
   sort_order: number;
   kind: AccessProductKind;
   tier: AccessTier | null;
-  /** Opłata sukcesu w punktach bazowych — historyczna (model v6); od v7 zawsze 0. */
+  /** Opłata sukcesu w punktach bazowych — historyczna (model v6); obecnie zawsze 0. */
   success_fee_bps: number;
 }
 

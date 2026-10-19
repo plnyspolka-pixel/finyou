@@ -136,7 +136,7 @@ function MatchCard({
   onDone: () => void;
 }) {
   // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności —
-  // Projekt jest w ramach abonamentu (Umowa ramowa v7 § 7).
+  // Projekt jest w ramach abonamentu (Umowa ramowa § 7).
   const accept = useServerFn(acceptKartaLeada);
   const disclose = useServerFn(requestDisclosure);
   const extend = useServerFn(extendReservation);
@@ -420,7 +420,7 @@ export function WithdrawalCard({ data, onDone }: { data: any; onDone: () => void
   }
   if (!data.withdrawalWindow?.open) {
     // Karta zostaje widoczna także poza terminem — Konsument musi wiedzieć,
-    // jaki jest stan jego prawa odstąpienia (Umowa ramowa v7, § 15).
+    // jaki jest stan jego prawa odstąpienia (Umowa ramowa, § 15).
     return (
       <Card id="odstapienie">
         <CardHeader className="pb-3">

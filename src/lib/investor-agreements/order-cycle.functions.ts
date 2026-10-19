@@ -1,4 +1,4 @@
-// Cykl Zlecenie–Projekt (Etap U2, § 5 Umowy ramowej v5) — server functions.
+// Cykl Zlecenie–Projekt (Etap U2, § 5 Umowy ramowej) — server functions.
 //
 // Zasady twarde (uwagi wdrożeniowe paczki):
 //  - teaser i Karta Leada istnieją WYŁĄCZNIE dla pary Projekt–Zlecenie
@@ -136,7 +136,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
     const acceptedAt = acceptance?.accepted_at ? new Date(acceptance.accepted_at) : null;
     const limits = orderLimitsFromSettings(await getModuleSettings());
     return {
-      // Jeden poziom (abonament, Umowa ramowa v7 § 7) — bez pakietów i wykupów.
+      // Jeden poziom (abonament, Umowa ramowa § 7) — bez pakietów i wykupów.
       tier: "podstawowy" as const,
       // Limity cyklu z project_module_settings (UI pokazuje je z ustawień, nie z hardcode).
       limits,
@@ -238,7 +238,7 @@ export const requestDisclosure = createServerFn({ method: "POST" })
     // Karta Transferu Danych wystawiana automatycznie (starsze Dopasowania bez karty).
     await (await srv()).issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
     // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności
-    // (Umowa ramowa v7 § 7: poza abonamentem brak opłat za Projekt).
+    // (Umowa ramowa § 7: poza abonamentem brak opłat za Projekt).
     const limits = orderLimitsFromSettings(await getModuleSettings());
     const now = new Date();
     const expires = reservationDeadline(now, limits.assignmentHours);
@@ -798,7 +798,7 @@ export const confirmZal6 = createServerFn({ method: "POST" })
       })
       .eq("id", m.id);
     if (error) throw new Error(error.message);
-    // Brak Opłaty Sukcesu (Umowa ramowa v7) — Inwestor płaci wyłącznie abonament.
+    // Brak Opłaty Sukcesu (Umowa ramowa) — Inwestor płaci wyłącznie abonament.
     await (
       await srv()
     ).logCycleEvent(supabaseAdmin, {

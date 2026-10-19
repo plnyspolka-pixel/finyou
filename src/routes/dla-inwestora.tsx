@@ -390,7 +390,7 @@ const WINDYKACJA: TwoColSlide[] = [
 // Finance You to szkolenie i zestaw narzędzi dla partnera (abonament, model
 // SaaS), nie platforma ani klub.
 // Fakty (opłaty, prowizja klienta, LTV, odsetki) muszą zgadzać się z Umową
-// ramową v7 (docs/legal/paczka-inwestor-v7/, docs/cennik-inwestora.md).
+// ramową (docs/legal/pakiet-inwestora/, docs/cennik-inwestora.md).
 // Bez stawek, które zmienia RPP (odsetki maksymalne pokazuje kalkulator).
 // Treść trafia także do JSON-LD FAQPage.
 const FAQ_ALL: FAQItem[] = [

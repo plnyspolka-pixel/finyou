@@ -2,7 +2,7 @@
 // windykacja AI, raporty bez limitu).
 //
 // Od 2026-09-30 moduły wymagają aktywnego abonamentu inwestora (Umowa ramowa
-// v7 § 7): przepuszcza personel wewnętrzny oraz inwestora, dla którego SQL
+// § 7): przepuszcza personel wewnętrzny oraz inwestora, dla którego SQL
 // `investor_has_full_access` zwraca true (aktywny abonament — z płatności albo
 // nadany ręcznie przez zespół; ta sama funkcja stoi za RLS). Składa się z
 // requireSupabaseAuth, więc kontekst (supabase, userId, claims) zostaje ten sam.

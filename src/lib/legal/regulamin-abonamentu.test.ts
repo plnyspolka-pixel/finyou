@@ -2,7 +2,7 @@
  * Regulamin Abonamentu Inwestora: płacąc, inwestor akceptuje tę wersję (jej
  * nazwa trafia do płatności). Skrót treści jest przypięty do wersji — zmiana
  * ceny albo treści wymaga nowej wersji. Cena i sprzedawca zgadzają się z
- * Umową ramową v7, a kopia w docs/legal/inwestor jest aktualna.
+ * Umową ramową 1.0, a kopia w docs/legal/inwestor jest aktualna.
  */
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
@@ -14,15 +14,15 @@ import {
   REGULAMIN_ABONAMENTU_VERSION,
   regulaminAbonamentuInwestora,
 } from "./regulamin-abonamentu";
-import { ABONAMENT_UMOWA, SPRZEDAWCA_ABONAMENTU } from "./pakiet-v7";
+import { ABONAMENT_UMOWA, SPRZEDAWCA_ABONAMENTU } from "./dokumenty-1-0";
 
 const tekst = regulaminAbonamentuInwestora();
 const sha = createHash("sha256").update(tekst, "utf8").digest("hex");
 
 describe("regulamin abonamentu inwestora", () => {
-  it("wersja 2 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
-    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-v2");
-    expect(sha).toBe("544eaad67791cc0c43e708807a57cc22c47dab22bf3470a4232c7428f7ee2488");
+  it("wersja 1.0 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
+    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.0");
+    expect(sha).toBe("14efebaacefc3dabc6c24647464c9a61fe45c1c0d6b2223fe666e07970fbd309");
   });
 
   it("całość jako szkolenie w treściach cyfrowych — bez prawa odstąpienia (art. 38 ust. 1 pkt 13)", () => {
@@ -35,7 +35,7 @@ describe("regulamin abonamentu inwestora", () => {
     expect(tekst).not.toMatch(/pomniejszona o kwotę proporcjonalną/);
   });
 
-  it("cena i sprzedawca zgodne z Umową ramową v7", () => {
+  it("cena i sprzedawca zgodne z Umową ramową 1.0", () => {
     expect(CENA_ABONAMENTU).toBe(ABONAMENT_UMOWA);
     expect(tekst).toContain(CENA_ABONAMENTU);
     expect(SPRZEDAWCA_ABONAMENTU).toContain(FUNDACJA.nazwa);

@@ -15,8 +15,8 @@ import { TubapayCheckoutFields, validateTubapayCheckout } from "./tubapay-checko
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
 // wersja 2 z 29 września 2026 r. — migracja 20260929156000_etap5_zgody_v2).
-export const TERMS_VERSION = "regulamin-platformy-v3";
-export const PRIVACY_VERSION = "polityka-prywatnosci-v2";
+export const TERMS_VERSION = "regulamin-klienta-1.0";
+export const PRIVACY_VERSION = "polityka-prywatnosci-1.0";
 
 const CheckoutSchema = z.object({
   productCode: z.string().trim().min(1).max(80),
@@ -115,7 +115,7 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
         (data.productCode.startsWith("investor_") &&
           !INVESTOR_SUBSCRIPTION_CODES.has(data.productCode))
       ) {
-        // Inwestor kupuje wyłącznie abonament (30 albo 365 dni — Umowa ramowa v7
+        // Inwestor kupuje wyłącznie abonament (30 albo 365 dni — Umowa ramowa
         // § 7). Pakiet PRO, odblokowanie pojedynczej okazji i stare plany nie
         // są już w sprzedaży.
         return {

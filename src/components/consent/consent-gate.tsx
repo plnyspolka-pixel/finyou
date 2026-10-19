@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { acceptConsents, getMyConsentState } from "@/lib/consent/consent.functions";
 import { CONSENT_LINKS, type ConsentAudience } from "@/lib/consent/consent-core";
+import { wersjaDokumentu } from "@/lib/legal/wersja";
 
 export function ConsentGate({
   audience,
@@ -84,7 +85,7 @@ export function ConsentGate({
                     >
                       {link.label}
                     </a>{" "}
-                    (wersja {p.version})
+                    (wersja {wersjaDokumentu(p.version)})
                   </label>
                 </li>
               );

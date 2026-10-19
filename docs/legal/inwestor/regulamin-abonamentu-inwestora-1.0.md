@@ -1,6 +1,6 @@
 # REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-**wersja 1 — obowiązuje od dnia 30 września 2026 r.**
+**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
 
 ## § 1. Postanowienia ogólne
 
@@ -21,9 +21,10 @@
 
 ## § 3. Zakres Abonamentu
 
-1. W Okresie Abonamentowym Inwestor ma dostęp do modułów panelu inwestora, w szczególności: analityki (księga wieczysta, właściciele, analiza księgi, ocena ryzyka), dokumentów i kreatora umów, windykacji, modułu AML, Akademii i kalkulatora compliance, a także do pipeline'u inwestora, w którym uzupełnia dane, przechodzi weryfikację tożsamości i zawiera Umowy o dostęp do Klientów.
-2. Dostęp do Klientów, Projektów i ofert (moduł ofert: Zlecenia, dopasowane Projekty, dane Klientów i oferty) wymaga ponadto zawarcia Umów o dostęp do Klientów. Inwestor akceptuje je w panelu po zakupie Abonamentu, gdy chce korzystać z modułu ofert. Umowy o dostęp do Klientów nie przewidują wynagrodzenia Finance You od Inwestora.
-3. Abonament nie obejmuje finansowania żadnego Projektu, nie gwarantuje przedstawienia Projektu ani zawarcia transakcji i nie stanowi doradztwa inwestycyjnego.
+1. Abonament jest szkoleniem inwestora dostarczanym w formie treści cyfrowych, niezapisanych na nośniku materialnym, w rozumieniu ustawy z dnia 30 maja 2014 r. o prawach konsumenta.
+2. W ramach szkolenia, w Okresie Abonamentowym, Inwestor ma dostęp do Akademii oraz do modułów panelu inwestora, w szczególności: analityki (księga wieczysta, właściciele, analiza księgi, ocena ryzyka), dokumentów i kreatora umów, windykacji, modułu AML i kalkulatora compliance. Moduły te są narzędziami szkoleniowymi i stanowią część szkolenia, a nie odrębną usługę. Abonament obejmuje także dostęp do pipeline'u inwestora, w którym Inwestor uzupełnia dane, przechodzi weryfikację tożsamości i zawiera Umowy o dostęp do Klientów.
+3. Dostęp do Klientów, Projektów i ofert (moduł ofert: Zlecenia, dopasowane Projekty, dane Klientów i oferty) wymaga ponadto zawarcia Umów o dostęp do Klientów. Inwestor akceptuje je w panelu po zakupie Abonamentu, gdy chce korzystać z modułu ofert. Umowy o dostęp do Klientów nie przewidują wynagrodzenia Finance You od Inwestora.
+4. Abonament nie obejmuje finansowania żadnego Projektu, nie gwarantuje przedstawienia Projektu ani zawarcia transakcji i nie stanowi doradztwa inwestycyjnego.
 
 ## § 4. Cena i płatność
 
@@ -36,16 +37,16 @@
 ## § 5. Zawarcie umowy i dostęp
 
 1. Umowa o Abonament zostaje zawarta z chwilą akceptacji Regulaminu i zlecenia płatności. Dostęp do panelu jest włączany po zaksięgowaniu płatności.
-2. Konsument może przy płatności zażądać rozpoczęcia świadczenia przed upływem terminu odstąpienia od umowy.
+2. Dostarczanie treści cyfrowych rozpoczyna się bezpośrednio po zaksięgowaniu płatności. Warunkiem zakupu Abonamentu jest złożone przy płatności wyraźne żądanie rozpoczęcia dostarczania treści cyfrowych przed upływem terminu do odstąpienia od umowy wraz z przyjęciem do wiadomości utraty prawa odstąpienia od umowy (§ 6).
 3. Do korzystania z panelu potrzebne są urządzenie z dostępem do internetu, aktualna przeglądarka internetowa z włączoną obsługą JavaScript i plików cookies niezbędnych do logowania oraz aktywny adres e-mail.
 4. Inwestor nie może dostarczać treści o charakterze bezprawnym ani udostępniać swojego konta osobom trzecim.
 
-## § 6. Odstąpienie od umowy przez Konsumenta
+## § 6. Brak prawa odstąpienia od umowy
 
-1. Konsument może odstąpić od umowy o Abonament w terminie 14 dni od jej zawarcia, bez podania przyczyny, składając oświadczenie w szczególności na adres kontakt@financeyou.pl.
-2. Jeżeli Konsument zażądał rozpoczęcia świadczenia przed upływem terminu odstąpienia, zwrotowi podlega Opłata Abonamentowa pomniejszona o kwotę proporcjonalną do wykorzystanej części Okresu Abonamentowego; w pozostałych przypadkach zwrotowi podlega cała Opłata Abonamentowa.
-3. Zwrot następuje niezwłocznie, nie później niż w terminie 14 dni od otrzymania oświadczenia o odstąpieniu, przy użyciu takiego samego sposobu płatności, jakiego użył Konsument, chyba że Konsument zgodzi się na inny sposób.
-4. Odstąpienie od umowy o Abonament nie jest odstąpieniem od Umów o dostęp do Klientów — ich zasady określają te umowy. Po zakończeniu Abonamentu dostęp do modułów panelu, w tym do modułu ofert, zostaje wstrzymany.
+1. Zgodnie z art. 38 ust. 1 pkt 13 ustawy z dnia 30 maja 2014 r. o prawach konsumenta prawo odstąpienia od umowy o Abonament nie przysługuje Konsumentowi, ponieważ Fundacja rozpoczyna dostarczanie treści cyfrowych za wyraźną i uprzednią zgodą Konsumenta, wyrażoną przy płatności, po poinformowaniu go, że utraci prawo odstąpienia od umowy, i po przyjęciu tego przez Konsumenta do wiadomości.
+2. Po zaksięgowaniu płatności Fundacja przesyła Konsumentowi na adres e-mail podany przy płatności potwierdzenie zawarcia umowy na trwałym nośniku, obejmujące treść Regulaminu oraz potwierdzenie zgody i przyjęcia do wiadomości, o których mowa w ust. 1.
+3. Ust. 1 nie ogranicza uprawnień Konsumenta w przypadku niezgodności treści cyfrowych z umową (§ 9).
+4. Umowy o dostęp do Klientów są odrębne od umowy o Abonament — zasady odstąpienia od nich określają te umowy. Po zakończeniu Abonamentu dostęp do modułów panelu, w tym do modułu ofert, zostaje wstrzymany.
 
 ## § 7. Wygaśnięcie Abonamentu
 
@@ -71,4 +72,4 @@
 ## § 11. Postanowienia końcowe
 
 1. Do umowy o Abonament stosuje się prawo polskie. Wobec Konsumenta wybór prawa nie pozbawia go ochrony przysługującej mu na podstawie bezwzględnie obowiązujących przepisów.
-2. Regulamin obowiązuje od dnia 30 września 2026 r.
+2. Regulamin obowiązuje od dnia 19 października 2026 r.

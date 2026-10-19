@@ -3,7 +3,7 @@
  * zaakceptować. Czysta funkcja — testowana jednostkowo.
  *
  * Klient: regulamin klienta (terms) i polityka prywatności (privacy).
- * Inwestor: polityka prywatności (umowy inwestora obsługuje pakiet v7).
+ * Inwestor: polityka prywatności (umowy inwestora obsługuje pakiet 1.0).
  */
 export type ConsentKind = "terms" | "privacy";
 export type ConsentAudience = "klient" | "inwestor";
