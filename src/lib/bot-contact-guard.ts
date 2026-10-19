@@ -61,8 +61,8 @@ const ALLOWED_DOMAINS = ["financeyou.pl"];
 function ownBackendHosts(): string[] {
   const urls: Array<string | undefined> = [];
   try {
-    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-      .process?.env;
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+      ?.env;
     urls.push(env?.SUPABASE_URL, env?.VITE_SUPABASE_URL);
   } catch {
     /* brak process — przeglądarka */
@@ -84,6 +84,9 @@ function ownBackendHosts(): string[] {
   }
   return hosts;
 }
+
+/** Centrum Wsparcia (800 70 2222). 116 123 i 112 nie wyglądają na numer 9-cyfrowy, więc filtr ich nie rusza. */
+export const CRISIS_HELPLINES: readonly string[] = ["800702222"];
 
 function digitsOf(value: string): string {
   return value.replace(/\D/g, "");
@@ -168,6 +171,9 @@ export function guardOutboundContactDetails(
   }
   const companyPhone = nationalPhoneDigits(COMPANY.phone);
   if (companyPhone) knownPhones.add(companyPhone);
+  // Publiczne numery pomocy kryzysowej, które prompty floty każą podać
+  // przy zagrożeniu życia — wycięcie ich byłoby gorsze niż każdy błąd.
+  for (const helpline of CRISIS_HELPLINES) knownPhones.add(helpline);
 
   const knownEmails = new Set<string>(
     (known.match(EMAIL_CANDIDATE) ?? []).map((e) => e.toLowerCase()),

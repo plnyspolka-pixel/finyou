@@ -355,6 +355,15 @@ export async function runAgentTurn(opts: {
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
+  /**
+   * Tożsamość nadawcy uwierzytelniona przez PLATFORMĘ kanału (sesja czatu,
+   * PSID / IGSID, numer nadawcy SMS, adres nadawcy e-maila). Wiąże wątek
+   * floty agentów z tym nadawcą — bez niej flota się nie włącza (A1).
+   */
+  channelIdentity?: {
+    kind: "chat" | "messenger" | "instagram" | "sms" | "email";
+    value: string;
+  } | null;
 }): Promise<AgentReply> {
   const variant: AgentVariant = opts.variant ?? "klient";
   const s = admin();
@@ -412,29 +421,60 @@ export async function runAgentTurn(opts: {
         `[DOTYCHCZASOWA ROZMOWA — kontekst, nie odpowiadaj na nią ponownie]\n${historyBlock}\n\n` +
         `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}`;
 
+      const dynamicVariables = {
+        ...channelDynamicVariables(opts.channel),
+        lead_id: lead.id,
+        first_name: lead.first_name ?? "",
+        last_name: lead.last_name ?? "",
+        email: lead.email ?? "",
+        phone: lead.phone_normalized ?? lead.phone_raw ?? "",
+      };
+      const knownContext = [
+        ...(history ?? []).map((h) => h.content),
+        opts.userMessage,
+        lead.email,
+        lead.phone_raw,
+        lead.phone_normalized,
+        (lead as { return_link?: string | null }).return_link,
+      ];
+
+      // Wspólny kanał tekstowy obsługiwany przez flotę (recepcja → specjalista
+      // z trwałą trasą wątku). Wyłączone, dopóki zespół nie ustawi
+      // voicebot_settings.agent_fleet.text_entry = "recepcja"; każde
+      // niepowodzenie wraca do dotychczasowego agenta poniżej.
+      if (variant === "klient") {
+        const { fleetTextTurn } = await import("./agent-fleet-routing.server");
+        const fleet = await fleetTextTurn({
+          leadId: lead.id,
+          channel: opts.channel,
+          channelIdentity: opts.channelIdentity ?? null,
+          message: elMessage,
+          dynamicVariables,
+        }).catch((e) => ({ ok: false as const, error: String(e?.message ?? e) }));
+        if (fleet?.ok && fleet.reply) {
+          const safeReply = await guardReply(
+            s,
+            opts.leadId,
+            opts.channel,
+            fleet.reply,
+            knownContext,
+          );
+          return { reply: safeReply, toolCalls: [] };
+        }
+        if (fleet)
+          console.warn(`[el-text-agent] flota: powrót do A1 (${fleet.error ?? "brak odpowiedzi"})`);
+      }
+
       const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
       const turn = await elevenLabsTextTurn({
         agentId: elAgentId,
         userMessage: elMessage,
-        dynamicVariables: {
-          ...channelDynamicVariables(opts.channel),
-          lead_id: lead.id,
-          first_name: lead.first_name ?? "",
-          last_name: lead.last_name ?? "",
-          email: lead.email ?? "",
-          phone: lead.phone_normalized ?? lead.phone_raw ?? "",
-        },
+        dynamicVariables,
       });
       if (turn.ok && turn.reply) {
-        const safeReply = await guardReply(s, opts.leadId, opts.channel, turn.reply, [
-          ...(history ?? []).map((h) => h.content),
-          opts.userMessage,
-          lead.email,
-          lead.phone_raw,
-          lead.phone_normalized,
-          // Link do wniosku wysłany wcześniej (send_application_link) — bot może go powtórzyć.
-          (lead as { return_link?: string | null }).return_link,
-        ]);
+        // Link do wniosku wysłany wcześniej (send_application_link) jest w
+        // knownContext — bot może go powtórzyć.
+        const safeReply = await guardReply(s, opts.leadId, opts.channel, turn.reply, knownContext);
         return { reply: safeReply, toolCalls: [] };
       }
       console.warn(
@@ -777,9 +817,14 @@ export async function executeTool(
     };
   }
   if (name === "mark_ready_for_human") {
+    // Dopisujemy do notatek zamiast je nadpisywać — to, co zespół zapisał
+    // wcześniej, nie może zniknąć po jednej eskalacji bota.
+    const { data: current } = await s.from("leads").select("notes").eq("id", leadId).maybeSingle();
+    const prev = String((current as { notes?: string | null } | null)?.notes ?? "").trim();
+    const line = `[AI ${new Date().toISOString().slice(0, 16).replace("T", " ")}] ${String(args?.reason ?? "eskalacja").slice(0, 500)}`;
     await s
       .from("leads")
-      .update({ status: "wymaga_kontaktu", notes: `[AI] ${args?.reason ?? "eskalacja"}` })
+      .update({ status: "wymaga_kontaktu", notes: (prev ? `${prev}\n${line}` : line).slice(-8000) })
       .eq("id", leadId);
     return { ok: true };
   }

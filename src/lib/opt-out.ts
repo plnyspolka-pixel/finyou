@@ -88,7 +88,10 @@ const OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
   // Angielski (klienci zagraniczni / klienty pocztowe z szablonem). Celowo bez
   // samego słowa „unsubscribe" — stopki firmowe w odpowiedziach klientów mają
   // je w treści i każdy taki mail wyglądałby na rezygnację.
-  { signal: "cofniecie_zgody_marketing_pl", re: /(cofam|wycofuj[ęe]|odwo[łl]uj[ęe])\s+(swoj[ąa]\s+|moj[ąa]\s+)?zgod[ęe]/i },
+  {
+    signal: "cofniecie_zgody_marketing_pl",
+    re: /(cofam|wycofuj[ęe]|odwo[łl]uj[ęe])\s+(swoj[ąa]\s+|moj[ąa]\s+)?zgod[ęe]/i,
+  },
 
   { signal: "optout_en", re: /(please\s+)?unsubscribe\s+(me|us)\b/i },
   { signal: "optout_en", re: /^\s*unsubscribe\s*[!.]*\s*$/im },
@@ -132,7 +135,10 @@ const HARD_OPT_OUT_PATTERNS: { signal: string; re: RegExp }[] = [
     re: /(cofam|wycofuj[ęe]|odwo[łl]uj[ęe])\s+(swoj[ąa]\s+|moj[ąa]\s+)?zgod[ęe](?!\s+na\s+(marketing|newsletter|ofert|otrzymywanie\s+(ofert|newslettera|informacji\s+handlowych|materia[łl][óo]w\s+marketingowych)|informacj[ęe]\s+handlow|komunikacj[ęe]\s+marketingow|kontakt\s+marketingowy))/i,
   },
   { signal: "rodo", re: /(wnosz[ęe]|zg[łl]aszam|sk[łl]adam)\s+sprzeciw/i },
-  { signal: "rodo", re: /(please\s+)?(delete|erase|remove)\s+(all\s+)?(of\s+)?my\s+(personal\s+)?data/i },
+  {
+    signal: "rodo",
+    re: /(please\s+)?(delete|erase|remove)\s+(all\s+)?(of\s+)?my\s+(personal\s+)?data/i,
+  },
   { signal: "rodo", re: /i\s+(hereby\s+)?(withdraw|revoke)\s+(my\s+)?consent/i },
   { signal: "rodo", re: /i\s+(hereby\s+)?object\s+to\s+(the\s+)?processing/i },
   {
@@ -158,6 +164,16 @@ const QUOTE_BOUNDARIES: RegExp[] = [
   /^\s*-{2,}\s*(Original Message|Wiadomo[śs][ćc] oryginalna|Forwarded message|Przekazana wiadomo[śs][ćc])/im,
   /^\s*(Od|From)\s*:\s*.+$/im,
   /^\s*W\s+dniu\s+.+\s+napisa[łl]/im,
+  // Poczta WP/Onet i część klientów webowych oddaje tekst spłaszczony do
+  // jednej linii — nagłówek cytatu ląduje w środku wiersza, więc granice
+  // zakotwiczone na początku linii go nie widzą. Te wymagają dwukropka po
+  // „napisał(a)” / „wrote”, żeby nie ciąć zwykłego zdania z datą.
+  /(?:W\s+dniu|Dnia)\s+[^\n]{4,160}?napisa[łl](?:\(a\))?\s*:/i,
+  /\b(?:pon|wt|[śs]r|czw|pt|sob|niedz?)\.?,\s+\d{1,2}\s+\p{L}+\.?\s+\d{4}[^\n]{0,120}?napisa[łl](?:\(a\))?\s*:/iu,
+  /\bOn\s[^\n]{4,160}?wrote\s*:/i,
+  /-{2,}\s*(Original Message|Wiadomo[śs][ćc] oryginalna|Forwarded message|Przekazana wiadomo[śs][ćc])/i,
+  // Nasza stopka — gdziekolwiek się pojawi, dalej jest już tylko nasz tekst.
+  /Nie\s+chcesz\s+dostawa[ćc]\s+tych\s+wiadomo[śs]ci\?/i,
   /^\s*(Dnia|Data)\s+.+\s+napisa[łl]/im,
   /^\s*On\s+.+\s+wrote\s*:/im,
   /^\s*Wys[łl]ane\s+z\s+(mojego\s+)?(iPhone|iPad|Yahoo|Poczty)/im,

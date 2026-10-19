@@ -7,6 +7,7 @@ import {
   parseExtractedQuestions,
   questionKey,
   type ThreadQuestion,
+  criteriaSummary,
 } from "./qa-questions";
 
 // Pytania wzięte 1:1 z wątków w panelu (7-9.09.2026).
@@ -193,5 +194,29 @@ describe("outstandingQuestions i treść wiadomości", () => {
     expect(buildClientMessage(qs)).toContain("prosi o dodatkowe informacje");
     expect(buildClientMessage(qs, { reminder: true })).toContain("wracamy do pytań");
     expect(buildClientMessage(qs)).toContain("1. Jaki jest cel pożyczki?");
+  });
+});
+
+describe("criteriaSummary", () => {
+  it("dopisuje partnera, do którego instytucja odsyła", () => {
+    expect(
+      criteriaSummary({
+        accepting: false,
+        note: "Fundusz nie udziela pożyczek samodzielnie",
+        redirect_to: {
+          name: "MONGO Sp. z o.o.",
+          email: "info@mongo.com.pl",
+          phone: "883-144-866",
+          website: null,
+        },
+      }),
+    ).toBe(
+      "Fundusz nie udziela pożyczek samodzielnie — Odsyła do partnera: MONGO Sp. z o.o. · info@mongo.com.pl · 883-144-866",
+    );
+  });
+
+  it("bez partnera zostaje sama notatka, bez niczego — null", () => {
+    expect(criteriaSummary({ note: "Wstrzymanie do 1.11" })).toBe("Wstrzymanie do 1.11");
+    expect(criteriaSummary({})).toBeNull();
   });
 });

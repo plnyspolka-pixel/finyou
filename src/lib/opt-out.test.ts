@@ -83,7 +83,9 @@ describe("detectOptOut — samo słowo RODO/GDPR to nie wypis", () => {
       detectOptOut({ text: "Dzień dobry, przesyłam podpisaną zgodę RODO oraz skan dowodu." }),
     ).toBeNull();
     expect(detectOptOut({ subject: "Zgoda RODO", text: "W załączniku." })).toBeNull();
-    expect(detectOptOut({ text: "Our company is GDPR compliant, attached the documents." })).toBeNull();
+    expect(
+      detectOptOut({ text: "Our company is GDPR compliant, attached the documents." }),
+    ).toBeNull();
   });
 
   it("klauzula informacyjna RODO w stopce nie blokuje", () => {
@@ -106,11 +108,12 @@ describe("detectOptOut — samo słowo RODO/GDPR to nie wypis", () => {
 
   it("wyraźne żądanie z powołaniem na RODO nadal jest twarde", () => {
     expect(
-      detectOptOut({ text: "Na podstawie art. 17 RODO proszę o usunięcie moich danych." })?.strength,
+      detectOptOut({ text: "Na podstawie art. 17 RODO proszę o usunięcie moich danych." })
+        ?.strength,
     ).toBe("hard");
-    expect(detectOptOut({ text: "Wnoszę sprzeciw wobec przetwarzania moich danych." })?.strength).toBe(
-      "hard",
-    );
+    expect(
+      detectOptOut({ text: "Wnoszę sprzeciw wobec przetwarzania moich danych." })?.strength,
+    ).toBe("hard");
     expect(detectOptOut({ text: "Please delete my personal data (GDPR)." })?.strength).toBe("hard");
   });
 
@@ -118,7 +121,7 @@ describe("detectOptOut — samo słowo RODO/GDPR to nie wypis", () => {
     expect(detectOptOut({ text: "Cofam zgodę na marketing." })?.strength).toBe("soft");
   });
 
-  it("„nie wysyłajcie mi\" to zwykły wypis", () => {
+  it('„nie wysyłajcie mi" to zwykły wypis', () => {
     expect(detectOptOut({ text: "Nie wysyłajcie mi już ofert." })?.strength).toBe("soft");
   });
 });
@@ -149,6 +152,37 @@ describe("detectOptOut — brak fałszywych alarmów", () => {
       "You received this email as our partner. To unsubscribe click here.",
     ].join("\n");
     expect(detectOptOut({ text: reply })).toBeNull();
+  });
+
+  it("spłaszczona odpowiedź z WP (cytat w środku linii) nie jest rezygnacją", () => {
+    const reply =
+      "Szanowni Państwo, Wracam do przesłanej wcześniej dokumentacji. Zależy mi na szybkiej odpowiedzi. " +
+      "Z poważaniem Agnieszka Ż. 884883657 Dnia 24 września 2026 13:28 Finance You &lt; kontakt@financeyou.pl &gt; " +
+      "napisał(a): financeyou.pl Dziękuję za szczegółowe informacje. Masz pytanie? Po prostu odpisz na tego maila. " +
+      "Nie chcesz dostawać tych wiadomości? financeyou.pl Wypisz mnie · Finance You — pożyczki pod zastaw nieruchomości.";
+    expect(stripQuotedReply(reply)).toBe(
+      "Szanowni Państwo, Wracam do przesłanej wcześniej dokumentacji. Zależy mi na szybkiej odpowiedzi. " +
+        "Z poważaniem Agnieszka Ż. 884883657",
+    );
+    expect(detectOptOut({ subject: "Odp: Re: Pilne", text: reply })).toBeNull();
+  });
+
+  it("spłaszczona odpowiedź z Gmaila (pt., 16 paź 2026 … napisał:) nie jest rezygnacją", () => {
+    const reply =
+      "Tak żeby spłacić zobowiązanie pt., 16 paź 2026, 13:18 użytkownik Finance You <kontakt@financeyou.pl> napisał: > Wypisz mnie";
+    expect(stripQuotedReply(reply)).toBe("Tak żeby spłacić zobowiązanie");
+  });
+
+  it("zdanie z datą bez nagłówka cytatu nie jest cięte", () => {
+    const text = "Wczoraj, dnia 5 maja napisałem do komornika: proszę mnie wypisać.";
+    expect(stripQuotedReply(text)).toBe(text);
+    expect(detectOptOut({ text })).not.toBeNull();
+  });
+
+  it("rezygnacja przed spłaszczonym cytatem nadal działa", () => {
+    const reply =
+      "Proszę mnie wypisać. Dnia 24 września 2026 13:28 Finance You &lt; kontakt@financeyou.pl &gt; napisał(a): oferta";
+    expect(detectOptOut({ text: reply })).not.toBeNull();
   });
 
   it("nasza własna stopka w cytacie nie jest rezygnacją", () => {

@@ -243,6 +243,7 @@ export const Route = createFileRoute("/api/public/mailgun-inbound-webhook")({
           channel: "email",
           userMessage: text || "[Klient przesłał same załączniki]",
           attachmentsSummary,
+          channelIdentity: fromEmail ? { kind: "email", value: fromEmail } : null,
         });
 
         let replyText = agent.reply;
