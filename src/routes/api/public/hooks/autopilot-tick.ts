@@ -22,6 +22,11 @@ async function runTick(force?: string | null): Promise<Response> {
       }).format(now),
     );
     const reports: Record<string, unknown> = {};
+    // Sekwencje powitalne – tylko w ciągu dnia (8–20), tylko full_autopilot.
+    if (hour >= 8 && hour <= 20) {
+      const { runWelcomeSequences } = await import("@/lib/autopilot/sequences.server");
+      reports.sequences = await runWelcomeSequences(now);
+    }
     // Tryb full_autopilot: narzędzia-lead-magnety otwarte (raz na dobę wystarczy).
     const { loadAutopilotConfig } = await import("@/lib/autopilot/state.server");
     const cfg = await loadAutopilotConfig();

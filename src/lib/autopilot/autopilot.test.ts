@@ -464,11 +464,48 @@ describe("narzędzia jako lead magnety", () => {
   it("mail z pełnym wynikiem ma stopkę i przechodzi reguły", async () => {
     const { toolResultEmail } = await import("./tools");
     const c = STARTER_CALCULATORS.find((x) => x.keyword === "LTV")!;
-    const mail = toolResultEmail(c, runCalculator(c, { property_value: 1000000, loan_amount: 400000 }, { unlocked: true }), "Anna");
+    const mail = toolResultEmail(
+      c,
+      runCalculator(c, { property_value: 1000000, loan_amount: 400000 }, { unlocked: true }),
+      "Anna",
+    );
     expect(mail.text).toContain("{link}");
     expect(mail.text).toContain("Bufor do limitu systemu: 20%");
     const r = evaluateCompliance(mail.text, { kind: "email", track: c.track });
     expect(r.blocks).toEqual([]);
     expect(r.requires.map((x) => x.code)).toEqual(["brak_oznaczenia_ai"]);
+  });
+});
+
+describe("sekwencje powitalne", () => {
+  it("treści przechodzą reguły compliance i mają stopkę", async () => {
+    const { WELCOME_SEQUENCES, renderStep } = await import("./sequences");
+    for (const track of ["pozyczkobiorca", "inwestor"] as const) {
+      for (const s of WELCOME_SEQUENCES[track]) {
+        const text = `${s.subject}\n${renderStep(track, s, "Jan")}`;
+        const r = evaluateCompliance(text, { kind: "email", track });
+        expect(r.blocks, `${track}#${s.step}`).toEqual([]);
+        expect(text).toContain("KRS 0000635207");
+      }
+    }
+  });
+
+  it("kolejny krok: termin, odstęp, limit tygodniowy, jeden na przebieg", async () => {
+    const { nextSequenceStep } = await import("./sequences");
+    const base = {
+      subscriberId: "s",
+      tags: ["lead-magnet", "inwestor"],
+      createdAt: "2026-10-10T10:00:00Z",
+      sentSteps: [] as number[],
+      sentLast7d: 0,
+    };
+    expect(nextSequenceStep(base, NOW, 3)?.step.step).toBe(1);
+    expect(nextSequenceStep({ ...base, sentSteps: [1] }, NOW, 3)?.step.step).toBe(2);
+    expect(
+      nextSequenceStep({ ...base, sentSteps: [1], lastSentAt: "2026-10-19T08:00:00Z" }, NOW, 3),
+    ).toBeNull();
+    expect(nextSequenceStep({ ...base, sentLast7d: 3 }, NOW, 3)).toBeNull();
+    expect(nextSequenceStep({ ...base, createdAt: "2026-10-18T10:00:00Z" }, NOW, 3)).toBeNull();
+    expect(nextSequenceStep({ ...base, tags: ["lead-magnet"] }, NOW, 3)).toBeNull();
   });
 });
