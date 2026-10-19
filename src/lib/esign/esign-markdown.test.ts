@@ -20,6 +20,13 @@ describe("Markdown e-signature source rules", () => {
     expect(CreateInput.safeParse({ ...base, documentMarkdown: "   " }).success).toBe(false);
     expect(CreateInput.safeParse({ ...base, fileBase64: "a".repeat(16), documentHeader: "UMOWA" }).success).toBe(false);
   });
+  it("operators cannot create envelopes from Markdown", async () => {
+    const { createEnvelopeImpl } = await import("./esign-owner.server");
+    const context = { userId: "00000000-0000-0000-0000-000000000001", claims: {},
+      supabase: { from: () => ({ select: () => ({ eq: async () => ({ data: [{ role: "operator" }] }) }) }) } };
+    await expect(createEnvelopeImpl(CreateInput.parse({ ...base, documentMarkdown: "# Umowa", sendNow: false }), context))
+      .rejects.toThrow("Wymagana rola administrator.");
+  });
   it("maps headings, emphasis, numbered lists, tables and centered text", () => {
     const { bloki, pageBreakBefore } = markdownBlocks("# Umowa\n\n## Strony\n\n### Warunki\n\n**Kwota** i *termin*.\n\n3. Trzecia\n4. Czwarta\n\n- Punkt\n\n| Strona | Kwota |\n| --- | ---: |\n| Fundacja | 20 000 zł |\n\n-> Warszawa <-\n\\pagebreak\n\nDruga strona.");
     expect(bloki.slice(0, 3).map((b) => b.t)).toEqual(["tytul", "podtytul", "naglowek"]);
