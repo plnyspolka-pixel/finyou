@@ -1,4 +1,4 @@
-// Panel administratora — pakiet umów inwestora (FY-LEGAL-2026-09-29, v7/v6/v5).
+// Panel administratora — pakiet umów inwestora (FY-LEGAL-1.0).
 // Rejestr dokumentów z hashami i aktywacją po przeglądzie kancelarii,
 // dziennik akceptacji (Zał. 5) oraz decyzje o Zleceniach (Zał. 7, SLA 2 dni).
 import { useState } from "react";
@@ -51,7 +51,7 @@ function AdminUmowyPage() {
       <FancyPageHeader
         eyebrow="Dokumenty"
         title="Umowy inwestorów"
-        subtitle="Pakiet FY-LEGAL-2026-09-29 (umowa ramowa v7, NDA v6, RODO v5) — dokumenty kanoniczne, dziennik akceptacji i decyzje o Zleceniach. Aktywacja całego pakietu naraz."
+        subtitle="Pakiet FY-LEGAL-1.0 (umowa ramowa, NDA, RODO — wersja 1.0) — dokumenty kanoniczne, dziennik akceptacji i decyzje o Zleceniach. Aktywacja całego pakietu naraz."
       />
       <DocumentsCard state={state} onDone={refresh} />
       <OrdersCard state={state} onDone={refresh} />
@@ -215,8 +215,8 @@ function OrdersCard({ state, onDone }: { state: any; onDone: () => void }) {
             <div key={o.id} className="space-y-2 rounded-md border p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="font-medium">FY-Z-{o.order_seq}</span> ·{" "}
-                  do {Number(o.amount_pln).toLocaleString("pl-PL")} zł
+                  <span className="font-medium">FY-Z-{o.order_seq}</span> · do{" "}
+                  {Number(o.amount_pln).toLocaleString("pl-PL")} zł
                   <div className="text-xs text-muted-foreground">
                     złożone {new Date(o.submitted_at).toLocaleString("pl-PL")} · user{" "}
                     {String(o.user_id).slice(0, 8)}…

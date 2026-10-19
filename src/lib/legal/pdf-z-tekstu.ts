@@ -24,11 +24,11 @@ export interface PdfZTekstuOpts {
   contentText: string;
   /** Tytuł dokumentu — metadane PDF i stopka. */
   title: string;
-  /** Wersja (np. `v7`) — stopka. */
+  /** Wersja (np. `1.0`) — stopka. */
   version: string;
   /** SHA-256 treści — drukowany na końcu jako identyfikator dokumentu. */
   sha256?: string | null;
-  /** Identyfikator pakietu (np. `FY-LEGAL-2026-09-29`). */
+  /** Identyfikator pakietu (np. `FY-LEGAL-1.0`). */
   packageId?: string | null;
   /** Data utworzenia w metadanych (stała data → powtarzalny plik w testach). */
   date?: Date;

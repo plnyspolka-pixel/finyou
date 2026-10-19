@@ -35,10 +35,10 @@ function StrukturaPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Share2 className="h-6 w-6" /> Struktura partnerska
+          <Share2 className="h-6 w-6" /> Struktura poleceń
         </h1>
         <p className="text-sm text-muted-foreground">
-          Twoja sieć do 3 poziomów. Dane partnerów z niższych poziomów są ograniczone (bez danych
+          Twoja sieć do 3 poziomów. Dane pośredników z niższych poziomów są ograniczone (bez danych
           osobowych).
         </p>
       </div>
@@ -48,7 +48,7 @@ function StrukturaPage() {
       ) : levels.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Brak partnerów w strukturze. Udostępnij swój link polecający, aby zacząć budować sieć.
+            Brak pośredników w strukturze. Udostępnij swój link polecający, aby zacząć budować sieć.
           </CardContent>
         </Card>
       ) : (
@@ -69,13 +69,13 @@ function StrukturaPage() {
             <CardContent className="p-0">
               {lvl.members.length === 0 ? (
                 <p className="px-4 pb-4 text-sm text-muted-foreground">
-                  Brak partnerów na tym poziomie.
+                  Brak pośredników na tym poziomie.
                 </p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Partner</TableHead>
+                      <TableHead>Pośrednik</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Dołączył</TableHead>
                       <TableHead className="text-right">Zdarzenia</TableHead>

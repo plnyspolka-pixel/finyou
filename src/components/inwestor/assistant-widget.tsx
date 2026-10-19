@@ -10,7 +10,7 @@ import {
 type ChatMsg = { id?: string; role: "user" | "assistant"; content: string };
 
 const GREETING =
-  "Dzień dobry! Jestem asystentem Klubu Inwestorów Hipotecznych. Pomogę odnaleźć się w panelu, wyjaśnię proces inwestycji i pojęcia (KW, hipoteka, LTV). W czym mogę pomóc?";
+  "Dzień dobry! Jestem asystentem Finance You dla partnerów-inwestorów. Pomogę odnaleźć się w panelu, wyjaśnię proces inwestycji i pojęcia (KW, hipoteka, LTV). W czym mogę pomóc?";
 
 /**
  * Pływający asystent w panelu /inwestor — osobna logika od bota
@@ -81,7 +81,7 @@ export function InvestorAssistantWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Otwórz asystenta Klubu"
+          aria-label="Otwórz asystenta Finance You"
           className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-accent to-[oklch(0.65_0.13_235)] text-accent-foreground shadow-lg shadow-accent/40 transition hover:brightness-110"
         >
           <Sparkles className="h-6 w-6" />
@@ -94,7 +94,7 @@ export function InvestorAssistantWidget() {
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
               <div className="leading-tight">
-                <div className="text-sm font-semibold">Asystent Klubu</div>
+                <div className="text-sm font-semibold">Asystent partnera</div>
                 <div className="text-[11px] opacity-80">Przewodnik po panelu inwestora</div>
               </div>
             </div>

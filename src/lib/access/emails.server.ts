@@ -157,7 +157,7 @@ export async function sendExpiryReminderEmail(opts: {
   const renewPath = opts.audience === "investor" ? "/inwestor/abonament" : "/posrednik/abonament";
   const text = `Dzień dobry,
 
-Twój pełny dostęp do platformy Finance You wygasa ${until} (za ${dni}).
+Twój dostęp do szkolenia i narzędzi Finance You wygasa ${until} (za ${dni}).
 
 Aby zachować ciągłość dostępu, przedłuż ${opts.audience === "investor" ? "abonament" : "pakiet"} tutaj: ${base}${renewPath}
 
@@ -204,18 +204,18 @@ export async function sendManualAccessChangeEmail(opts: {
 }): Promise<void> {
   const base = resolveAppBaseUrl();
   const subject = opts.revoked
-    ? "Zmiana dostępu do platformy — Finance You"
+    ? "Zmiana dostępu — Finance You"
     : "Twój dostęp został przedłużony — Finance You";
   const text = opts.revoked
     ? `Dzień dobry,
 
-administrator zaktualizował Twój dostęp do platformy Finance You — pełny dostęp został zakończony. W razie pytań odpisz na tę wiadomość.
+administrator zaktualizował Twój dostęp do szkolenia i narzędzi Finance You — pełny dostęp został zakończony. W razie pytań odpisz na tę wiadomość.
 
 Pozdrawiamy,
 Zespół Finance You`
     : `Dzień dobry,
 
-administrator przedłużył Twój pełny dostęp do platformy Finance You do: ${formatWarsawDate(opts.activeUntil, true)} (czas polski).
+administrator przedłużył Twój pełny dostęp do szkolenia i narzędzi Finance You do: ${formatWarsawDate(opts.activeUntil, true)} (czas polski).
 
 Panel: ${base}${panelPath(opts.audience)}
 

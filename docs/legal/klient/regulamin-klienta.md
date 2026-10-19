@@ -1,14 +1,14 @@
-# REGULAMIN PLATFORMY FINANCE YOU
+# REGULAMIN SERWISU FINANCE YOU
 
 ## dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania
 
-**wersja 3 — obowiązuje od dnia 30 września 2026 r.**
+**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
 
 ---
 
 ## § 1. Postanowienia ogólne
 
-1. Niniejszy regulamin, zwany dalej „Regulaminem”, określa zasady korzystania z Platformy Finance You przez użytkowników zainteresowanych uzyskaniem finansowania, w szczególności pożyczki zabezpieczonej na nieruchomości.
+1. Niniejszy regulamin, zwany dalej „Regulaminem”, określa zasady korzystania z Serwisu Finance You przez użytkowników zainteresowanych uzyskaniem finansowania, w szczególności pożyczki zabezpieczonej na nieruchomości.
 
 2. Regulamin dotyczy użytkowników, którzy w szczególności:
 
@@ -19,11 +19,11 @@
    5. przesyłają dokumenty, zdjęcia, oświadczenia lub inne informacje potrzebne do analizy sprawy;
    6. oczekują kontaktu ze strony Finance You;
    7. oczekują przedstawienia ich sprawy potencjalnym finansującym, inwestorom, partnerom lub podmiotom współpracującym z Finance You;
-   8. korzystają z formularzy, panelu klienta, komunikacji elektronicznej lub innych funkcjonalności Platformy.
+   8. korzystają z formularzy, panelu klienta, komunikacji elektronicznej lub innych funkcjonalności Serwisu.
 
-3. Regulamin nie dotyczy inwestorów, osób zainteresowanych udzielaniem finansowania ani użytkowników korzystających z części inwestorskiej Platformy. Dla tych osób może obowiązywać odrębny regulamin.
+3. Regulamin nie dotyczy inwestorów, osób zainteresowanych udzielaniem finansowania ani użytkowników korzystających z części inwestorskiej Serwisu. Dla tych osób może obowiązywać odrębny regulamin.
 
-4. Właścicielem i operatorem Platformy Finance You jest:
+4. Właścicielem i operatorem Serwisu Finance You jest:
 
 **FINANCE YOU spółka z ograniczoną odpowiedzialnością** z siedzibą w Warszawie,
 adres: ul. Nowogrodzka 31, 00-511 Warszawa,
@@ -35,21 +35,21 @@ adres e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl),
 
 zwana dalej „Usługodawcą”, „Operatorem”, „Spółką” albo „Finance You”.
 
-5. Platforma Finance You jest narzędziem elektronicznym służącym do przyjmowania, porządkowania, wstępnej analizy, publikowania i obsługi zgłoszeń użytkowników poszukujących finansowania.
+5. Serwis Finance You jest narzędziem elektronicznym służącym do przyjmowania, porządkowania, wstępnej analizy, publikowania i obsługi zgłoszeń użytkowników poszukujących finansowania.
 
-6. Za pośrednictwem Platformy Finance You organizuje wyłącznie finansowanie przeznaczone na Cel Gospodarczy (finansowanie B2B). Klientem może być przedsiębiorca, w tym osoba fizyczna prowadząca działalność gospodarczą, spółka albo inna jednostka organizacyjna, a także osoba fizyczna działająca w bezpośrednim związku z działalnością gospodarczą. Finance You nie organizuje finansowania na cele konsumpcyjne ani na zaspokojenie prywatnych potrzeb mieszkaniowych, w tym kredytu konsumenckiego i kredytu hipotecznego dla konsumenta.
+6. Za pośrednictwem Serwisu Finance You organizuje wyłącznie finansowanie przeznaczone na Cel Gospodarczy (finansowanie B2B). Klientem może być przedsiębiorca, w tym osoba fizyczna prowadząca działalność gospodarczą, spółka albo inna jednostka organizacyjna, a także osoba fizyczna działająca w bezpośrednim związku z działalnością gospodarczą. Finance You nie organizuje finansowania na cele konsumpcyjne ani na zaspokojenie prywatnych potrzeb mieszkaniowych, w tym kredytu konsumenckiego i kredytu hipotecznego dla konsumenta.
 
-7. Platforma nie jest bankiem, instytucją kredytową, instytucją pożyczkową, firmą inwestycyjną, domem maklerskim, funduszem inwestycyjnym, alternatywną spółką inwestycyjną, platformą finansowania społecznościowego ani systemem automatycznego udzielania pożyczek.
+7. Serwis nie jest bankiem, instytucją kredytową, instytucją pożyczkową, firmą inwestycyjną, domem maklerskim, funduszem inwestycyjnym, alternatywną spółką inwestycyjną, platformą finansowania społecznościowego ani systemem automatycznego udzielania pożyczek.
 
-8. Finance You nie udziela za pośrednictwem Platformy porad prawnych, podatkowych, inwestycyjnych, księgowych ani doradztwa kredytowego w rozumieniu odrębnych przepisów.
+8. Finance You nie udziela za pośrednictwem Serwisu porad prawnych, podatkowych, inwestycyjnych, księgowych ani doradztwa kredytowego w rozumieniu odrębnych przepisów.
 
 9. Złożenie wniosku, założenie konta, przesłanie dokumentów, opublikowanie ogłoszenia albo rozpoczęcie kontaktu z Finance You nie oznacza przyznania pożyczki, promesy finansowania, gwarancji pozyskania inwestora ani zobowiązania Finance You do zorganizowania finansowania.
 
 10. Finansowanie może zostać udzielone wyłącznie po odrębnej analizie sprawy, akceptacji warunków przez właściwe strony oraz podpisaniu odpowiednich dokumentów, w szczególności umowy pożyczki, dokumentów zabezpieczenia, oświadczeń oraz aktów notarialnych, jeżeli będą wymagane.
 
-11. Regulamin jest udostępniany użytkownikowi nieodpłatnie przed rozpoczęciem korzystania z Platformy, w sposób umożliwiający jego pozyskanie, utrwalenie, odtwarzanie i przechowywanie.
+11. Regulamin jest udostępniany użytkownikowi nieodpłatnie przed rozpoczęciem korzystania z Serwisu, w sposób umożliwiający jego pozyskanie, utrwalenie, odtwarzanie i przechowywanie.
 
-12. Korzystanie z Platformy oznacza akceptację Regulaminu.
+12. Korzystanie z Serwisu oznacza akceptację Regulaminu.
 
 ---
 
@@ -57,11 +57,11 @@ zwana dalej „Usługodawcą”, „Operatorem”, „Spółką” albo „Finan
 
 Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
-1. **Platforma** albo **Platforma Finance You** – serwis internetowy, aplikacja, formularz, panel klienta, system obsługi zgłoszeń, moduł publikacji ogłoszeń, narzędzia komunikacyjne oraz inne rozwiązania cyfrowe prowadzone przez Usługodawcę pod marką Finance You.
+1. **Serwis** albo **Serwis Finance You** – strona internetowa, aplikacja, formularz, panel klienta, system obsługi zgłoszeń, moduł publikacji ogłoszeń, narzędzia komunikacyjne oraz inne rozwiązania cyfrowe prowadzone przez Usługodawcę pod marką Finance You.
 
 2. **Usługodawca** – Finance You sp. z o.o.
 
-3. **Użytkownik** – osoba fizyczna, osoba prawna albo jednostka organizacyjna korzystająca z Platformy w celu złożenia wniosku, przekazania danych, publikacji ogłoszenia, uzyskania kontaktu lub uzyskania informacji o możliwości finansowania.
+3. **Użytkownik** – osoba fizyczna, osoba prawna albo jednostka organizacyjna korzystająca z Serwisu w celu złożenia wniosku, przekazania danych, publikacji ogłoszenia, uzyskania kontaktu lub uzyskania informacji o możliwości finansowania.
 
 4. **Klient** – użytkownik zainteresowany uzyskaniem finansowania.
 
@@ -73,7 +73,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 8. **Wniosek** – formularz, zgłoszenie, ogłoszenie, wiadomość albo inna forma przekazania przez użytkownika informacji o potrzebie finansowania.
 
-9. **Ogłoszenie** – zaakceptowany przez administratora opis potrzeby finansowania, który może zostać udostępniony w Platformie albo przekazany wybranym inwestorom, finansującym, partnerom lub współpracownikom Finance You.
+9. **Ogłoszenie** – zaakceptowany przez administratora opis potrzeby finansowania, który może zostać udostępniony w Serwisie albo przekazany wybranym inwestorom, finansującym, partnerom lub współpracownikom Finance You.
 
 10. **Finansowanie** – pożyczka, finansowanie prywatne, finansowanie pomostowe, finansowanie zabezpieczone na nieruchomości albo inna forma udostępnienia środków pieniężnych uzgodniona indywidualnie pomiędzy właściwymi stronami.
 
@@ -93,7 +93,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 18. **Dni robocze** – dni od poniedziałku do piątku, z wyłączeniem dni ustawowo wolnych od pracy w Polsce.
 
-19. **Regulamin** – niniejszy regulamin Platformy Finance You dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania.
+19. **Regulamin** – niniejszy regulamin Serwisu Finance You dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania.
 
 20. **Cel Gospodarczy** – cel pozostający w bezpośrednim związku z działalnością gospodarczą lub zawodową Klienta, w szczególności finansowanie bieżącej działalności, inwestycji, zakupu lub remontu nieruchomości w ramach działalności, refinansowanie zobowiązań firmowych. Celem Gospodarczym nie jest cel konsumpcyjny ani zaspokojenie prywatnych potrzeb mieszkaniowych.
 
@@ -101,11 +101,11 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ---
 
-## § 3. Charakter Platformy
+## § 3. Charakter Serwisu
 
-1. Platforma Finance You służy do obsługi zgłoszeń osób i podmiotów poszukujących finansowania.
+1. Serwis Finance You służy do obsługi zgłoszeń osób i podmiotów poszukujących finansowania.
 
-2. Platforma może umożliwiać w szczególności:
+2. Serwis może umożliwiać w szczególności:
 
    1. złożenie wniosku o finansowanie;
    2. opisanie celu finansowania;
@@ -121,7 +121,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    12. otrzymanie informacji zwrotnej o zainteresowaniu finansowaniem;
    13. umówienie dalszych czynności, w tym spotkania, rozmowy, analizy dokumentów albo czynności notarialnych.
 
-3. Platforma ma charakter organizacyjny, informacyjny i pośredniczący w znaczeniu faktycznym. Jej celem jest zebranie, uporządkowanie, opisanie i przedstawienie sprawy potencjalnym finansującym.
+3. Serwis ma charakter organizacyjny, informacyjny i pośredniczący w znaczeniu faktycznym. Jego celem jest zebranie, uporządkowanie, opisanie i przedstawienie sprawy potencjalnym finansującym.
 
 4. Finance You nie ma obowiązku udzielenia finansowania ze środków własnych.
 
@@ -140,38 +140,38 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 6. Użytkownik przyjmuje do wiadomości, że każda sprawa wymaga indywidualnej analizy i może zostać odrzucona bez podania szczegółowego uzasadnienia, jeżeli Finance You albo potencjalny finansujący uzna, że nie spełnia ona wymogów formalnych, ekonomicznych, prawnych, zabezpieczeniowych lub ryzyka.
 
-7. Informacje dostępne na Platformie, przekazywane przez formularz, wiadomość e-mail, rozmowę telefoniczną, panel klienta albo inną formę kontaktu mają charakter organizacyjny i informacyjny, chyba że strony wyraźnie zawrą odrębną umowę o innym charakterze.
+7. Informacje dostępne w Serwisie, przekazywane przez formularz, wiadomość e-mail, rozmowę telefoniczną, panel klienta albo inną formę kontaktu mają charakter organizacyjny i informacyjny, chyba że strony wyraźnie zawrą odrębną umowę o innym charakterze.
 
 ---
 
-## § 4. Dostęp do Platformy dla klientów
+## § 4. Dostęp do Serwisu dla klientów
 
-1. Dostęp do Platformy dla użytkowników poszukujących finansowania jest na dzień wejścia w życie Regulaminu nielimitowany i nieodpłatny.
+1. Dostęp do Serwisu dla użytkowników poszukujących finansowania jest na dzień wejścia w życie Regulaminu nielimitowany i nieodpłatny.
 
 2. Użytkownik nie ponosi opłaty za samo:
 
-   1. wejście na stronę Platformy;
+   1. wejście na stronę Serwisu;
    2. wypełnienie formularza;
    3. przesłanie wniosku;
    4. dodanie dokumentów;
    5. przekazanie danych do wstępnej analizy;
    6. samo opublikowanie ogłoszenia, o ile Finance You nie uzgodni z użytkownikiem inaczej w odrębnej umowie.
 
-3. Brak opłaty za korzystanie z Platformy nie oznacza, że usługa zorganizowania finansowania jest bezpłatna.
+3. Brak opłaty za korzystanie z Serwisu nie oznacza, że usługa zorganizowania finansowania jest bezpłatna.
 
 4. W przypadku skutecznego zorganizowania finansowania Finance You przysługuje wynagrodzenie określone w § 12 Regulaminu.
 
 5. Finance You może w przyszłości wprowadzić dodatkowe funkcjonalności płatne, jednak będzie to wymagało wyraźnego poinformowania użytkownika przed skorzystaniem z takiej funkcjonalności.
 
-6. Żadna płatność nie zostanie naliczona użytkownikowi wyłącznie na podstawie samego wejścia na stronę Platformy albo samego przeglądania treści informacyjnych.
+6. Żadna płatność nie zostanie naliczona użytkownikowi wyłącznie na podstawie samego wejścia na stronę Serwisu albo samego przeglądania treści informacyjnych.
 
-7. Użytkownik poszukujący finansowania nie dokonuje płatności za pośrednictwem systemu płatności Platformy, chyba że w przyszłości zostanie wyraźnie poinformowany o wprowadzeniu takiej funkcjonalności i zaakceptuje odrębne warunki płatności.
+7. Użytkownik poszukujący finansowania nie dokonuje płatności za pośrednictwem systemu płatności Serwisu, chyba że w przyszłości zostanie wyraźnie poinformowany o wprowadzeniu takiej funkcjonalności i zaakceptuje odrębne warunki płatności.
 
 ---
 
 ## § 5. Zasady składania wniosku
 
-1. Użytkownik może złożyć wniosek poprzez formularz dostępny na Platformie, kontakt e-mailowy, kontakt telefoniczny, wiadomość elektroniczną albo inną formę zaakceptowaną przez Finance You.
+1. Użytkownik może złożyć wniosek poprzez formularz dostępny w Serwisie, kontakt e-mailowy, kontakt telefoniczny, wiadomość elektroniczną albo inną formę zaakceptowaną przez Finance You.
 
 2. Wniosek może obejmować w szczególności:
 
@@ -222,7 +222,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    2. dane są sprzeczne;
    3. dokumenty budzą wątpliwości;
    4. użytkownik nie odpowiada na kontakt;
-   5. sprawa jest niezgodna z profilem Platformy;
+   5. sprawa jest niezgodna z profilem Serwisu;
    6. ryzyko sprawy jest zbyt wysokie;
    7. zabezpieczenie jest niewystarczające;
    8. istnieje podejrzenie działania niezgodnego z prawem;
@@ -238,7 +238,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 6. Dokumenty i zdjęcia
 
-1. Użytkownik może przesyłać za pośrednictwem Platformy dokumenty i zdjęcia potrzebne do analizy sprawy.
+1. Użytkownik może przesyłać za pośrednictwem Serwisu dokumenty i zdjęcia potrzebne do analizy sprawy.
 
 2. Dokumenty mogą obejmować w szczególności:
 
@@ -356,7 +356,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 5. Użytkownik przyjmuje do wiadomości, że skuteczne zorganizowanie finansowania może wymagać przekazania danych sprawy innym podmiotom, w szczególności inwestorom, analitykom, notariuszom, prawnikom, rzeczoznawcom, pośrednikom, partnerom technicznym lub podmiotom wspierającym proces.
 
-6. Finance You nie publikuje w ogólnodostępnej części Platformy dokumentów zawierających dane wrażliwe, dane nadmiarowe albo pełne dane identyfikacyjne, chyba że użytkownik wyraźnie poleci inaczej, a publikacja jest zgodna z prawem.
+6. Finance You nie publikuje w ogólnodostępnej części Serwisu dokumentów zawierających dane wrażliwe, dane nadmiarowe albo pełne dane identyfikacyjne, chyba że użytkownik wyraźnie poleci inaczej, a publikacja jest zgodna z prawem.
 
 7. Finance You może anonimizować, skracać, redagować lub porządkować opis sprawy w celu zwiększenia czytelności ogłoszenia, ochrony danych osobowych lub ułatwienia analizy przez finansujących.
 
@@ -375,7 +375,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    5. ocenę realności proponowanego zabezpieczenia;
    6. ocenę celu finansowania;
    7. ocenę możliwości przedstawienia sprawy potencjalnym finansującym;
-   8. ocenę zgodności sprawy z profilem Platformy;
+   8. ocenę zgodności sprawy z profilem Serwisu;
    9. ocenę, czy przekazane dane są wystarczające do dalszej obsługi.
 
 3. Weryfikacja prowadzona przez Finance You ma charakter wstępny i organizacyjny.
@@ -394,11 +394,11 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 5. Potencjalny finansujący może przeprowadzić własną analizę sprawy i odmówić finansowania niezależnie od wstępnej oceny Finance You.
 
-6. Finance You może odmówić dalszej obsługi sprawy, jeżeli w wyniku weryfikacji uzna, że sprawa jest nierealna, niewystarczająco udokumentowana, zbyt ryzykowna, niezgodna z prawem albo niezgodna z profilem Platformy.
+6. Finance You może odmówić dalszej obsługi sprawy, jeżeli w wyniku weryfikacji uzna, że sprawa jest nierealna, niewystarczająco udokumentowana, zbyt ryzykowna, niezgodna z prawem albo niezgodna z profilem Serwisu.
 
 7. Finance You może, ale nie musi, przedstawić użytkownikowi przyczyny odmowy dalszej obsługi sprawy.
 
-8. Narzędzia automatyczne Platformy, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku albo zaproponować jego status, w tym propozycję odmowy. Decyzję o odmowie dalszej obsługi wniosku albo o jego odrzuceniu zawsze podejmuje pracownik Finance You po zapoznaniu się z propozycją. Użytkownik może przedstawić swoje stanowisko i poprosić o ponowne rozpatrzenie sprawy, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
+8. Narzędzia automatyczne Serwisu, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku albo zaproponować jego status, w tym propozycję odmowy. Decyzję o odmowie dalszej obsługi wniosku albo o jego odrzuceniu zawsze podejmuje pracownik Finance You po zapoznaniu się z propozycją. Użytkownik może przedstawić swoje stanowisko i poprosić o ponowne rozpatrzenie sprawy, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
 ---
 
@@ -470,7 +470,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 12. Wynagrodzenie Finance You za zorganizowanie finansowania
 
-1. Korzystanie z Platformy przez użytkownika poszukującego finansowania jest nieodpłatne na etapie złożenia wniosku, publikacji ogłoszenia i wstępnej analizy sprawy.
+1. Korzystanie z Serwisu przez użytkownika poszukującego finansowania jest nieodpłatne na etapie złożenia wniosku, publikacji ogłoszenia i wstępnej analizy sprawy.
 
 2. W przypadku skutecznego zorganizowania finansowania Finance You przysługuje wynagrodzenie za zorganizowanie finansowania.
 
@@ -556,7 +556,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 1. Użytkownik zobowiązuje się:
 
-   1. korzystać z Platformy zgodnie z prawem i Regulaminem;
+   1. korzystać z Serwisu zgodnie z prawem i Regulaminem;
    2. podawać prawdziwe, aktualne i kompletne dane;
    3. nie wprowadzać Finance You ani finansujących w błąd;
    4. nie zatajać istotnych informacji;
@@ -565,7 +565,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    7. odpowiadać na uzasadnione pytania Finance You;
    8. nie publikować treści bezprawnych;
    9. nie naruszać praw osób trzecich;
-   10. nie wykorzystywać Platformy do wyłudzeń, oszustw, obchodzenia prawa ani działań nieuczciwych.
+   10. nie wykorzystywać Serwisu do wyłudzeń, oszustw, obchodzenia prawa ani działań nieuczciwych.
 
 2. Użytkownik ponosi odpowiedzialność za treść przekazanych danych, dokumentów, zdjęć, oświadczeń i informacji.
 
@@ -580,7 +580,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    5. przesyłać dokumentów przerobionych lub podrobionych;
    6. ukrywać obciążeń nieruchomości;
    7. ukrywać zadłużenia;
-   8. wykorzystywać Platformy do obejścia prawa;
+   8. wykorzystywać Serwisu do obejścia prawa;
    9. kontaktować się z finansującymi w sposób naruszający ustalenia z Finance You;
    10. omijać Finance You w celu uniknięcia zapłaty wynagrodzenia, jeżeli wynagrodzenie stało się należne.
 
@@ -590,7 +590,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 15. Zasady korzystania z konta i panelu klienta
 
-1. Platforma może umożliwiać utworzenie konta albo panelu klienta.
+1. Serwis może umożliwiać utworzenie konta albo panelu klienta.
 
 2. Konto może służyć w szczególności do:
 
@@ -613,7 +613,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    3. istnieje podejrzenie nieuprawnionego dostępu;
    4. użytkownik podał nieprawdziwe dane;
    5. użytkownik narusza prawa osób trzecich;
-   6. wymaga tego bezpieczeństwo Platformy.
+   6. wymaga tego bezpieczeństwo Serwisu.
 
 6. Użytkownik może zażądać usunięcia konta, wysyłając wiadomość na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
@@ -623,7 +623,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 16. Treści zabronione
 
-1. Użytkownik nie może przekazywać za pomocą Platformy treści:
+1. Użytkownik nie może przekazywać za pomocą Serwisu treści:
 
    1. bezprawnych;
    2. nieprawdziwych;
@@ -677,9 +677,9 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 18. Zawarcie umowy o świadczenie usług elektronicznych
 
-1. Do zawarcia umowy o świadczenie usług elektronicznych dochodzi z chwilą rozpoczęcia korzystania przez użytkownika z danej funkcjonalności Platformy, w szczególności poprzez:
+1. Do zawarcia umowy o świadczenie usług elektronicznych dochodzi z chwilą rozpoczęcia korzystania przez użytkownika z danej funkcjonalności Serwisu, w szczególności poprzez:
 
-   1. wejście na stronę Platformy;
+   1. wejście na stronę Serwisu;
    2. rozpoczęcie wypełniania formularza;
    3. wysłanie wniosku;
    4. utworzenie konta;
@@ -687,11 +687,11 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    6. zaakceptowanie Regulaminu;
    7. wysłanie wiadomości przez formularz kontaktowy.
 
-2. Umowa o świadczenie usług elektronicznych dotycząca samego korzystania z Platformy jest zawierana na czas korzystania z danej usługi.
+2. Umowa o świadczenie usług elektronicznych dotycząca samego korzystania z Serwisu jest zawierana na czas korzystania z danej usługi.
 
-3. Użytkownik może zakończyć korzystanie z Platformy w każdym czasie.
+3. Użytkownik może zakończyć korzystanie z Serwisu w każdym czasie.
 
-4. Zakończenie korzystania z Platformy nie wpływa na:
+4. Zakończenie korzystania z Serwisu nie wpływa na:
 
    1. obowiązek zapłaty wynagrodzenia, jeżeli stało się należne;
    2. skuteczność wcześniej zawartych umów;
@@ -720,7 +720,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 8. Jeżeli usługa została w pełni wykonana za wyraźną i uprzednią zgodą konsumenta, po poinformowaniu go o utracie prawa odstąpienia po spełnieniu świadczenia, konsument może utracić prawo odstąpienia w zakresie przewidzianym przez prawo.
 
-9. W przypadku samego nieodpłatnego korzystania z Platformy odstąpienie od umowy polega w praktyce na zaprzestaniu korzystania z Platformy, żądaniu usunięcia konta albo wysłaniu oświadczenia o odstąpieniu.
+9. W przypadku samego nieodpłatnego korzystania z Serwisu odstąpienie od umowy polega w praktyce na zaprzestaniu korzystania z Serwisu, żądaniu usunięcia konta albo wysłaniu oświadczenia o odstąpieniu.
 
 10. Postanowienia niniejszego paragrafu stosuje się również do przedsiębiorcy na prawach konsumenta w zakresie przewidzianym przez przepisy prawa.
 
@@ -728,7 +728,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 20. Reklamacje
 
-1. Użytkownik może złożyć reklamację dotyczącą działania Platformy albo usług świadczonych przez Finance You.
+1. Użytkownik może złożyć reklamację dotyczącą działania Serwisu albo usług świadczonych przez Finance You.
 
 2. Reklamację należy wysłać na adres e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
@@ -749,7 +749,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 7. Reklamacja dotycząca braku uzyskania finansowania nie będzie uznana za zasadną, jeżeli Finance You nie zobowiązało się wyraźnie do zapewnienia finansowania.
 
-8. Reklamacja dotycząca decyzji finansującego nie będzie uznana za reklamację dotyczącą działania Platformy, chyba że dotyczy błędu Finance You w przekazaniu danych albo obsłudze sprawy.
+8. Reklamacja dotycząca decyzji finansującego nie będzie uznana za reklamację dotyczącą działania Serwisu, chyba że dotyczy błędu Finance You w przekazaniu danych albo obsłudze sprawy.
 
 ---
 
@@ -759,7 +759,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 2. Dane osobowe są przetwarzane w szczególności w celu:
 
-   1. obsługi Platformy;
+   1. obsługi Serwisu;
    2. przyjęcia wniosku;
    3. analizy sprawy;
    4. kontaktu z użytkownikiem;
@@ -773,7 +773,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    12. wykonania obowiązków prawnych, podatkowych i księgowych;
    13. prowadzenia działań marketingowych, jeżeli użytkownik wyraził odpowiednią zgodę albo istnieje inna podstawa prawna.
 
-3. Szczegółowe zasady przetwarzania danych osobowych określa Polityka prywatności Platformy.
+3. Szczegółowe zasady przetwarzania danych osobowych określa Polityka prywatności Serwisu.
 
 4. Użytkownik przyjmuje do wiadomości, że obsługa sprawy może wymagać przekazania danych osobowych podmiotom trzecim, w szczególności:
 
@@ -836,9 +836,9 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ## § 24. Własność intelektualna
 
-1. Prawa do Platformy, jej układu, treści, formularzy, tekstów, grafik, znaków, logotypów, rozwiązań technicznych, baz danych, materiałów i dokumentów należą do Finance You albo podmiotów, od których Finance You uzyskało odpowiednie prawa.
+1. Prawa do Serwisu, jego układu, treści, formularzy, tekstów, grafik, znaków, logotypów, rozwiązań technicznych, baz danych, materiałów i dokumentów należą do Finance You albo podmiotów, od których Finance You uzyskało odpowiednie prawa.
 
-2. Użytkownik nie może kopiować, rozpowszechniać, sprzedawać, udostępniać, modyfikować ani wykorzystywać elementów Platformy poza zakresem dozwolonego korzystania wynikającego z Regulaminu.
+2. Użytkownik nie może kopiować, rozpowszechniać, sprzedawać, udostępniać, modyfikować ani wykorzystywać elementów Serwisu poza zakresem dozwolonego korzystania wynikającego z Regulaminu.
 
 3. Użytkownik zachowuje prawa do dokumentów, zdjęć i treści, które sam przekazuje, z zastrzeżeniem ust. 4.
 
@@ -851,7 +851,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    3. kopiowanie techniczne;
    4. przesyłanie;
    5. udostępnianie wybranym finansującym i partnerom;
-   6. publikację w Platformie w zakresie zaakceptowanym przez administratora;
+   6. publikację w Serwisie w zakresie zaakceptowanym przez administratora;
    7. anonimizację;
    8. opracowanie opisu sprawy.
 
@@ -859,13 +859,13 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 ---
 
-## § 25. Przerwy techniczne i dostępność Platformy
+## § 25. Przerwy techniczne i dostępność Serwisu
 
-1. Finance You dokłada starań, aby Platforma działała prawidłowo i była dostępna dla użytkowników.
+1. Finance You dokłada starań, aby Serwis działał prawidłowo i był dostępny dla użytkowników.
 
-2. Finance You nie gwarantuje nieprzerwanej dostępności Platformy.
+2. Finance You nie gwarantuje nieprzerwanej dostępności Serwisu.
 
-3. Dostęp do Platformy może być ograniczony w szczególności z powodu:
+3. Dostęp do Serwisu może być ograniczony w szczególności z powodu:
 
    1. prac technicznych;
    2. aktualizacji;
@@ -876,7 +876,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    7. siły wyższej;
    8. konieczności zapewnienia bezpieczeństwa danych.
 
-4. Finance You może zmieniać funkcjonalności Platformy, jeżeli nie narusza to praw nabytych użytkowników ani bezwzględnie obowiązujących przepisów prawa.
+4. Finance You może zmieniać funkcjonalności Serwisu, jeżeli nie narusza to praw nabytych użytkowników ani bezwzględnie obowiązujących przepisów prawa.
 
 ---
 
@@ -916,8 +916,8 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 1. Finance You może zmienić Regulamin z ważnych przyczyn, w szczególności:
 
    1. zmiany przepisów prawa;
-   2. zmiany funkcjonalności Platformy;
-   3. zmiany modelu działania Platformy;
+   2. zmiany funkcjonalności Serwisu;
+   3. zmiany modelu działania Serwisu;
    4. zmiany danych Finance You;
    5. potrzeby doprecyzowania postanowień;
    6. potrzeby zwiększenia bezpieczeństwa;
@@ -925,13 +925,13 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
    8. zmiany zasad obsługi spraw;
    9. zmiany zasad rozliczeń.
 
-2. Zmieniony Regulamin zostanie udostępniony na Platformie.
+2. Zmieniony Regulamin zostanie udostępniony w Serwisie.
 
 3. W przypadku użytkowników posiadających konto albo aktywną sprawę Finance You może poinformować o zmianie Regulaminu drogą elektroniczną.
 
 4. Do spraw rozpoczętych przed zmianą Regulaminu stosuje się Regulamin obowiązujący w chwili rozpoczęcia sprawy, chyba że zmiana Regulaminu jest korzystna dla użytkownika albo bezwzględnie wymagają jej przepisy prawa.
 
-5. Użytkownik, który nie akceptuje zmian Regulaminu, może zaprzestać korzystania z Platformy albo zażądać usunięcia konta.
+5. Użytkownik, który nie akceptuje zmian Regulaminu, może zaprzestać korzystania z Serwisu albo zażądać usunięcia konta.
 
 ---
 
@@ -947,7 +947,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 5. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne, bezskuteczne albo niewykonalne, nie wpływa to na ważność pozostałych postanowień Regulaminu.
 
-6. Regulamin w wersji 3 obowiązuje od dnia 30 września 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
+6. Regulamin w wersji 1.0 obowiązuje od dnia 19 października 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
 
 ---
 
@@ -969,9 +969,9 @@ Adres: .........................................................................
 
 Adres e-mail: ..................................................................
 
-niniejszym informuję o moim odstąpieniu od umowy o świadczenie usług drogą elektroniczną zawartej za pośrednictwem Platformy Finance You.
+niniejszym informuję o moim odstąpieniu od umowy o świadczenie usług drogą elektroniczną zawartej za pośrednictwem Serwisu Finance You.
 
-Data zawarcia umowy / rozpoczęcia korzystania z Platformy: ....................................
+Data zawarcia umowy / rozpoczęcia korzystania z Serwisu: ....................................
 
 Numer sprawy, jeżeli został nadany: ....................................
 

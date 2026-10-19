@@ -112,7 +112,7 @@ export function ChatThreadView({ threadId, senderRole, title }: Props) {
         </div>
         <p className="text-[11px] text-muted-foreground">
           AI moderuje wiadomości — numery, e-maile, linki i nazwy komunikatorów są ukrywane. Cała
-          komunikacja odbywa się w platformie.
+          komunikacja odbywa się w panelu Finance You.
         </p>
       </CardContent>
     </Card>

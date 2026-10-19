@@ -103,7 +103,9 @@ export const Route = createFileRoute("/blog/")({
   errorComponent: ({ error }) => (
     <MarketingShell page="blog">
       <Section>
-        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>{(error as Error).message}</p>
+        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
+          {(error as Error).message}
+        </p>
       </Section>
     </MarketingShell>
   ),
@@ -295,10 +297,10 @@ function BlogIndex() {
 
       <CTASection
         title="Sprawdź, co Finance You może zrobić dla Ciebie."
-        sub="Bezpłatny wniosek o finansowanie pod zabezpieczenie nieruchomości albo dostęp do Klubu Inwestorów Hipotecznych — edukacja, dokumenty i narzędzia AI."
+        sub="Bezpłatny wniosek o finansowanie pod zabezpieczenie nieruchomości albo program partnerski dla inwestorów — szkolenie i narzędzia w jednym abonamencie."
         buttons={[
           { label: "Dla klienta — złóż wniosek", href: "/dla-klienta" },
-          { label: "Dla inwestora — poznaj Klub", href: "/dla-inwestora" },
+          { label: "Dla inwestora — zostań partnerem", href: "/dla-inwestora" },
         ]}
       />
     </MarketingShell>

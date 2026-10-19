@@ -70,7 +70,7 @@ function RolePickerPage() {
       <Card className="w-full max-w-4xl">
         <CardHeader>
           <CardTitle>Wybierz typ konta</CardTitle>
-          <CardDescription>Określ, w jakiej roli chcesz korzystać z platformy.</CardDescription>
+          <CardDescription>Określ, w jakiej roli chcesz korzystać z Finance You.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           {tile("klient", Building2, "Klient", "Złóż wniosek o pożyczkę pod zastaw nieruchomości.")}

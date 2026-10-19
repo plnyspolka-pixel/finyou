@@ -36,7 +36,7 @@ const freeGroups: NavGroup[] = [
 ];
 
 // Pełny (płatny) dostęp: dodatkowo leady Finance You, skrzynka, Akademia
-// i moduły programu partnerskiego.
+// i moduły programu poleceń.
 const paidGroups: NavGroup[] = [
   {
     items: [
@@ -50,7 +50,7 @@ const paidGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Program partnerski",
+    label: "Program poleceń",
     items: [
       { to: "/posrednik/program", label: "Pulpit programu", icon: Network },
       { to: "/posrednik/prowizje", label: "Prowizje", icon: Coins },

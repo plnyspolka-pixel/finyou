@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
+import { wersjaDokumentu } from "@/lib/legal/wersja";
 
 export interface ActiveConsentDoc {
   content: string;
@@ -50,7 +51,7 @@ export function ActiveConsentDocumentPage({
           ← Wróć do strony głównej
         </Link>
         <p className="mt-6 text-sm text-muted-foreground">
-          {heading} — wersja {doc.version}
+          {heading} — wersja {wersjaDokumentu(doc.version)}
         </p>
         <article className="fy-article mt-4">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown>

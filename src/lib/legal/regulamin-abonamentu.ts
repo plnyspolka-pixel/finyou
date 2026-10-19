@@ -9,7 +9,8 @@
  * generowana z tych samych stałych co cennik (lib/investor-plan/plans.ts),
  * a skrót każdej wersji pilnuje test — zmiana ceny wymaga nowej wersji.
  *
- * Wersja 2 (decyzja właściciela 2026-09-30): Abonament w całości jest
+ * Wersja 1.0 (decyzja właściciela 2026-10-19 — dokumenty bez wersji
+ * historycznych; treść jak dotąd): Abonament w całości jest
  * szkoleniem w formie treści cyfrowych — po wyraźnym żądaniu rozpoczęcia
  * świadczenia przy płatności Konsument traci prawo odstąpienia
  * (art. 38 ust. 1 pkt 13 u.p.k.). Zgoda jest obowiązkowa przy zakupie, a
@@ -20,11 +21,11 @@ import {
   SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
 } from "@/lib/investor-plan/plans";
 
-/** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (pakiet-v7.ts). */
+/** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (dokumenty-1-0.ts). */
 export const CENA_ABONAMENTU = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
 
-export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-v2";
-export const REGULAMIN_ABONAMENTU_DATA_PL = "30 września 2026 r.";
+export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.0";
+export const REGULAMIN_ABONAMENTU_DATA_PL = "19 października 2026 r.";
 export const REGULAMIN_ABONAMENTU_PATH = "/regulamin-inwestora";
 
 export const FUNDACJA = {
@@ -39,7 +40,7 @@ export function regulaminAbonamentuInwestora(): string {
   const f = FUNDACJA;
   return `# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-**wersja 2 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
+**wersja 1.0 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
 
 ## § 1. Postanowienia ogólne
 

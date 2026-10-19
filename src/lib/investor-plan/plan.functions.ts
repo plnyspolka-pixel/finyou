@@ -1,7 +1,7 @@
 // Dostęp inwestora (jeden poziom, abonament) + rejestr HISTORYCZNYCH opłat
 // sukcesu w panelu administratora.
 //
-// Od 2026-09 (Umowa ramowa v7) nie ma pakietu PRO, opłaty sukcesu ani
+// Od 2026-09 (Umowa ramowa) nie ma pakietu PRO, opłaty sukcesu ani
 // odblokowań pojedynczych okazji; od 2026-09-30 Inwestor płaci wyłącznie
 // Opłatę Abonamentową (1 500 zł / 30 dni albo 7 000 zł / 365 dni).
 // `investorTier` zwraca jeden poziom, `assertInvestorPro` sprawdza aktywny
@@ -35,7 +35,7 @@ export interface InvestorPlanState {
   tier: InvestorTier;
   /** Zawsze 0 — opłata sukcesu zniesiona. */
   successFeeBps: number;
-  /** Historyczne opłaty sukcesu inwestora (sprzed v7) — tylko do wglądu. */
+  /** Historyczne opłaty sukcesu inwestora (sprzed obecnej umowy) — tylko do wglądu. */
   successFees: {
     id: string;
     matchId: string;
@@ -139,7 +139,7 @@ export const getSuccessFeesAdminState = createServerFn({ method: "GET" })
     }
 
     return {
-      // Opłata Sukcesu zniesiona w v7 (allows_investor_fees dotyczy dziś wyłącznie
+      // Opłata Sukcesu zniesiona w Umowie ramowej (allows_investor_fees dotyczy dziś wyłącznie
       // Opłaty Abonamentowej) — ta sekcja pozostaje historyczna.
       feesAllowed: false,
       contractVersion: (ramowa?.version as string | null) ?? null,
@@ -162,8 +162,8 @@ export const getSuccessFeesAdminState = createServerFn({ method: "GET" })
   });
 
 /**
- * Zmiana statusu historycznej opłaty sukcesu przez administratora. Od v7
- * dozwolone jest wyłącznie anulowanie — naliczanie i fakturowanie opłat od
+ * Zmiana statusu historycznej opłaty sukcesu przez administratora. Dozwolone
+ * jest wyłącznie anulowanie — naliczanie i fakturowanie opłat od
  * Inwestora nie ma podstawy umownej.
  */
 export const setSuccessFeeStatus = createServerFn({ method: "POST" })
@@ -184,7 +184,7 @@ export const setSuccessFeeStatus = createServerFn({ method: "POST" })
       .from("investor_success_fees")
       .update({
         status: data.status,
-        note: data.note ?? "Anulowana — Umowa ramowa v7: bez Opłaty Sukcesu.",
+        note: data.note ?? "Anulowana — Umowa ramowa: bez Opłaty Sukcesu.",
       })
       .eq("id", data.feeId);
     if (error) throw new Error(error.message);

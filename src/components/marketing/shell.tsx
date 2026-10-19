@@ -72,9 +72,9 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
   // Inwestor najpierw poznaje warunki w cenniku (abonament), potem zakłada konto
   // (nagłówek z page="inwestor" renderuje się tylko na /dla-inwestora).
-  inwestor: { label: "Dołącz do klubu", href: "#cennik" },
+  inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
-  inwestorModul: { label: "Dołącz do klubu", href: "/dla-inwestora#cennik" },
+  inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
   posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -84,7 +84,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
  *  `hidden` zdejmuje wpis z menu, gdy sekcja jest schowana na landingu
  *  (flagi SHOW w routes/dla-inwestora.tsx) — wpis zostaje, żeby dało się go przywrócić. */
 const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
-  { label: "Akademia Inwestora", hash: "#akademia", hidden: true },
+  { label: "Szkolenie — program", hash: "#akademia", hidden: true },
   { label: "7 warstw ochrony inwestycji", hash: "#ochrona", hidden: true },
   { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
   { label: "Co zyskujesz", hash: "#korzysci" },
@@ -394,7 +394,7 @@ export function SiteFooter() {
       links: LOAN_PRODUCTS.map((p) => ({ t: p.menuLabel, href: `/${p.slug}` })),
     },
     {
-      h: "Platforma",
+      h: "Finance You",
       links: [
         { t: "Jak działa", href: "/#jak-dziala" },
         { t: "Blog", href: "/blog" },
@@ -544,8 +544,9 @@ export function SiteFooter() {
           color: "var(--muted-foreground)",
         }}
       >
-        © 2026 Finance You sp. z o.o. · Platforma dla rynku prywatnych pożyczek zabezpieczonych
-        nieruchomościami. Materiały mają charakter informacyjny i nie stanowią oferty.
+        © 2026 Finance You sp. z o.o. · Pożyczki dla firm zabezpieczone nieruchomościami oraz
+        szkolenie i narzędzia dla inwestorów. Materiały mają charakter informacyjny i nie stanowią
+        oferty.
       </div>
     </footer>
   );

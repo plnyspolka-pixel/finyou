@@ -68,8 +68,8 @@ const ROLES: RoleCardProps[] = [
     accent: "var(--cyan-500)",
     badge: { v: "secondary", t: "Inwestor" },
     title: "Dla inwestorów",
-    desc: "Zyskaj możliwość składania Zleceń na finansowanie klientów i ucz się inwestowania w pożyczki zabezpieczone nieruchomościami.",
-    cta: "Dołącz do klubu",
+    desc: "Zostań partnerem Finance You: szkolenie i narzędzia do inwestowania w pożyczki zabezpieczone nieruchomościami — w abonamencie, także w ratach.",
+    cta: "Zostań partnerem",
     href: "/dla-inwestora",
   },
 ];
@@ -99,7 +99,7 @@ const FLOW = [
   },
   { t: "Zespół prowadzi proces", d: "Obsługa w CRM z pełną historią kontaktu." },
   { t: "Inwestor analizuje", d: "LTV, typ nieruchomości, dokumenty w jednym miejscu." },
-  { t: "Platforma wspiera obsługę", d: "Dokumentacja, komunikacja i monitoring." },
+  { t: "Finance You wspiera obsługę", d: "Dokumentacja, komunikacja i monitoring." },
 ];
 
 function Hero() {
@@ -133,7 +133,7 @@ function Hero() {
               letterSpacing: "0.1em",
             }}
           >
-            <BrandIcon name="shield" size={16} /> Platforma prywatnego finansowania
+            <BrandIcon name="shield" size={16} /> Prywatne finansowanie pod nieruchomości
           </span>
           <h1
             style={{
@@ -144,7 +144,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Jedna platforma dla klientów i inwestorów na rynku pożyczek pod{" "}
+            Finansowanie dla firm i szkolenie dla inwestorów na rynku pożyczek pod{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
@@ -165,9 +165,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Finance You łączy przedsiębiorców szukających finansowania i prywatnych inwestorów w
-            jednym systemie: z CRM-em, AI, dokumentacją, szkoleniami i automatyzacją procesu.
-            Finansowanie wyłącznie na cel związany z działalnością gospodarczą.
+            Przedsiębiorcom pomagamy znaleźć finansowanie pod zastaw nieruchomości, a inwestorów
+            szkolimy i dajemy im narzędzia do pracy jako partnerom Finance You. Finansowanie
+            wyłącznie na cel związany z działalnością gospodarczą.
           </p>
           <div
             style={{
@@ -240,8 +240,8 @@ function Landing() {
       <Section id="sciezki">
         <SectionHead
           eyebrow="Wybierz ścieżkę"
-          title="Dwie role, jeden system"
-          sub="Każda ścieżka prowadzi do osobnego, dopasowanego procesu w platformie Finance You."
+          title="Dwie role, jeden partner"
+          sub="Każda ścieżka prowadzi do osobnego, dopasowanego procesu w Finance You."
         />
         <div
           className="fy-steps"
@@ -261,8 +261,8 @@ function Landing() {
 
       <Section tint>
         <SectionHead
-          eyebrow="Platforma, nie pośrednik"
-          title="Nie kolejny pośrednik. Cały system do obsługi rynku prywatnego finansowania."
+          eyebrow="Więcej niż pośrednik"
+          title="Wiedza, narzędzia i ludzie do obsługi prywatnego finansowania."
           sub="Wszystko, czego potrzebuje rynek prywatnych pożyczek hipotecznych — w jednym, uporządkowanym miejscu."
         />
         <div style={{ marginTop: "2.5rem" }}>
@@ -302,7 +302,7 @@ function Landing() {
 
       <CTASection
         title="Wybierz swoją ścieżkę w Finance You."
-        sub="Dwie role, jeden system operacyjny. Zacznij tam, gdzie jesteś."
+        sub="Pożyczasz albo inwestujesz — zacznij tam, gdzie jesteś."
         buttons={[
           { label: "Pożyczam", href: "/dla-klienta" },
           { label: "Inwestuję", href: "/dla-inwestora" },

@@ -1,6 +1,6 @@
-// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-2026-09-29).
-// Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa v7 (§ 5–7,
-// Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA v6 (§ 5, § 7), plik 00 paczki.
+// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-1.0).
+// Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa (§ 5–7,
+// Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA (§ 5, § 7), plik 00 paczki.
 
 /** Statusy Dopasowania (para Zlecenie–Projekt) — cykl z § 5 Umowy ramowej. */
 import { FY_COMMISSION_MIN_PLN, FY_COMMISSION_PCT, fyCommission } from "@/lib/contract-engine/fees";
@@ -301,7 +301,7 @@ export function canTransition(from: MatchStatus, to: MatchStatus): boolean {
   return allowed[from]?.includes(to) ?? false;
 }
 
-/** Payload Karty Leada (Załącznik nr 1 do Umowy ramowej, v5): pola Nr
+/** Payload Karty Leada (Załącznik nr 1 do Umowy ramowej): pola Nr
  *  Zlecenia, Parametry, Przyjęcie/Dopasowanie + wersje dokumentów pakietu. */
 export interface KartaLeadaPayload {
   projekt_ref: string;

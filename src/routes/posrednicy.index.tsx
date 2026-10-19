@@ -17,17 +17,17 @@ import {
 export const Route = createFileRoute("/posrednicy/")({
   head: () => ({
     meta: [
-      { title: "Program pośredników Finance You — sieć partnerska, 3-poziomowy system prowizji" },
+      { title: "Program pośredników Finance You — sieć pośredników, 3-poziomowy system prowizji" },
       {
         name: "description",
         content:
-          "Dołącz do sieci partnerskiej Finance You. Prowizja sieciowa do 3 poziomów wyłącznie od realnych zdarzeń gospodarczych. Rozliczenie B2B lub działalność nierejestrowana. Próg wypłaty 500 zł.",
+          "Dołącz do sieci pośredników Finance You. Prowizja sieciowa do 3 poziomów wyłącznie od realnych zdarzeń gospodarczych. Rozliczenie B2B lub działalność nierejestrowana. Próg wypłaty 500 zł.",
       },
       { property: "og:title", content: "Program pośredników Finance You" },
       {
         property: "og:description",
         content:
-          "Sieć partnerska i 3-poziomowy system prowizji. Prowizje wyłącznie od realnych zdarzeń gospodarczych.",
+          "Sieć pośredników i 3-poziomowy system prowizji. Prowizje wyłącznie od realnych zdarzeń gospodarczych.",
       },
       { property: "og:url", content: "https://financeyou.pl/posrednicy" },
       { property: "og:type", content: "website" },
@@ -71,7 +71,7 @@ function PosrednicyLanding() {
           </Button>
           <Button asChild size="sm">
             <Link to="/posrednicy/rejestracja" search={{ ref: "" }}>
-              Zostań partnerem
+              Zostań pośrednikiem
             </Link>
           </Button>
         </div>
@@ -80,7 +80,7 @@ function PosrednicyLanding() {
       <main className="mx-auto max-w-5xl px-4 py-12 space-y-12">
         <section className="text-center space-y-5">
           <Badge variant="secondary" className="gap-1">
-            <Network className="h-3.5 w-3.5" /> Sieć partnerska Finance You
+            <Network className="h-3.5 w-3.5" /> Sieć pośredników Finance You
           </Badge>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
             Program pośredników i 3-poziomowy system prowizji
@@ -124,7 +124,7 @@ function PosrednicyLanding() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Poziom 1 — Ty (bezpośrednie polecenie). Poziom 2 — partner, który zaprosił Ciebie.
+              Poziom 1 — Ty (bezpośrednie polecenie). Poziom 2 — pośrednik, który zaprosił Ciebie.
               Poziom 3 — jego sponsor. Prowizja sieciowa nie jest naliczana powyżej 3 poziomów.
             </CardContent>
           </Card>
@@ -170,7 +170,7 @@ function PosrednicyLanding() {
               </div>
               <Button asChild>
                 <Link to="/posrednicy/rejestracja" search={{ ref: "" }}>
-                  Zostań partnerem <ArrowRight className="ml-2 h-4 w-4" />
+                  Zostań pośrednikiem <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>

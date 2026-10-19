@@ -1,12 +1,20 @@
 /**
  * PDF na trwały nośnik: treść z `content_text`, polskie znaki z fontu
  * Liberation Sans, załączniki od nowej strony, stopka z numeracją, SHA-256
- * treści w identyfikatorze. Realne dokumenty v7 budujemy tak jak skrypt
- * `scripts/legal/build-pakiet-v7.ts`.
+ * treści w identyfikatorze. Realne dokumenty to pakiet inwestora 1.0 z
+ * docs/legal/pakiet-inwestora.
  */
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { buildPakietV7 } from "./build-v7";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  PAKIET_ID,
+  PAKIET_PLIKI,
+  PAKIET_WERSJA,
+  sha256Hex,
+  type KodPakietu,
+} from "./dokumenty-1-0";
 import { pdfFilename, pdfZTekstu, pdfZTekstuBase64, znakiPozaFontem } from "./pdf-z-tekstu";
 
 const DATE = new Date(Date.UTC(2026, 9, 3, 12, 0, 0));
@@ -75,8 +83,21 @@ describe("pdfZTekstu", () => {
     expect(pdfFilename("  ", "rodo")).toBe("rodo.pdf");
   });
 
-  it("every character of the real v7 pack is covered by the embedded font", async () => {
-    const docs = await buildPakietV7();
+  it("every character of the real 1.0 pack is covered by the embedded font", async () => {
+    const docs = (Object.keys(PAKIET_PLIKI) as KodPakietu[]).map((code) => {
+      const content_text = readFileSync(
+        join(process.cwd(), "docs", "legal", "pakiet-inwestora", `${PAKIET_PLIKI[code]}.txt`),
+        "utf8",
+      );
+      return {
+        code,
+        content_text,
+        title: PAKIET_PLIKI[code],
+        version: PAKIET_WERSJA,
+        sha256: sha256Hex(content_text),
+        package_id: PAKIET_ID,
+      };
+    });
     expect(docs.map((d) => d.code).sort()).toEqual(["nda", "rodo", "umowa_ramowa"]);
     for (const d of docs) {
       expect(await znakiPozaFontem(d.content_text), d.code).toEqual([]);

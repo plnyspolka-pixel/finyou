@@ -57,7 +57,7 @@ export const Route = createFileRoute("/inwestor/wniosek/$id")({
 });
 
 // Szczegół wniosku: dane chroni RLS (investor_has_full_access — abonament;
-// Umowa ramowa v7). Dane i tak chronią server functions i RLS.
+// Umowa ramowa). Dane i tak chronią server functions i RLS.
 function InwestorWniosekGate() {
   return <InwestorWniosek />;
 }

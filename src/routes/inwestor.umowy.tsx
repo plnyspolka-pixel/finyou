@@ -1,4 +1,4 @@
-// JEDEN pipeline inwestora (pakiet FY-LEGAL-2026-09-29: umowa ramowa v7, NDA v6, RODO v5;
+// JEDEN pipeline inwestora (pakiet FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0;
 // Inwestor płaci wyłącznie abonament):
 //   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
 //   2. Rachunek bankowy do spłaty pożyczki (wymuszony)
@@ -250,7 +250,7 @@ function PipelinePage() {
   );
 }
 
-// ── Historyczne opłaty sukcesu (nieaktywne od Umowy ramowej v7) ─────────────
+// ── Historyczne opłaty sukcesu (nieaktywne od Umowy ramowej) ─────────────
 
 const FEE_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   wstrzymana: {
@@ -270,7 +270,7 @@ function SuccessFeesList({ plan }: { plan: any }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">
-          Historyczne opłaty sukcesu (nieaktywne — od Umowy ramowej v7 nie ma Opłaty Sukcesu)
+          Historyczne opłaty sukcesu (nieaktywne — Umowa ramowa nie przewiduje Opłaty Sukcesu)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

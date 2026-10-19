@@ -210,7 +210,7 @@ export const ROLE_PANELS: RolePanel[] = [
     role: "posrednik",
     path: "/posrednik",
     title: "Pośrednik",
-    desc: "Panel partnera — przekazane wnioski i prowizje.",
+    desc: "Panel pośrednika — przekazane wnioski i prowizje.",
   },
   {
     role: "inwestor",

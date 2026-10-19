@@ -1,14 +1,14 @@
-# POLITYKA PRYWATNOŚCI PLATFORMY FINANCE YOU
+# POLITYKA PRYWATNOŚCI SERWISU FINANCE YOU
 
-**wersja 2 — obowiązuje od dnia 29 września 2026 r.**
+**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
 
 ---
 
 ## § 1. Postanowienia ogólne
 
-1. Niniejsza polityka prywatności, zwana dalej „Polityką prywatności”, określa zasady przetwarzania danych osobowych użytkowników korzystających z Platformy Finance You, w szczególności osób składających wniosek o pożyczkę, poszukujących finansowania, przekazujących dane dotyczące nieruchomości, przesyłających dokumenty lub korzystających z formularzy, panelu klienta, komunikacji elektronicznej i innych funkcjonalności Platformy.
+1. Niniejsza polityka prywatności, zwana dalej „Polityką prywatności”, określa zasady przetwarzania danych osobowych użytkowników korzystających z Serwisu Finance You, w szczególności osób składających wniosek o pożyczkę, poszukujących finansowania, przekazujących dane dotyczące nieruchomości, przesyłających dokumenty lub korzystających z formularzy, panelu klienta, komunikacji elektronicznej i innych funkcjonalności Serwisu.
 
-2. Polityka prywatności ma zastosowanie do Platformy Finance You prowadzonej przez Finance You sp. z o.o., w tym do strony internetowej, formularzy, panelu użytkownika, systemu obsługi zgłoszeń, komunikacji e-mail, komunikacji telefonicznej, komunikacji SMS, komunikatorów internetowych oraz innych narzędzi wykorzystywanych przez Finance You do obsługi wniosków i spraw użytkowników.
+2. Polityka prywatności ma zastosowanie do Serwisu Finance You prowadzonego przez Finance You sp. z o.o., w tym do strony internetowej, formularzy, panelu użytkownika, systemu obsługi zgłoszeń, komunikacji e-mail, komunikacji telefonicznej, komunikacji SMS, komunikatorów internetowych oraz innych narzędzi wykorzystywanych przez Finance You do obsługi wniosków i spraw użytkowników.
 
 3. Polityka prywatności dotyczy w szczególności:
 
@@ -23,7 +23,7 @@
 
 4. Polityka prywatności stanowi wykonanie obowiązków informacyjnych wynikających z rozporządzenia Parlamentu Europejskiego i Rady UE 2016/679 z dnia 27 kwietnia 2016 r., zwanego dalej „RODO”.
 
-5. Korzystanie z Platformy oznacza zapoznanie się z zasadami przetwarzania danych opisanymi w niniejszej Polityce prywatności.
+5. Korzystanie z Serwisu oznacza zapoznanie się z zasadami przetwarzania danych opisanymi w niniejszej Polityce prywatności.
 
 ---
 
@@ -79,12 +79,12 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
    7. **dane zawarte w dokumentach**, w szczególności dane z aktów notarialnych, umów, odpisów, wypisów, zaświadczeń, decyzji administracyjnych, dokumentów sądowych, dokumentów komorniczych, dokumentów księgowych, dokumentów firmowych, dokumentów potwierdzających dochód, dokumentów dotyczących zobowiązań lub zabezpieczeń;
    8. **dane komunikacyjne**, w szczególności treść wiadomości e-mail, formularzy, SMS, wiadomości z komunikatorów, notatki z rozmów, historia kontaktu, ustalenia dotyczące sprawy;
 
-   9. **dane techniczne**, w szczególności adres IP, identyfikatory cookies, dane o urządzeniu, przeglądarce, systemie operacyjnym, czasie wizyty, źródle wejścia na stronę, aktywności w Platformie;
+   9. **dane techniczne**, w szczególności adres IP, identyfikatory cookies, dane o urządzeniu, przeglądarce, systemie operacyjnym, czasie wizyty, źródle wejścia na stronę, aktywności w Serwisie;
    10. **dane rozliczeniowe**, w szczególności dane potrzebne do wystawienia faktury, dane dotyczące wynagrodzenia Finance You, dane dotyczące potrącenia wynagrodzenia z kwoty finansowania, dane dotyczące płatności lub rozliczeń;
 
    11. **dane marketingowe**, w szczególności zgody marketingowe, historia udzielonych zgód, źródło zgody, data zgody, kanał komunikacji, historia wysłanych wiadomości marketingowych.
 
-2. Zakres przetwarzanych danych zależy od rodzaju sprawy, sposobu korzystania z Platformy, danych przekazanych przez użytkownika, rodzaju nieruchomości, celu finansowania oraz zakresu niezbędnego do obsługi sprawy.
+2. Zakres przetwarzanych danych zależy od rodzaju sprawy, sposobu korzystania z Serwisu, danych przekazanych przez użytkownika, rodzaju nieruchomości, celu finansowania oraz zakresu niezbędnego do obsługi sprawy.
 
 3. Finance You nie wymaga od użytkownika przekazywania danych nadmiarowych. Użytkownik powinien przekazywać wyłącznie dane potrzebne do obsługi sprawy.
 
@@ -96,7 +96,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 1. Finance You może pozyskiwać dane osobowe bezpośrednio od użytkownika, w szczególności poprzez:
 
-   1. formularz na Platformie;
+   1. formularz w Serwisie;
    2. panel klienta;
    3. wiadomość e-mail;
    4. rozmowę telefoniczną;
@@ -125,14 +125,14 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 1. Finance You przetwarza dane osobowe w następujących celach:
 
-### 1. Obsługa Platformy i świadczenie usług drogą elektroniczną
+### 1. Obsługa Serwisu i świadczenie usług drogą elektroniczną
 
-2. Dane są przetwarzane w celu umożliwienia korzystania z Platformy, formularzy, panelu klienta, konta użytkownika, przesyłania dokumentów, publikacji ogłoszeń i komunikacji z Finance You.
+2. Dane są przetwarzane w celu umożliwienia korzystania z Serwisu, formularzy, panelu klienta, konta użytkownika, przesyłania dokumentów, publikacji ogłoszeń i komunikacji z Finance You.
 
 3. Podstawą prawną przetwarzania jest:
 
    1. art. 6 ust. 1 lit. b RODO – wykonanie umowy lub podjęcie działań przed zawarciem umowy;
-   2. art. 6 ust. 1 lit. f RODO – prawnie uzasadniony interes Administratora polegający na prowadzeniu i zabezpieczeniu Platformy.
+   2. art. 6 ust. 1 lit. f RODO – prawnie uzasadniony interes Administratora polegający na prowadzeniu i zabezpieczeniu Serwisu.
 
 ### 2. Przyjęcie i analiza wniosku o finansowanie
 
@@ -214,9 +214,9 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
    1. zgoda użytkownika – art. 6 ust. 1 lit. a RODO, jeżeli jest wymagana;
    2. art. 6 ust. 1 lit. f RODO – prawnie uzasadniony interes Administratora polegający na marketingu własnym, z zastrzeżeniem przepisów dotyczących zgód na komunikację elektroniczną i telefoniczną.
 
-### 11. Analityka, bezpieczeństwo i rozwój Platformy
+### 11. Analityka, bezpieczeństwo i rozwój Serwisu
 
-22. Dane techniczne i eksploatacyjne mogą być przetwarzane w celu zapewnienia bezpieczeństwa Platformy, wykrywania nadużyć, prowadzenia statystyk, analizy działania strony, poprawy funkcjonalności i jakości usług.
+22. Dane techniczne i eksploatacyjne mogą być przetwarzane w celu zapewnienia bezpieczeństwa Serwisu, wykrywania nadużyć, prowadzenia statystyk, analizy działania strony, poprawy funkcjonalności i jakości usług.
 
 23. Podstawą prawną przetwarzania jest:
 
@@ -251,7 +251,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 ## § 8. Odbiorcy danych osobowych
 
-1. Dane osobowe mogą być ujawniane podmiotom, które uczestniczą w obsłudze Platformy, obsłudze wniosku, organizacji finansowania albo wykonaniu obowiązków prawnych.
+1. Dane osobowe mogą być ujawniane podmiotom, które uczestniczą w obsłudze Serwisu, obsłudze wniosku, organizacji finansowania albo wykonaniu obowiązków prawnych.
 
 2. Odbiorcami danych mogą być w szczególności:
 
@@ -280,7 +280,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 5. Finance You przekazuje dane osobowe wyłącznie w zakresie niezbędnym do realizacji określonego celu.
 
 6. Podmioty przetwarzające dane w imieniu Finance You (stan na 29 września 2026 r.):
-   1. **Lovable Labs Incorporated** (USA), w Unii Europejskiej reprezentowana przez **Lovable Labs Sweden AB**, Regeringsgatan 25, 111 53 Sztokholm, Szwecja – hosting aplikacji i bazy danych Platformy (Lovable Cloud), uwierzytelnianie, przechowywanie plików oraz dostęp do modeli sztucznej inteligencji wykorzystywanych do wstępnej analizy dokumentów, przygotowania opisów spraw i działania asystentów AI. Dalszymi podmiotami przetwarzającymi Lovable są w szczególności: Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513 (baza danych na infrastrukturze Amazon Web Services), Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (uruchamianie aplikacji i sieć dostarczania treści), Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA (modele Gemini) oraz OpenAI (modele językowe i transkrypcja mowy);
+   1. **Lovable Labs Incorporated** (USA), w Unii Europejskiej reprezentowana przez **Lovable Labs Sweden AB**, Regeringsgatan 25, 111 53 Sztokholm, Szwecja – hosting aplikacji i bazy danych Serwisu (Lovable Cloud), uwierzytelnianie, przechowywanie plików oraz dostęp do modeli sztucznej inteligencji wykorzystywanych do wstępnej analizy dokumentów, przygotowania opisów spraw i działania asystentów AI. Dalszymi podmiotami przetwarzającymi Lovable są w szczególności: Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapur 049513 (baza danych na infrastrukturze Amazon Web Services), Cloudflare, Inc., 101 Townsend St., San Francisco, CA 94107, USA (uruchamianie aplikacji i sieć dostarczania treści), Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA (modele Gemini) oraz OpenAI (modele językowe i transkrypcja mowy);
    2. **Anthropic Ireland, Limited**, 6th Floor, South Bank House, Barrow Street, Dublin 4, D04 TR29, Irlandia – model językowy Claude w narzędziach wewnętrznych zespołu Finance You; dane nie są wykorzystywane do trenowania modeli;
    3. **Didit Identity Spain, S.L.**, Calle Nápoles 227, P. 1, 08013 Barcelona, Hiszpania (CIF B22929327) – weryfikacja tożsamości (KYC), w tym weryfikacja dokumentu tożsamości i zdjęcia twarzy;
    4. **dilisense GmbH**, Weinbergstrasse 131, 8006 Zurych, Szwajcaria (UID CHE-406.519.053) – weryfikacja na listach sankcyjnych i listach osób zajmujących eksponowane stanowiska polityczne (AML);
@@ -326,7 +326,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 1. Dane osobowe są przechowywane przez okres niezbędny do realizacji celów, dla których zostały zebrane.
 
-2. Dane związane z kontem użytkownika lub korzystaniem z Platformy są przechowywane przez okres korzystania z Platformy, a następnie przez okres niezbędny do rozliczeń, obrony przed roszczeniami lub wykonania obowiązków prawnych.
+2. Dane związane z kontem użytkownika lub korzystaniem z Serwisu są przechowywane przez okres korzystania z Serwisu, a następnie przez okres niezbędny do rozliczeń, obrony przed roszczeniami lub wykonania obowiązków prawnych.
 
 3. Dane związane z wnioskiem o finansowanie są przechowywane przez okres obsługi sprawy, a następnie przez okres niezbędny do wykazania przebiegu sprawy, dochodzenia roszczeń, obrony przed roszczeniami albo wykonania obowiązków prawnych.
 
@@ -338,7 +338,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 7. Dane przetwarzane w celu dochodzenia roszczeń lub obrony przed roszczeniami są przechowywane do czasu upływu terminów przedawnienia roszczeń albo zakończenia postępowań dotyczących tych roszczeń.
 
-8. Dane techniczne, analityczne i cookies są przechowywane przez okres wynikający z ustawień danego narzędzia, przeglądarki, zgody użytkownika lub konfiguracji Platformy.
+8. Dane techniczne, analityczne i cookies są przechowywane przez okres wynikający z ustawień danego narzędzia, przeglądarki, zgody użytkownika lub konfiguracji Serwisu.
 
 9. Po upływie okresu przechowywania dane są usuwane, anonimizowane albo ograniczane w zakresie dalszego przetwarzania, chyba że przepisy prawa wymagają dalszego przechowywania.
 
@@ -384,7 +384,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 ## § 13. Dobrowolność podania danych
 
-1. Podanie danych osobowych jest dobrowolne, ale może być niezbędne do skorzystania z określonych funkcjonalności Platformy.
+1. Podanie danych osobowych jest dobrowolne, ale może być niezbędne do skorzystania z określonych funkcjonalności Serwisu.
 
 2. Niepodanie danych wymaganych w formularzu może uniemożliwić:
 
@@ -397,7 +397,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
    7. wystawienie faktury;
    8. wykonanie obowiązków prawnych.
 
-3. Podanie danych do celów marketingowych jest dobrowolne i nie jest warunkiem złożenia wniosku ani korzystania z podstawowych funkcjonalności Platformy.
+3. Podanie danych do celów marketingowych jest dobrowolne i nie jest warunkiem złożenia wniosku ani korzystania z podstawowych funkcjonalności Serwisu.
 
 ---
 
@@ -426,14 +426,14 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 ## § 15. Cookies i podobne technologie
 
-1. Platforma może korzystać z plików cookies oraz podobnych technologii.
+1. Serwis może korzystać z plików cookies oraz podobnych technologii.
 
 2. Cookies to niewielkie pliki zapisywane na urządzeniu użytkownika, które umożliwiają prawidłowe działanie strony, zapamiętanie ustawień, analizę ruchu, zapewnienie bezpieczeństwa lub prowadzenie działań marketingowych.
 
-3. Platforma może wykorzystywać następujące rodzaje cookies:
+3. Serwis może wykorzystywać następujące rodzaje cookies:
 
-   1. **cookies niezbędne** – potrzebne do prawidłowego działania Platformy, formularzy, sesji, bezpieczeństwa i podstawowych funkcji;
-   2. **cookies analityczne** – służące do badania sposobu korzystania z Platformy, statystyk, źródeł ruchu i poprawy działania strony;
+   1. **cookies niezbędne** – potrzebne do prawidłowego działania Serwisu, formularzy, sesji, bezpieczeństwa i podstawowych funkcji;
+   2. **cookies analityczne** – służące do badania sposobu korzystania z Serwisu, statystyk, źródeł ruchu i poprawy działania strony;
    3. **cookies funkcjonalne** – umożliwiające zapamiętanie ustawień użytkownika;
    4. **cookies marketingowe** – służące do prowadzenia działań reklamowych, remarketingu, mierzenia skuteczności kampanii lub personalizacji komunikacji.
 
@@ -443,17 +443,17 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 6. Cookies analityczne (Google Analytics, Microsoft Clarity) i marketingowe (piksel Meta i Conversions API, Google Ads) są uruchamiane wyłącznie po wyrażeniu zgody w banerze wyświetlanym przy pierwszej wizycie. Zgodę można w każdej chwili zmienić lub wycofać w „Ustawieniach cookies” dostępnych w stopce strony, bez wpływu na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem. Finance You zapisuje historię udzielonych i wycofanych zgód na cookies (identyfikator zgody, wybrane kategorie, data, skrócony adres IP, informacje o przeglądarce) w celu wykazania ich udzielenia – przez okres 3 lat od ostatniej zmiany. Cookies można również blokować lub usuwać w ustawieniach przeglądarki. Wykaz stosowanych cookies zawiera [Polityka cookies](https://financeyou.pl/polityka-cookies).
 
-7. Ograniczenie albo wyłączenie cookies może wpłynąć na działanie niektórych funkcjonalności Platformy.
+7. Ograniczenie albo wyłączenie cookies może wpłynąć na działanie niektórych funkcjonalności Serwisu.
 
 ---
 
 ## § 16. Narzędzia analityczne, reklamowe i zewnętrzne
 
-1. Finance You może korzystać z narzędzi analitycznych, reklamowych, hostingowych, komunikacyjnych, CRM, formularzy, automatyzacji, systemów mailingowych i innych narzędzi wspierających działanie Platformy.
+1. Finance You może korzystać z narzędzi analitycznych, reklamowych, hostingowych, komunikacyjnych, CRM, formularzy, automatyzacji, systemów mailingowych i innych narzędzi wspierających działanie Serwisu.
 
-2. Narzędzia te mogą przetwarzać dane techniczne, dane o aktywności użytkownika, identyfikatory cookies, adres IP, informacje o urządzeniu, źródle wizyty lub interakcjach z Platformą.
+2. Narzędzia te mogą przetwarzać dane techniczne, dane o aktywności użytkownika, identyfikatory cookies, adres IP, informacje o urządzeniu, źródle wizyty lub interakcjach z Serwisem.
 
-3. Zakres działania poszczególnych narzędzi może zależeć od aktualnej konfiguracji Platformy oraz zgód udzielonych przez użytkownika.
+3. Zakres działania poszczególnych narzędzi może zależeć od aktualnej konfiguracji Serwisu oraz zgód udzielonych przez użytkownika.
 
 4. Jeżeli dane narzędzie wymaga zgody użytkownika, Finance You uruchamia je zgodnie z udzieloną zgodą, o ile jest to technicznie możliwe i wymagane przez przepisy.
 
@@ -471,13 +471,13 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
    2. oceny skuteczności kampanii marketingowych;
    3. usprawnienia obsługi użytkownika;
    4. kierowania odpowiednich komunikatów;
-   5. poprawy działania Platformy.
+   5. poprawy działania Serwisu.
 
 3. Finance You nie podejmuje wobec użytkownika decyzji opartych wyłącznie na zautomatyzowanym przetwarzaniu, które wywoływałyby wobec niego skutki prawne lub w podobny sposób istotnie na niego wpływały, chyba że użytkownik zostanie o tym wyraźnie poinformowany i zostaną spełnione wymagania wynikające z RODO.
 
-4. Decyzja o udzieleniu finansowania, odmowie finansowania albo zaproponowaniu określonych warunków finansowania nie jest podejmowana automatycznie przez Platformę Finance You. Decyzje te mogą zależeć od indywidualnej analizy sprawy przez Finance You, inwestora, finansującego lub partnera.
+4. Decyzja o udzieleniu finansowania, odmowie finansowania albo zaproponowaniu określonych warunków finansowania nie jest podejmowana automatycznie przez Serwis Finance You. Decyzje te mogą zależeć od indywidualnej analizy sprawy przez Finance You, inwestora, finansującego lub partnera.
 
-5. Narzędzia automatyczne Platformy, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku (np. kompletność dokumentów, relacja kwoty do wartości zabezpieczenia) albo zaproponować status wniosku, w tym propozycję jego odrzucenia. Propozycja nie wywołuje skutków wobec użytkownika. Decyzję o odrzuceniu wniosku albo odmowie dalszej obsługi zawsze podejmuje człowiek – pracownik Finance You – po weryfikacji propozycji.
+5. Narzędzia automatyczne Serwisu, w tym modele sztucznej inteligencji, mogą przygotować wstępną ocenę wniosku (np. kompletność dokumentów, relacja kwoty do wartości zabezpieczenia) albo zaproponować status wniosku, w tym propozycję jego odrzucenia. Propozycja nie wywołuje skutków wobec użytkownika. Decyzję o odrzuceniu wniosku albo odmowie dalszej obsługi zawsze podejmuje człowiek – pracownik Finance You – po weryfikacji propozycji.
 
 6. Użytkownik ma prawo uzyskać interwencję człowieka, wyrazić własne stanowisko i zakwestionować decyzję, pisząc na adres [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
@@ -513,9 +513,9 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 ## § 19. Dane dzieci
 
-1. Platforma Finance You nie jest kierowana do dzieci.
+1. Serwis Finance You nie jest kierowany do dzieci.
 
-2. Finance You co do zasady nie zbiera świadomie danych dzieci za pośrednictwem Platformy.
+2. Finance You co do zasady nie zbiera świadomie danych dzieci za pośrednictwem Serwisu.
 
 3. Jeżeli w dokumentach przekazywanych przez użytkownika znajdują się dane dzieci, Finance You może je przetwarzać wyłącznie w zakresie niezbędnym do obsługi sprawy, wykonania obowiązków prawnych albo ochrony roszczeń.
 
@@ -619,18 +619,18 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 1. Finance You może zmienić Politykę prywatności w szczególności w przypadku:
 
    1. zmiany przepisów prawa;
-   2. zmiany sposobu działania Platformy;
+   2. zmiany sposobu działania Serwisu;
    3. zmiany zakresu przetwarzanych danych;
    4. zmiany narzędzi technicznych;
    5. zmiany odbiorców danych;
    6. zmiany danych Administratora;
    7. potrzeby doprecyzowania informacji.
 
-2. Aktualna wersja Polityki prywatności jest publikowana na Platformie.
+2. Aktualna wersja Polityki prywatności jest publikowana w Serwisie.
 
 3. Jeżeli zmiana Polityki prywatności istotnie wpływa na prawa użytkowników lub sposób przetwarzania danych, Finance You może poinformować użytkowników o zmianie drogą elektroniczną.
 
-4. Polityka prywatności w wersji 2 obowiązuje od dnia 29 września 2026 r..
+4. Polityka prywatności w wersji 1.0 obowiązuje od dnia 19 października 2026 r.
 
 ---
 
@@ -656,7 +656,7 @@ zwana dalej „Administratorem”, „Spółką” albo „Finance You”.
 
 Administratorem danych osobowych jest Finance You sp. z o.o. z siedzibą w Warszawie, ul. Nowogrodzka 31, 00-511 Warszawa, KRS: 0000635207, NIP: 7010611803, REGON: 365350668, e-mail: [kontakt@financeyou.pl](mailto:kontakt@financeyou.pl).
 
-Dane osobowe są przetwarzane w celu obsługi Platformy Finance You, przyjęcia i analizy wniosku o finansowanie, kontaktu z użytkownikiem, publikacji lub przekazania ogłoszenia, przedstawienia sprawy potencjalnym finansującym, organizacji finansowania, rozliczenia wynagrodzenia Finance You, wykonania obowiązków prawnych, obsługi reklamacji, dochodzenia roszczeń i obrony przed roszczeniami, a także w celach marketingowych, jeżeli użytkownik wyraził odpowiednią zgodę albo istnieje inna podstawa prawna.
+Dane osobowe są przetwarzane w celu obsługi Serwisu Finance You, przyjęcia i analizy wniosku o finansowanie, kontaktu z użytkownikiem, publikacji lub przekazania ogłoszenia, przedstawienia sprawy potencjalnym finansującym, organizacji finansowania, rozliczenia wynagrodzenia Finance You, wykonania obowiązków prawnych, obsługi reklamacji, dochodzenia roszczeń i obrony przed roszczeniami, a także w celach marketingowych, jeżeli użytkownik wyraził odpowiednią zgodę albo istnieje inna podstawa prawna.
 
 Dane mogą być przekazywane inwestorom, finansującym, partnerom, notariuszom, prawnikom, rzeczoznawcom, dostawcom usług IT, księgowym, dostawcom narzędzi komunikacyjnych, organom publicznym oraz innym podmiotom uczestniczącym w obsłudze sprawy.
 
