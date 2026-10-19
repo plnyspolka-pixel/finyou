@@ -26,7 +26,13 @@ export type ReviewerVerdict = { verdict: "pass" | "fix"; issues: ReviewerIssue[]
 
 export type GateResult =
   | { status: "passed"; text: string; iterations: number; checkId: string | null; added: string[] }
-  | { status: "rejected"; text: string; iterations: number; checkId: string | null; reason: string };
+  | {
+      status: "rejected";
+      text: string;
+      iterations: number;
+      checkId: string | null;
+      reason: string;
+    };
 
 export type Rewriter = (text: string, feedback: string[]) => Promise<string>;
 
@@ -88,7 +94,7 @@ export function defaultRewriter(ctx: { track: TrackOrBoth; kind: ContentKind }):
       system:
         "Jesteś copywriterem Finance You. Przepisujesz treść po polsku tak, żeby usunąć wskazane problemy zgodności, " +
         "zachowując sens, długość (±15%), format, hook w formie pytania-tezy i CTA. Bez obietnic zysku, bez procentów zwrotu, " +
-        "bez cen, bez superlatywów, bez presji czasu. Zwracasz JSON {\"text\": \"...\"}.",
+        'bez cen, bez superlatywów, bez presji czasu. Zwracasz JSON {"text": "..."}.',
       user: `TOR: ${TRACK_LABEL[ctx.track]}; RODZAJ: ${ctx.kind}
 Gdy treść dotyczy pieniędzy, ma zawierać zdanie o ryzyku w duchu: ${tracks.map((t) => RISK_LINE[t]).join(" / ")}
 
@@ -180,10 +186,17 @@ export async function runComplianceGate(opts: {
     }
   }
 
-  const checkId = await audit(opts, rewrite ? "rejected" : "blocked", iteration, hardLog, reviewerLog, {
-    text,
-    added: [],
-  });
+  const checkId = await audit(
+    opts,
+    rewrite ? "rejected" : "blocked",
+    iteration,
+    hardLog,
+    reviewerLog,
+    {
+      text,
+      added: [],
+    },
+  );
   await logAutopilotAction({
     module: COMPLIANCE_MODULE,
     action: "content_rejected",

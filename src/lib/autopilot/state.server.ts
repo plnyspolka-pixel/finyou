@@ -22,6 +22,7 @@ export type AutopilotSettings = {
   heygenDailyVideosLimit: number;
   anomalyFailuresThreshold: number;
   ownerAlertPhone: string | null;
+  ownerReportEmail: string | null;
   lastDailyReportOn: string | null;
   lastWeeklyReportOn: string | null;
 };
@@ -56,12 +57,17 @@ const SAFE_DEFAULTS: Omit<AutopilotSettings, "id"> = {
   heygenDailyVideosLimit: 4,
   anomalyFailuresThreshold: 3,
   ownerAlertPhone: null,
+  ownerReportEmail: null,
   lastDailyReportOn: null,
   lastWeeklyReportOn: null,
 };
 
 export async function loadAutopilotSettings(): Promise<AutopilotSettings> {
-  const { data } = await supabaseAdmin.from("ai_growth_settings").select("*").limit(1).maybeSingle();
+  const { data } = await supabaseAdmin
+    .from("ai_growth_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
   const r = (data ?? {}) as Record<string, any>;
   const mode = r.video_module_mode as AutopilotMode | undefined;
   return {
@@ -86,6 +92,7 @@ export async function loadAutopilotSettings(): Promise<AutopilotSettings> {
       r.anomaly_failures_threshold ?? SAFE_DEFAULTS.anomalyFailuresThreshold,
     ),
     ownerAlertPhone: r.owner_alert_phone ?? null,
+    ownerReportEmail: r.owner_report_email ?? null,
     lastDailyReportOn: r.last_daily_report_on ?? null,
     lastWeeklyReportOn: r.last_weekly_report_on ?? null,
   };

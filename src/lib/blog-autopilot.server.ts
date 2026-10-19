@@ -441,10 +441,13 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const staleFix = (d: ArticleDraft): string[] => {
     const years = findStaleYears(`${d.title}\n${d.meta_title}`, now);
     return years.length
-      ? [`Tytuł/meta zawiera nieaktualny rok (${years.join(", ")}). Dziś jest ${formatPlDate(now)}.`]
+      ? [
+          `Tytuł/meta zawiera nieaktualny rok (${years.join(", ")}). Dziś jest ${formatPlDate(now)}.`,
+        ]
       : [];
   };
-  const asText = (d: ArticleDraft) => `${d.title}\n${d.meta_title}\n${d.excerpt}\n\n${d.content_md}`;
+  const asText = (d: ArticleDraft) =>
+    `${d.title}\n${d.meta_title}\n${d.excerpt}\n\n${d.content_md}`;
   for (let i = 0; i < 2 && staleFix(draft).length; i++) {
     draft = await writeArticleFromNews(brief, internal, kind, staleFix(draft));
   }

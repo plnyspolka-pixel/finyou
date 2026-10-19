@@ -58,6 +58,7 @@ import { marketingPublishTools } from "./tools/marketing-publish";
 import { marketingChannelTools } from "./tools/marketing-channels";
 import { leadMagnetTools } from "./tools/lead-magnets";
 import { marketingGrowthTools } from "./tools/marketing-growth";
+import { autopilotTools } from "./tools/autopilot";
 import { elevenLabsTools } from "./tools/elevenlabs";
 import { twilioTools } from "./tools/twilio";
 import { metaTools } from "./tools/meta";
@@ -140,6 +141,7 @@ export default defineMcp({
     ...marketingChannelTools,
     ...leadMagnetTools,
     ...marketingGrowthTools,
+    ...autopilotTools,
     ...elevenLabsTools,
     ...twilioTools,
     ...metaTools,

@@ -1964,6 +1964,7 @@ export type Database = {
           max_posts_per_day_per_account: number
           owner_alert_phone: string | null
           video_module_mode: string
+          owner_report_email: string | null
         }
         Insert: {
           automation_mode?: string
@@ -1989,6 +1990,7 @@ export type Database = {
           max_posts_per_day_per_account?: number
           owner_alert_phone?: string | null
           video_module_mode?: string
+          owner_report_email?: string | null
         }
         Update: {
           automation_mode?: string
@@ -2014,6 +2016,7 @@ export type Database = {
           max_posts_per_day_per_account?: number
           owner_alert_phone?: string | null
           video_module_mode?: string
+          owner_report_email?: string | null
         }
         Relationships: []
       }

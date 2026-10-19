@@ -41,6 +41,7 @@ ALTER TABLE public.ai_growth_settings
   ADD COLUMN IF NOT EXISTS anomaly_failures_threshold INTEGER NOT NULL DEFAULT 3
     CHECK (anomaly_failures_threshold BETWEEN 1 AND 50),
   ADD COLUMN IF NOT EXISTS owner_alert_phone TEXT,
+  ADD COLUMN IF NOT EXISTS owner_report_email TEXT,
   ADD COLUMN IF NOT EXISTS last_daily_report_on DATE,
   ADD COLUMN IF NOT EXISTS last_weekly_report_on DATE;
 

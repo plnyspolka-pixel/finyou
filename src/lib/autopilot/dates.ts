@@ -40,7 +40,11 @@ export function warsawIsoDate(now: Date): string {
 export function lastSevenDaysLabel(now: Date): string {
   const end = warsawParts(now);
   const startDate = new Date(Date.UTC(end.y, end.m - 1, end.d) - 6 * 86_400_000);
-  const s = { y: startDate.getUTCFullYear(), m: startDate.getUTCMonth() + 1, d: startDate.getUTCDate() };
+  const s = {
+    y: startDate.getUTCFullYear(),
+    m: startDate.getUTCMonth() + 1,
+    d: startDate.getUTCDate(),
+  };
   const endLabel = `${pad(end.d)}.${pad(end.m)}.${end.y}`;
   const startLabel = s.y === end.y ? `${pad(s.d)}.${pad(s.m)}` : `${pad(s.d)}.${pad(s.m)}.${s.y}`;
   return `${startLabel}–${endLabel}`;
@@ -58,7 +62,11 @@ export function findStaleYears(text: string, now: Date): number[] {
 }
 
 /** Czy wiadomość z RSS mieści się w oknie świeżości (z zapasem jednego dnia). */
-export function isWithinDays(publishedAt: string | null | undefined, days: number, now: Date): boolean {
+export function isWithinDays(
+  publishedAt: string | null | undefined,
+  days: number,
+  now: Date,
+): boolean {
   if (!publishedAt) return true; // brak daty w RSS — nie odrzucamy, model dostaje „b.d.”
   const t = Date.parse(publishedAt);
   if (Number.isNaN(t)) return true;

@@ -70,7 +70,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "no_risk",
     scope: "common",
-    pattern: /bez\s+(?:żadnego\s+|jakiegokolwiek\s+)?ryzyk\p{L}*|zero\s+ryzyk\p{L}*|nie\s+ma\s+(?:żadnego\s+)?ryzyk\p{L}*/iu,
+    pattern:
+      /bez\s+(?:żadnego\s+|jakiegokolwiek\s+)?ryzyk\p{L}*|zero\s+ryzyk\p{L}*|nie\s+ma\s+(?:żadnego\s+)?ryzyk\p{L}*/iu,
     reason: "„Bez ryzyka” — każda transakcja wiąże się z ryzykiem.",
   },
   {
@@ -85,7 +86,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "minimal_risk",
     scope: "common",
-    pattern: /(?:minimaln|znikom|niewielk|niski)\p{L}*\s+ryzyk\p{L}*|ryzyk\p{L}*\s+(?:jest\s+)?(?:minimaln|znikom)\p{L}*/iu,
+    pattern:
+      /(?:minimaln|znikom|niewielk|niski)\p{L}*\s+ryzyk\p{L}*|ryzyk\p{L}*\s+(?:jest\s+)?(?:minimaln|znikom)\p{L}*/iu,
     reason: "Bagatelizowanie ryzyka („minimalne ryzyko”).",
   },
   {
@@ -103,7 +105,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "verbal_return_range",
     scope: "common",
-    pattern: /(?:kilkunast|kilkudziesi|dwucyfrow|kilkuprocentow)\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:procent|%|zwrot|zysk)\p{L}*/iu,
+    pattern:
+      /(?:kilkunast|kilkudziesi|dwucyfrow|kilkuprocentow)\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:procent|%|zwrot|zysk)\p{L}*/iu,
     reason: "Słowny przedział stóp zwrotu („kilkanaście procent rocznie”) — obietnica wyniku.",
   },
   {
@@ -115,14 +118,16 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "unbacked_superlative",
     scope: "common",
-    pattern: /najlepsz\p{L}*|najbezpieczniejsz\p{L}*|najkorzystniejsz\p{L}*|najtańsz\p{L}*|najwyższ\p{L}*\s+(?:zysk|zwrot|stop)\p{L}*|numer\s+(?:1|jeden)\b|nr\s*1\b|lider\p{L}*\s+rynku/iu,
+    pattern:
+      /najlepsz\p{L}*|najbezpieczniejsz\p{L}*|najkorzystniejsz\p{L}*|najtańsz\p{L}*|najwyższ\p{L}*\s+(?:zysk|zwrot|stop)\p{L}*|numer\s+(?:1|jeden)\b|nr\s*1\b|lider\p{L}*\s+rynku/iu,
     reason: "Superlatyw bez pokrycia.",
   },
   {
     id: "closed_group_invite",
     scope: "common",
     kinds: AVATAR_KINDS,
-    pattern: /(?:zamkni\p{L}*|ekskluzywn\p{L}*|elitarn\p{L}*|prywatn\p{L}*|tajn\p{L}*)\s+(?:klub|grup|społeczno|kręg)\p{L}*|dołącz\p{L}*\s+do\s+(?:naszego\s+|mojego\s+)?(?:klubu|grupy|kręgu)/iu,
+    pattern:
+      /(?:zamkni\p{L}*|ekskluzywn\p{L}*|elitarn\p{L}*|prywatn\p{L}*|tajn\p{L}*)\s+(?:klub|grup|społeczno|kręg)\p{L}*|dołącz\p{L}*\s+do\s+(?:naszego\s+|mojego\s+)?(?:klubu|grupy|kręgu)/iu,
     reason: "Zaproszenie do zamkniętej grupy/klubu w treści awatara (sygnał ostrzegawczy KNF).",
   },
   {
@@ -174,7 +179,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "cost_as_slogan",
     scope: "pozyczkobiorca",
-    pattern: /(?:nisk|niższ|atrakcyjn|tani|tań|korzystn|okazyjn)\p{L}*\s+(?:oprocentowan|odset|koszt|prowizj|rat)\p{L}*|oprocentowan\p{L}*\s+(?:już\s+)?od\s+\d/iu,
+    pattern:
+      /(?:nisk|niższ|atrakcyjn|tani|tań|korzystn|okazyjn)\p{L}*\s+(?:oprocentowan|odset|koszt|prowizj|rat)\p{L}*|oprocentowan\p{L}*\s+(?:już\s+)?od\s+\d/iu,
     reason: "Koszt/oprocentowanie jako hasło reklamowe.",
   },
   // ── tor inwestora ───────────────────────────────────────────────────────
@@ -188,7 +194,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "buyback_guarantee",
     scope: "inwestor",
-    pattern: /odkup\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:udział|wierzytelno|pożycz|inwestycj|należnoś)\p{L}*/iu,
+    pattern:
+      /odkup\p{L}*\s+(?:\p{L}+\s+){0,2}?(?:udział|wierzytelno|pożycz|inwestycj|należnoś)\p{L}*/iu,
     reason: "Odkup udziałów/wierzytelności (wzorzec Fast Invest, KNF 2017).",
   },
   {
@@ -201,7 +208,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "i_invest_too_lure",
     scope: "inwestor",
-    pattern: /(?:sam|ja)\s+(?:też\s+|również\s+)?(?:inwestuję|zainwestowałem|lokuję)|moje\s+(?:własne\s+)?pieniądze\s+(?:też|również|są)/iu,
+    pattern:
+      /(?:sam|ja)\s+(?:też\s+|również\s+)?(?:inwestuję|zainwestowałem|lokuję)|moje\s+(?:własne\s+)?pieniądze\s+(?:też|również|są)/iu,
     reason: "„Sam też inwestuję” jako wabik (ESMA/KNF).",
   },
 ];
@@ -218,7 +226,8 @@ function ruleApplies(rule: HardRule, ctx: RuleContext): boolean {
 }
 
 /** Zastrzeżenie „to nie jest porada” jako JEDYNE zastrzeżenie (brief 5.7 p. 1). */
-const NOT_ADVICE = /nie\s+(?:jest|stanowi)\s+(?:\p{L}+\s+){0,2}?(?:porad|rekomendacj|ofert|doradztw)\p{L}*/iu;
+const NOT_ADVICE =
+  /nie\s+(?:jest|stanowi)\s+(?:\p{L}+\s+){0,2}?(?:porad|rekomendacj|ofert|doradztw)\p{L}*/iu;
 
 /** Reguły twarde dla tekstu. Pusta lista = tekst przechodzi warstwę deterministyczną. */
 export function checkHardRules(text: string, ctx: RuleContext): HardViolation[] {

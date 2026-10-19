@@ -91,9 +91,9 @@ describe("checkHardRules — tory", () => {
     expect(
       ids("Sam też inwestuję w takie pożyczki.", { track: "inwestor", kind: "post_caption" }),
     ).toContain("i_invest_too_lure");
-    expect(
-      ids("Pożyczka dla każdego", { track: "inwestor", kind: "post_caption" }),
-    ).not.toContain("consumer_targeting");
+    expect(ids("Pożyczka dla każdego", { track: "inwestor", kind: "post_caption" })).not.toContain(
+      "consumer_targeting",
+    );
   });
   it("tor „oba” sprawdza reguły obu torów", () => {
     const v = ids("Pożyczka dla każdego. Gwarancja odkupu udziałów.", {
@@ -130,12 +130,14 @@ describe("applyMandatoryElements", () => {
     expect(r.text).toContain(SENDER_LINE);
     expect(r.text).toContain(AI_LABEL_VIDEO);
     // Idempotencja: drugi przebieg nic nie dodaje.
-    expect(applyMandatoryElements(r.text, { track: "inwestor", kind: "video_caption" }).added).toEqual([]);
+    expect(
+      applyMandatoryElements(r.text, { track: "inwestor", kind: "video_caption" }).added,
+    ).toEqual([]);
   });
   it("tytułów nie rusza", () => {
-    expect(applyMandatoryElements("Bank vs Ty", { track: "inwestor", kind: "title" }).added).toEqual(
-      [],
-    );
+    expect(
+      applyMandatoryElements("Bank vs Ty", { track: "inwestor", kind: "title" }).added,
+    ).toEqual([]);
   });
   it("wynik przechodzi reguły twarde", () => {
     const r = applyMandatoryElements("Pożyczka pod zastaw nieruchomości dla firmy", {
