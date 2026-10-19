@@ -306,10 +306,14 @@ export const getPublicOfferCard = createServerFn({ method: "GET" })
       .select("file_path, file_url, file_name")
       .eq("loan_application_id", (app as any).id)
       .order("created_at", { ascending: true });
-    const { collectClientFileRefs, isShowablePropertyPhoto, IMAGE_EXT } =
+    const { collectClientFileRefs, dropLegacyClientFiles, isShowablePropertyPhoto, IMAGE_EXT } =
       await import("@/lib/property-photos");
     const { CLIENT_FILES_BUCKET } = await import("@/lib/storage-buckets");
-    const refs = collectClientFileRefs((p?.photos as string[] | null) ?? null, docRows ?? []);
+    // Pliki sprzed migracji na wspólny bucket — inwestorom ich nie pokazujemy.
+    const refs = await dropLegacyClientFiles(
+      supabaseAdmin,
+      collectClientFileRefs((p?.photos as string[] | null) ?? null, docRows ?? []),
+    );
 
     const urlByPath = new Map<string, string>();
     let unsigned = refs.map((f) => f.src).filter((s) => !/^https?:\/\//i.test(s));

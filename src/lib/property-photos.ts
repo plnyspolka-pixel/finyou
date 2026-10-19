@@ -91,6 +91,43 @@ export function collectClientFileRefs(
   return out;
 }
 
+/** Granica lipcowej migracji na wspólny bucket (20260715090000) — ta sama, co
+ *  `p_before` w `pliki_klienta_do_naprawy`. Obiekty starsze od niej mają w
+ *  `pliki-klienta` tylko metadane (pobranie → 404 NoSuchKey). */
+export const LEGACY_CLIENT_FILES_CUTOFF = Date.parse("2026-07-19T00:00:00Z");
+
+/** Odrzuca pliki wgrane przed migracją na wspólny bucket — inwestorom ich nie
+ *  pokazujemy (puste miniatury). Datę bierzemy z listingu Storage, folder po
+ *  folderze; zewnętrzne URL-e i pliki spoza `pliki-klienta` zostają bez zmian.
+ *  `db` — klient z rolą serwisową (serwer). */
+export async function dropLegacyClientFiles(
+  db: any,
+  refs: ClientFileRef[],
+): Promise<ClientFileRef[]> {
+  const byDir = new Map<string, Set<string>>();
+  for (const r of refs) {
+    if (isExternalUrl(r.src)) continue;
+    const cut = r.src.lastIndexOf("/");
+    const dir = cut < 0 ? "" : r.src.slice(0, cut);
+    if (!byDir.has(dir)) byDir.set(dir, new Set());
+    byDir.get(dir)!.add(r.src.slice(cut + 1));
+  }
+  const legacy = new Set<string>();
+  await Promise.all(
+    [...byDir].map(async ([dir, names]) => {
+      const { data, error } = await db.storage.from(CLIENT_FILES_BUCKET).list(dir, { limit: 1000 });
+      if (error || !data) return;
+      for (const f of data as Array<{ name: string; created_at?: string | null }>) {
+        if (!names.has(f.name) || !f.created_at) continue;
+        if (Date.parse(f.created_at) < LEGACY_CLIENT_FILES_CUTOFF) {
+          legacy.add(dir ? `${dir}/${f.name}` : f.name);
+        }
+      }
+    }),
+  );
+  return legacy.size ? refs.filter((r) => !legacy.has(r.src)) : refs;
+}
+
 /** Miniatura wniosku na listach: pierwszy obrazek z plików klienta, a gdy go
  *  brak — miniatura pierwszego PDF-a (konwencja `<ścieżka>.thumb.png`). */
 export async function resolveClientFilesHero(
