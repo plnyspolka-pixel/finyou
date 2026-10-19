@@ -97,14 +97,24 @@ OTP, dane bankowe partnerów) nie są zwracane.
 
 **Start / konto**
 
-| Narzędzie             | Co daje                                                                                                      |
-| --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `get_my_profile`      | Kim jestem: id, e-mail, role.                                                                                |
-| `get_my_access`       | Role, aktywne dostępy, subskrypcja inwestora, ostatnie płatności.                                            |
-| `get_platform_stats`  | Liczby: leady, wnioski, klienci, inwestorzy, artykuły.                                                       |
-| `get_updates_since`   | „Co nowego" od chwili X: leady, wnioski, wiadomości, oferty, odpowiedzi instytucji, płatności; `next_since`. |
-| `get_kpi_report`      | KPI za okres vs poprzedni okres (z przychodem).                                                              |
-| `get_platform_health` | Stan operacyjny: automatyzacje, błędy API, zaległe follow-upy, skrzynka, analizy, wnioski niekompletne.      |
+| Narzędzie             | Co daje                                                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `get_my_profile`      | Kim jestem: id, e-mail, role.                                                                                                 |
+| `get_my_access`       | Role, aktywne dostępy, subskrypcja inwestora, ostatnie płatności.                                                             |
+| `get_platform_stats`  | Liczby: leady, wnioski, klienci, inwestorzy, artykuły.                                                                        |
+| `get_updates_since`   | „Co nowego" od ostatniego odpytania (albo od chwili X): leady, wnioski, wiadomości, oferty, odpowiedzi instytucji, płatności. |
+| `get_kpi_report`      | KPI za okres vs poprzedni okres (z przychodem).                                                                               |
+| `get_platform_health` | Stan operacyjny: automatyzacje, błędy API, zaległe follow-upy, skrzynka, analizy, wnioski niekompletne.                       |
+
+`get_updates_since` pamięta moment ostatniego odpytania per użytkownik (tabela
+`mcp_digest_cursors`, `last_until`). Bez `since` raport obejmuje okno od tego
+momentu do teraz i po sukcesie przesuwa znacznik na `until`; przy pierwszym
+odpytaniu bierze ostatnie 24 h (kursor starszy niż 30 dni jest przycinany do
+30 dni). Jawne `since` / `until` (pytania historyczne) znacznika nie ruszają,
+chyba że podano `advance_cursor: true`. Odpowiedź zawiera `since`,
+`since_source` (`last_query` / `default` / `explicit`), `since_label` (np. „Od
+Twojego ostatniego pytania (wt. 20.10 10:58).”), `first_query`,
+`previous_query_at` i `cursor_advanced`.
 
 **Skrzynka i korespondencja**
 
@@ -581,7 +591,8 @@ projektu) są te same co w panelu — narzędzia wołają ten sam kod
 
 Przykładowe pytania w czacie:
 
-- „Co nowego na Finance You od 9:00?" → `get_updates_since`
+- „Co nowego na Finance You?" → `get_updates_since` bez `since` (od Twojego ostatniego pytania)
+- „Co nowego od 9:00?" / „Pokaż nowości z ostatniego tygodnia" → `get_updates_since` z `since` (nie przesuwa znacznika)
 - „Kto czeka na odpowiedź w skrzynce?" → `list_inbox_threads` z `only_awaiting_reply`
 - „Pokaż całą rozmowę z Janem Kowalskim i zaproponuj odpowiedź" → `search_leads` + `read_inbox_thread`
 - „Które wnioski powyżej 300 tys. są niekompletne i od kiedy nikt się nie kontaktował?" → `list_incomplete_applications`
@@ -688,7 +699,9 @@ cronów, digestów ani automatycznych maili/pushy. Twoja praca to wdrożenie, ko
       send_email, decide_investor_offer, grant_access;
    b) tools/call get_my_profile → moje role zawierają administrator;
    c) tools/call list_leads {limit: 3} → wiersze + total;
-   d) tools/call get_updates_since {} → liczniki z ostatniej godziny;
+   d) tools/call get_updates_since {} → pierwsze wywołanie: `since_source: "default"` (24 h); drugie:
+      `since_source: "last_query"`, `since` = `until` z pierwszego; wywołanie z `since` → `since_source:
+      "explicit"`, `cursor_advanced: false`;
    e) ZAPIS: na leadzie testowym (załóż go przez create_lead z first_name "TEST MCP", source "mcp_test")
       wywołaj add_lead_note {note: "test MCP"} → w panelu /operator/leady/<id> notatka jest widoczna;
       potem update_lead {status: "w_kontakcie"} → status zmieniony; potem update_lead
