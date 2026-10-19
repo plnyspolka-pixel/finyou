@@ -6,6 +6,13 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseRssItems, type RssItem } from "@/lib/pr/core";
 import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
+import {
+  findStaleYears,
+  formatPlDate,
+  isWithinDays,
+  lastSevenDaysLabel,
+  warsawParts,
+} from "@/lib/autopilot/dates";
 
 function slugify(s: string): string {
   return s
@@ -78,7 +85,7 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
   },
   investor_review: {
     sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
-    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
+    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni (dla pożyczek pod zastaw NIE podawaj stóp zwrotu — opisz mechanizm i ryzyko): oprocentowanie / oczekiwana stopa zwrotu netto lokat, obligacji i pozostałych klas (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem o dywersyfikacji (bez rekomendowania konkretnego produktu).",
   },
   legal_market_monitor: {
     sys: "Jesteś analitykiem prawno-rynkowym monitorującym polski rynek nieruchomości i finansów. Po polsku, konkretnie, bez spekulacji poza to co wynika ze źródeł.",
@@ -152,7 +159,12 @@ async function fetchNewsItems(kind: PostKind): Promise<RssItem[]> {
   );
   const seen = new Set<string>();
   const out: RssItem[] = [];
+  // `when:` w Google News bywa luźne — stare wiadomości (np. z 2024) wpadały
+  // do briefingu i model brał z nich daty. Odcinamy je po dacie publikacji.
+  const windowDays = Number(cfg.when.replace(/\D/g, "")) || 7;
+  const now = new Date();
   for (const it of batches.flat()) {
+    if (!isWithinDays(it.publishedAt, windowDays, now)) continue;
     const key = it.title.toLowerCase().slice(0, 80);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -173,7 +185,7 @@ async function fetchFreshNewsBrief(kind: PostKind): Promise<NewsBrief> {
     .join("\n");
   const parsed = await lovableAiJson<{ summary?: string; used?: number[] }>({
     model: AI_MODEL_PRO,
-    system: `${b.sys} Pracujesz WYŁĄCZNIE na podanej liście wiadomości — nie dopisuj faktów, liczb ani dat spoza niej. Odpowiadasz JSON-em.`,
+    system: `${b.sys} ${dateContext(new Date())} Pracujesz WYŁĄCZNIE na podanej liście wiadomości — nie dopisuj faktów, liczb ani dat spoza niej. Odpowiadasz JSON-em.`,
     user: `${b.user}
 
 WIADOMOŚCI (nagłówki z Google News, numerowane):
@@ -227,7 +239,7 @@ const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
 - Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
 - SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
 - LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (program partnerski dla inwestorów: szkolenie i narzędzia), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
-- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): realne stopy zwrotu inwestorów na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako OD KILKUNASTU DO NAWET KILKUDZIESIĘCIU PROCENT ROCZNIE — używaj tego przedziału, gdy piszesz o zwrotach z tej klasy aktywów. Inne liczby (oprocentowanie lokat, obligacji, najmu itd.) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. NIE przedstawiaj zwrotu jako pewnego ani gwarantowanego: ZAKAZANE "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
+- ZWROTY Z INWESTYCJI (komunikacja Finance You od 19.10.2026): NIE podajemy stóp zwrotu ani oprocentowania pożyczek pod zastaw — ani liczbą, ani przedziałem słownym ("kilkanaście procent" itp.). Opisuj MECHANIZM (odsetki od pożyczki zabezpieczonej hipoteką, LTV jako bufor, ryzyko niespłaty i egzekucji), nie wynik. Liczby innych klas aktywów (lokaty, obligacje, najem) przytaczaj wyłącznie ze źródeł briefingu, z podanym źródłem, jako fakt rynkowy. ZAKAZANE: "gwarant*", "pewny/bezpieczny/stabilny zysk", "bez ryzyka", "minimalne ryzyko", "zarobisz X", "podwój", superlatywy ("najlepsza inwestycja"), presja czasu. Nie wymieniaj sum kapitału.
 - W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
 
 /**
@@ -254,6 +266,12 @@ export function findBannedClaims(md: string): string[] {
   return found;
 }
 
+/** Bieżąca data w prompcie — bez niej model pisał „w 2024” (wrzesień 2026). */
+function dateContext(now: Date): string {
+  const year = warsawParts(now).y;
+  return `DZISIAJ JEST ${formatPlDate(now)} (rok ${year}). Jeśli tytuł, meta lub treść podaje bieżący rok, to wyłącznie ${year}; wcześniejsze lata tylko przy faktach historycznych ze źródeł.`;
+}
+
 interface ArticleDraft {
   title: string;
   meta_title: string;
@@ -270,6 +288,7 @@ async function writeArticleFromNews(
   brief: NewsBrief,
   internal: RelatedArticle[],
   kind: PostKind,
+  fixes: string[] = [],
 ): Promise<ArticleDraft> {
   const audience = audienceOf(kind);
 
@@ -285,7 +304,7 @@ async function writeArticleFromNews(
 
   const structureHint =
     kind === "investor_review"
-      ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski i rekomendacja dywersyfikacji', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
+      ? "Markdown, 1100-1700 słów. Struktura: krótki lead (problem inwestora), H2 'Porównywane klasy aktywów' (lista), H2 'Tabela porównawcza' (markdown table z kolumnami: Klasa aktywów | Oczekiwana stopa zwrotu netto (dla pożyczek pod zastaw: 'zależy od transakcji') | Min. ticket | Horyzont | Płynność | Ryzyko 1-5 | Zabezpieczenie | Podatek), H2 'Analiza' (po jednym akapicie na każdą klasę z LICZBAMI z briefingu), H2 'Dla kogo która opcja', H2 'Wnioski: dywersyfikacja i ryzyko', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. ZAWSZE podawaj liczby z briefingu, NIGDY nie wymyślaj."
       : kind === "legal_market_monitor"
         ? "Markdown, 1000-1500 słów. Format PRZEGLĄDU TYGODNIA. Struktura: krótki lead (1 akapit — co najważniejszego wydarzyło się w minionym tygodniu na styku prawa, sądów i rynku nieruchomości w PL), H2 'Legislacja i regulatorzy' (Sejm/Senat/MS/MF/KNF/UOKiK — pod-punkty z datą + źródło + 'Możliwy wpływ:'), H2 'Sądy i orzecznictwo' (SN/TSUE/apelacyjne — j.w.), H2 'Komornicy i egzekucja z nieruchomości', H2 'Notariat, adwokatura i radcowie prawni', H2 'Rynek nieruchomości w Polsce' (dane z GUS/AMRON/Otodom — liczby, miasta), H2 'Świat → Polska' (FED/EBC/USD/EUR/surowce — wyłącznie z konkretnym mechanizmem przełożenia na PL), H2 'Podsumowanie tygodnia — co to zmienia dla właściciela nieruchomości i pożyczkobiorcy' (2-3 akapity), H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ 2-3 linki wewnętrzne. KAŻDA teza musi mieć źródło z briefingu — NIE dopisuj zdarzeń spoza briefingu. Jeżeli w danej sekcji brief mówi 'brak zdarzeń', napisz to jawnie."
         : "Markdown, 700-1100 słów. Struktura: krótki lead, H2 'Co się stało', H2 'Co to znaczy dla inwestora', H2 'Co to znaczy dla osób z nieruchomością', H2 'Linki i źródła', FAQ (3 Q&A). WPLEĆ naturalnie 2-3 linki wewnętrzne z podanej listy. NA KOŃCU 'Linki i źródła' wymień zewnętrzne źródła.";
@@ -296,12 +315,12 @@ async function writeArticleFromNews(
   } else if (kind === "legal_market_monitor") {
     audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[sprawdź bezpłatnie możliwości finansowania](https://financeyou.pl/dla-klienta)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, realne stopy zwrotu od kilkunastu do nawet kilkudziesięciu procent rocznie, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (mechanizm zarabiania na odsetkach jak bank, zabezpieczenie hipoteczne, LTV, ryzyko, dywersyfikacja — bez podawania stóp zwrotu). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: PRZEDSIĘBIORCA szukający finansowania pod zastaw nieruchomości WYŁĄCZNIE na cel związany z działalnością gospodarczą (np. gdy bank odmówił, potrzebny szybki kapitał obrotowy, II hipoteka). Nie kieruj treści do konsumentów, nie obiecuj finansowania "bez BIK" ani "dla każdego". Pisz językiem korzyści i jasnych procedur; decyzja należy do finansujących. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const sys = `${dateContext(new Date())}\nJesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
   const briefLabel =
     kind === "investor_review"
@@ -313,7 +332,7 @@ async function writeArticleFromNews(
     kind === "investor_review"
       ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
       : kind === "legal_market_monitor"
-        ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
+        ? `Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową DOKŁADNIE taką: 'Przegląd tygodnia ${lastSevenDaysLabel(new Date())}' (nie wymyślaj innych dat) — bez clickbaitu.`
         : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
@@ -328,6 +347,7 @@ ${internalList || "(brak — pomiń linki wewnętrzne)"}
 ${taskLabel}
 
 WYMAGANY OPIS POLA content_md: ${structureHint}
+${fixes.length ? `\nPOPRZEDNIA WERSJA NIE PRZESZŁA KONTROLI ZGODNOŚCI. Popraw:\n${fixes.map((f) => `- ${f}`).join("\n")}\n` : ""}
 Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords" (array of strings), "content_md", "cover_prompt", "cover_alt" }.`;
 
   const jsonSchema = {
@@ -413,7 +433,35 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const audience = audienceOf(kind);
   const brief = await fetchFreshNewsBrief(kind);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(brief, internal, kind);
+  // Bramka compliance (brief 5.7) + strażnik nieaktualnego roku w tytule.
+  // Autor poprawek = ten sam pisarz z listą uwag; po 3 nieudanych próbach
+  // artykuł zostaje szkicem (nie publikujemy), a w dzienniku jest powód.
+  const now = new Date();
+  let draft = await writeArticleFromNews(brief, internal, kind);
+  const staleFix = (d: ArticleDraft): string[] => {
+    const years = findStaleYears(`${d.title}\n${d.meta_title}`, now);
+    return years.length
+      ? [`Tytuł/meta zawiera nieaktualny rok (${years.join(", ")}). Dziś jest ${formatPlDate(now)}.`]
+      : [];
+  };
+  const asText = (d: ArticleDraft) => `${d.title}\n${d.meta_title}\n${d.excerpt}\n\n${d.content_md}`;
+  for (let i = 0; i < 2 && staleFix(draft).length; i++) {
+    draft = await writeArticleFromNews(brief, internal, kind, staleFix(draft));
+  }
+  const { runComplianceGate } = await import("@/lib/autopilot/compliance.server");
+  const track = audience === "investor" ? "inwestor" : "pozyczkobiorca";
+  const gate = await runComplianceGate({
+    text: asText(draft),
+    kind: "blog_article",
+    track,
+    refTable: "ai_seo_articles",
+    rewrite: async (_text, feedback) => {
+      draft = await writeArticleFromNews(brief, internal, kind, [...feedback, ...staleFix(draft)]);
+      return asText(draft);
+    },
+  });
+  const stale = staleFix(draft);
+  const publishable = gate.status === "passed" && stale.length === 0;
   const cover = pickCover(kind);
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
@@ -439,14 +487,14 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       keywords: draft.keywords ?? [],
       word_count: wordCount,
       reading_minutes: Math.max(1, Math.round(wordCount / 200)),
-      status: "published",
+      status: publishable ? "published" : "draft",
       audience,
       cta_url: ctaUrl,
       cta_label: ctaLabel,
 
       source: "ai_autopilot",
       raw_ai_output: { ...draft, post_kind: kind } as any,
-      published_at: new Date().toISOString(),
+      published_at: publishable ? new Date().toISOString() : null,
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover.url,
       cover_image_alt: cover.alt || draft.cover_alt,
@@ -460,14 +508,20 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
 
   await supabaseAdmin.from("ai_growth_action_log").insert({
     module: "seo_content_engine",
-    action: "daily_autopost",
-    status: "ok",
-    summary: `[${kind}] ${draft.title}`,
+    action: publishable ? "daily_autopost" : "daily_autopost_rejected",
+    status: publishable ? "ok" : "blocked",
+    summary: publishable
+      ? `[${kind}] ${draft.title}`
+      : `[${kind}] Szkic bez publikacji (bramka compliance): ${draft.title} — ${
+          gate.status === "rejected" ? gate.reason : stale.join(" ")
+        }`,
     payload: {
       article_id: inserted.id,
       slug: inserted.slug,
       kind,
       sources: brief.citations.length,
+      compliance_check_id: gate.checkId,
+      compliance_iterations: gate.iterations,
     },
   });
 
