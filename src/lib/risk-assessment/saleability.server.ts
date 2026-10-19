@@ -289,10 +289,10 @@ export async function analyzeSaleability(args: {
     summary,
   });
 
-  if (!process.env.LOVABLE_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     const offers = await offersPromise;
     return empty(
-      "Brak LOVABLE_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach z portali zachowane).",
+      "Brak ANTHROPIC_API_KEY — prognoza łatwości sprzedaży pominięta (dane o ofertach z portali zachowane).",
       offers,
     );
   }

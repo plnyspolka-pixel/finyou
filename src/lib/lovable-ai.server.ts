@@ -1,11 +1,14 @@
-// Wspólne wywołanie Lovable AI Gateway z odpowiedzią w JSON — zastępuje
-// dawne zapytania do Perplexity (sonar / sonar-pro). Model nie przeszukuje
-// sieci: twarde dane (oferty z portali, wyniki wyszukiwania, newsy z RSS)
-// przekazujemy mu w prompcie, a on je analizuje. Server-only.
+// Wspólne wywołanie AI z odpowiedzią w JSON (dawniej przez bramkę Lovable AI Gateway,
+// teraz przez warstwę `ai.server.ts` → Anthropic Claude). Model nie przeszukuje sieci:
+// twarde dane (oferty z portali, wyniki wyszukiwania, newsy z RSS) przekazujemy mu
+// w prompcie, a on je analizuje. Server-only. Plik zachowuje dawne nazwy eksportów,
+// żeby dotychczasowe importy działały bez zmian.
 
-export const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-export const AI_MODEL_FAST = "google/gemini-2.5-flash";
-export const AI_MODEL_PRO = "google/gemini-2.5-pro";
+import { AI_MODEL_FAST, AI_MODEL_PRO, AiError, aiChatCompletions } from "./ai.server";
+
+export { AI_MODEL_FAST, AI_MODEL_PRO };
+/** Zachowane dla zgodności — adres nie jest już używany do wywołań. */
+export const AI_GATEWAY_URL = "https://api.anthropic.com/v1/messages";
 
 export class LovableAiError extends Error {}
 
@@ -35,40 +38,28 @@ export async function lovableAiJson<T = any>(args: {
   temperature?: number;
   timeoutMs?: number;
 }): Promise<T> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new LovableAiError("Brak LOVABLE_API_KEY.");
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), args.timeoutMs ?? 90_000);
+  if (!process.env.ANTHROPIC_API_KEY) throw new LovableAiError("Brak ANTHROPIC_API_KEY.");
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new LovableAiError("AI: przekroczono czas odpowiedzi.")), args.timeoutMs ?? 180_000),
+  );
   try {
-    const res = await fetch(AI_GATEWAY_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      signal: ctrl.signal,
-      body: JSON.stringify({
+    const json = await Promise.race([
+      aiChatCompletions({
         model: args.model ?? AI_MODEL_FAST,
         messages: [
           { role: "system", content: args.system },
           { role: "user", content: args.user },
         ],
-        temperature: args.temperature ?? 0.2,
         response_format: { type: "json_object" },
       }),
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new LovableAiError(`AI Gateway HTTP ${res.status}: ${t.slice(0, 200)}`);
-    }
-    const json: any = await res.json();
+      timeout,
+    ]);
     const content: string = json?.choices?.[0]?.message?.content ?? "";
     const parsed = parseJsonLoose(content);
-    if (parsed == null)
-      throw new LovableAiError("AI Gateway: odpowiedź nie jest poprawnym JSON-em.");
+    if (parsed == null) throw new LovableAiError("AI: odpowiedź nie jest poprawnym JSON-em.");
     return parsed as T;
   } catch (e: any) {
-    if (e?.name === "AbortError")
-      throw new LovableAiError("AI Gateway: przekroczono czas odpowiedzi.");
+    if (e instanceof AiError) throw new LovableAiError(`AI HTTP ${e.status}: ${e.message.slice(0, 200)}`);
     throw e;
-  } finally {
-    clearTimeout(timer);
   }
 }

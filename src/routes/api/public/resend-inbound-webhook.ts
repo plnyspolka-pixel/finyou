@@ -91,16 +91,14 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
         const emailId = String(meta?.email_id ?? meta?.id ?? "");
 
         // Webhook zawiera TYLKO metadane — body i załączniki trzeba dociągnąć przez Resend API.
-        const GATEWAY = "https://connector-gateway.lovable.dev/resend";
-        const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+        const GATEWAY = "https://api.resend.com";
         const RESEND_API_KEY = process.env.RESEND_API_KEY;
         const resendHeaders: Record<string, string> = {
-          Authorization: `Bearer ${LOVABLE_API_KEY ?? ""}`,
-          "X-Connection-Api-Key": RESEND_API_KEY ?? "",
+          Authorization: `Bearer ${RESEND_API_KEY ?? ""}`,
         };
 
         let data: any = meta;
-        if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+        if (emailId && RESEND_API_KEY) {
           try {
             const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}`, {
               headers: resendHeaders,
@@ -168,7 +166,7 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
             .map((v: any) => (typeof v === "string" ? v : (v?.email ?? "")))
             .filter(Boolean);
           let attachmentUrls: Array<{ name: string; mime?: string | null; url: string }> = [];
-          if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+          if (emailId && RESEND_API_KEY) {
             try {
               const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, {
                 headers: resendHeaders,
@@ -217,7 +215,7 @@ export const Route = createFileRoute("/api/public/resend-inbound-webhook")({
 
         // Załączniki: pobierz listę z signed download_url przez Resend API
         const stored: any[] = [];
-        if (emailId && LOVABLE_API_KEY && RESEND_API_KEY) {
+        if (emailId && RESEND_API_KEY) {
           try {
             const r = await fetch(`${GATEWAY}/emails/receiving/${emailId}/attachments`, {
               headers: resendHeaders,

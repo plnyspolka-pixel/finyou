@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { OcrSummary, OcrDocumentResult } from "./types";
 import type { SourceStatus } from "@/lib/property-analysis/types";
 
+import { aiFetch } from "@/lib/ai.server";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 const MAX_DOCS = 6; // limit kosztowo-czasowy na jedną ocenę
@@ -107,7 +108,7 @@ async function ocrOne(
     });
 
   try {
-    const resp = await fetch(AI_GATEWAY, {
+    const resp = await aiFetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -201,7 +202,7 @@ export async function ocrDocuments(args: {
     .in("document_id", ids);
   const cacheMap = new Map((cached ?? []).map((c) => [c.document_id, c]));
 
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   const results: OcrDocumentResult[] = [];
   for (const doc of docs) {
     const hit = cacheMap.get(doc.id);

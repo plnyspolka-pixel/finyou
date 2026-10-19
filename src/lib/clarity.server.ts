@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Microsoft Clarity (metryki, analiza AI) — logika wyniesiona z clarity.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -73,8 +74,8 @@ export async function analyzeClarityMetrics(
   _userId: string,
   data: AnalyzeClarityMetricsInput,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY nie skonfigurowany");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY nie skonfigurowany");
 
   const system =
     "Jesteś analitykiem UX i konwersji. Analizujesz metryki Microsoft Clarity " +
@@ -90,7 +91,7 @@ export async function analyzeClarityMetrics(
     data.question || "Przeanalizuj dane i podaj TOP 5 problemów UX + rekomendacje napraw."
   }`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

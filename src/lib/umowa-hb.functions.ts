@@ -13,6 +13,7 @@ import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { renderujXml, renderujTekst, GRUPY_POL, FLAGI, type WzorData } from "@/lib/umowa-hb/render";
 import { WZOR_UMOWY_DOCX_B64 } from "@/lib/umowa-hb/wzor-docx.b64";
 
+import { aiFetch } from "@/lib/ai.server";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const GEMINI_PRO = "google/gemini-2.5-pro";
 
@@ -98,8 +99,8 @@ export const umowaHbAssistant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { messages: ChatMsg[]; data: WzorData }) => d)
   .handler(async ({ data }): Promise<HbAssistantResult> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY nie skonfigurowany");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY nie skonfigurowany");
 
     const dane = normalizujDane(data.data);
     const katalog = GRUPY_POL.map(
@@ -138,7 +139,7 @@ export const umowaHbAssistant = createServerFn({ method: "POST" })
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const res = await fetch(GATEWAY, {
+    const res = await aiFetch(GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

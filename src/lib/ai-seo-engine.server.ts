@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // AI SEO (plan tematów, artykuły z AI) — logika wyniesiona z ai-seo.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -43,7 +44,7 @@ async function callAI(apiKey: string, model: string, system: string, user: strin
     body.tools = tools;
     body.tool_choice = { type: "function", function: { name: tools[0].function.name } };
   }
-  const res = await fetch(AI_URL, {
+  const res = await aiFetch(AI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -59,8 +60,8 @@ export async function planSeoTopics(
   userId: string,
   data: PlanSeoTopicsInput,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("Brak LOVABLE_API_KEY");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Brak ANTHROPIC_API_KEY");
 
   const { data: settings } = await supabase
     .from("ai_growth_settings")
@@ -145,8 +146,8 @@ export async function generateSeoArticle(
   userId: string,
   data: GenerateSeoArticleInput,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("Brak LOVABLE_API_KEY");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Brak ANTHROPIC_API_KEY");
 
   const { data: topic } = await supabase
     .from("ai_seo_topics")

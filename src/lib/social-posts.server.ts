@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Server-only helpers for Social Media & AI Content
 
 const PLATFORM_GUIDE: Record<string, string> = {
@@ -16,8 +17,8 @@ export async function generateSocialContent(args: {
   campaign?: string;
   tone?: string;
 }): Promise<{ content: string; hashtags: string[]; image_prompt: string }> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
 
   const guide = PLATFORM_GUIDE[args.platform] ?? "";
   const sys = `Jesteś social media managerem firmy finansowej Finance You (pożyczki pod nieruchomość, inwestowanie w wierzytelności). Piszesz po polsku, bez clickbaitu, bez ogólników. Konkret, korzyść, CTA.
@@ -26,7 +27,7 @@ ${args.tone ? `Dodatkowy ton: ${args.tone}.` : ""}
 ${args.campaign ? `Kampania: ${args.campaign}.` : ""}
 Zwracaj WYŁĄCZNIE JSON: {"content":"...","hashtags":["#tag1","#tag2"],"image_prompt":"opis grafiki w jęz. angielskim, fotorealistyczny styl, do 200 znaków"}`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -51,9 +52,9 @@ Zwracaj WYŁĄCZNIE JSON: {"content":"...","hashtags":["#tag1","#tag2"],"image_p
 }
 
 export async function generateSocialImage(prompt: string): Promise<{ image_url: string }> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({

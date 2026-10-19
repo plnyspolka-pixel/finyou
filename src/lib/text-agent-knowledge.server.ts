@@ -1,4 +1,5 @@
-// Helpers RAG dla agenta DM: embedding przez Lovable AI Gateway + retrieval z pgvector.
+import { aiFetch } from "@/lib/ai.server";
+// Helpers RAG dla agenta DM: embedding (OpenAI text-embedding-3-small przez ai.server.ts) + retrieval z pgvector.
 import { createClient } from "@supabase/supabase-js";
 
 const EMBED_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
@@ -9,9 +10,9 @@ function admin() {
 }
 
 export async function embedText(input: string): Promise<number[]> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-  const res = await fetch(EMBED_URL, {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY missing");
+  const res = await aiFetch(EMBED_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model: EMBED_MODEL, input: input.slice(0, 8000) }),

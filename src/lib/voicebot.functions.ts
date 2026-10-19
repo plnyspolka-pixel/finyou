@@ -154,10 +154,10 @@ export async function sendSmsInternal(opts: {
   /** Dodatkowe pola do `lead_communications.metadata` (np. kod krótkiego linku). */
   metadata?: Record<string, unknown>;
 }): Promise<{ ok: boolean; sid?: string; error?: string; skipped?: boolean; reason?: string }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const twilioKey = process.env.TWILIO_API_KEY;
-  if (!lovableKey) return { ok: false, error: "Brak LOVABLE_API_KEY" };
-  if (!twilioKey) return { ok: false, error: "Twilio nie jest podłączony (brak TWILIO_API_KEY)" };
+  const { twilioCredentials, twilioAuth } = await import("@/lib/twilio-api.server");
+  if (!twilioCredentials())
+    return { ok: false, error: "Twilio nie jest podłączony (brak TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN)" };
+  const twilio = twilioAuth();
 
   const settings = await loadSettings();
   const from = opts.from || settings?.sms_from;
@@ -190,11 +190,10 @@ export async function sendSmsInternal(opts: {
   }
 
   try {
-    const res = await fetch("https://connector-gateway.lovable.dev/twilio/Messages.json", {
+    const res = await fetch(`${twilio.base}Messages.json`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": twilioKey,
+        ...twilio.headers,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ To: phone, From: from, Body: opts.body }),

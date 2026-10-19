@@ -1,20 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const DRIVE_GW = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
-const DOCS_GW = "https://connector-gateway.lovable.dev/google_docs/v1";
+// API Google bezpośrednio (konto usługi GOOGLE_SERVICE_ACCOUNT_JSON — dokumenty/foldery trzeba
+// udostępnić adresowi e-mail konta usługi; patrz src/lib/google-auth.server.ts).
+const DRIVE_GW = "https://www.googleapis.com/drive/v3";
+const DOCS_GW = "https://docs.googleapis.com/v1";
 
-function gwHeaders(kind: "drive" | "docs") {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const apiKey =
-    kind === "drive" ? process.env.GOOGLE_DRIVE_API_KEY : process.env.GOOGLE_DOCS_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
-  if (!apiKey)
-    throw new Error(
-      `${kind === "drive" ? "GOOGLE_DRIVE_API_KEY" : "GOOGLE_DOCS_API_KEY"} not configured`,
-    );
-  return { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": apiKey };
+async function gwHeaders(kind: "drive" | "docs"): Promise<Record<string, string>> {
+  const { googleAccessToken } = await import("@/lib/google-auth.server");
+  const scope =
+    kind === "drive"
+      ? "https://www.googleapis.com/auth/drive.readonly"
+      : "https://www.googleapis.com/auth/documents.readonly";
+  const { token } = await googleAccessToken([scope]);
+  return { Authorization: `Bearer ${token}` };
 }
 
 export const listGoogleDocs = createServerFn({ method: "POST" })
@@ -50,7 +51,7 @@ export const listGoogleDocs = createServerFn({ method: "POST" })
         corpora: scope === "drives" ? "allDrives" : "allDrives",
       });
       const url = `${DRIVE_GW}/files?${params.toString()}`;
-      const res = await fetch(url, { headers: gwHeaders("drive") });
+      const res = await fetch(url, { headers: await gwHeaders("drive") });
       const json: any = await res.json();
       if (!res.ok)
         return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
@@ -67,7 +68,7 @@ export const getConnectedGoogleAccount = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
       const url = `${DRIVE_GW}/about?fields=user(displayName,emailAddress,photoLink),storageQuota(usage,limit)`;
-      const res = await fetch(url, { headers: gwHeaders("drive") });
+      const res = await fetch(url, { headers: await gwHeaders("drive") });
       const json: any = await res.json();
       if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
       return { ok: true, user: json.user };
@@ -122,7 +123,7 @@ export const importGoogleDoc = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const res = await fetch(`${DOCS_GW}/documents/${data.documentId}`, {
-        headers: gwHeaders("docs"),
+        headers: await gwHeaders("docs"),
       });
       const json: any = await res.json();
       if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
@@ -160,8 +161,8 @@ export const suggestPlaceholders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ content: z.string().min(1).max(50000) }).parse(input))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return { ok: false, error: "LOVABLE_API_KEY nieskonfigurowany", placeholders: [] };
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return { ok: false, error: "ANTHROPIC_API_KEY nieskonfigurowany", placeholders: [] };
 
     const systemPrompt = `Jesteś asystentem, który analizuje treść szablonu dokumentu prawnego/finansowego po polsku.
 Twoje zadanie: znajdź miejsca w tekście, gdzie powinny być placeholdery na zmienne dane (imię klienta, kwota pożyczki, adres nieruchomości itp.) i zaproponuj zamianę.
@@ -174,7 +175,7 @@ Zwróć JSON z listą propozycji. Każda propozycja zawiera:
 - "placeholder": klucz placeholdera z listy powyżej w formacie {{klucz}}
 - "reason": krótkie uzasadnienie (max 80 znaków)`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -104,18 +104,14 @@ export const refetchInboundEmailBody = createServerFn({ method: "POST" })
       );
     }
 
-    const GATEWAY = "https://connector-gateway.lovable.dev/resend";
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
+    const RESEND_API = "https://api.resend.com";
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-      throw new Error("Brak konfiguracji Resend (LOVABLE_API_KEY / RESEND_API_KEY)");
+    if (!RESEND_API_KEY) {
+      throw new Error("Brak konfiguracji Resend (RESEND_API_KEY)");
     }
 
-    const r = await fetch(`${GATEWAY}/emails/receiving/${encodeURIComponent(emailId)}`, {
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": RESEND_API_KEY,
-      },
+    const r = await fetch(`${RESEND_API}/emails/receiving/${encodeURIComponent(emailId)}`, {
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}` },
     });
     if (!r.ok) {
       const errText = await r.text().catch(() => "");

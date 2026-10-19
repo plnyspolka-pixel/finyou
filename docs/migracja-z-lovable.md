@@ -416,13 +416,6 @@ publikacja Realtime pusta po obu stronach, brak webhooków bazodanowych (`supaba
 i triggerów `pg_net`, brak kolejek pgmq (rozszerzenie jest, kolejek nie ma), Vault w starej bazie
 zawiera tylko `migration_target`, brak hooków Auth (custom access token itp.).
 
-**Stan 19.10.2026:** konektor Supabase nie wykonuje DELETE/DROP bez potwierdzenia w czacie
-(operacje „cancelled”) i nie zapisuje sekretów funkcji z sesji automatycznej, a sesja chmurowa nie ma
-przeglądarki — dlatego punkty 1 (sekrety), 4 (Auth), sprzątanie historii migracji i wdrożenie Workera
-zbiera jeden skrypt **`scripts/migracja/po-tokenach.sh`** (Management API + wrangler), który potrzebuje
-tylko `SUPABASE_PAT`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` w środowisku
-(prompt na założenie tokenów: `docs/migracja/prompt-przegladarka.md`).
-
 **Do zrobienia przed przełączeniem (decyzje/akcje właściciela, wszystko przygotowane):**
 1. **Funkcje Edge** — repo ma 4 (`supabase/functions/`: `didit-webhook`, `rcn-proxy`, `registry-proxy`,
    `tpay-proxy`), nowy projekt ma **0**. Wdrożenie: `supabase functions deploy --project-ref
@@ -550,13 +543,6 @@ Właściciel: „zgoda na wszystko”, priorytet: nieprzerwane działanie aplika
   `didit-webhook` wdrożona (czeka na sekret), granty RPC utwardzone (migracja 20261010130000
   zastosowana i wpisana do historii), produkcja Lovable też załatana tymi samymi `revoke`.
 
-- **Build**: `bun run build` (Vite 7 + TanStack Start + Nitro/Cloudflare) przechodzi; paczka gotowa do
-  `wrangler deploy` po wpisaniu sekretów i tokenu Cloudflare.
-- **Historia migracji w nowej bazie**: archiwum `_mig.lovable_schema_migrations` (233 wiersze) i 304
-  wersje z repo wpisane (`on conflict` — razem 514); do zrobienia przez Management API albo panel SQL:
-  `delete from supabase_migrations.schema_migrations where version not in (…)` z
-  `baseline-historii.sql` (208 wierszy Lovable) oraz 4 `DROP FUNCTION` z `20261010120100`.
-
 **Nadal po stronie właściciela / wymaga dostępu do paneli:** sekrety (lista wyżej), token
 Management API Supabase (klucz service_role, Auth: SMTP/redirecty/Google, sekrety funkcji, DROP-y i
 baseline historii), Cloudflare (wdrożenie Workera, DNS), kopia Storage.
@@ -565,31 +551,3 @@ baseline historii), Cloudflare (wdrożenie Workera, DNS), kopia Storage.
 
 - Zabezpieczenie przed pętlą mailową (odpowiedzi na własną domenę / autorespondery).
 - Idempotencja zapisu załączników do `pliki-klienta` (zdublowane uploady z lipca).
-
-### Sekrety i Storage (2026-10-26)
-
-- **Lovable nie wydaje wartości sekretów.** Panel Cloud → Secrets pokazuje tylko nazwy, a czat Lovable
-  odmówił trasy eksportu (zamiast tego przygotował arkusz z planem przeniesienia). Klucze dostawców
-  trzeba więc pobrać lub wygenerować u każdego dostawcy.
-- **W Workerze `finyou` (25 sekretów):** Supabase (service_role, anon), `PROXY_SHARED_SECRET`,
-  `SEND_EMAIL_HOOK_SECRET`, `CRON_SECRET` oraz nowe własne: `AGENT_TOOLS_SECRET`, `DISCOUNT_CODE_SECRET`,
-  `LOCATION_SCORING_HMAC_SECRET`, `AFFILIATE_ENCRYPTION_KEY`, `META_WEBHOOK_VERIFY_TOKEN`,
-  `META_IG_WEBHOOK_VERIFY_TOKEN`, `TWILIO_WEBHOOK_TOKEN`, para VAPID (wartości w
-  `~/.finyou-migracja/sekrety-wlasne.json`). Jawne ustawienia odczytane z narzędzi aplikacji:
-  `META_APP_ID` 2196910261086398, `META_PAGE_ID` 661893307005604, `META_IG_USER_ID` 17841447567157032,
-  `GA4_PROPERTY_ID` 377900600, `REMOTION_REGION` eu-central-1, `REMOTION_FUNCTION_NAME`,
-  `ELEVENLABS_TEXT_AGENT_ID` (agent „Filip - pisze”, do potwierdzenia), `DIDIT_WORKFLOW_ID_KYC` (z docs/didit-kyc.md),
-  `APP_URL`, `VAPID_SUBJECT`.
-- **Wymiana własnych sekretów jest bezpieczna:** w starej bazie 0 zaszyfrowanych rekordów partnerów i
-  księgowości, 0 użytych kodów rabatowych, 0 subskrypcji push. `AML_ENVELOPE_MASTER_KEY` nie jest
-  czytany przez kod. Kody rabatowe wysłane mailem przed przełączeniem przestaną działać.
-- **Przy przełączeniu wpisać nowe wartości u dostawców:** verify tokeny w Meta → Webhooks, nowe adresy
-  webhooków Twilio z `TWILIO_WEBHOOK_TOKEN`, nagłówek `AGENT_TOOLS_SECRET` w narzędziach agentów
-  ElevenLabs. Wcześniej nie, bo zepsułoby to działającą produkcję Lovable.
-- **Klucze dostawców (56 pozycji):** plik do uzupełnienia `.sekrety/klucze-dostawcow.env` (w `.gitignore`,
-  z linkami i uwagami z arkusza), wgrywanie: `bash scripts/migracja/wgraj-klucze.sh` (puste pomija).
-- **Storage dogoniony:** delta po 21.10 skopiowana (7 plików `lead-magnets`, 83 `studio-media`, 0 błędów).
-  108 wpisów `pliki-klienta` bez pliku w starym Storage (martwe rekordy). `storage-copy.py` porównuje
-  teraz rozmiar z manifestu, więc ponowna delta kopiuje tylko nowe pliki.
-- **DNS:** `financeyou.pl` ma serwery nazw az.pl (nie Cloudflare). Przepięcie domeny na Workera wymaga
-  dodania strefy w Cloudflare i zmiany NS u rejestratora.

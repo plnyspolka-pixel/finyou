@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Link building AI (backlinki, propozycje) — logika wyniesiona z ai-linkbuilding.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -100,8 +101,8 @@ export async function generateLinkBuildingSuggestions(
   userId: string,
   data: GenerateLinkBuildingSuggestionsInput,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY nie skonfigurowany");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY nie skonfigurowany");
 
   const [{ data: settings }, { data: existing }] = await Promise.all([
     supabase
@@ -184,7 +185,7 @@ export async function generateLinkBuildingSuggestions(
     },
   ];
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

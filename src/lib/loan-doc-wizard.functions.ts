@@ -36,6 +36,7 @@ import { FY_CREDITOR } from "@/lib/windykacja-docfill";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
 import type { LoanCalcPayload } from "@/lib/loan-calc-pdf";
 
+import { aiFetch } from "@/lib/ai.server";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 // Kreator jawnie korzysta z Gemini Pro (mocniejszy model do wnioskowania z rozmowy).
 const GEMINI_PRO = "google/gemini-2.5-pro";
@@ -395,8 +396,8 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
       };
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY nie skonfigurowany");
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY nie skonfigurowany");
 
     // Pola do wypełnienia przez rozmowę — bez strony finansującego (tę wypełnia
     // sam finansujący) i bez czystych instrukcji/opcji (te operator ustawia ręcznie).
@@ -447,7 +448,7 @@ export const runLoanDocWizard = createServerFn({ method: "POST" })
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const res = await fetch(GATEWAY, {
+    const res = await aiFetch(GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

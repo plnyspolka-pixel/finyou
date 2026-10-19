@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Digital PR — generowanie draftu komentarza eksperckiego dla okazji
 // medialnej (Lovable AI gateway). Twarde zasady promptu SEO §MODUŁ 4:
 //  * draft NIE zawiera żadnych danych liczbowych, których nie mamy w tabelach
@@ -29,8 +30,8 @@ export async function generatePrDraft(opportunityId: string): Promise<{
   body?: string;
   error?: string;
 }> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return { ok: false, error: "LOVABLE_API_KEY missing" };
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return { ok: false, error: "ANTHROPIC_API_KEY missing" };
 
   const { data: opp, error } = await db
     .from("pr_opportunities")
@@ -52,7 +53,7 @@ export async function generatePrDraft(opportunityId: string): Promise<{
     .filter(Boolean)
     .join("\n");
 
-  const res = await fetch(AI_URL, {
+  const res = await aiFetch(AI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

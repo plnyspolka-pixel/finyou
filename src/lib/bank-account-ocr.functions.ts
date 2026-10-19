@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -37,7 +38,7 @@ export const verifyBankAccountDocument = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("Brak konfiguracji AI.");
 
     const isPdf = data.mimeType === "application/pdf" || /\.pdf$/i.test(data.fileName ?? "");
@@ -68,7 +69,7 @@ export const verifyBankAccountDocument = createServerFn({ method: "POST" })
 
     let text = "";
     try {
-      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
