@@ -43,6 +43,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
@@ -144,6 +145,7 @@ import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiado
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as NarzedzieSlugRouteImport } from './routes/narzedzie.$slug'
 import { Route as OperatorIndexRouteImport } from './routes/operator.index'
 import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
@@ -485,6 +487,11 @@ const RejestracjaRoute = RejestracjaRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WyborPaneluRoute = WyborPaneluRouteImport.update({
@@ -995,6 +1002,11 @@ const KlientPropozycjeRoute = KlientPropozycjeRouteImport.update({
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NarzedzieSlugRoute = NarzedzieSlugRouteImport.update({
+  id: '/narzedzie/$slug',
+  path: '/narzedzie/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorIndexRoute = OperatorIndexRouteImport.update({
@@ -1950,6 +1962,7 @@ export interface FileRoutesByFullPath {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2047,6 +2060,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2250,6 +2264,7 @@ export interface FileRoutesByTo {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2344,6 +2359,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2551,6 +2567,7 @@ export interface FileRoutesById {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2648,6 +2665,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2858,6 +2876,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -2955,6 +2974,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3158,6 +3178,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3252,6 +3273,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3458,6 +3480,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3555,6 +3578,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3764,6 +3788,7 @@ export interface RootRouteChildren {
   RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StartRoute: typeof StartRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
@@ -3779,6 +3804,7 @@ export interface RootRouteChildren {
   FakturaIdRoute: typeof FakturaIdRoute
   KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
+  NarzedzieSlugRoute: typeof NarzedzieSlugRoute
   PobierzPlikTokenRoute: typeof PobierzPlikTokenRoute
   PobierzSlugRoute: typeof PobierzSlugRoute
   PodpisTokenRoute: typeof PodpisTokenRoute
@@ -4107,6 +4133,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wybor-panelu': {
@@ -4814,6 +4847,13 @@ declare module '@tanstack/react-router' {
       path: '/l/$slug'
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/narzedzie/$slug': {
+      id: '/narzedzie/$slug'
+      path: '/narzedzie/$slug'
+      fullPath: '/narzedzie/$slug'
+      preLoaderRoute: typeof NarzedzieSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator/': {
@@ -6493,6 +6533,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminInwestoraRoute: RegulaminInwestoraRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StartRoute: StartRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
@@ -6509,6 +6550,7 @@ const rootRouteChildren: RootRouteChildren = {
   FakturaIdRoute: FakturaIdRoute,
   KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
+  NarzedzieSlugRoute: NarzedzieSlugRoute,
   PobierzPlikTokenRoute: PobierzPlikTokenRoute,
   PobierzSlugRoute: PobierzSlugRoute,
   PodpisTokenRoute: PodpisTokenRoute,

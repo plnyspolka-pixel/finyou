@@ -1,0 +1,57 @@
+{
+  "$comment": "System marki Finance You — jedno źródło prawdy dla generatorów (PDF, strony lead magnetów i narzędzi, maile, miniatury, grafiki w wideo). Wartości przeniesione z istniejącego kodu: src/styles.css (motyw marketingowy dark-glow navy+gold) i services/remotion/src/Motion.tsx. Zmiana marki = zmiana tego pliku.",
+  "version": 1,
+  "name": "Finance You",
+  "legal": {
+    "company": "Finance You sp. z o.o.",
+    "krs": "0000635207",
+    "address": "ul. Nowogrodzka 31, 00-511 Warszawa",
+    "email": "kontakt@financeyou.pl",
+    "website": "https://financeyou.pl"
+  },
+  "claims": {
+    "allowed": [
+      "ok. 15 lat na rynku finansowania pozabankowego",
+      "ok. 12 stałych partnerów finansowych",
+      "tysiące przeanalizowanych tematów",
+      "setki obsłużonych klientów",
+      "ponad 100 wypłaconych pożyczek"
+    ],
+    "forbidden": [
+      "łączna wartość kapitału",
+      "stopy zwrotu",
+      "oprocentowanie jako obietnica",
+      "ceny w wideo"
+    ]
+  },
+  "colors": {
+    "navy": "#0D1638",
+    "navyDeep": "#070B22",
+    "navyBrand": "#0D193C",
+    "ink": "#050A30",
+    "gold": "#EABE4A",
+    "goldLight": "#F3D57E",
+    "accent": "#2A6FDB",
+    "glow": "#4F8BF0",
+    "border": "#547CD6",
+    "muted": "#AFC0E8",
+    "grey": "#595959",
+    "white": "#FFFFFF",
+    "gradient": ["#0D193C", "#2197D3"],
+    "risk": "#F3D57E"
+  },
+  "typography": {
+    "sans": "Montserrat",
+    "captions": "Inter",
+    "mono": "JetBrains Mono",
+    "pdfFallback": "Liberation Sans"
+  },
+  "grid": { "pdfPage": "A4", "pdfMarginMm": 18, "radiusPx": 12, "spacingPx": 8 },
+  "logo": {
+    "pdfBase64Export": "src/lib/esign/esign-logo.ts#FY_ROUND_LOGO_PNG_BASE64"
+  },
+  "mandatory": {
+    "aiNotice": "Treść przygotowana z użyciem AI.",
+    "aiVideoLabel": "Treść wygenerowana przez AI"
+  }
+}
