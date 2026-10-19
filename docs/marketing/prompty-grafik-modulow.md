@@ -147,5 +147,11 @@ Pliki: `public/marketing/moduly/siec-sprzedazy-1.webp`, `-2.webp`, `-3.webp`
 3. Karta sama zacznie przewijać slajdy (kropki na dole, pauza po najechaniu
    myszą, bez animacji przy ograniczonym ruchu w systemie).
 
-Do czasu nowych grafik karta Szkolenia używa ilustracji z Akademii
-(`/marketing/akademia/modul-1.png`), a pozostałe moduły — obecnych grafik.
+## Stan (19.10.2026)
+
+Grafiki są wygenerowane i podpięte: `public/marketing/moduly/<slug>-1..3.webp`.
+Zmiana względem zasad wyżej (decyzja właściciela): na grafikach jest oficjalne
+logo financeyou.pl oraz treść — nagłówek, punkty i widżet z danymi (wykres,
+skala A–E, oś etapów). Tła generuje AI (Studio, bez tekstu), a tekst, widżety
+i logo nakłada kompozytor HTML (Playwright), więc polskie znaki są poprawne.
+Liczby w widżetach z przykładowymi danymi mają plakietkę „przykład”.
