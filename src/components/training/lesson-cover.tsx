@@ -6,8 +6,8 @@ export function coverLabels(title: string): { eyebrow: string | null; heading: s
   const t = title.trim();
   const cs = t.match(/^case study:\s*(.+)$/i);
   if (cs) {
-    const place = cs[1].replace(/^(mieszkanie|działka|nieruchomość)\s+w\s+/i, "");
-    return { eyebrow: "Case study", heading: place };
+    const rest = cs[1].trim();
+    return { eyebrow: "Case study", heading: rest.charAt(0).toUpperCase() + rest.slice(1) };
   }
   return { eyebrow: null, heading: t.replace(/^\d+\.\s*/, "") };
 }

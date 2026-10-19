@@ -3,7 +3,7 @@ import { coverLabels } from "./lesson-cover";
 
 describe("coverLabels", () => {
   it("case study pokazuje samą miejscowość", () => {
-    expect(coverLabels("Case study: działka w Żelewie")).toEqual({ eyebrow: "Case study", heading: "Żelewie" });
+    expect(coverLabels("Case study: działka w Żelewie")).toEqual({ eyebrow: "Case study", heading: "Działka w Żelewie" });
     expect(coverLabels("Case study: Lubań")).toEqual({ eyebrow: "Case study", heading: "Lubań" });
   });
   it("usuwa numer z tytułu, bo numer jest osobno", () => {
