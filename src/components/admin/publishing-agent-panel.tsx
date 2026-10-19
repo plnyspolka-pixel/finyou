@@ -86,7 +86,7 @@ export function PublishingAgentPanel() {
       <Card>
         <CardContent className="pt-6 text-sm text-muted-foreground">
           Moduł agenta publikującego czeka na migrację{" "}
-          <code>20261019180000_agent_publikujacy_fundament</code>. Bramka compliance w publikatorach
+          <code>20261019190000_agent_publikujacy_fundament</code>. Bramka compliance w publikatorach
           działa już teraz (na wartościach domyślnych).
         </CardContent>
       </Card>

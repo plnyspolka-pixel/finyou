@@ -1,5 +1,5 @@
 // Cron agenta publikującego (pg_cron co godzinę, migracja
-// 20261019180000_agent_publikujacy_fundament): bezpieczniki i automatyczna
+// 20261019190000_agent_publikujacy_fundament): bezpieczniki i automatyczna
 // pauza przy anomaliach, import metryk publikacji, raport dzienny i tygodniowy
 // do właściciela. Nie publikuje — publikują ticki kolejek przez bramkę agenta.
 import { createFileRoute } from "@tanstack/react-router";

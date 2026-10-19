@@ -1,7 +1,7 @@
 /**
  * Agent publikujący — ustawienia modułu, profile torów, dziennik i alarmy.
  *
- * Odczyty są TOLERANCYJNE: gdy migracja `20261019180000_agent_publikujacy_fundament`
+ * Odczyty są TOLERANCYJNE: gdy migracja `20261019190000_agent_publikujacy_fundament`
  * nie jest jeszcze wdrożona, zwracamy bezpieczne wartości domyślne (tryb
  * manual_review, X wyłączony), a zapisy do nowych tabel są best-effort.
  * Dzięki temu wdrożenie kodu przed migracją niczego nie psuje.
