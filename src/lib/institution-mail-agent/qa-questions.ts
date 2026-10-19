@@ -214,3 +214,16 @@ export function buildClientMessage(
     `Zespół Finance You`
   );
 }
+
+/** Opis propozycji dla operatora — z partnerem, do którego instytucja odsyła. */
+export function criteriaSummary(criteria: Record<string, unknown>): string | null {
+  const note = String(criteria.note ?? "").trim();
+  const r = criteria.redirect_to as Record<string, unknown> | null | undefined;
+  const partner =
+    r && typeof r === "object" && r.name
+      ? `Odsyła do partnera: ${[r.name, r.email, r.phone, r.website]
+          .filter((v) => typeof v === "string" && v.trim())
+          .join(" · ")}`
+      : "";
+  return [note, partner].filter(Boolean).join(" — ").slice(0, 500) || null;
+}

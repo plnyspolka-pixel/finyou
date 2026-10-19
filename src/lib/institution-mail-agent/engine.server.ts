@@ -22,6 +22,7 @@
 // odpowiedź klienta", której nikt nigdy nie poprosił.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
+  criteriaSummary,
   buildClientMessage,
   outstandingQuestions,
   parseExtractedQuestions,
@@ -116,7 +117,7 @@ KATEGORIE (wybierz jedną):
 - "question" — instytucja prosi o dodatkowe informacje/dokumenty dotyczące konkretnego wniosku,
 - "offer" — instytucja składa konkretną ofertę finansowania (kwota/rata/okres/warunki),
 - "rejection" — instytucja odmawia finansowania tego wniosku (z powodem lub bez),
-- "criteria_change" — instytucja informuje o OGÓLNEJ zmianie zasad przyjmowania wniosków (zawieszenie przyjmowania, wznowienie, promocja, zmiana widełek kwotowych),
+- "criteria_change" — instytucja informuje o OGÓLNEJ zmianie zasad przyjmowania wniosków (zawieszenie przyjmowania, wznowienie, promocja, zmiana widełek kwotowych) ALBO o tym, że sama nie udziela już pożyczek i odsyła do partnera / innej spółki (wtedy "accepting": false, a partnera wpisz w "redirect_to"),
 - "auto_ack" — automatyczne potwierdzenie rejestracji/odbioru, autoresponder,
 - "other" — nic z powyższych.
 
@@ -140,7 +141,7 @@ ODPOWIEDŹ — wyłącznie JSON:
   ],
   "offer": {"amount": number|null, "installment": number|null, "period_months": number|null, "conditions": "..."} | null,
   "rejection_reason": "..." | null,
-  "criteria": {"accepting": true|false|null, "paused_until": "YYYY-MM-DD"|null, "min_amount": number|null, "max_amount": number|null, "note": "krótki opis zmiany"} | null
+  "criteria": {"accepting": true|false|null, "paused_until": "YYYY-MM-DD"|null, "min_amount": number|null, "max_amount": number|null, "note": "krótki opis zmiany", "redirect_to": {"name": "...", "email": "..."|null, "phone": "..."|null, "website": "..."|null} | null} | null
 }`;
 }
 
@@ -262,7 +263,7 @@ async function proposeCriteriaChange(
     investor_id: mail.investor_id,
     source_message_id: mail.id,
     proposed_patch: patch,
-    summary: String((criteria as any).note ?? "").slice(0, 500) || null,
+    summary: criteriaSummary(criteria),
   });
 }
 
