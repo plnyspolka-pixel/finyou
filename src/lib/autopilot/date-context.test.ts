@@ -5,6 +5,7 @@ import {
   fixStaleYearInTitle,
   formatDatePl,
   warsawDateParts,
+  weekRangePl,
 } from "./date-context";
 
 const NOW = new Date("2026-10-19T10:00:00Z");
@@ -38,5 +39,11 @@ describe("date-context", () => {
     expect(fixStaleYearInTitle("Stopy NBP 2025 vs 2026", NOW).changed).toBe(false);
     expect(fixStaleYearInTitle("Przegląd tygodnia 2026", NOW).changed).toBe(false);
     expect(fixStaleYearInTitle("Bez roku", NOW).changed).toBe(false);
+  });
+
+  it("zakres tygodnia do promptu przeglądu", () => {
+    expect(weekRangePl(NOW)).toBe("13–19.10.2026");
+    expect(weekRangePl(new Date("2026-11-03T10:00:00Z"))).toBe("28.10–3.11.2026");
+    expect(weekRangePl(new Date("2027-01-02T10:00:00Z"))).toBe("27.12.2026–2.01.2027");
   });
 });

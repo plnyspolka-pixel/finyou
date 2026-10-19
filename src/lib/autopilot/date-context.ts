@@ -105,3 +105,17 @@ export function fixStaleYearInTitle(
   if (y >= cur || y < cur - 6) return { text: title, changed: false };
   return { text: title.replace(YEAR_RE, String(cur)), changed: true, from: y };
 }
+
+/** Ostatnie 7 dni kończące się dziś (Warszawa): „13–19.10.2026”. */
+export function weekRangePl(now: Date = new Date()): string {
+  const end = warsawDateParts(now);
+  const start = warsawDateParts(new Date(now.getTime() - 6 * 86_400_000));
+  const dd = (n: number) => String(n).padStart(2, "0");
+  const startStr =
+    start.year === end.year
+      ? start.month === end.month
+        ? `${start.day}`
+        : `${start.day}.${dd(start.month)}`
+      : `${start.day}.${dd(start.month)}.${start.year}`;
+  return `${startStr}–${end.day}.${dd(end.month)}.${end.year}`;
+}

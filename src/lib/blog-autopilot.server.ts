@@ -6,7 +6,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseRssItems, type RssItem } from "@/lib/pr/core";
 import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
-import { currentDateContextPl, fixStaleYearInTitle } from "@/lib/autopilot/date-context";
+import {
+  currentDateContextPl,
+  fixStaleYearInTitle,
+  weekRangePl,
+} from "@/lib/autopilot/date-context";
 
 function slugify(s: string): string {
   return s
@@ -314,7 +318,7 @@ async function writeArticleFromNews(
     kind === "investor_review"
       ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
       : kind === "legal_market_monitor"
-        ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
+        ? `Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY za okres ${weekRangePl()}. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia ${weekRangePl()}', 'Co zmieniło się w prawie i na rynku nieruchomości') — wyłącznie ten zakres dat, bez clickbaitu.`
         : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
