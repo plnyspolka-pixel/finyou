@@ -67,6 +67,7 @@ import { studioMotionTools } from "./tools/studio-motion";
 import { googleTools } from "./tools/google";
 import { supabaseTools } from "./tools/supabase";
 import { storageRepairTools } from "./tools/storage-repair";
+import { legalDocsTools } from "./tools/legal-docs";
 
 const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
 
@@ -148,5 +149,6 @@ export default defineMcp({
     ...googleTools,
     ...supabaseTools,
     ...storageRepairTools,
+    ...legalDocsTools,
   ],
 });
