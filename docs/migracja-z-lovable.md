@@ -303,10 +303,12 @@ brakujące obiekty, treść 1:1 z plików źródłowych (podanych w nagłówkach
 idempotentnie (`CREATE TABLE/INDEX IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, polityki i triggery
 w blokach `DO` z kontrolą istnienia, funkcje `CREATE OR REPLACE`): 7 tabel z RLS, 3 kolumny,
 20 indeksów, 7 polityk, 5 triggerów `updated_at`, 4 funkcje pgmq (`enqueue_email`,
-`read_email_batch`, `delete_email`, `move_to_dlq`) oraz — dopisane po skanie DROP-ów (niżej) — 4 `DROP FUNCTION IF EXISTS`
+`read_email_batch`, `delete_email`, `move_to_dlq`) oraz osobny plik `20261010120100_dogonienie_usuniecia.sql` z 4 `DROP FUNCTION IF EXISTS`
 (`reconcile_object_names/shadow_upsert/shadow_delete`, `free_investor_usage`; bez zależności w katalogu i użyć
-w kodzie; tej części konektor nie przetestuje — czeka na potwierdzenie instrukcji destrukcyjnych — do sprawdzenia
-w panelu SQL). Świadomie pominięte (uzasadnienie w nagłówku
+w kodzie; wydzielone, bo konektor wykonuje DROP tylko po potwierdzeniu).
+**Stan 2026-10-19:** część 1 (`20261010120000`) **zastosowana w nowej bazie** przez konektor, wersja wpisana do
+`supabase_migrations.schema_migrations` (kontrola: 7 tabel, 4 funkcje, 7 polityk). Część 2 czeka na wykonanie
+przez Management API albo panel SQL. Świadomie pominięte (uzasadnienie w nagłówku
 pliku): `investors_partner_select` (usunięta celowo przez 20260719123238), `rules_select_all` /
 `limits_select_all` (produkcja ma wersje tylko dla kadry), `investor_module_access_active` (0 użyć).
 Próbne wykonanie w nowej bazie 2026-10-10 w transakcji wycofanej na końcu (`begin; … rollback;`):
