@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import type { Database } from "@/integrations/supabase/types";
+import { LessonCover } from "@/components/training/lesson-cover";
 
 export const Route = createFileRoute("/posrednik/szkolenia")({
   component: SzkoleniaPosrednik,
@@ -88,27 +89,20 @@ function SzkoleniaPosrednik() {
                       </p>
                     )}
                     <div className="mt-auto">
-                      {url ? (
-                        external ? (
-                          <iframe
-                            src={embedUrl(url)}
-                            className="aspect-video w-full rounded-md border-0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        ) : (
-                          <video
-                            src={url}
-                            controls
-                            preload="metadata"
-                            playsInline
-                            className="aspect-video w-full rounded-md bg-black object-contain"
-                          />
-                        )
+                      {url && external ? (
+                        <iframe
+                          src={embedUrl(url)}
+                          className="aspect-video w-full rounded-md border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
                       ) : (
-                        <div className="aspect-video w-full rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                          Materiał wkrótce
-                        </div>
+                        <LessonCover
+                          number={videos.indexOf(v) + 1}
+                          title={v.title}
+                          coverUrl={v.thumbnail_url}
+                          videoUrl={url}
+                        />
                       )}
                     </div>
                   </CardContent>
