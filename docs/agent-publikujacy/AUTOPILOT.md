@@ -40,6 +40,42 @@ Pauza (ręczna albo automatyczna przy anomalii) wstrzymuje **wyłącznie wpisy a
    iteracje, uwagi, tekst wejściowy i finalny.
 6. **Brak ścieżki ominięcia** – `enqueuePublication` (Studio, materiały, MCP `queue_social_publication`)
    odrzuca każdą publikację z blokadą reguł twardych, także ręczną.
+7. **Kontrola końcowa w tickach** (`publish-gate.ts`) – ticki Meta, TikToka, X i YouTube sprawdzają
+   tytuł i opis jeszcze raz tuż przed wysyłką. Łapie to wpisy dodane przed wdrożeniem bramki,
+   zmienione po wstawieniu, ponowienia i bezpośrednie zapisy do tabel. Blokada = `failed` z powodem
+   w `last_error` + wpis `gate_publish_final` w dzienniku. Brakująca stopka (AI, KRS, ryzyko) jest
+   doklejana także do wpisów ręcznych (poza X – limit znaków).
+
+## Gotowe rolki Studia (Etap 0)
+
+W `full_autopilot` bez wyłącznika tick co godzinę bierze do 2 rolek `ready`, jeszcze nie
+opublikowanych (`ready-reels.server.ts`):
+
+1. Tor z `track` albo `material_audience` (bez toru rolka czeka – wpis `ready_reel_no_track`).
+2. Scenariusz przez pełną bramkę **bez autora poprawek** (wideo już wyrenderowane): naruszenie =
+   `compliance_status = 'rejected'` i powód w `last_error`.
+3. Tytuł i opis przez pełną bramkę (mogą być przepisane); wynik zapisany na zadaniu, żeby ponowna
+   próba nie płaciła za recenzenta.
+4. Wolne sloty toru (`audience_profiles[track].slots`) na IG Reels, FB Reels i YouTube z limitem
+   `maxPostsPerDayPerPlatform`; wstawienie przez `enqueuePublication` z `idempotency_key`.
+   Brak slotu → rolka wraca w kolejnym ticku.
+
+## Zadanie jednorazowe dla właściciela: profil Instagram
+
+Graph API nie zmienia nazwy, bio ani zdjęcia profilu – raz w aplikacji Instagram
+(@filipbielakconsulting):
+
+- **Nazwa:** `Finance You · Filip Bielak`
+- **Bio (136/150 znaków):**
+  ```
+  Finanse pod zastaw nieruchomości 🏠
+  💼 Firmy: finansowanie na cel firmowy
+  📈 Inwestorzy: jak zarabiają banki
+  Treści z AI · KRS 0000635207 ↓
+  ```
+- **Link:** `https://financeyou.pl/start` (link-hub z wyborem toru).
+- **Wyróżnione relacje:** „Dla firm” i „Dla inwestorów”.
+- **Zdjęcie profilowe:** znak Finance You (`financeyou-mark-v2`) na tle `primary` z `brand.json`.
 
 ## Bezpieczniki (brief 5.8)
 
