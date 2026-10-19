@@ -526,6 +526,9 @@ async function uploadVideo(
       // Ujawnienie treści komercyjnej („Your brand" / „Branded content").
       brand_organic_toggle: effective.brandOrganic,
       brand_content_toggle: effective.brandedContent,
+      // Etykieta „AI-generated content” (brief 5.7 p. 2) — rolki Studia
+      // powstają z awatarem i głosem AI.
+      is_aigc: true,
     },
     source_info: {
       source: "FILE_UPLOAD",
@@ -696,6 +699,13 @@ export async function processTiktokQueueItem(id: string): Promise<{
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as TiktokQueueRow;
+  if (!item.tiktok_publish_id) {
+    // Bramka compliance przed wysyłką (brief 5.7).
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("social_publish_queue", item);
+    if (!gate.proceed) return { ok: false, error: gate.error };
+    item.message = gate.message;
+  }
   try {
     const token = await getAccessToken();
 

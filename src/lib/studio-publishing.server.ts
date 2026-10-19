@@ -399,6 +399,14 @@ export async function processSocialQueueItem(
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as QueueRow;
+  // Bramka compliance tuż przed wysyłką (brief 5.7) — bez wyjątków. Wpis IG
+  // z istniejącym kontenerem przeszedł ją przy tworzeniu kontenera.
+  if (!item.ig_creation_id) {
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("social_publish_queue", item);
+    if (!gate.proceed) return { ok: false, deferred: gate.deferred, error: gate.error };
+    item.message = gate.message;
+  }
   try {
     if (item.platform === "facebook_post") {
       const postId = await publishFacebookPost(item);
@@ -529,6 +537,45 @@ async function processInstagramProcessingItems(
   return { published, errors };
 }
 
+/** Po ilu minutach w „publishing” wpis Meta uznajemy za zawieszony. */
+const STALLED_PUBLISHING_MIN = 60;
+
+/**
+ * Wpisy Meta zawieszone w „publishing” (worker padł między przejęciem a
+ * zapisem wyniku — np. FB Reels z 6.10.2026). Nie wznawiamy ich sami:
+ * upload FB Reels mógł już dojść do Meta, a automatyczne ponowienie
+ * zdublowałoby post. Wpis przechodzi do `failed` z opisem — widać go w
+ * panelu (przycisk „Ponów”) i w raporcie autopilota, który może go ponowić
+ * po sprawdzeniu, że posta nie ma na stronie. IG z kontenerem domyka
+ * processInstagramProcessingItems.
+ */
+export async function failStalledMetaItems(): Promise<number> {
+  const cutoff = new Date(Date.now() - STALLED_PUBLISHING_MIN * 60_000).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("social_publish_queue")
+    .update({
+      status: "failed",
+      last_error: `Publikacja zawieszona ponad ${STALLED_PUBLISHING_MIN} min (worker przerwał w trakcie). Sprawdź, czy posta nie ma już na profilu, zanim ponowisz.`,
+    })
+    .eq("status", "publishing")
+    .in("platform", META_PLATFORMS)
+    .is("ig_creation_id", null)
+    .is("external_post_id", null)
+    .lt("updated_at", cutoff)
+    .select("id, platform");
+  if (error) throw new Error(error.message);
+  if (data?.length) {
+    const { logAutopilotAction } = await import("./autopilot/state.server");
+    await logAutopilotAction({
+      action: "stalled_publishing_failed",
+      status: "warning",
+      summary: `Zawieszone publikacje Meta przeniesione do „nieudane”: ${data.length}`,
+      payload: { items: data },
+    });
+  }
+  return data?.length ?? 0;
+}
+
 export async function runSocialPublishTick(): Promise<{
   ok: boolean;
   processed: number;
@@ -541,6 +588,10 @@ export async function runSocialPublishTick(): Promise<{
   const errors: string[] = [];
   let published = 0;
   let deferred = 0;
+
+  await failStalledMetaItems().catch((e) =>
+    errors.push(`stalled: ${e instanceof Error ? e.message : String(e)}`),
+  );
 
   // Najpierw domykamy kontenery IG (najtańsze wywołania i najbliżej publikacji),
   // dopiero potem bierzemy nowe wpisy — przy limicie Meta liczy się kolejność.

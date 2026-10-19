@@ -700,6 +700,13 @@ export async function processXQueueItem(id: string): Promise<{
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as XQueueRow;
+  if (!item.x_media_id) {
+    // Bramka compliance przed wysyłką (brief 5.7); X dostaje wersję kompaktową.
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("social_publish_queue", item);
+    if (!gate.proceed) return { ok: false, error: gate.error };
+    item.message = gate.message;
+  }
   try {
     const text = textFor(item);
     const media = pickXMedia(item);
@@ -903,6 +910,13 @@ export async function runXPublishTick(): Promise<{
   };
   const { configured } = getXEnv();
   if (!configured) return empty;
+  // Kanał wyłączony w ustawieniach autopilota (domyślnie: X — brak kredytów
+  // API, HTTP 402) — nie zużywamy prób ani nie odświeżamy tokena.
+  const xDisabled = await import("./autopilot/state.server")
+    .then((m) => m.loadAutopilotSettings())
+    .then((s) => s.disabledPlatforms.includes("x"))
+    .catch(() => false);
+  if (xDisabled) return empty;
 
   const row = await getIntegrationRow();
   if (!row.refresh_token) return empty;

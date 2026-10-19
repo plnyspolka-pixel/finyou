@@ -34,6 +34,18 @@ export async function enqueuePublication(
   data: EnqueuePublicationInput,
 ): Promise<EnqueuePublicationResult> {
   if (!data.platforms.length) throw new Error("Wybierz co najmniej jedną platformę.");
+  {
+    const disabled = await import("./autopilot/state.server")
+      .then((m) => m.loadAutopilotSettings())
+      .then((s) => s.disabledPlatforms)
+      .catch(() => [] as string[]);
+    const off = data.platforms.filter((p) => disabled.includes(p));
+    if (off.length) {
+      throw new Error(
+        `Kanał wyłączony w ustawieniach (disabled_platforms): ${off.join(", ")}. Usuń go z listy platform.`,
+      );
+    }
+  }
   const videoUrl = data.video_url?.trim() || null;
   const imageUrl = data.image_url?.trim() || null;
   const title = data.title?.trim() ?? "";
