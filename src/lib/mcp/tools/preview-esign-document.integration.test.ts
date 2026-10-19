@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { ToolContext } from "@lovable.dev/mcp-js";
 import preview from "./preview-esign-document";
 import { createEsignEnvelope } from "./esign";
-import { z } from "zod";
 
 describe.skipIf(!process.env.ESIGN_LIVE_PREVIEW)("real administrator preview storage", () => {
   it("renders and reads back the PDF through its signed link", async () => {
@@ -32,18 +31,25 @@ describe.skipIf(!process.env.ESIGN_LIVE_PREVIEW)("real administrator preview sto
 
     const schema = createEsignEnvelope.inputSchema;
     if (!schema) throw new Error("Missing envelope schema");
-    const created = await createEsignEnvelope.handler(z.object(schema).parse({
+    const created = await createEsignEnvelope.handler({
       title: "TEST MCP — dokument Markdown (bez wysyłki)", document_markdown: "# TEST E-PODPISU\n\nZażółć gęślą jaźń.\n\\pagebreak\n\nDruga strona testowa.",
-      document_header: "TEST — BEZ WYSYŁKI", signers: [{ kind: "ja" }], send_now: false,
-    }), ctx);
+      document_header: "TEST — BEZ WYSYŁKI", signing_mode: "rownolegle", signers: [{ kind: "ja", client_id: undefined, user_id: undefined, full_name: undefined, email: undefined, phone: undefined, role_label: undefined, order_no: undefined }], send_now: false,
+      message: undefined, generated_document_id: undefined, file_name: undefined, file_base64: undefined,
+      client_id: undefined, loan_application_id: undefined, expires_in_days: undefined,
+    }, ctx);
     const createdText = created.content?.find((item) => item.type === "text");
     if (!createdText || createdText.type !== "text") throw new Error("Missing envelope result");
     if (created.isError) throw new Error(createdText.text);
     const envelope = JSON.parse(createdText.text);
     expect(envelope.status).toBe("szkic");
     expect(envelope.sentTo).toEqual([]);
+    // Read through the same explicitly authorized owner service as the UI;
+    // direct table RLS currently has an existing recursion bug.
+    const { getEnvelopeDetailsImpl } = await import("@/lib/esign/esign-owner.server");
     const { userClient } = await import("../_helpers");
-    const { data: saved, error } = await userClient(ctx).from("esign_envelopes").select("source_path,source_sha256,source_bytes,page_count,status").eq("id", envelope.id).single();
+    await getEnvelopeDetailsImpl({ envelopeId: envelope.id }, { supabase: userClient(ctx), userId: user.id, claims: ctx.getClaims() ?? {} });
+    const { db } = await import("@/lib/esign/esign.server");
+    const { data: saved, error } = await db().from("esign_envelopes").select("source_path,source_sha256,source_bytes,page_count,status").eq("id", envelope.id).single();
     if (error) throw error;
     expect(saved.status).toBe("szkic");
     expect(saved.page_count).toBe(2);
