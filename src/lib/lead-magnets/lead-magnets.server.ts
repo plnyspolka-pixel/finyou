@@ -84,6 +84,11 @@ export type RegisterSignupInput = {
   userAgent?: string | null;
   /** Własna treść zgody (np. e-mail podany w wiadomości prywatnej). */
   consentText?: string | null;
+  /**
+   * Własny mail zamiast szablonu lead magnetu – np. narzędzie (kalkulator)
+   * wysyła pełny wynik. `{link}` w treści zastępowany linkiem z tokenem.
+   */
+  emailOverride?: { subject: string; text: string; link?: (token: string) => string } | null;
 };
 
 export type RegisterSignupResult = {
@@ -209,8 +214,19 @@ export async function registerLeadMagnetSignup(
   }
 
   // 4) Mail z linkiem.
-  const link = downloadUrl(token);
-  const sent = await sendLeadMagnetEmail({ magnet, email, firstName, link });
+  const link = input.emailOverride?.link ? input.emailOverride.link(token) : downloadUrl(token);
+  const sent = input.emailOverride
+    ? await sendResendEmail({
+        to: email,
+        subject: input.emailOverride.subject,
+        text: input.emailOverride.text.replaceAll("{link}", link),
+        category: "transactional",
+        showReplyHint: true,
+      }).catch((e: unknown) => ({
+        ok: false as const,
+        error: e instanceof Error ? e.message : String(e),
+      }))
+    : await sendLeadMagnetEmail({ magnet, email, firstName, link });
   await supabaseAdmin
     .from("lead_magnet_signups")
     .update({
@@ -383,12 +399,7 @@ export type SocialCommentEvent = {
 };
 
 export type ReplyStatus =
-  | "sent_private"
-  | "sent_public"
-  | "sent_both"
-  | "failed"
-  | "skipped"
-  | "not_possible";
+  "sent_private" | "sent_public" | "sent_both" | "failed" | "skipped" | "not_possible";
 
 export type SocialCommentOutcome = {
   /** true = komentarz obsłużony przez lead magnet (webhook pomija zwykłego agenta). */

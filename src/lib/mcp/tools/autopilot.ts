@@ -273,6 +273,22 @@ export const autopilotCalculators = defineTool({
     }),
 });
 
+export const autopilotProvisionTools = defineTool({
+  name: "autopilot_provision_tools",
+  title: "Provision lead-magnet tools",
+  description:
+    "Zakłada albo aktualizuje rekordy lead magnetów dla narzędzi-kalkulatorów (/narzedzie/<slug>, hasła ILE / RATA / LTV): kontrola jakości formuł i reguły compliance, zgoda RODO i automat „komentarz z hasłem → link” z mechanizmu lead magnetów. `publish: true` otwiera zapisy i reakcje na hasło (tylko administrator). W trybie full_autopilot tick robi to sam.",
+  inputSchema: { publish: z.boolean().default(false) },
+  annotations: WRITE_IDEMPOTENT,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      if (a.publish) await requireRolesAdmin(ctx, ADMIN);
+      else await requireTeamAdmin(ctx);
+      const { ensureToolMagnets } = await import("@/lib/autopilot/tools.server");
+      return ok({ tools: await ensureToolMagnets({ publish: a.publish, actor: actorId(ctx) }) });
+    }),
+});
+
 export const autopilotTools = [
   autopilotStatus,
   autopilotKillSwitch,
@@ -282,4 +298,5 @@ export const autopilotTools = [
   autopilotCheckCompliance,
   autopilotReport,
   autopilotCalculators,
+  autopilotProvisionTools,
 ];

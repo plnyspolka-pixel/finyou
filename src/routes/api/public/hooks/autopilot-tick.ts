@@ -22,6 +22,13 @@ async function runTick(force?: string | null): Promise<Response> {
       }).format(now),
     );
     const reports: Record<string, unknown> = {};
+    // Tryb full_autopilot: narzędzia-lead-magnety otwarte (raz na dobę wystarczy).
+    const { loadAutopilotConfig } = await import("@/lib/autopilot/state.server");
+    const cfg = await loadAutopilotConfig();
+    if (cfg.state.mode === "full_autopilot" && !cfg.state.paused && hour === 6) {
+      const { ensureToolMagnets } = await import("@/lib/autopilot/tools.server");
+      reports.tools = await ensureToolMagnets({ publish: true });
+    }
     if (hour === 20 || force === "daily")
       reports.daily = (await runScheduledReport("daily", now)).sms;
     if ((p.weekday === 1 && hour === 8) || force === "weekly")

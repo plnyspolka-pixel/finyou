@@ -447,3 +447,28 @@ describe("serie i marka", () => {
     expect(contrastRatio(BRAND.colors.primaryForeground, BRAND.colors.accent)).toBeGreaterThan(4.5);
   });
 });
+
+describe("narzędzia jako lead magnety", () => {
+  it("rekord lead magnetu narzędzia przechodzi schemat lead magnetów", async () => {
+    const { toolMagnetRow } = await import("./tools");
+    const { leadMagnetSchema } = await import("@/lib/lead-magnets/schema");
+    for (const c of STARTER_CALCULATORS) {
+      const row = toolMagnetRow(c, "https://financeyou.pl", true);
+      const parsed = leadMagnetSchema.safeParse(row);
+      expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+      expect(row.file_url).toBe(`https://financeyou.pl/narzedzie/${c.slug}`);
+      expect(row.trigger_keywords).toEqual([c.keyword]);
+    }
+  });
+
+  it("mail z pełnym wynikiem ma stopkę i przechodzi reguły", async () => {
+    const { toolResultEmail } = await import("./tools");
+    const c = STARTER_CALCULATORS.find((x) => x.keyword === "LTV")!;
+    const mail = toolResultEmail(c, runCalculator(c, { property_value: 1000000, loan_amount: 400000 }, { unlocked: true }), "Anna");
+    expect(mail.text).toContain("{link}");
+    expect(mail.text).toContain("Bufor do limitu systemu: 20%");
+    const r = evaluateCompliance(mail.text, { kind: "email", track: c.track });
+    expect(r.blocks).toEqual([]);
+    expect(r.requires.map((x) => x.code)).toEqual(["brak_oznaczenia_ai"]);
+  });
+});

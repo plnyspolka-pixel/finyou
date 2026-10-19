@@ -162,6 +162,7 @@ import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
 import { Route as PobierzPlikTokenRouteImport } from './routes/pobierz-plik.$token'
 import { Route as PobierzSlugRouteImport } from './routes/pobierz.$slug'
+import { Route as NarzedzieSlugRouteImport } from './routes/narzedzie.$slug'
 import { Route as PodpisTokenRouteImport } from './routes/podpis.$token'
 import { Route as PosrednicyIndexRouteImport } from './routes/posrednicy.index'
 import { Route as PosrednicyRejestracjaRouteImport } from './routes/posrednicy.rejestracja'
@@ -1087,6 +1088,11 @@ const PobierzPlikTokenRoute = PobierzPlikTokenRouteImport.update({
 const PobierzSlugRoute = PobierzSlugRouteImport.update({
   id: '/pobierz/$slug',
   path: '/pobierz/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NarzedzieSlugRoute = NarzedzieSlugRouteImport.update({
+  id: '/narzedzie/$slug',
+  path: '/narzedzie/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PodpisTokenRoute = PodpisTokenRouteImport.update({
@@ -2070,6 +2076,7 @@ export interface FileRoutesByFullPath {
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2367,6 +2374,7 @@ export interface FileRoutesByTo {
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2673,6 +2681,7 @@ export interface FileRoutesById {
   '/operator/wniosek': typeof OperatorWniosekRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
   '/posrednicy/rejestracja': typeof PosrednicyRejestracjaRoute
   '/posrednik/abonament': typeof PosrednikAbonamentRoute
@@ -2981,6 +2990,7 @@ export interface FileRouteTypes {
     | '/operator/wniosek'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
+    | '/narzedzie/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3278,6 +3288,7 @@ export interface FileRouteTypes {
     | '/operator/wniosek'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
+    | '/narzedzie/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3583,6 +3594,7 @@ export interface FileRouteTypes {
     | '/operator/wniosek'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
+    | '/narzedzie/$slug'
     | '/podpis/$token'
     | '/posrednicy/rejestracja'
     | '/posrednik/abonament'
@@ -3794,6 +3806,7 @@ export interface RootRouteChildren {
   LSlugRoute: typeof LSlugRoute
   PobierzPlikTokenRoute: typeof PobierzPlikTokenRoute
   PobierzSlugRoute: typeof PobierzSlugRoute
+  NarzedzieSlugRoute: typeof NarzedzieSlugRoute
   PodpisTokenRoute: typeof PodpisTokenRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
@@ -4953,6 +4966,13 @@ declare module '@tanstack/react-router' {
       path: '/pobierz/$slug'
       fullPath: '/pobierz/$slug'
       preLoaderRoute: typeof PobierzSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/narzedzie/$slug': {
+      id: '/narzedzie/$slug'
+      path: '/narzedzie/$slug'
+      fullPath: '/narzedzie/$slug'
+      preLoaderRoute: typeof NarzedzieSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/podpis/$token': {
@@ -6532,6 +6552,7 @@ const rootRouteChildren: RootRouteChildren = {
   LSlugRoute: LSlugRoute,
   PobierzPlikTokenRoute: PobierzPlikTokenRoute,
   PobierzSlugRoute: PobierzSlugRoute,
+  NarzedzieSlugRoute: NarzedzieSlugRoute,
   PodpisTokenRoute: PodpisTokenRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PozyczkiSlugRoute: PozyczkiSlugRoute,
