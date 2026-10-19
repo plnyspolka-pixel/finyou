@@ -26,6 +26,7 @@
 //   * istniejący kontener IG jest ponawiany zamiast tworzenia nowego.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withOriginFilter } from "@/lib/autopilot/state.server";
 import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import {
   classifyGraphError,
@@ -587,15 +588,18 @@ export async function runSocialPublishTick(): Promise<{
   published += ig.published;
   errors.push(...ig.errors);
 
-  const { data: due, error } = await supabaseAdmin
-    .from("social_publish_queue")
-    .select("id")
-    .eq("status", "pending")
-    // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
-    .in("platform", META_PLATFORMS)
-    .lte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at", { ascending: true })
-    .limit(MAX_ITEMS_PER_TICK);
+  const { data: due, error } = await withOriginFilter(
+    // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).
+    supabaseAdmin
+      .from("social_publish_queue")
+      .select("id")
+      .eq("status", "pending")
+      // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
+      .in("platform", META_PLATFORMS)
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(MAX_ITEMS_PER_TICK),
+  );
   if (error) throw new Error(error.message);
 
   let processed = 0;

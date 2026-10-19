@@ -1,0 +1,52 @@
+{
+  "$comment": "System marki Finance You – jedno źródło prawdy dla generatorów (PDF, strony lead magnetów, narzędzia, maile, miniatury, grafiki w wideo). Kolory z src/styles.css (oklch → hex), krój z __root.tsx (Montserrat). Zmiana tylko przez commit.",
+  "version": "2026-10-19.1",
+  "name": "Finance You",
+  "colors": {
+    "primary": "#051139",
+    "primaryForeground": "#FDFDFE",
+    "accent": "#1C17CB",
+    "background": "#F9FAFC",
+    "surface": "#FFFFFF",
+    "muted": "#EEF2F7",
+    "mutedForeground": "#5A5E63",
+    "success": "#0FA05C",
+    "warning": "#E49E22",
+    "danger": "#DF2321",
+    "info": "#1F9AD3",
+    "pdfNavy": "#1C295C"
+  },
+  "typography": {
+    "heading": { "family": "Montserrat", "weights": [700, 800], "fallback": "Arial, sans-serif" },
+    "body": { "family": "Montserrat", "weights": [400, 500, 600], "fallback": "Arial, sans-serif" },
+    "mono": { "family": "JetBrains Mono", "weights": [400], "fallback": "monospace" },
+    "pdf": {
+      "family": "Liberation Sans",
+      "note": "src/lib/legal/legal-fonts.ts – polskie znaki w pdf-lib"
+    }
+  },
+  "radius": { "sm": 6, "md": 8, "lg": 12, "pill": 999 },
+  "spacing": { "unit": 4, "gutterMobile": 16, "gutterDesktop": 32, "maxContent": 720 },
+  "logo": {
+    "full": "/__l5e/assets-v1/4ba3ac38-c33f-4163-aeef-c2d2bb118ce2/financeyou-logo.png",
+    "assetFiles": {
+      "logo": "src/assets/financeyou-logo.png.asset.json",
+      "wordmark": "src/assets/financeyou-wordmark.png.asset.json",
+      "mark": "src/assets/financeyou-mark-v2.png.asset.json",
+      "og": "src/assets/financeyou-og-1200x630.png.asset.json"
+    }
+  },
+  "boxes": {
+    "important": { "border": "#1C17CB", "background": "#EEF2F7", "label": "Ważne" },
+    "risk": { "border": "#E49E22", "background": "#FFF7E8", "label": "Ryzyko" }
+  },
+  "voice": {
+    "language": "pl",
+    "rules": [
+      "Hook w formie pytania, zadziornie, klient jest bohaterem – nie firma.",
+      "System pokazuje, co można zrobić; decyzja zostaje po stronie klienta.",
+      "Dozwolone liczby: ok. 15 lat na rynku finansowania pozabankowego, ok. 12 stałych partnerów finansowych, tysiące przeanalizowanych tematów, setki obsłużonych klientów, ponad 100 wypłaconych pożyczek.",
+      "Nigdy: łączna wartość kapitału, stopy zwrotu, oprocentowanie jako obietnica, ceny w wideo."
+    ]
+  }
+}

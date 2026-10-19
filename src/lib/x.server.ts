@@ -23,6 +23,7 @@
 //     wymaga pollingu (jak kontener IG albo publish_id TikToka).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withOriginFilter } from "@/lib/autopilot/state.server";
 import {
   X_TEXT_LIMIT,
   pickXMedia,
@@ -948,15 +949,18 @@ export async function runXPublishTick(): Promise<{
   });
   errors.push(...poll.errors);
 
-  const { data: due, error } = await supabaseAdmin
-    .from("social_publish_queue")
-    .select("id")
-    .eq("platform", "x")
-    .eq("status", "pending")
-    .is("x_media_status", null)
-    .lte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at", { ascending: true })
-    .limit(MAX_POSTS_PER_TICK);
+  const { data: due, error } = await withOriginFilter(
+    // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).
+    supabaseAdmin
+      .from("social_publish_queue")
+      .select("id")
+      .eq("platform", "x")
+      .eq("status", "pending")
+      .is("x_media_status", null)
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(MAX_POSTS_PER_TICK),
+  );
   if (error) throw new Error(error.message);
 
   let published = poll.published;

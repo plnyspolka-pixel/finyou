@@ -7,6 +7,12 @@
 // dzielą social_publish_queue (różni je kolumna `platform`).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { StudioPlatform } from "./studio-platforms";
+import {
+  COMPLIANCE_RULES_VERSION,
+  applyRequiredElements,
+  checkHardRules,
+} from "./autopilot/compliance-rules";
+import type { Track } from "./autopilot/types";
 
 export type EnqueuePublicationInput = {
   platforms: StudioPlatform[];
@@ -20,6 +26,18 @@ export type EnqueuePublicationInput = {
   // (wymóg audytu — patrz src/lib/tiktok-upload.ts).
   tiktok_post_options?: unknown;
   userId: string;
+  /** Wpisy autopilota (brief 5.3): tor, seria, lejek, idempotencja. */
+  autopilot?: {
+    track: Track;
+    series?: string | null;
+    keyword?: string | null;
+    lead_magnet_id?: string | null;
+    studio_job_id?: string | null;
+    /** Np. `autopilot:<job>:<platforma>` – drugi wpis z tym kluczem nie powstanie. */
+    idempotency_key: string;
+  };
+  /** false tylko dla materiału nagranego przez człowieka (bez AI). */
+  contains_synthetic_media?: boolean;
 };
 
 export type EnqueuePublicationResult = {
@@ -77,6 +95,42 @@ export async function enqueuePublication(
     throw new Error("Post na X wymaga treści (lub tytułu, który ją zastąpi).");
   }
 
+  // Bramka compliance – reguły twarde dla KAŻDEJ publikacji (brief 5.7: nie
+  // ma ścieżki ominięcia). Autopilot przechodzi wcześniej pełną bramkę
+  // (recenzent LLM); tu deterministyczna kontrola końcowa.
+  const track = data.autopilot?.track ?? null;
+  const blocks = checkHardRules(`${title}\n${message}`, { kind: "description", track }).filter(
+    (h) => h.severity === "block",
+  );
+  if (blocks.length) {
+    throw new Error(
+      `Treść nie przeszła reguł compliance (${COMPLIANCE_RULES_VERSION}): ` +
+        blocks.map((b) => `${b.message}${b.match ? ` [„${b.match}”]` : ""}`).join(" "),
+    );
+  }
+
+  const autopilotCols = data.autopilot
+    ? {
+        origin: "autopilot",
+        track: data.autopilot.track,
+        series: data.autopilot.series ?? null,
+        keyword: data.autopilot.keyword ?? null,
+        lead_magnet_id: data.autopilot.lead_magnet_id ?? null,
+        studio_job_id: data.autopilot.studio_job_id ?? null,
+        compliance_rules_version: COMPLIANCE_RULES_VERSION,
+        contains_synthetic_media: data.contains_synthetic_media !== false,
+      }
+    : data.contains_synthetic_media === false
+      ? { contains_synthetic_media: false }
+      : {};
+  // Elementy obowiązkowe w opisie wpisów autopilota (AI, nadawca, ryzyko).
+  const finalMessage =
+    data.autopilot && message
+      ? applyRequiredElements(message, { kind: "description", track: data.autopilot.track })
+      : message;
+  const keyFor = (platform: string) =>
+    data.autopilot ? { idempotency_key: `${data.autopilot.idempotency_key}:${platform}` } : {};
+
   const scheduledAt = data.scheduled_at ?? new Date().toISOString();
   const result: EnqueuePublicationResult = {
     queued: data.platforms.length,
@@ -89,12 +143,14 @@ export async function enqueuePublication(
       .from("youtube_publish_queue")
       .insert({
         title,
-        description: message,
+        description: finalMessage,
         source_video_url: videoUrl!,
         privacy_status: data.privacy_status ?? "public",
         scheduled_at: scheduledAt,
         created_by: data.userId,
-      })
+        ...autopilotCols,
+        ...keyFor("youtube"),
+      } as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -109,17 +165,19 @@ export async function enqueuePublication(
     const rows = queuePlatforms.map((platform) => ({
       platform,
       title,
-      message,
+      message: finalMessage,
       video_url: videoUrl,
       // Grafikę niosą tylko platformy, które ją publikują: post FB i X.
       image_url: platform === "facebook_post" || platform === "x" ? imageUrl : null,
       scheduled_at: scheduledAt,
       created_by: data.userId,
       ...(platform === "tiktok" ? { tiktok_post_options: tiktokOptions as never } : {}),
+      ...autopilotCols,
+      ...keyFor(platform),
     }));
     const { data: inserted, error } = await supabaseAdmin
       .from("social_publish_queue")
-      .insert(rows)
+      .insert(rows as never)
       .select("id, platform");
     if (error) throw new Error(error.message);
     for (const r of inserted ?? []) {

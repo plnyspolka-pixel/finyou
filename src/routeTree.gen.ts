@@ -45,6 +45,7 @@ import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -277,6 +278,7 @@ import { Route as ApiPublicHooksFollowUpTickRouteImport } from './routes/api/pub
 import { Route as ApiPublicHooksInstitutionMailTickRouteImport } from './routes/api/public/hooks/institution-mail-tick'
 import { Route as ApiPublicHooksKwEasymkwPollRouteImport } from './routes/api/public/hooks/kw-easymkw-poll'
 import { Route as ApiPublicHooksLeadMagnetTickRouteImport } from './routes/api/public/hooks/lead-magnet-tick'
+import { Route as ApiPublicHooksAutopilotTickRouteImport } from './routes/api/public/hooks/autopilot-tick'
 import { Route as ApiPublicHooksLoanReminderEmailsRouteImport } from './routes/api/public/hooks/loan-reminder-emails'
 import { Route as ApiPublicHooksLoanReminderEmailsTickRouteImport } from './routes/api/public/hooks/loan-reminder-emails-tick'
 import { Route as ApiPublicHooksLoanRemindersRouteImport } from './routes/api/public/hooks/loan-reminders'
@@ -494,6 +496,11 @@ const WyborPaneluRoute = WyborPaneluRouteImport.update({
 const WyborRoliRoute = WyborRoliRouteImport.update({
   id: '/wybor-roli',
   path: '/wybor-roli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ZapomnianeHasloRoute = ZapomnianeHasloRouteImport.update({
@@ -1706,6 +1713,12 @@ const ApiPublicHooksLeadMagnetTickRoute =
     path: '/api/public/hooks/lead-magnet-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAutopilotTickRoute =
+  ApiPublicHooksAutopilotTickRouteImport.update({
+    id: '/api/public/hooks/autopilot-tick',
+    path: '/api/public/hooks/autopilot-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksLoanReminderEmailsRoute =
   ApiPublicHooksLoanReminderEmailsRouteImport.update({
     id: '/api/public/hooks/loan-reminder-emails',
@@ -1945,6 +1958,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/start': typeof StartRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2177,6 +2191,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2244,6 +2259,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/start': typeof StartRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2471,6 +2487,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2544,6 +2561,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
+  '/start': typeof StartRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2776,6 +2794,7 @@ export interface FileRoutesById {
   '/api/public/hooks/institution-mail-tick': typeof ApiPublicHooksInstitutionMailTickRoute
   '/api/public/hooks/kw-easymkw-poll': typeof ApiPublicHooksKwEasymkwPollRoute
   '/api/public/hooks/lead-magnet-tick': typeof ApiPublicHooksLeadMagnetTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/loan-reminder-emails': typeof ApiPublicHooksLoanReminderEmailsRoute
   '/api/public/hooks/loan-reminder-emails-tick': typeof ApiPublicHooksLoanReminderEmailsTickRoute
   '/api/public/hooks/loan-reminders': typeof ApiPublicHooksLoanRemindersRoute
@@ -2850,6 +2869,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/wybor-panelu'
     | '/wybor-roli'
+    | '/start'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -3082,6 +3102,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3149,6 +3170,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/wybor-panelu'
     | '/wybor-roli'
+    | '/start'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -3376,6 +3398,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3448,6 +3471,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/wybor-panelu'
     | '/wybor-roli'
+    | '/start'
     | '/zapomniane-haslo'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -3680,6 +3704,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/institution-mail-tick'
     | '/api/public/hooks/kw-easymkw-poll'
     | '/api/public/hooks/lead-magnet-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/loan-reminder-emails'
     | '/api/public/hooks/loan-reminder-emails-tick'
     | '/api/public/hooks/loan-reminders'
@@ -3753,6 +3778,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
+  StartRoute: typeof StartRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -3821,6 +3847,7 @@ export interface RootRouteChildren {
   ApiPublicHooksInstitutionMailTickRoute: typeof ApiPublicHooksInstitutionMailTickRoute
   ApiPublicHooksKwEasymkwPollRoute: typeof ApiPublicHooksKwEasymkwPollRoute
   ApiPublicHooksLeadMagnetTickRoute: typeof ApiPublicHooksLeadMagnetTickRoute
+  ApiPublicHooksAutopilotTickRoute: typeof ApiPublicHooksAutopilotTickRoute
   ApiPublicHooksLoanReminderEmailsRoute: typeof ApiPublicHooksLoanReminderEmailsRoute
   ApiPublicHooksLoanReminderEmailsTickRoute: typeof ApiPublicHooksLoanReminderEmailsTickRoute
   ApiPublicHooksLoanRemindersRoute: typeof ApiPublicHooksLoanRemindersRoute
@@ -4107,6 +4134,13 @@ declare module '@tanstack/react-router' {
       path: '/wybor-roli'
       fullPath: '/wybor-roli'
       preLoaderRoute: typeof WyborRoliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/zapomniane-haslo': {
@@ -5733,6 +5767,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksLeadMagnetTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/autopilot-tick': {
+      id: '/api/public/hooks/autopilot-tick'
+      path: '/api/public/hooks/autopilot-tick'
+      fullPath: '/api/public/hooks/autopilot-tick'
+      preLoaderRoute: typeof ApiPublicHooksAutopilotTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/loan-reminder-emails': {
       id: '/api/public/hooks/loan-reminder-emails'
       path: '/api/public/hooks/loan-reminder-emails'
@@ -6474,6 +6515,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
+  StartRoute: StartRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -6548,6 +6590,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksInstitutionMailTickRoute,
   ApiPublicHooksKwEasymkwPollRoute: ApiPublicHooksKwEasymkwPollRoute,
   ApiPublicHooksLeadMagnetTickRoute: ApiPublicHooksLeadMagnetTickRoute,
+  ApiPublicHooksAutopilotTickRoute: ApiPublicHooksAutopilotTickRoute,
   ApiPublicHooksLoanReminderEmailsRoute: ApiPublicHooksLoanReminderEmailsRoute,
   ApiPublicHooksLoanReminderEmailsTickRoute:
     ApiPublicHooksLoanReminderEmailsTickRoute,
