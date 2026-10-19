@@ -61,8 +61,8 @@ const ALLOWED_DOMAINS = ["financeyou.pl"];
 function ownBackendHosts(): string[] {
   const urls: Array<string | undefined> = [];
   try {
-    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
-      .process?.env;
+    const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
+      ?.env;
     urls.push(env?.SUPABASE_URL, env?.VITE_SUPABASE_URL);
   } catch {
     /* brak process — przeglądarka */

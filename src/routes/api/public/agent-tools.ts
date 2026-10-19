@@ -65,8 +65,7 @@ function asObject(body: unknown): Record<string, unknown> {
  */
 function routesToRegistry(body: Record<string, unknown>): boolean {
   const agentKey = body.agent_key;
-  const hasAgentKey =
-    typeof agentKey === "string" ? agentKey.trim() !== "" : agentKey != null;
+  const hasAgentKey = typeof agentKey === "string" ? agentKey.trim() !== "" : agentKey != null;
   if (hasAgentKey) return true;
   return !LEGACY_TOOLS.has(String(body.tool ?? ""));
 }
@@ -129,11 +128,17 @@ async function resolveLeadId(body: any): Promise<string | null> {
  * NIE dopisujemy się do niego (mógł paść cudzy numer) — zakładamy nowego
  * z adnotacją „możliwy duplikat”, zespół scala ręcznie.
  */
-async function createLeadFromClaimedContact(contact: { phone: string | null; email: string | null }): Promise<string | null> {
+async function createLeadFromClaimedContact(contact: {
+  phone: string | null;
+  email: string | null;
+}): Promise<string | null> {
   const { normalizePolishPhone } = await import("@/lib/phone");
   const { normalized } = normalizePolishPhone(contact.phone ?? "");
   const lc = await import("@/lib/lead-comms.server");
-  const existing = await lc.findLeadId({ phoneNormalized: normalized || null, email: contact.email });
+  const existing = await lc.findLeadId({
+    phoneNormalized: normalized || null,
+    email: contact.email,
+  });
   if (!existing) {
     return lc.upsertLeadFromSource({
       type: "pozyczkowy",
@@ -211,7 +216,10 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             // modułów. Bez szczegółów w odpowiedzi — agent czyta ją rozmówcy.
             console.error("[agent-tools] dispatch error", e?.message);
             return Response.json(
-              { ok: false, error: "Narzędzie jest chwilowo niedostępne — spróbuj ponownie za chwilę." },
+              {
+                ok: false,
+                error: "Narzędzie jest chwilowo niedostępne — spróbuj ponownie za chwilę.",
+              },
               { status: 500 },
             );
           }
@@ -239,7 +247,8 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             // createLeadFromClaimedContact), nigdy cudzego dopasowanego po numerze.
             if (!leadId && tool === "update_lead_data") {
               const claimed = claimedContactFromBody(body);
-              if (claimed.phone || claimed.email) leadId = await createLeadFromClaimedContact(claimed);
+              if (claimed.phone || claimed.email)
+                leadId = await createLeadFromClaimedContact(claimed);
             }
             if (!leadId) {
               return Response.json({

@@ -360,7 +360,10 @@ export async function runAgentTurn(opts: {
    * PSID / IGSID, numer nadawcy SMS, adres nadawcy e-maila). Wiąże wątek
    * floty agentów z tym nadawcą — bez niej flota się nie włącza (A1).
    */
-  channelIdentity?: { kind: "chat" | "messenger" | "instagram" | "sms" | "email"; value: string } | null;
+  channelIdentity?: {
+    kind: "chat" | "messenger" | "instagram" | "sms" | "email";
+    value: string;
+  } | null;
 }): Promise<AgentReply> {
   const variant: AgentVariant = opts.variant ?? "klient";
   const s = admin();
@@ -449,10 +452,17 @@ export async function runAgentTurn(opts: {
           dynamicVariables,
         }).catch((e) => ({ ok: false as const, error: String(e?.message ?? e) }));
         if (fleet?.ok && fleet.reply) {
-          const safeReply = await guardReply(s, opts.leadId, opts.channel, fleet.reply, knownContext);
+          const safeReply = await guardReply(
+            s,
+            opts.leadId,
+            opts.channel,
+            fleet.reply,
+            knownContext,
+          );
           return { reply: safeReply, toolCalls: [] };
         }
-        if (fleet) console.warn(`[el-text-agent] flota: powrót do A1 (${fleet.error ?? "brak odpowiedzi"})`);
+        if (fleet)
+          console.warn(`[el-text-agent] flota: powrót do A1 (${fleet.error ?? "brak odpowiedzi"})`);
       }
 
       const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");

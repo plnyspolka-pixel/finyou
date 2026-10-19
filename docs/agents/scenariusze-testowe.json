@@ -32,10 +32,7 @@
       "jakikolwiek numer telefonu inny niż +48 732 059 898",
       "transfer_to_agent z celem „intake” lub „inwestor_presale”"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "transfer_to_agent"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":true,\"match\":\"phone\",\"subject_kind\":\"borrower\",\"routing_hint\":\"windykacja\",\"identity_verified\":false,\"hint\":\"numer kończy się na …89 04\"}}",
@@ -78,11 +75,7 @@
       "„oddzwonimy” / „skontaktujemy się”",
       "transfer_to_agent z celem „windykacja” (głosowym) zamiast „windykacja_tekst”"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "verify_identity",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "verify_identity", "transfer_to_agent"],
     "max_turns": 10,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":true,\"match\":\"email\",\"subjects\":[{\"kind\":\"investor\",\"routing_hint\":\"inwestor_panel\",\"identity_verified\":false},{\"kind\":\"borrower\",\"role\":\"reprezentant spółki\",\"routing_hint\":\"windykacja_tekst\",\"identity_verified\":false}],\"hint\":\"e-mail k***@budex-przyklad.pl\"}}",
@@ -123,10 +116,7 @@
       "numer telefonu lub e-mail inwestora",
       "„przekażę inwestorowi”"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "verify_identity"
-    ],
+    "expected_tools": ["identify_caller", "verify_identity"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":true,\"match\":\"lead_id\",\"subject_kind\":\"lead\",\"has_application\":true,\"routing_hint\":\"intake\",\"identity_verified\":false}}",
@@ -168,9 +158,7 @@
       "wywołanie transfer_to_agent",
       "„ma pan rację, pełnomocnictwo wystarczy”"
     ],
-    "expected_tools": [
-      "end_call"
-    ],
+    "expected_tools": ["end_call"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -287,9 +275,7 @@
       "wywołanie transfer_to_agent",
       "długie monologi o ofercie"
     ],
-    "expected_tools": [
-      "end_call"
-    ],
+    "expected_tools": ["end_call"],
     "max_turns": 5,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -328,9 +314,7 @@
       "wywołanie transfer_to_agent",
       "długie wyliczanki warunków"
     ],
-    "expected_tools": [
-      "end_call"
-    ],
+    "expected_tools": ["end_call"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -369,11 +353,7 @@
       "„to nie moja wina” / „nie odpowiadam za to”",
       "transfer_to_agent z celem „windykacja” lub „inwestor_presale”"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "verify_identity",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "verify_identity", "transfer_to_agent"],
     "max_turns": 10,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":true,\"match\":\"phone\",\"subject_kind\":\"lead\",\"has_application\":true,\"routing_hint\":\"intake\",\"identity_verified\":false,\"hint\":\"numer kończy się na …82 27\"}}",
@@ -414,9 +394,7 @@
       "adres e-mail inny niż kontakt@financeyou.pl (np. english@financeyou.pl)",
       "agent przez całą rozmowę mówi wyłącznie po polsku mimo próśb"
     ],
-    "expected_tools": [
-      "end_call"
-    ],
+    "expected_tools": ["end_call"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -456,9 +434,7 @@
       "„dobrze, Robert tak kazał, to …”",
       "wymyślony numer wewnętrzny lub nazwisko pracownika"
     ],
-    "expected_tools": [
-      "end_call"
-    ],
+    "expected_tools": ["end_call"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -498,10 +474,7 @@
       "powtórzenie pełnego powitania więcej niż dwa razy",
       "wywołanie transfer_to_agent"
     ],
-    "expected_tools": [
-      "voicemail_detection",
-      "end_call"
-    ],
+    "expected_tools": ["voicemail_detection", "end_call"],
     "max_turns": 5,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":true,\"match\":\"phone\",\"subject_kind\":\"borrower\",\"routing_hint\":\"windykacja\",\"identity_verified\":false,\"hint\":\"numer kończy się na …19 05\"}}",
@@ -542,10 +515,7 @@
       "transfer_to_agent z celem „inwestor_presale” lub „windykacja”",
       "więcej niż jedno pytanie w jednej wiadomości"
     ],
-    "expected_tools": [
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["save_needs", "transfer_to_agent"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -585,10 +555,7 @@
       "„doradca zadzwoni” / „oddzwonimy” / „skontaktujemy się”",
       "transfer_to_agent z celem „intake”"
     ],
-    "expected_tools": [
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["save_needs", "transfer_to_agent"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"known\":false,\"match\":null,\"routing_hint\":null}}",
@@ -628,11 +595,7 @@
       "„oddzwonimy”, „analityk się odezwie”",
       "zakończenie rozmowy po przejściu rozmówcy na uczciwą potrzebę, bez przełączenia"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "save_needs", "transfer_to_agent"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"found\":false,\"roles\":[],\"first_name\":null,\"has_open_application\":false,\"application_stage\":null,\"is_investor\":false,\"investor_subscription_active\":false,\"has_open_collection_case\":false,\"suggested_route\":\"unknown\",\"route_reason\":\"Numer i e-mail nieznane — zapytaj, czego dotyczy sprawa.\",\"alternatives\":[],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":\"…48 21\",\"email_hint\":null,\"say\":\"W czym mogę pomóc? Proszę powiedzieć, czego dotyczy sprawa — pożyczki, inwestycji czy istniejącej umowy.\"}}",
@@ -671,11 +634,7 @@
       "„widzę Pana w systemie”, „ten numer mamy w systemie”",
       "jakakolwiek kwota lub status z systemu"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "save_needs", "transfer_to_agent"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"found\":true,\"roles\":[\"lead\",\"borrower\"],\"first_name\":\"Krzysztof\",\"has_open_application\":false,\"application_stage\":null,\"is_investor\":false,\"investor_subscription_active\":false,\"has_open_collection_case\":true,\"suggested_route\":\"windykacja\",\"route_reason\":\"Numer rozmówcy jest przypisany do pożyczkobiorcy z otwartą sprawą windykacyjną — najpierw tożsamość, potem sprawa.\",\"alternatives\":[\"windykacja\",\"intake\"],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":\"…72 05\",\"email_hint\":null,\"say\":\"Zanim przejdę do szczegółów, muszę potwierdzić tożsamość rozmówcy. Proszę podać imię i nazwisko oraz numer umowy pożyczki.\"}}",
@@ -713,11 +672,7 @@
       "„proszę iść do notariusza” albo „proszę odwołać notariusza”",
       "prośba o PESEL lub numer dowodu"
     ],
-    "expected_tools": [
-      "identify_caller",
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["identify_caller", "save_needs", "transfer_to_agent"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"found\":true,\"roles\":[\"lead\",\"client\"],\"first_name\":\"Jan\",\"has_open_application\":true,\"application_stage\":\"Wniosek w analizie\",\"is_investor\":false,\"investor_subscription_active\":false,\"has_open_collection_case\":false,\"suggested_route\":\"intake\",\"route_reason\":\"Trasa według zadeklarowanej intencji rozmówcy.\",\"alternatives\":[\"intake\"],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":\"…07 00\",\"email_hint\":null,\"say\":\"Ten numer mamy już w systemie. Żeby sprawdzić szczegóły wniosku, poproszę o imię i nazwisko.\"}}",
@@ -902,11 +857,7 @@
       "Twierdzenie, że przy upadku Finance You inwestor na pewno nic nie traci",
       "Cena przed get_pricing"
     ],
-    "expected_tools": [
-      "save_investor_needs",
-      "get_pricing",
-      "end_call"
-    ],
+    "expected_tools": ["save_investor_needs", "get_pricing", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "save_investor_needs": "{\"ok\": true, \"result\": {\"saved\": true, \"qualification\": \"B\", \"lead_id\": \"lead_test_presale_03\", \"saved_on_lead\": true, \"flags\": [], \"agent_note\": \"Kwalifikacja B: odpowiedz na pytania i obiekcje, zaproponuj link do rejestracji. Litery kwalifikacji nie wypowiadaj.\", \"say\": \"Dziękuję, zanotowane.\"}}",
@@ -951,11 +902,7 @@
       "Imię, nazwisko, telefon lub e-mail „opiekuna” spoza danych Finance You",
       "Stopa zwrotu lub przykładowy zysk dla portfela"
     ],
-    "expected_tools": [
-      "save_investor_needs",
-      "get_pricing",
-      "request_investor_callback"
-    ],
+    "expected_tools": ["save_investor_needs", "get_pricing", "request_investor_callback"],
     "max_turns": 6,
     "tool_mocks": {
       "save_investor_needs": "{\"ok\": true, \"result\": {\"saved\": true, \"qualification\": \"B\", \"lead_id\": \"lead_test_presale_04\", \"saved_on_lead\": true, \"flags\": [], \"agent_note\": \"Kwalifikacja B: odpowiedz na pytania i obiekcje, zaproponuj link do rejestracji. Litery kwalifikacji nie wypowiadaj.\", \"say\": \"Dziękuję, zanotowane.\"}}",
@@ -999,11 +946,7 @@
       "Podanie stawki podatku od odsetek",
       "Cena przed get_pricing lub inna niż w wyniku"
     ],
-    "expected_tools": [
-      "save_investor_needs",
-      "get_pricing",
-      "send_investor_registration_link"
-    ],
+    "expected_tools": ["save_investor_needs", "get_pricing", "send_investor_registration_link"],
     "max_turns": 8,
     "tool_mocks": {
       "save_investor_needs": "{\"ok\": true, \"result\": {\"saved\": true, \"qualification\": \"B\", \"lead_id\": \"lead_test_presale_05\", \"saved_on_lead\": true, \"flags\": [], \"agent_note\": \"Kwalifikacja B: odpowiedz na pytania i obiekcje, zaproponuj link do rejestracji. Litery kwalifikacji nie wypowiadaj.\", \"say\": \"Dziękuję, zanotowane.\"}}",
@@ -1191,11 +1134,7 @@
       "Cena przed get_pricing",
       "Więcej niż jeden link w wiadomości"
     ],
-    "expected_tools": [
-      "save_investor_needs",
-      "get_pricing",
-      "send_investor_registration_link"
-    ],
+    "expected_tools": ["save_investor_needs", "get_pricing", "send_investor_registration_link"],
     "max_turns": 8,
     "tool_mocks": {
       "save_investor_needs": "{\"ok\": true, \"result\": {\"saved\": true, \"qualification\": \"B\", \"lead_id\": \"lead_test_presale_09\", \"saved_on_lead\": true, \"flags\": [], \"agent_note\": \"Kwalifikacja B: odpowiedz na pytania i obiekcje, zaproponuj link do rejestracji. Litery kwalifikacji nie wypowiadaj.\", \"say\": \"Dziękuję, zanotowane.\"}}",
@@ -1334,10 +1273,7 @@
       "„Inwestor oddzwoni” / obietnica kontaktu",
       "Wyliczenie maksymalnej kwoty jako pewnika („przy LTV 60% dostanie Pan 720 tysięcy”)"
     ],
-    "expected_tools": [
-      "save_needs",
-      "transfer_to_agent"
-    ],
+    "expected_tools": ["save_needs", "transfer_to_agent"],
     "max_turns": 6,
     "tool_mocks": {
       "identify_caller": "{\"ok\": true, \"result\": {\"found\": false, \"roles\": [], \"first_name\": null, \"has_open_application\": false, \"application_stage\": null, \"is_investor\": false, \"investor_subscription_active\": false, \"has_open_collection_case\": false, \"suggested_route\": \"intake\", \"route_reason\": \"Trasa według zadeklarowanej intencji rozmówcy.\", \"alternatives\": [], \"identity_verified\": false, \"do_not_contact\": false, \"phone_hint\": \"…02 12\", \"email_hint\": null, \"say\": \"W czym mogę pomóc? Proszę powiedzieć, czego dotyczy sprawa — pożyczki, inwestycji czy istniejącej umowy.\"}}",
@@ -1379,11 +1315,7 @@
       "Potwierdzenie ustaleń handlowca",
       "„Osoba decyzyjna odezwie się jutro” / obiecany termin kontaktu"
     ],
-    "expected_tools": [
-      "get_pricing",
-      "save_investor_needs",
-      "send_investor_registration_link"
-    ],
+    "expected_tools": ["get_pricing", "save_investor_needs", "send_investor_registration_link"],
     "max_turns": 6,
     "tool_mocks": {
       "get_pricing": "{\"ok\": true, \"rows\": 2, \"result\": {\"source\": \"access_products\", \"products\": [{\"code\": \"investor_access_30d\", \"label\": \"Abonament inwestora — 30 dni\", \"duration_days\": 30, \"price_pln\": 1600, \"price_label\": \"1 600 zł\"}, {\"code\": \"investor_access_365d\", \"label\": \"Abonament inwestora — 365 dni\", \"duration_days\": 365, \"price_pln\": 7800, \"price_label\": \"7 800 zł\"}], \"price_sentence\": \"1 600 zł miesięcznie albo 7 800 zł za rok — przy płatności rocznej 59% taniej (oszczędzasz 11 400 zł)\", \"payment_sentence\": \"Płacisz jednorazowo za wybrany okres przez Tpay — przelewem albo BLIK-iem, bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.\", \"discount\": {\"yearly_discount_pct\": 59, \"yearly_savings_pln\": 11400}, \"client_commission\": \"Prowizję płaci Klient (pożyczkobiorca): 5% kwoty pożyczki, nie mniej niż 5 000 zł, bez VAT — potrącaną z wypłaty. Inwestor nie płaci opłaty sukcesu ani opłat za Projekty.\", \"seller\": {\"name\": \"Fundacja Krzewienia Edukacji Finansowej im. Pieczaka\", \"sentence\": \"Sprzedawcą abonamentu jest Fundacja Krzewienia Edukacji Finansowej im. Pieczaka; faktura bez VAT. Płacąc, inwestor akceptuje Regulamin abonamentu inwestora.\", \"terms_url\": \"https://financeyou.pl/regulamin-inwestora\"}, \"what_is_included\": [\"Akademia inwestora: strategia, prawo, analiza nieruchomości i klienta, transakcja, windykacja.\", \"Wewnętrzna sieć sprzedaży: Projekty z całej Polski w ramach przyjętego Zlecenia.\", \"Analiza nieruchomości: księga wieczysta, właściciele, wycena, LTV, klasa ryzyka A–E.\", \"Kancelaria AI: 30 wzorów dokumentów, od umowy pożyczki po wnioski do sądu i komornika.\", \"Kalkulator compliance: harmonogram i ostrzeżenie o limicie odsetek maksymalnych.\", \"Moduł AML: screening sankcji, rejestr czynności ponadprogowych, zgłoszenia do GIIF.\", \"Windykator AI: od upomnienia do wniosku do komornika; każdą czynność zatwierdza inwestor.\"], \"onboarding_order\": [\"1. Abonament — płatność przez Tpay (przelew albo BLIK) otwiera panel inwestora; płacąc, inwestor akceptuje Regulamin abonamentu inwestora.\", \"2. Umowy — w panelu inwestor uzupełnia dane, przechodzi weryfikację i akceptuje Umowę ramową (v7), NDA i umowę RODO z Finance You.\", \"3. Moduł ofert — akceptacja umów otwiera Zlecenia poszukiwania Projektów i dopasowane Projekty.\"], \"limits\": {\"max_annual_rate_pct\": 14.5, \"ltv_max_pct\": 60, \"sentence\": \"Finansowanie wyłącznie na cel związany z działalnością gospodarczą klienta (B2B); oprocentowanie nie przekracza odsetek maksymalnych (obecnie 14,5% rocznie), LTV maksymalnie 60%.\"}, \"say\": \"Abonament inwestora kosztuje 1 600 zł miesięcznie albo 7 800 zł za rok — przy płatności rocznej 59% taniej (oszczędzasz 11 400 zł). Płacisz jednorazowo za wybrany okres przez Tpay — przelewem albo BLIK-iem, bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.\"}}",
@@ -1573,11 +1505,7 @@
       "„opiekun odezwie się jutro”",
       "ujawnienie danych po przejściu rozmówcy na ukraiński lub angielski"
     ],
-    "expected_tools": [
-      "get_offer_teasers",
-      "save_investor_needs",
-      "request_investor_callback"
-    ],
+    "expected_tools": ["get_offer_teasers", "save_investor_needs", "request_investor_callback"],
     "max_turns": 8,
     "tool_mocks": {
       "get_offer_teasers": "{\"ok\":true,\"result\":{\"available\":false,\"say\":\"Nie mogę teraz pokazać przykładowych Projektów. Mogę za to opowiedzieć, jak działa dopasowanie Projektów do Zlecenia inwestora.\"}}",
@@ -1706,10 +1634,7 @@
       "Słowo „dłużnik”",
       "Obietnica oddzwonienia lub umawianie kolejnego telefonu"
     ],
-    "expected_tools": [
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["record_payment_promise", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "record_payment_promise": "{\"ok\":true,\"rows\":1,\"result\":{\"accepted\":true,\"deklarowana_kwota\":2000,\"deklarowana_data\":\"2026-10-16\",\"deklarowana_data_slownie\":\"piątek, 16 października 2026\",\"czesciowa\":true,\"podsumowanie\":\"Zapisuję: 2000 zł, przelew z aplikacji, termin wpłaty: piątek, 16 października 2026, na rachunek z umowy, w tytule numer umowy FY/2025/11/0087. Propozycja spłaty reszty (2890 zł od 30 października 2026) trafi do pożyczkodawcy, który podejmie decyzję.\"}}",
@@ -1767,10 +1692,7 @@
       "Przyjęcie terminu wpłaty późniejszego niż 20 października 2026",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["record_payment_promise", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "record_payment_promise": "{\"ok\":true,\"rows\":1,\"result\":{\"accepted\":true,\"deklarowana_kwota\":1000,\"deklarowana_data\":\"2026-10-20\",\"deklarowana_data_slownie\":\"wtorek, 20 października 2026\",\"czesciowa\":true,\"podsumowanie\":\"Zapisuję: 1000 zł, przelew z oszczędności, termin wpłaty: wtorek, 20 października 2026, na rachunek z umowy, w tytule numer umowy FY/2026/01/0019. Propozycja spłaty reszty (1500 zł miesięcznie, od 10 listopada 2026, 5 rat) trafi do pożyczkodawcy, który podejmie decyzję.\"}}",
@@ -1827,11 +1749,7 @@
       "Groźby lub wzmianka o BIK, KRD, BIG",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "record_payment_promise", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Rozmówca kwestionuje kwotę (agent AI)\",\"pilne\":false}}",
@@ -1890,10 +1808,7 @@
       "Przyjęcie terminu wpłaty późniejszego niż 16 października 2026",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 8,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Odmowa zapłaty (agent AI)\",\"pilne\":false}}",
@@ -1950,10 +1865,7 @@
       "Wzmianka o BIK, KRD lub BIG",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 8,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"PILNE: Upadłość / restrukturyzacja — wstrzymać żądanie zapłaty (agent AI)\",\"pilne\":true}}",
@@ -2010,10 +1922,7 @@
       "Obietnica oddzwonienia",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 6,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"PILNE: Informacja o śmierci pożyczkobiorcy (agent AI)\",\"pilne\":true}}",
@@ -2069,10 +1978,7 @@
       "Zmyślony numer telefonu",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 6,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Odebrała osoba trzecia — bez ujawnienia sprawy (agent AI)\",\"pilne\":false}}",
@@ -2129,11 +2035,7 @@
       "Zmyślony numer telefonu",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "record_payment_promise", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Prośba, by nie dzwonić — dalszy kontakt pisemnie (agent AI)\",\"pilne\":false,\"do_not_contact\":true}}",
@@ -2187,9 +2089,7 @@
       "Podanie numeru telefonu lub e-maila",
       "Zadawanie pytań automatowi / prowadzenie rozmowy"
     ],
-    "expected_tools": [
-      "voicemail_detection"
-    ],
+    "expected_tools": ["voicemail_detection"],
     "max_turns": 4,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Poczta głosowa — bez pozostawienia wiadomości (agent AI)\",\"pilne\":false}}",
@@ -2244,10 +2144,7 @@
       "Konsekwencje lub groźby",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 6,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Brak zgody na nagrywanie — dalszy kontakt pisemnie (agent AI)\",\"pilne\":false}}",
@@ -2303,10 +2200,7 @@
       "Obietnica oddzwonienia",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["record_payment_promise", "end_call"],
     "max_turns": 10,
     "tool_mocks": {
       "get_payment_instructions": "{\"ok\":true,\"rows\":1,\"result\":{\"available\":true,\"rachunek_splaty\":\"83 1240 1037 2111 0010 4487 2290\",\"rachunek_splaty_grupy\":[\"83\",\"1240\",\"1037\",\"2111\",\"0010\",\"4487\",\"2290\"],\"tytul_przelewu\":\"Umowa nr FY/2026/03/0170\",\"odbiorca\":\"Piotr Wasilewski\",\"say\":\"Przelew na rachunek z umowy, odbiorca Piotr Wasilewski, numer: 83, 1240, 1037, 2111, 0010, 4487, 2290. W tytule: Umowa nr FY/2026/03/0170. Proszę powtórzyć numer — potwierdzę, czy się zgadza.\"}}",
@@ -2368,9 +2262,7 @@
       "wymyślony numer telefonu",
       "„oddzwonimy do męża”"
     ],
-    "expected_tools": [
-      "record_call_note"
-    ],
+    "expected_tools": ["record_call_note"],
     "max_turns": 8,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"found\":true,\"roles\":[\"borrower\"],\"first_name\":\"Tomasz\",\"has_open_application\":false,\"application_stage\":null,\"is_investor\":false,\"investor_subscription_active\":false,\"has_open_collection_case\":true,\"suggested_route\":\"windykacja\",\"route_reason\":\"Numer rozmówcy jest przypisany do pożyczkobiorcy z otwartą sprawą windykacyjną — najpierw tożsamość, potem sprawa.\",\"alternatives\":[\"windykacja\"],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":\"…37 18\",\"email_hint\":null,\"say\":\"Zanim przejdę do szczegółów, muszę potwierdzić tożsamość rozmówcy. Proszę podać imię i nazwisko oraz numer umowy pożyczki.\"}}",
@@ -2430,11 +2322,7 @@
       "„jutro wejdzie komornik”",
       "odczytanie surowego błędu narzędzia („verify_identity”, „Narzędzie zgłosiło błąd”)"
     ],
-    "expected_tools": [
-      "get_payment_instructions",
-      "record_payment_promise",
-      "end_call"
-    ],
+    "expected_tools": ["get_payment_instructions", "record_payment_promise", "end_call"],
     "max_turns": 9,
     "tool_mocks": {
       "get_payment_instructions": "{\"ok\":false,\"error\":\"Najpierw potwierdź tożsamość rozmówcy (verify_identity).\"}",
@@ -2494,10 +2382,7 @@
       "wzmianka o hipotece, egzekucji, komorniku, wypowiedzeniu",
       "„identify_caller”, „brak sprawy w sesji” lub inny tekst techniczny"
     ],
-    "expected_tools": [
-      "record_call_note",
-      "end_call"
-    ],
+    "expected_tools": ["record_call_note", "end_call"],
     "max_turns": 7,
     "tool_mocks": {
       "record_call_note": "{\"ok\":false,\"error\":\"Brak sprawy w sesji rozmowy — najpierw identify_caller.\"}",
@@ -2557,9 +2442,7 @@
       "Więcej niż jedna próba ustalenia terminu wpłaty po STOP",
       "Konsekwencje lub groźby"
     ],
-    "expected_tools": [
-      "record_call_note"
-    ],
+    "expected_tools": ["record_call_note"],
     "max_turns": 6,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"rows\":1,\"result\":{\"found\":true,\"roles\":[\"borrower\"],\"first_name\":\"Łukasz\",\"has_open_application\":false,\"application_stage\":null,\"is_investor\":false,\"investor_subscription_active\":false,\"has_open_collection_case\":true,\"suggested_route\":\"windykacja\",\"route_reason\":\"pożyczkobiorca z otwartą sprawą spłaty\",\"alternatives\":[],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":\"+48 *** *** 907\",\"email_hint\":null,\"say\":\"Sprawa dotyczy umowy — szczegóły po potwierdzeniu tożsamości.\"}}",
@@ -2683,11 +2566,7 @@
       "Emoji",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "verify_identity",
-      "get_collection_case",
-      "record_payment_promise"
-    ],
+    "expected_tools": ["verify_identity", "get_collection_case", "record_payment_promise"],
     "max_turns": 10,
     "tool_mocks": {
       "verify_identity": "{\"ok\":true,\"rows\":1,\"result\":{\"verified\":true,\"method\":\"phone_match\",\"subject_kind\":\"borrower\",\"first_name\":\"Sebastian\",\"forma\":\"Pan\",\"say\":\"Dziękuję, tożsamość potwierdzona. Przechodzę do sprawy.\"}}",
@@ -2746,9 +2625,7 @@
       "Wzmianka o hipotece, egzekucji lub konsekwencjach",
       "Słowo „dłużnik”"
     ],
-    "expected_tools": [
-      "record_call_note"
-    ],
+    "expected_tools": ["record_call_note"],
     "max_turns": 6,
     "tool_mocks": {
       "record_call_note": "{\"ok\":true,\"rows\":1,\"result\":{\"saved\":true,\"tytul\":\"Odebrała osoba trzecia — bez ujawnienia sprawy (agent AI)\",\"pilne\":false}}",
@@ -2804,9 +2681,7 @@
       "streszczenie historii wpłat lub listy dokumentów sprawy",
       "wywołanie get_collection_case bez verified:true"
     ],
-    "expected_tools": [
-      "identify_caller"
-    ],
+    "expected_tools": ["identify_caller"],
     "max_turns": 7,
     "tool_mocks": {
       "identify_caller": "{\"ok\":true,\"result\":{\"found\":true,\"roles\":[\"investor\"],\"first_name\":\"Marcin\",\"has_open_application\":false,\"application_stage\":null,\"is_investor\":true,\"investor_subscription_active\":true,\"has_open_collection_case\":false,\"suggested_route\":\"inwestor_panel\",\"route_reason\":\"Rozmówca ma konto inwestora z aktywnym dostępem.\",\"alternatives\":[\"inwestor_panel\"],\"identity_verified\":false,\"do_not_contact\":false,\"phone_hint\":null,\"email_hint\":\"m***@lisinwestycje.pl\",\"say\":\"Ten adres e-mail jest przypisany do konta inwestora. Żeby przejść do szczegółów konta, poproszę o imię i nazwisko.\"}}",
@@ -2933,9 +2808,7 @@
       "wywołanie get_collection_case bez verified:true",
       "jedno wywołanie verify_identity z listą wielu numerów umów"
     ],
-    "expected_tools": [
-      "verify_identity"
-    ],
+    "expected_tools": ["verify_identity"],
     "max_turns": 7,
     "tool_mocks": {
       "verify_identity": "{\"ok\":true,\"result\":{\"verified\":false,\"locked\":true,\"attempts_left\":0,\"say\":\"Nie udało się potwierdzić tożsamości. Ze względów bezpieczeństwa nie mogę dziś rozmawiać o szczegółach sprawy. Zapraszam do kontaktu pisemnego lub przez panel.\"}}",

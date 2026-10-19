@@ -8,16 +8,16 @@ zabezpieczeniami po stronie serwera.
 
 ## Agenty
 
-| Klucz                    | Agent                                              | Model             | Głos       | Przełącza do                                     |
-| ------------------------ | -------------------------------------------------- | ----------------- | ---------- | ------------------------------------------------ |
-| `recepcja_glos`          | Finance You — recepcja (A0, głos)                  | gemini-2.5-flash  | Aleksandra | A1 intake, A2P głos, A3 panel, A4 głos           |
-| `recepcja_tekst`         | Finance You — recepcja (A0, tekst)                 | gemini-2.5-flash  | —          | A1 intake, A2P tekst, A3 panel, A4T              |
-| `inwestor_presale_glos`  | Finance You — presale inwestora (A2P, głos)        | claude-sonnet-4-6 | Aleksandra | A1 intake, A3 panel                              |
-| `inwestor_presale_tekst` | Finance You — presale inwestora (A2P, tekst)       | claude-sonnet-4-6 | —          | A1 intake, A3 panel                              |
-| `windykacja_glos`        | Finance You — windykacja (A4, głos, linia wspólna) | claude-sonnet-4-6 | Filip      | —                                                |
-| `windykacja_tekst`       | Finance You — windykacja (A4T, tekst)              | claude-sonnet-4-6 | —          | —                                                |
-| (istniejący) A1          | Finance You — przyjęcie wniosku (A1)               | bez zmian         | bez zmian  | —                                                |
-| (istniejący) A3          | Finance You — panel inwestora (A3)                 | bez zmian         | bez zmian  | —                                                |
+| Klucz                    | Agent                                              | Model             | Głos       | Przełącza do                           |
+| ------------------------ | -------------------------------------------------- | ----------------- | ---------- | -------------------------------------- |
+| `recepcja_glos`          | Finance You — recepcja (A0, głos)                  | gemini-2.5-flash  | Aleksandra | A1 intake, A2P głos, A3 panel, A4 głos |
+| `recepcja_tekst`         | Finance You — recepcja (A0, tekst)                 | gemini-2.5-flash  | —          | A1 intake, A2P tekst, A3 panel, A4T    |
+| `inwestor_presale_glos`  | Finance You — presale inwestora (A2P, głos)        | claude-sonnet-4-6 | Aleksandra | A1 intake, A3 panel                    |
+| `inwestor_presale_tekst` | Finance You — presale inwestora (A2P, tekst)       | claude-sonnet-4-6 | —          | A1 intake, A3 panel                    |
+| `windykacja_glos`        | Finance You — windykacja (A4, głos, linia wspólna) | claude-sonnet-4-6 | Filip      | —                                      |
+| `windykacja_tekst`       | Finance You — windykacja (A4T, tekst)              | claude-sonnet-4-6 | —          | —                                      |
+| (istniejący) A1          | Finance You — przyjęcie wniosku (A1)               | bez zmian         | bez zmian  | —                                      |
+| (istniejący) A3          | Finance You — panel inwestora (A3)                 | bez zmian         | bez zmian  | —                                      |
 
 - Źródło prawdy: `src/lib/agent-fleet.ts` (agenty, narzędzia, przełączenia,
   konfiguracja dla API) oraz prompty: `src/lib/triage-agent-prompt.ts`,
@@ -90,25 +90,25 @@ i wysyłają **stałe** `tool` oraz `agent_key` — model ani klient widgetu nie
 ich podmienić. Sekret jest w magazynie sekretów ElevenLabs
 (`fy_agent_tools_secret`), nie jawnym tekstem w konfiguracji.
 
-| Narzędzie                  | Agenty           | Tożsamość | Zapis | Co robi                                                                                   |
-| -------------------------- | ---------------- | --------- | ----- | ----------------------------------------------------------------------------------------- |
-| `identify_caller`          | wszystkie        | nie       | nie   | sugerowana trasa po kontakcie z kanału; bez danych osobowych                              |
-| `verify_identity`          | A2P, A4, A4T     | —         | tak   | dowód w kodzie: imię i nazwisko + numer umowy albo kod SMS; 3 próby + limit per podmiot   |
-| `send_verification_code`   | A2P, A4, A4T     | nie       | tak   | SMS z kodem na numer **z akt** (nigdy na numer podany w rozmowie), 3 kody / podmiot / dobę |
-| `save_needs`               | A0, A2P          | nie       | tak   | rozpoznane potrzeby w sesji                                                               |
-| `get_collection_case`      | A4, A4T          | **tak**   | nie   | akta konkretnej umowy: kwota na dziś z harmonogramu, etap, termin maks., opłaty z umowy   |
-| `record_payment_promise`   | A4, A4T          | **tak**   | tak   | deklaracja wpłaty w aktach; termin po limicie etapu odrzucony                             |
-| `record_call_note`         | A4, A4T          | częściowo | tak   | przed weryfikacją tylko neutralne rodzaje, oznaczone „Niezweryfikowane”                    |
-| `get_payment_instructions` | A4, A4T          | **tak**   | nie   | wyłącznie rachunek z umowy, pogrupowany do dyktowania                                     |
-| `lookup` / `describe_data` | A4, A4T          | per tabela| nie   | szeroki odczyt bazy przez allow-listę (niżej)                                             |
-| `get_pricing`              | A2P              | nie       | nie   | cennik z bazy (`access_products`) — jedyne źródło cen                                     |
-| `get_offer_teasers`        | A2P              | nie       | nie   | przykładowe karty spraw bez danych osobowych                                              |
-| `get_investor_state`       | A2P              | **silna** | nie   | abonament, pakiet umów, kryteria, zlecenia, następny krok (po kodzie SMS)                 |
-| `save_investor_needs`      | A2P              | nie       | tak   | potrzeby + kwalifikacja A/B/C; pisze tylko do leada „swojej” rozmowy                      |
-| `request_investor_callback`| A2P              | nie       | tak   | prośba o kontakt — bez obietnicy terminu                                                  |
-| `send_investor_registration_link` | A2P       | nie       | tak   | SMS z linkiem (albo link do czatu)                                                        |
-| `search_knowledge`         | A0, A2P          | nie       | nie   | wiedza z `text_agent_knowledge` (RAG)                                                     |
-| `get_process_overview`     | A2P, A4, A4T     | nie       | nie   | pewny opis procesu + lista „nigdy nie mów”                                                |
+| Narzędzie                         | Agenty       | Tożsamość  | Zapis | Co robi                                                                                    |
+| --------------------------------- | ------------ | ---------- | ----- | ------------------------------------------------------------------------------------------ |
+| `identify_caller`                 | wszystkie    | nie        | nie   | sugerowana trasa po kontakcie z kanału; bez danych osobowych                               |
+| `verify_identity`                 | A2P, A4, A4T | —          | tak   | dowód w kodzie: imię i nazwisko + numer umowy albo kod SMS; 3 próby + limit per podmiot    |
+| `send_verification_code`          | A2P, A4, A4T | nie        | tak   | SMS z kodem na numer **z akt** (nigdy na numer podany w rozmowie), 3 kody / podmiot / dobę |
+| `save_needs`                      | A0, A2P      | nie        | tak   | rozpoznane potrzeby w sesji                                                                |
+| `get_collection_case`             | A4, A4T      | **tak**    | nie   | akta konkretnej umowy: kwota na dziś z harmonogramu, etap, termin maks., opłaty z umowy    |
+| `record_payment_promise`          | A4, A4T      | **tak**    | tak   | deklaracja wpłaty w aktach; termin po limicie etapu odrzucony                              |
+| `record_call_note`                | A4, A4T      | częściowo  | tak   | przed weryfikacją tylko neutralne rodzaje, oznaczone „Niezweryfikowane”                    |
+| `get_payment_instructions`        | A4, A4T      | **tak**    | nie   | wyłącznie rachunek z umowy, pogrupowany do dyktowania                                      |
+| `lookup` / `describe_data`        | A4, A4T      | per tabela | nie   | szeroki odczyt bazy przez allow-listę (niżej)                                              |
+| `get_pricing`                     | A2P          | nie        | nie   | cennik z bazy (`access_products`) — jedyne źródło cen                                      |
+| `get_offer_teasers`               | A2P          | nie        | nie   | przykładowe karty spraw bez danych osobowych                                               |
+| `get_investor_state`              | A2P          | **silna**  | nie   | abonament, pakiet umów, kryteria, zlecenia, następny krok (po kodzie SMS)                  |
+| `save_investor_needs`             | A2P          | nie        | tak   | potrzeby + kwalifikacja A/B/C; pisze tylko do leada „swojej” rozmowy                       |
+| `request_investor_callback`       | A2P          | nie        | tak   | prośba o kontakt — bez obietnicy terminu                                                   |
+| `send_investor_registration_link` | A2P          | nie        | tak   | SMS z linkiem (albo link do czatu)                                                         |
+| `search_knowledge`                | A0, A2P      | nie        | nie   | wiedza z `text_agent_knowledge` (RAG)                                                      |
+| `get_process_overview`            | A2P, A4, A4T | nie        | nie   | pewny opis procesu + lista „nigdy nie mów”                                                 |
 
 ### Warstwy zabezpieczeń (`src/lib/agent-tools/`)
 
@@ -143,7 +143,7 @@ ich podmienić. Sekret jest w magazynie sekretów ElevenLabs
    przepuszczany tylko pod własnym kluczem (do dyktowania).
 9. **Limity** — per rozmowa i narzędzie (np. weryfikacja 5/10 min, kod SMS 2/30 min).
 10. **Audyt** — każda decyzja (także odmowa) w `agent_tool_calls`; odmowy także
-   w `automation_events` (`agent_tool_denied`), bez cytatów z rozmowy.
+    w `automation_events` (`agent_tool_denied`), bez cytatów z rozmowy.
 
 Ścieżka legacy (`fy_*`, A1): lead rozmowy tylko z `lead_id` zmiennej albo
 caller-id; numer / e-mail podany w rozmowie zakłada co najwyżej NOWEGO leada

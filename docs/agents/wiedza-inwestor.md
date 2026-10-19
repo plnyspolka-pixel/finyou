@@ -29,6 +29,7 @@ Na odsetkach umownych — do wysokości odsetek maksymalnych (art. 359 § 2¹ k.
 ## Skala A–E
 
 Ocena inwestycyjna to wynik 0–100 (wyżej = bezpieczniej) i klasa:
+
 - A (85–100): bardzo niskie ryzyko — mocne zabezpieczenie, uporządkowany stan prawny, płynna nieruchomość.
 - B (70–84): niskie ryzyko — pojedyncze zastrzeżenia do wyjaśnienia.
 - C (55–69): umiarkowane ryzyko — zabezpieczenie do przyjęcia pod warunkami lub po uzupełnieniu dokumentów.
@@ -40,6 +41,7 @@ Składowe i wagi: łatwość sprzedaży 30%, stan prawny KW 20%, zabezpieczenie 
 ## Co daje abonament
 
 Jeden abonament, jeden poziom, wszystkie moduły panelu:
+
 - Akademia inwestora — siedem modułów: wprowadzenie i strategia, prawo, operacje, analiza nieruchomości, analiza klienta, case study, windykacja miękka i twarda.
 - Analityk AI — KW, właściciele, analiza KW, wycena w widełkach i LTV, scenariusz licytacji komorniczej (3/4 i 2/3 wartości), wskaźnik płynności 0–100, karta zabezpieczenia, klasa A–E; także analiza własnej transakcji po numerze KW; raporty bez limitu.
 - Ogólnopolska sieć sprzedaży — Zlecenia i dopasowane Projekty, teaser i raport przed rezerwacją, rezerwacja 24 h, dane kontaktowe po akceptacji Karty Leada, oferta i umowa z karty Projektu.
@@ -108,7 +110,7 @@ Agent windykacyjny A4 dzwoni w imieniu pożyczkodawcy: przedstawia się jako asy
 
 ## Źródła
 
-src/lib/company.ts; src/lib/investor-plan/plans.ts; src/components/marketing/investor-modules.ts; src/routes/dla-inwestora.tsx; src/routes/dla-inwestora_.$modul.tsx; src/lib/risk-assessment/grade-bands.ts; src/lib/contract-engine/fees.ts; src/lib/legal/regulamin-abonamentu.ts; src/lib/legal/pakiet-v7.ts; src/lib/investor-agreements/order-cycle-core.ts; src/routes/inwestor.umowy.tsx; src/lib/analysis-pipeline/engine.server.ts; src/lib/auto-distribution/engine.server.ts; src/lib/application-completeness.ts; docs/cennik-inwestora.md; docs/platnosci-dostep.md; docs/legal/paczka-inwestor-v7/README.md i 02_Ramowa_umowa_..._v7.txt; docs/legal/inwestor/regulamin-abonamentu-inwestora-v1.md; docs/projekty-inwestycyjne.md; docs/windykacja-agent-glosowy.md; docs/aml.md; docs/didit-kyc.md; docs/location-scoring.md; docs/boty-elevenlabs.md; supabase/migrations/20261001100000_zlecenie_tylko_kwota_max.sql.
+src/lib/company.ts; src/lib/investor-plan/plans.ts; src/components/marketing/investor-modules.ts; src/routes/dla-inwestora.tsx; src/routes/dla-inwestora*.$modul.tsx; src/lib/risk-assessment/grade-bands.ts; src/lib/contract-engine/fees.ts; src/lib/legal/regulamin-abonamentu.ts; src/lib/legal/pakiet-v7.ts; src/lib/investor-agreements/order-cycle-core.ts; src/routes/inwestor.umowy.tsx; src/lib/analysis-pipeline/engine.server.ts; src/lib/auto-distribution/engine.server.ts; src/lib/application-completeness.ts; docs/cennik-inwestora.md; docs/platnosci-dostep.md; docs/legal/paczka-inwestor-v7/README.md i 02_Ramowa_umowa*...\_v7.txt; docs/legal/inwestor/regulamin-abonamentu-inwestora-v1.md; docs/projekty-inwestycyjne.md; docs/windykacja-agent-glosowy.md; docs/aml.md; docs/didit-kyc.md; docs/location-scoring.md; docs/boty-elevenlabs.md; supabase/migrations/20261001100000_zlecenie_tylko_kwota_max.sql.
 
 ## SPRZECZNOŚCI DO ROZSTRZYGNIĘCIA
 
