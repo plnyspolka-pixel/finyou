@@ -115,7 +115,12 @@
   --color-color-4: var(--color-4);
   --color-color-3: var(--color-3);
   --color-color-2: var(--color-2);
-  --color-color-1: var(--color-1)
+  --color-color-1: var(--color-1);
+  /* Okładki lekcji Akademii — stała seria granat/złoto niezależna od motywu */
+  --color-cover-ink: #0a1030;
+  --color-cover-ink-2: #141c4a;
+  --color-cover-gold: #f0c667;
+  --color-cover-text: #f6f3ea
 ;
   @keyframes marquee {
   from {
