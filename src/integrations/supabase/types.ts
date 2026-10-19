@@ -1527,6 +1527,72 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_audience_profiles: {
+        Row: {
+          active: boolean
+          ads_monthly_budget_pln: number
+          allowed_topics: string[]
+          blog_audience: string
+          cadence_share: number
+          cta_label: string
+          cta_url: string
+          daily_ai_budget_pln: number
+          extra_banned_phrases: string[]
+          label: string
+          lead_magnet_audience: string
+          series: string[]
+          slots: Json
+          target_audience: string
+          tone: string
+          track: string
+          updated_at: string
+          updated_by: string | null
+          weekly_reels_target: number
+        }
+        Insert: {
+          active?: boolean
+          ads_monthly_budget_pln?: number
+          allowed_topics?: string[]
+          blog_audience: string
+          cadence_share?: number
+          cta_label?: string
+          cta_url: string
+          daily_ai_budget_pln?: number
+          extra_banned_phrases?: string[]
+          label: string
+          lead_magnet_audience: string
+          series?: string[]
+          slots?: Json
+          target_audience: string
+          tone?: string
+          track: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_reels_target?: number
+        }
+        Update: {
+          active?: boolean
+          ads_monthly_budget_pln?: number
+          allowed_topics?: string[]
+          blog_audience?: string
+          cadence_share?: number
+          cta_label?: string
+          cta_url?: string
+          daily_ai_budget_pln?: number
+          extra_banned_phrases?: string[]
+          label?: string
+          lead_magnet_audience?: string
+          series?: string[]
+          slots?: Json
+          target_audience?: string
+          tone?: string
+          track?: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_reels_target?: number
+        }
+        Relationships: []
+      }
       ai_backlinks: {
         Row: {
           anchor_text: string | null
@@ -1690,6 +1756,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_compliance_checks: {
+        Row: {
+          content_kind: string
+          created_at: string
+          final_text: string | null
+          hard_violations: Json
+          id: string
+          iterations: number
+          mandatory_added: string[]
+          original_text: string | null
+          ref_id: string | null
+          ref_table: string | null
+          result: string
+          reviewer: Json
+          rules_version: string
+          track: string
+        }
+        Insert: {
+          content_kind: string
+          created_at?: string
+          final_text?: string | null
+          hard_violations?: Json
+          id?: string
+          iterations?: number
+          mandatory_added?: string[]
+          original_text?: string | null
+          ref_id?: string | null
+          ref_table?: string | null
+          result: string
+          reviewer?: Json
+          rules_version: string
+          track: string
+        }
+        Update: {
+          content_kind?: string
+          created_at?: string
+          final_text?: string | null
+          hard_violations?: Json
+          id?: string
+          iterations?: number
+          mandatory_added?: string[]
+          original_text?: string | null
+          ref_id?: string | null
+          ref_table?: string | null
+          result?: string
+          reviewer?: Json
+          rules_version?: string
+          track?: string
+        }
+        Relationships: []
+      }
       ai_funnel_events: {
         Row: {
           campaign: string | null
@@ -1835,6 +1952,18 @@ export type Database = {
           target_audience: string | null
           updated_at: string
           updated_by: string | null
+          anomaly_failures_threshold: number
+          disabled_platforms: string[]
+          heygen_daily_videos_limit: number
+          kill_switch: boolean
+          kill_switch_at: string | null
+          kill_switch_reason: string | null
+          last_daily_report_on: string | null
+          last_weekly_report_on: string | null
+          max_emails_per_recipient_per_week: number
+          max_posts_per_day_per_account: number
+          owner_alert_phone: string | null
+          video_module_mode: string
         }
         Insert: {
           automation_mode?: string
@@ -1848,6 +1977,18 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           updated_by?: string | null
+          anomaly_failures_threshold?: number
+          disabled_platforms?: string[]
+          heygen_daily_videos_limit?: number
+          kill_switch?: boolean
+          kill_switch_at?: string | null
+          kill_switch_reason?: string | null
+          last_daily_report_on?: string | null
+          last_weekly_report_on?: string | null
+          max_emails_per_recipient_per_week?: number
+          max_posts_per_day_per_account?: number
+          owner_alert_phone?: string | null
+          video_module_mode?: string
         }
         Update: {
           automation_mode?: string
@@ -1861,6 +2002,18 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string
           updated_by?: string | null
+          anomaly_failures_threshold?: number
+          disabled_platforms?: string[]
+          heygen_daily_videos_limit?: number
+          kill_switch?: boolean
+          kill_switch_at?: string | null
+          kill_switch_reason?: string | null
+          last_daily_report_on?: string | null
+          last_weekly_report_on?: string | null
+          max_emails_per_recipient_per_week?: number
+          max_posts_per_day_per_account?: number
+          owner_alert_phone?: string | null
+          video_module_mode?: string
         }
         Relationships: []
       }
@@ -13374,6 +13527,69 @@ export type Database = {
         }
         Relationships: []
       }
+      social_post_metrics: {
+        Row: {
+          captured_at: string
+          captured_on: string
+          comments: number | null
+          external_id: string
+          follows: number | null
+          id: string
+          likes: number | null
+          platform: string
+          published_at: string | null
+          queue_item_id: string | null
+          queue_table: string | null
+          raw: Json
+          reach: number | null
+          saves: number | null
+          series: string | null
+          shares: number | null
+          track: string | null
+          views: number | null
+        }
+        Insert: {
+          captured_at?: string
+          captured_on?: string
+          comments?: number | null
+          external_id: string
+          follows?: number | null
+          id?: string
+          likes?: number | null
+          platform: string
+          published_at?: string | null
+          queue_item_id?: string | null
+          queue_table?: string | null
+          raw?: Json
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          track?: string | null
+          views?: number | null
+        }
+        Update: {
+          captured_at?: string
+          captured_on?: string
+          comments?: number | null
+          external_id?: string
+          follows?: number | null
+          id?: string
+          likes?: number | null
+          platform?: string
+          published_at?: string | null
+          queue_item_id?: string | null
+          queue_table?: string | null
+          raw?: Json
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          track?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
       social_posts: {
         Row: {
           ai_model: string | null
@@ -13455,6 +13671,12 @@ export type Database = {
           x_media_at: string | null
           x_media_id: string | null
           x_media_status: string | null
+          autopilot: boolean
+          compliance_checked_at: string | null
+          compliance_status: string | null
+          content_meta: Json
+          series: string | null
+          track: string | null
         }
         Insert: {
           attempt_count?: number
@@ -13482,6 +13704,12 @@ export type Database = {
           x_media_at?: string | null
           x_media_id?: string | null
           x_media_status?: string | null
+          autopilot?: boolean
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          content_meta?: Json
+          series?: string | null
+          track?: string | null
         }
         Update: {
           attempt_count?: number
@@ -13509,6 +13737,12 @@ export type Database = {
           x_media_at?: string | null
           x_media_id?: string | null
           x_media_status?: string | null
+          autopilot?: boolean
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          content_meta?: Json
+          series?: string | null
+          track?: string | null
         }
         Relationships: []
       }
@@ -13737,6 +13971,9 @@ export type Database = {
           video_url: string | null
           video_url_clean: string | null
           voice_id: string
+          compliance_checked_at: string | null
+          compliance_status: string | null
+          track: string | null
         }
         Insert: {
           aspect_ratio?: string
@@ -13779,6 +14016,9 @@ export type Database = {
           video_url?: string | null
           video_url_clean?: string | null
           voice_id?: string
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          track?: string | null
         }
         Update: {
           aspect_ratio?: string
@@ -13821,6 +14061,9 @@ export type Database = {
           video_url?: string | null
           video_url_clean?: string | null
           voice_id?: string
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          track?: string | null
         }
         Relationships: []
       }
@@ -14803,6 +15046,12 @@ export type Database = {
           title: string
           updated_at: string
           youtube_video_id: string | null
+          autopilot: boolean
+          compliance_checked_at: string | null
+          compliance_status: string | null
+          content_meta: Json
+          series: string | null
+          track: string | null
         }
         Insert: {
           attempt_count?: number
@@ -14820,6 +15069,12 @@ export type Database = {
           title: string
           updated_at?: string
           youtube_video_id?: string | null
+          autopilot?: boolean
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          content_meta?: Json
+          series?: string | null
+          track?: string | null
         }
         Update: {
           attempt_count?: number
@@ -14837,6 +15092,12 @@ export type Database = {
           title?: string
           updated_at?: string
           youtube_video_id?: string | null
+          autopilot?: boolean
+          compliance_checked_at?: string | null
+          compliance_status?: string | null
+          content_meta?: Json
+          series?: string | null
+          track?: string | null
         }
         Relationships: []
       }
