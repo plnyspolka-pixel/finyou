@@ -47,6 +47,7 @@ import {
 import { AbTestingDialog } from "@/components/ab-testing-dialog";
 import { HeatmapDialog } from "@/components/heatmap-dialog";
 import { MicroOptimizerDialog } from "@/components/micro-optimizer-dialog";
+import { PublishingAgentPanel } from "@/components/admin/publishing-agent-panel";
 
 export const Route = createFileRoute("/admin/ai-growth-engine")({
   component: GrowthEnginePage,
@@ -77,6 +78,7 @@ function GrowthEnginePage() {
       <Tabs defaultValue="dashboard">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="agent">Agent publikujący</TabsTrigger>
           <TabsTrigger value="generator">Landing Generator</TabsTrigger>
           <TabsTrigger value="landings">Landingi</TabsTrigger>
           <TabsTrigger value="log">Log działań</TabsTrigger>
@@ -85,6 +87,9 @@ function GrowthEnginePage() {
 
         <TabsContent value="dashboard" className="mt-4">
           <Dashboard />
+        </TabsContent>
+        <TabsContent value="agent" className="mt-4">
+          <PublishingAgentPanel />
         </TabsContent>
         <TabsContent value="generator" className="mt-4">
           <Generator />

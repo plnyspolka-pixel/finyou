@@ -423,7 +423,11 @@ export async function processSocialQueueItem(
     if (guard.action === "hold") {
       await supabaseAdmin
         .from("social_publish_queue")
-        .update({ status: "pending", scheduled_at: guard.until.toISOString(), last_error: guard.message })
+        .update({
+          status: "pending",
+          scheduled_at: guard.until.toISOString(),
+          last_error: guard.message,
+        })
         .eq("id", id);
       return { ok: false, deferred: true, error: guard.message };
     }
@@ -574,11 +578,16 @@ const STALLED_FB_FAIL_HOURS = 6;
  *    ponawiamy automatycznie (ryzyko dubla), tylko po kilku godzinach
  *    oznaczamy `failed` z instrukcją — wpis jest widoczny i trafia do raportu.
  */
-export async function reclaimStalledMetaItems(now: Date = new Date()): Promise<{ requeued: number; failed: number }> {
+export async function reclaimStalledMetaItems(
+  now: Date = new Date(),
+): Promise<{ requeued: number; failed: number }> {
   const cutoff = new Date(now.getTime() - STALLED_CLAIM_MIN * 60_000).toISOString();
   const { data: ig } = await supabaseAdmin
     .from("social_publish_queue")
-    .update({ status: "pending", last_error: "Wznowione po przerwanej publikacji (do Meta nic nie wysłano)." })
+    .update({
+      status: "pending",
+      last_error: "Wznowione po przerwanej publikacji (do Meta nic nie wysłano).",
+    })
     .eq("platform", "instagram_reels")
     .eq("status", "publishing")
     .is("ig_creation_id", null)

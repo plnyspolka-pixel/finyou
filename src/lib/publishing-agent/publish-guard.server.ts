@@ -3,7 +3,11 @@
  * wyłączone platformy, pauza agenta dla wpisów agenta i bramka compliance.
  * Publikator woła go po optymistycznym przejęciu wpisu, PRZED wysyłką.
  */
-import { enforcePublicationGate, gateRejectMessage, type QueueTable } from "./compliance-gate.server";
+import {
+  enforcePublicationGate,
+  gateRejectMessage,
+  type QueueTable,
+} from "./compliance-gate.server";
 import { getAgentSettings } from "./agent-settings.server";
 import { isAgentPaused, isPlatformDisabled } from "./safeguards";
 

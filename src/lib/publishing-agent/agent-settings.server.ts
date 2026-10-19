@@ -159,7 +159,7 @@ export function warsawDayStart(now: Date): Date {
   const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
   const hourWarsaw = get("hour");
   const utcHour = now.getUTCHours();
-  const offsetH = ((hourWarsaw - utcHour + 24) % 24) || 0;
+  const offsetH = (hourWarsaw - utcHour + 24) % 24 || 0;
   const d = new Date(Date.UTC(get("year"), get("month") - 1, get("day"), 0, 0, 0));
   return new Date(d.getTime() - offsetH * 3600_000);
 }
@@ -217,7 +217,11 @@ export async function autoPauseAgent(reason: string): Promise<void> {
     .update({ auto_paused_at: new Date().toISOString(), auto_pause_reason: reason.slice(0, 500) })
     .eq("id", true)
     .is("auto_paused_at", null);
-  await logAgentAction({ action: "auto_pause", status: "warning", summary: `Automatyczna pauza: ${reason}` });
+  await logAgentAction({
+    action: "auto_pause",
+    status: "warning",
+    summary: `Automatyczna pauza: ${reason}`,
+  });
 }
 
 /**

@@ -528,7 +528,10 @@ async function uploadVideo(
       brand_organic_toggle: effective.brandOrganic,
       brand_content_toggle: effective.brandedContent,
       // Oznaczenie treści generowanej przez AI (AI Act art. 50, zasady TikToka).
-      is_aigc: isAiGeneratedMedia({ videoUrl: item.video_url, origin: (item as { origin?: string | null }).origin }),
+      is_aigc: isAiGeneratedMedia({
+        videoUrl: item.video_url,
+        origin: (item as { origin?: string | null }).origin,
+      }),
     },
     source_info: {
       source: "FILE_UPLOAD",
@@ -705,7 +708,10 @@ export async function processTiktokQueueItem(id: string): Promise<{
   // AI idzie flagą `is_aigc` w post_info.
   if (!item.tiktok_publish_id) {
     const { guardQueuePublication } = await import("./publishing-agent/publish-guard.server");
-    const raw = claimed as TiktokQueueRow & { origin?: string | null; audience_track?: string | null };
+    const raw = claimed as TiktokQueueRow & {
+      origin?: string | null;
+      audience_track?: string | null;
+    };
     const guard = await guardQueuePublication(
       "social_publish_queue",
       {

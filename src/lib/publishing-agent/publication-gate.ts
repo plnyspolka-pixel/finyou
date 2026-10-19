@@ -58,7 +58,9 @@ const BODY_LIMITS: Record<string, number> = {
  * `studio-media` (poza kopiami materiałów wgranych przez ludzi
  * `studio-media/marketing-materials/…`); wpisy agenta/Studia mają `origin`.
  */
-export function isAiGeneratedMedia(input: Pick<PublicationGateInput, "videoUrl" | "imageUrl" | "origin">): boolean {
+export function isAiGeneratedMedia(
+  input: Pick<PublicationGateInput, "videoUrl" | "imageUrl" | "origin">,
+): boolean {
   if (input.origin === "agent" || input.origin === "studio") return true;
   const urls = [input.videoUrl, input.imageUrl].filter(Boolean) as string[];
   return urls.some(
@@ -85,7 +87,9 @@ export function decidePublicationGate(input: PublicationGateInput): PublicationG
     ...checkHardRules(input.body, { kind: "caption", track, aiGenerated }),
   ];
   // Jedno naruszenie na regułę (tytuł i opis często powtarzają frazę).
-  const unique = violations.filter((v, i, arr) => arr.findIndex((x) => x.ruleId === v.ruleId) === i);
+  const unique = violations.filter(
+    (v, i, arr) => arr.findIndex((x) => x.ruleId === v.ruleId) === i,
+  );
   if (unique.length > 0) {
     return {
       ...base,

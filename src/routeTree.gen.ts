@@ -287,6 +287,7 @@ import { Route as ApiPublicHooksMissingInfoFollowUpTickRouteImport } from './rou
 import { Route as ApiPublicHooksPrMonitorTickRouteImport } from './routes/api/public/hooks/pr-monitor-tick'
 import { Route as ApiPublicHooksProcessScheduledCallsRouteImport } from './routes/api/public/hooks/process-scheduled-calls'
 import { Route as ApiPublicHooksProjectAssignmentsTickRouteImport } from './routes/api/public/hooks/project-assignments-tick'
+import { Route as ApiPublicHooksPublishingAgentTickRouteImport } from './routes/api/public/hooks/publishing-agent-tick'
 import { Route as ApiPublicHooksSaturdaySmsRemindersRouteImport } from './routes/api/public/hooks/saturday-sms-reminders'
 import { Route as ApiPublicHooksScreeningHealthRouteImport } from './routes/api/public/hooks/screening-health'
 import { Route as ApiPublicHooksScreeningImportRouteImport } from './routes/api/public/hooks/screening-import'
@@ -1766,6 +1767,12 @@ const ApiPublicHooksProjectAssignmentsTickRoute =
     path: '/api/public/hooks/project-assignments-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksPublishingAgentTickRoute =
+  ApiPublicHooksPublishingAgentTickRouteImport.update({
+    id: '/api/public/hooks/publishing-agent-tick',
+    path: '/api/public/hooks/publishing-agent-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksSaturdaySmsRemindersRoute =
   ApiPublicHooksSaturdaySmsRemindersRouteImport.update({
     id: '/api/public/hooks/saturday-sms-reminders',
@@ -2187,6 +2194,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
+  '/api/public/hooks/publishing-agent-tick': typeof ApiPublicHooksPublishingAgentTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
   '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
@@ -2481,6 +2489,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
+  '/api/public/hooks/publishing-agent-tick': typeof ApiPublicHooksPublishingAgentTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
   '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
@@ -2786,6 +2795,7 @@ export interface FileRoutesById {
   '/api/public/hooks/pr-monitor-tick': typeof ApiPublicHooksPrMonitorTickRoute
   '/api/public/hooks/process-scheduled-calls': typeof ApiPublicHooksProcessScheduledCallsRoute
   '/api/public/hooks/project-assignments-tick': typeof ApiPublicHooksProjectAssignmentsTickRoute
+  '/api/public/hooks/publishing-agent-tick': typeof ApiPublicHooksPublishingAgentTickRoute
   '/api/public/hooks/saturday-sms-reminders': typeof ApiPublicHooksSaturdaySmsRemindersRoute
   '/api/public/hooks/screening-health': typeof ApiPublicHooksScreeningHealthRoute
   '/api/public/hooks/screening-import': typeof ApiPublicHooksScreeningImportRoute
@@ -3092,6 +3102,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
+    | '/api/public/hooks/publishing-agent-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/screening-health'
     | '/api/public/hooks/screening-import'
@@ -3386,6 +3397,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
+    | '/api/public/hooks/publishing-agent-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/screening-health'
     | '/api/public/hooks/screening-import'
@@ -3690,6 +3702,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/pr-monitor-tick'
     | '/api/public/hooks/process-scheduled-calls'
     | '/api/public/hooks/project-assignments-tick'
+    | '/api/public/hooks/publishing-agent-tick'
     | '/api/public/hooks/saturday-sms-reminders'
     | '/api/public/hooks/screening-health'
     | '/api/public/hooks/screening-import'
@@ -3831,6 +3844,7 @@ export interface RootRouteChildren {
   ApiPublicHooksPrMonitorTickRoute: typeof ApiPublicHooksPrMonitorTickRoute
   ApiPublicHooksProcessScheduledCallsRoute: typeof ApiPublicHooksProcessScheduledCallsRoute
   ApiPublicHooksProjectAssignmentsTickRoute: typeof ApiPublicHooksProjectAssignmentsTickRoute
+  ApiPublicHooksPublishingAgentTickRoute: typeof ApiPublicHooksPublishingAgentTickRoute
   ApiPublicHooksSaturdaySmsRemindersRoute: typeof ApiPublicHooksSaturdaySmsRemindersRoute
   ApiPublicHooksScreeningHealthRoute: typeof ApiPublicHooksScreeningHealthRoute
   ApiPublicHooksScreeningImportRoute: typeof ApiPublicHooksScreeningImportRoute
@@ -5803,6 +5817,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksProjectAssignmentsTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/publishing-agent-tick': {
+      id: '/api/public/hooks/publishing-agent-tick'
+      path: '/api/public/hooks/publishing-agent-tick'
+      fullPath: '/api/public/hooks/publishing-agent-tick'
+      preLoaderRoute: typeof ApiPublicHooksPublishingAgentTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/saturday-sms-reminders': {
       id: '/api/public/hooks/saturday-sms-reminders'
       path: '/api/public/hooks/saturday-sms-reminders'
@@ -6563,6 +6584,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProcessScheduledCallsRoute,
   ApiPublicHooksProjectAssignmentsTickRoute:
     ApiPublicHooksProjectAssignmentsTickRoute,
+  ApiPublicHooksPublishingAgentTickRoute:
+    ApiPublicHooksPublishingAgentTickRoute,
   ApiPublicHooksSaturdaySmsRemindersRoute:
     ApiPublicHooksSaturdaySmsRemindersRoute,
   ApiPublicHooksScreeningHealthRoute: ApiPublicHooksScreeningHealthRoute,

@@ -8,7 +8,10 @@ import {
   type AgentSettings,
 } from "./safeguards";
 
-const s = (over: Partial<AgentSettings> = {}): AgentSettings => ({ ...DEFAULT_AGENT_SETTINGS, ...over });
+const s = (over: Partial<AgentSettings> = {}): AgentSettings => ({
+  ...DEFAULT_AGENT_SETTINGS,
+  ...over,
+});
 
 describe("canAgentAct", () => {
   it("wyłącznik i auto-pauza blokują wszystko poza raportem i alarmem", () => {
@@ -16,7 +19,9 @@ describe("canAgentAct", () => {
     expect(canAgentAct(k, "publish").allowed).toBe(false);
     expect(canAgentAct(k, "plan").reason).toContain("Wyłącznik");
     expect(canAgentAct(k, "report").allowed).toBe(true);
-    expect(canAgentAct(s({ mode: "full_autopilot", auto_paused_at: "x" }), "produce").allowed).toBe(false);
+    expect(canAgentAct(s({ mode: "full_autopilot", auto_paused_at: "x" }), "produce").allowed).toBe(
+      false,
+    );
   });
 
   it("manual_review: szkice tak, publikacja jako szkic do przeglądu", () => {
@@ -32,16 +37,24 @@ describe("canAgentAct", () => {
 
   it("budżet AI, limity publikacji i maili", () => {
     const a = s({ mode: "full_autopilot", daily_ai_budget_pln: 50 });
-    expect(canAgentAct(a, "produce", { spentTodayPln: 48, estimatedCostPln: 3 }).allowed).toBe(false);
-    expect(canAgentAct(a, "produce", { spentTodayPln: 40, estimatedCostPln: 3 }).allowed).toBe(true);
+    expect(canAgentAct(a, "produce", { spentTodayPln: 48, estimatedCostPln: 3 }).allowed).toBe(
+      false,
+    );
+    expect(canAgentAct(a, "produce", { spentTodayPln: 40, estimatedCostPln: 3 }).allowed).toBe(
+      true,
+    );
     expect(canAgentAct(a, "publish", { postsTodayOnPlatform: 3 }).allowed).toBe(false);
     expect(canAgentAct(a, "email", { emailsThisWeekToRecipient: 3 }).allowed).toBe(false);
     expect(canAgentAct(a, "publish", { platform: "x" }).allowed).toBe(false);
   });
 
   it("promocje tylko w full_autopilot i w budżecie toru", () => {
-    expect(canAgentAct(s({ mode: "full_autopilot" }), "promote", { adsBudgetPln: 0 }).allowed).toBe(false);
-    expect(canAgentAct(s({ mode: "semi_auto" }), "promote", { adsBudgetPln: 500 }).allowed).toBe(false);
+    expect(canAgentAct(s({ mode: "full_autopilot" }), "promote", { adsBudgetPln: 0 }).allowed).toBe(
+      false,
+    );
+    expect(canAgentAct(s({ mode: "semi_auto" }), "promote", { adsBudgetPln: 500 }).allowed).toBe(
+      false,
+    );
     expect(
       canAgentAct(s({ mode: "full_autopilot" }), "promote", {
         adsBudgetPln: 500,
@@ -50,7 +63,8 @@ describe("canAgentAct", () => {
       }).allowed,
     ).toBe(false);
     expect(
-      canAgentAct(s({ mode: "full_autopilot" }), "promote", { adsBudgetPln: 500, adsCostPln: 30 }).allowed,
+      canAgentAct(s({ mode: "full_autopilot" }), "promote", { adsBudgetPln: 500, adsCostPln: 30 })
+        .allowed,
     ).toBe(true);
   });
 });
@@ -94,7 +108,11 @@ describe("detectAnomalies", () => {
 });
 
 describe("adjustCadenceShare", () => {
-  const t = (leadValuePln: number, costPerLeadPln: number, leads = 5) => ({ leadValuePln, costPerLeadPln, leads });
+  const t = (leadValuePln: number, costPerLeadPln: number, leads = 5) => ({
+    leadValuePln,
+    costPerLeadPln,
+    leads,
+  });
   it("bez danych zostaje", () => {
     expect(adjustCadenceShare(50, t(0, 0, 0), t(100, 10))).toBe(50);
   });

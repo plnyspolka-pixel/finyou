@@ -480,7 +480,13 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       ]
         .filter(Boolean)
         .join("; ")}`.slice(0, 2000),
-      payload: { article_id: inserted.id, slug: inserted.slug, kind, stale_years: staleYears, violations } as any,
+      payload: {
+        article_id: inserted.id,
+        slug: inserted.slug,
+        kind,
+        stale_years: staleYears,
+        violations,
+      } as any,
     });
     return { ok: true, reason: "held_as_draft", slug: inserted.slug, id: inserted.id };
   }

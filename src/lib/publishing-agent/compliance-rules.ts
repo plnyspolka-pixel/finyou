@@ -109,7 +109,9 @@ const HARD_RULES: HardRule[] = [
   {
     id: "double_money",
     scope: "common",
-    pattern: rx("podw[oó]j\\p{L}*|podwoi\\p{L}*|pomnóż\\p{L}*\\s+(?:pieniądz|kapitał|oszczędnoś)\\p{L}*"),
+    pattern: rx(
+      "podw[oó]j\\p{L}*|podwoi\\p{L}*|pomnóż\\p{L}*\\s+(?:pieniądz|kapitał|oszczędnoś)\\p{L}*",
+    ),
     negatable: true,
     message: "„Podwój / pomnóż pieniądze” — obietnica wyniku.",
     fix: "Usuń obietnicę wyniku; pokaż mechanizm.",
@@ -146,9 +148,7 @@ const HARD_RULES: HardRule[] = [
   {
     id: "not_advice_only",
     scope: "common",
-    pattern: rx(
-      "(?:to\\s+)?nie\\s+(?:jest|stanowi)\\s+(?:porad|rekomendacj|doradztw)\\p{L}*",
-    ),
+    pattern: rx("(?:to\\s+)?nie\\s+(?:jest|stanowi)\\s+(?:porad|rekomendacj|doradztw)\\p{L}*"),
     when: (t) => !hasRisk(t),
     message: "„To nie jest porada” jako jedyne zastrzeżenie — nie chroni (ESMA/KNF).",
     fix: "Dodaj zdanie o konkretnym ryzyku; formułka sama nie wystarcza.",
@@ -216,14 +216,18 @@ const HARD_RULES: HardRule[] = [
   {
     id: "buyback_guarantee",
     scope: "inwestor",
-    pattern: rx("(?:gwarancj|obowiąz|obietnic)\\p{L}*\\s+(?:odkup|wykup)\\p{L}*|odkupimy\\s+(?:od\\s+ciebie|twoj)\\p{L}*"),
+    pattern: rx(
+      "(?:gwarancj|obowiąz|obietnic)\\p{L}*\\s+(?:odkup|wykup)\\p{L}*|odkupimy\\s+(?:od\\s+ciebie|twoj)\\p{L}*",
+    ),
     message: "Gwarancja odkupu (precedens Fast Invest / KNF 2017).",
     fix: "Usuń; opisz realną ścieżkę wyjścia i jej ryzyko.",
   },
   {
     id: "money_printer",
     scope: "inwestor",
-    pattern: rx("drukark\\p{L}*\\s+(?:do\\s+)?pieniędzy|maszynk\\p{L}*\\s+do\\s+(?:pieniędzy|zarabiania)"),
+    pattern: rx(
+      "drukark\\p{L}*\\s+(?:do\\s+)?pieniędzy|maszynk\\p{L}*\\s+do\\s+(?:pieniędzy|zarabiania)",
+    ),
     negatable: true,
     when: (t) => !hasRisk(t),
     message: "„Drukarka pieniędzy” bez zdania równoważącego ryzyko.",
@@ -244,7 +248,8 @@ const PERCENT_RE =
   /(?<![\p{L}\p{N}])(?:\d+(?:[.,]\d+)?\s?(?:%|proc\p{L}*)|kilkunast\p{L}*\s+proc\p{L}*|kilkudziesię\p{L}*\s+proc\p{L}*|dwucyfrow\p{L}*)/giu;
 const RETURN_CONTEXT_RE =
   /zwrot|rentown|zysk|zarabia|zarobi|oprocentow|rocznie|w\s+skali\s+roku|stop\p{L}*\s+(?:zwrotu|procent)|dochod|dochód|wynik|p\.a\./iu;
-const PERCENT_SAFE_CONTEXT_RE = /ltv|komornik|egzekuc|opłat\p{L}*\s+(?:sądow|egzekuc|notarial|skarbow)|wskaźnik\p{L}*\s+zadłużenia|wartości\s+nieruchomości|inflacj|stop\p{L}*\s+(?:nbp|referencyjn)|rpp|wibor|wiron|podat|belk/iu;
+const PERCENT_SAFE_CONTEXT_RE =
+  /ltv|komornik|egzekuc|opłat\p{L}*\s+(?:sądow|egzekuc|notarial|skarbow)|wskaźnik\p{L}*\s+zadłużenia|wartości\s+nieruchomości|inflacj|stop\p{L}*\s+(?:nbp|referencyjn)|rpp|wibor|wiron|podat|belk/iu;
 
 const NEGATION_RE =
   /(?<![\p{L}\p{N}])(?:nie|nigdy|żadn\p{L}*|brak\p{L}*|bez|nikt|ani|zakaz\p{L}*)(?![\p{L}\p{N}])/iu;
@@ -256,15 +261,24 @@ function isAnsweredNo(text: string, index: number): boolean {
   if (qEnd < 0) return false;
   const between = text.slice(index, qEnd);
   if (/[.!]/.test(between)) return false;
-  return /^\s*(?:nie|wcale|absolutnie\s+nie)(?![\p{L}\p{N}])/iu.test(text.slice(qEnd + 1, qEnd + 20));
+  return /^\s*(?:nie|wcale|absolutnie\s+nie)(?![\p{L}\p{N}])/iu.test(
+    text.slice(qEnd + 1, qEnd + 20),
+  );
 }
 
 function isNegated(text: string, index: number): boolean {
   if (isAnsweredNo(text, index)) return true;
   const before = text.slice(Math.max(0, index - 60), index);
-  const words = before.split(/[\s,;:]+/).filter(Boolean).slice(-NEGATION_WINDOW_WORDS);
+  const words = before
+    .split(/[\s,;:]+/)
+    .filter(Boolean)
+    .slice(-NEGATION_WINDOW_WORDS);
   // Zaprzeczenie liczy się tylko w obrębie tego samego zdania.
-  const lastStop = Math.max(before.lastIndexOf("."), before.lastIndexOf("!"), before.lastIndexOf("?"));
+  const lastStop = Math.max(
+    before.lastIndexOf("."),
+    before.lastIndexOf("!"),
+    before.lastIndexOf("?"),
+  );
   const sameSentence = lastStop >= 0 ? before.slice(lastStop + 1) : before;
   const sentenceWords = sameSentence.split(/[\s,;:]+/).filter(Boolean);
   const n = Math.min(words.length, sentenceWords.length);
@@ -354,7 +368,12 @@ export function missingMandatoryElements(text: string, ctx: MandatoryContext): M
   if (ctx.aiGenerated && !AI_DISCLOSURE_RE.test(t)) missing.push("ai_disclosure");
   const needsDescriptionBlocks = ctx.kind === "caption" || ctx.kind === "ad";
   if (needsDescriptionBlocks && !SENDER_RE.test(t)) missing.push("sender_identification");
-  if ((ctx.aboutMoney ?? true) && !hasRisk(t) && ctx.kind !== "title" && ctx.kind !== "comment_reply") {
+  if (
+    (ctx.aboutMoney ?? true) &&
+    !hasRisk(t) &&
+    ctx.kind !== "title" &&
+    ctx.kind !== "comment_reply"
+  ) {
     missing.push("risk_line");
   }
   return missing;
@@ -400,8 +419,13 @@ export function applyMandatoryElements(
 /** Zgrubne rozpoznanie toru po treści, gdy wpis go nie niesie. */
 export function inferTrack(text: string): AudienceTrack | null {
   const t = (text ?? "").toLowerCase();
-  const inv = (t.match(/inwestor|inwestuj|inwestycj|kapitał|pożyczkodawc|dla-inwestora|zarabia/gu) ?? []).length;
-  const bor = (t.match(/przedsiębiorc|firm|wniosek|finansowani|pożyczkobiorc|kredyt|bank odmówił|płynnoś/gu) ?? []).length;
+  const inv = (
+    t.match(/inwestor|inwestuj|inwestycj|kapitał|pożyczkodawc|dla-inwestora|zarabia/gu) ?? []
+  ).length;
+  const bor = (
+    t.match(/przedsiębiorc|firm|wniosek|finansowani|pożyczkobiorc|kredyt|bank odmówił|płynnoś/gu) ??
+    []
+  ).length;
   if (inv === 0 && bor === 0) return null;
   if (inv === bor) return null;
   return inv > bor ? "inwestor" : "pozyczkobiorca";

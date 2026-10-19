@@ -31,11 +31,15 @@ describe("checkHardRules — wspólne", () => {
     expect(ids("Nie ma inwestycji bez ryzyka.", { kind: "caption" })).not.toContain("no_risk");
     expect(ids("Nie gwarantujemy zysku. Pokażemy ryzyko.", { kind: "caption" })).toEqual([]);
     expect(ids(RISK_LINES.inwestor, { kind: "caption", track: "inwestor" })).toEqual([]);
-    expect(ids(RISK_LINES.pozyczkobiorca, { kind: "caption", track: "pozyczkobiorca" })).toEqual([]);
+    expect(ids(RISK_LINES.pozyczkobiorca, { kind: "caption", track: "pozyczkobiorca" })).toEqual(
+      [],
+    );
   });
 
   it("pytanie z odpowiedzią „Nie” nie jest obietnicą", () => {
-    expect(ids("Czy notariusz gwarantuje bezpieczeństwo? Nie. Pilnuje formy.", { kind: "caption" })).toEqual([]);
+    expect(
+      ids("Czy notariusz gwarantuje bezpieczeństwo? Nie. Pilnuje formy.", { kind: "caption" }),
+    ).toEqual([]);
     expect(ids("Czy wiesz, że gwarantujemy zysk?", { kind: "caption" })).toContain("guarantee");
   });
 
@@ -44,8 +48,12 @@ describe("checkHardRules — wspólne", () => {
   });
 
   it("blokuje stopy zwrotu jako obietnicę, ale nie LTV ani inflację", () => {
-    expect(ids("Zarabiaj 12% rocznie na hipotece", { kind: "caption" })).toContain("percent_return");
-    expect(ids("od kilkunastu procent rocznie zwrotu", { kind: "article" })).toContain("percent_return");
+    expect(ids("Zarabiaj 12% rocznie na hipotece", { kind: "caption" })).toContain(
+      "percent_return",
+    );
+    expect(ids("od kilkunastu procent rocznie zwrotu", { kind: "article" })).toContain(
+      "percent_return",
+    );
     expect(ids("LTV 60% oznacza zapas bezpieczeństwa", { kind: "caption" })).not.toContain(
       "percent_return",
     );
@@ -60,13 +68,15 @@ describe("checkHardRules — wspólne", () => {
   it("blokuje ceny w wideo, nie kwoty edukacyjne", () => {
     expect(ids("Abonament 1500 zł / mies.", { kind: "caption" })).toContain("price_in_video");
     expect(ids("Pakiet PRO", { kind: "title" })).toContain("price_in_video");
-    expect(ids("Pożyczasz 1,1 mln zł pod nieruchomość wartą 1 mln zł?", { kind: "caption" })).toEqual(
-      [],
-    );
+    expect(
+      ids("Pożyczasz 1,1 mln zł pod nieruchomość wartą 1 mln zł?", { kind: "caption" }),
+    ).toEqual([]);
   });
 
   it("formułka „to nie jest porada” wymaga zdania o ryzyku", () => {
-    expect(ids("To nie jest porada inwestycyjna.", { kind: "caption" })).toContain("not_advice_only");
+    expect(ids("To nie jest porada inwestycyjna.", { kind: "caption" })).toContain(
+      "not_advice_only",
+    );
     expect(
       ids("Materiał nie stanowi porady. Inwestowanie wiąże się z ryzykiem.", { kind: "caption" }),
     ).not.toContain("not_advice_only");
@@ -96,7 +106,9 @@ describe("checkHardRules — tory", () => {
   });
 
   it("reguły toru pożyczkobiorcy nie dotyczą toru inwestora", () => {
-    expect(ids("Nie czekaj", { kind: "caption", track: "inwestor" })).not.toContain("time_pressure");
+    expect(ids("Nie czekaj", { kind: "caption", track: "inwestor" })).not.toContain(
+      "time_pressure",
+    );
   });
 
   it("inwestor: odkup, drukarka bez ryzyka, „sam inwestuję”", () => {

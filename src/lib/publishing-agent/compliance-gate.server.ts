@@ -16,7 +16,11 @@ import {
   type ComplianceContext,
   type ComplianceViolation,
 } from "./compliance-rules";
-import { decidePublicationGate, type PublicationGateInput, type PublicationGateResult } from "./publication-gate";
+import {
+  decidePublicationGate,
+  type PublicationGateInput,
+  type PublicationGateResult,
+} from "./publication-gate";
 import { logAgentAction } from "./agent-settings.server";
 
 export const MAX_REWRITE_ITERATIONS = 3;
@@ -93,7 +97,10 @@ export async function enforcePublicationGate(
 
   const bodyColumn = table === "youtube_publish_queue" ? "description" : "message";
   if (result.decision === "fixed") {
-    await supabaseAdmin.from(table).update({ [bodyColumn]: result.body } as never).eq("id", id);
+    await supabaseAdmin
+      .from(table)
+      .update({ [bodyColumn]: result.body } as never)
+      .eq("id", id);
   }
   // Kolumny audytu w osobnym zapisie: przed migracją ich nie ma, a to nie
   // może zablokować publikacji.
@@ -137,7 +144,10 @@ Marka: Finance You sp. z o.o. (KRS 0000635207) — platforma B2B kojarząca prze
 Odrzuć (approved=false), gdy tekst: wprowadza w błąd; obiecuje zysk, stopę zwrotu, oprocentowanie lub bezpieczeństwo kapitału; bagatelizuje ryzyko; wywiera presję na osoby w trudnej sytuacji; kieruje finansowanie do konsumentów; zaprasza do zamkniętych grup; przedstawia instytucje jako rekomendację; podaje ceny w wideo; ujawnia dane osób; awatar AI składa ofertę lub mówi o stopach zwrotu; tekst nie pasuje do toru odbiorcy.
 Dopuszczalne: edukacja o mechanizmach (LTV, hipoteka, księga wieczysta, egzekucja), motyw szansy z wyraźnym beatem ryzyka, pytania-hooki, CTA do obserwowania i do darmowego materiału.`;
 
-export async function reviewWithLlm(text: string, ctx: ComplianceContext): Promise<ReviewerVerdict | null> {
+export async function reviewWithLlm(
+  text: string,
+  ctx: ComplianceContext,
+): Promise<ReviewerVerdict | null> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) return null;
   // Inny model niż autor (domyślnie autorzy jadą na gemini-2.5-flash).
@@ -189,7 +199,12 @@ export async function reviewWithLlm(text: string, ctx: ComplianceContext): Promi
     const args = json.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!args) return null;
     const v = JSON.parse(args) as Omit<ReviewerVerdict, "model">;
-    return { approved: !!v.approved && v.risk !== "high", risk: v.risk, issues: v.issues ?? [], model };
+    return {
+      approved: !!v.approved && v.risk !== "high",
+      risk: v.risk,
+      issues: v.issues ?? [],
+      model,
+    };
   } catch {
     return null;
   }
@@ -222,11 +237,16 @@ export async function runComplianceLoop(opts: {
   let lastReview: ReviewerVerdict | null = null;
   for (let i = 1; i <= MAX_REWRITE_ITERATIONS; i++) {
     lastViolations = checkHardRules(text, opts.ctx);
-    lastReview = lastViolations.length === 0 && opts.useReviewer !== false ? await reviewWithLlm(text, opts.ctx) : null;
+    lastReview =
+      lastViolations.length === 0 && opts.useReviewer !== false
+        ? await reviewWithLlm(text, opts.ctx)
+        : null;
     const passed = lastViolations.length === 0 && (lastReview == null || lastReview.approved);
     const feedback = [
       ...lastViolations.map((v) => `${v.message} Fragment: „${v.match}”. ${v.fix}`),
-      ...(lastReview?.approved === false ? lastReview.issues.map((x) => `${x.problem} → ${x.fix}`) : []),
+      ...(lastReview?.approved === false
+        ? lastReview.issues.map((x) => `${x.problem} → ${x.fix}`)
+        : []),
     ];
     const last = i === MAX_REWRITE_ITERATIONS;
     await recordComplianceCheck({

@@ -87,7 +87,10 @@ export interface ActionDecision {
 
 export function isAgentPaused(s: AgentSettings): { paused: boolean; reason?: string } {
   if (s.kill_switch) {
-    return { paused: true, reason: `Wyłącznik awaryjny${s.kill_switch_reason ? `: ${s.kill_switch_reason}` : ""}` };
+    return {
+      paused: true,
+      reason: `Wyłącznik awaryjny${s.kill_switch_reason ? `: ${s.kill_switch_reason}` : ""}`,
+    };
   }
   if (s.auto_paused_at) {
     return { paused: true, reason: `Automatyczna pauza: ${s.auto_pause_reason ?? "anomalia"}` };
@@ -95,7 +98,10 @@ export function isAgentPaused(s: AgentSettings): { paused: boolean; reason?: str
   return { paused: false };
 }
 
-export function isPlatformDisabled(s: Pick<AgentSettings, "disabled_platforms">, platform: string): boolean {
+export function isPlatformDisabled(
+  s: Pick<AgentSettings, "disabled_platforms">,
+  platform: string,
+): boolean {
   const p = platform.toLowerCase();
   return s.disabled_platforms.some((d) => {
     const x = d.toLowerCase();
@@ -104,7 +110,11 @@ export function isPlatformDisabled(s: Pick<AgentSettings, "disabled_platforms">,
   });
 }
 
-export function canAgentAct(s: AgentSettings, action: AgentAction, ctx: ActionContext = {}): ActionDecision {
+export function canAgentAct(
+  s: AgentSettings,
+  action: AgentAction,
+  ctx: ActionContext = {},
+): ActionDecision {
   if (ALWAYS_ALLOWED.includes(action)) return { allowed: true };
   const pause = isAgentPaused(s);
   if (pause.paused) return { allowed: false, reason: pause.reason };
@@ -118,7 +128,10 @@ export function canAgentAct(s: AgentSettings, action: AgentAction, ctx: ActionCo
     };
   }
   if (ctx.platform && isPlatformDisabled(s, ctx.platform)) {
-    return { allowed: false, reason: `Platforma ${ctx.platform} jest wyłączona w ustawieniach agenta.` };
+    return {
+      allowed: false,
+      reason: `Platforma ${ctx.platform} jest wyłączona w ustawieniach agenta.`,
+    };
   }
   if (
     action === "publish" &&
@@ -135,11 +148,15 @@ export function canAgentAct(s: AgentSettings, action: AgentAction, ctx: ActionCo
     ctx.emailsThisWeekToRecipient != null &&
     ctx.emailsThisWeekToRecipient >= s.max_emails_per_recipient_per_week
   ) {
-    return { allowed: false, reason: `Limit ${s.max_emails_per_recipient_per_week} maili tygodniowo na odbiorcę.` };
+    return {
+      allowed: false,
+      reason: `Limit ${s.max_emails_per_recipient_per_week} maili tygodniowo na odbiorcę.`,
+    };
   }
   if (action === "promote") {
     const budget = ctx.adsBudgetPln ?? 0;
-    if (budget <= 0) return { allowed: false, reason: "Budżet reklam toru = 0 zł (podbicia wyłączone)." };
+    if (budget <= 0)
+      return { allowed: false, reason: "Budżet reklam toru = 0 zł (podbicia wyłączone)." };
     if ((ctx.adsSpentThisMonthPln ?? 0) + (ctx.adsCostPln ?? 0) > budget) {
       return { allowed: false, reason: `Miesięczny budżet reklam toru ${budget} zł wyczerpany.` };
     }
@@ -151,7 +168,11 @@ export function canAgentAct(s: AgentSettings, action: AgentAction, ctx: ActionCo
 
   if (DRAFT_ACTIONS.includes(action)) return { allowed: true };
   if (s.mode === "manual_review") {
-    return { allowed: false, draftOnly: true, reason: "Tryb manual_review: akcja czeka na przegląd." };
+    return {
+      allowed: false,
+      draftOnly: true,
+      reason: "Tryb manual_review: akcja czeka na przegląd.",
+    };
   }
   return { allowed: true };
 }
@@ -198,7 +219,10 @@ export function detectAnomalies(s: AgentSettings, input: AnomalyInput): Anomaly[
     });
   }
   if (input.platformSignals > 0) {
-    out.push({ id: "platform_signal", message: `Sygnały platform: ${input.platformSignals} (ostrzeżenie/usunięcie/ograniczenie).` });
+    out.push({
+      id: "platform_signal",
+      message: `Sygnały platform: ${input.platformSignals} (ostrzeżenie/usunięcie/ograniczenie).`,
+    });
   }
   if ((input.complianceChecks24h ?? 0) >= 5 && (input.complianceRejectRate24h ?? 0) > 0.6) {
     out.push({
