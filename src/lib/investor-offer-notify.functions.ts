@@ -22,3 +22,19 @@ export const notifyMyOfferSubmitted = createServerFn({ method: "POST" })
     const { notifyInvestorOfferSubmitted } = await import("@/lib/investor-offer-notify.server");
     return notifyInvestorOfferSubmitted(data.offerId);
   });
+
+// Ręczne ponowne wysłanie powiadomienia o ofercie — tylko administrator.
+// staffOnly: trafia wyłącznie do pośrednika/operatora (nigdy do klienta);
+// force: pomija blokadę „już powiadomiono".
+export const resendOfferNotificationToStaff = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ offerId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin } = await (context.supabase as any).rpc("has_role", {
+      _user_id: context.userId,
+      _role: "administrator",
+    });
+    if (!isAdmin) throw new Error("Brak uprawnień.");
+    const { notifyInvestorOfferSubmitted } = await import("@/lib/investor-offer-notify.server");
+    return notifyInvestorOfferSubmitted(data.offerId, { force: true, staffOnly: true });
+  });

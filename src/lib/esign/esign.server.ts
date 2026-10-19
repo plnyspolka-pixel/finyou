@@ -793,6 +793,124 @@ export async function finalizeEnvelope(envelopeId: string): Promise<{ finalized:
   return { finalized: true };
 }
 
+/**
+ * Kopia pośrednia: koperta w trakcie podpisywania, część stron już podpisała.
+ * Buduje PDF ze znacznikami i Kartą podpisów w wariancie „podpisano częściowo
+ * n z N” (brakujące podpisy wymienione wprost), zapisuje go obok koperty i
+ * wysyła wskazanym adresom jako załącznik. Koperta pozostaje otwarta.
+ */
+export async function sendInterimCopy(
+  envelope: EnvelopeRow,
+  input: { recipients: string[]; note: string | null; actorUserId: string },
+): Promise<{
+  file_path: string;
+  sha256: string;
+  signed: string[];
+  pending: string[];
+  deliveries: Array<{ email: string; ok: boolean; error: string | null }>;
+}> {
+  if (envelope.status !== "wyslana") throw new Error("Koperta nie jest w trakcie podpisywania.");
+  const signers = await loadSigners(envelope.id);
+  const signed = signers.filter((s) => s.status === "podpisany");
+  const pending = signers.filter((s) => s.status !== "podpisany");
+  if (signed.length === 0) throw new Error("Nikt jeszcze nie podpisał — nie ma czego poświadczać.");
+  if (pending.length === 0)
+    throw new Error("Wszyscy podpisali — użyj pliku końcowego (get_esign_envelope_file).");
+
+  const events = await loadEvents(envelope.id);
+  const sourceBytes = await downloadBytes(envelope.source_path, envelope.source_bucket);
+  const now = new Date();
+  const stamped = await stampSignedPdf({
+    sourceBytes,
+    publicId: envelope.public_id,
+    title: envelope.title,
+    sourceFilename: envelope.source_filename,
+    sourceSha256: envelope.source_sha256,
+    verifyUrl: verifyUrl(envelope.verify_code),
+    verifyUrlShort: verifyUrlShort(envelope.verify_code),
+    sender: { name: envelope.sender_name, email: envelope.sender_email },
+    operatorName: operatorName(),
+    createdAt: envelope.created_at,
+    sentAt: envelope.sent_at,
+    completedAt: null,
+    signingMode: envelope.signing_mode,
+    signers: signed.map(signerToStamp),
+    pendingSigners: pending.map((s) => ({
+      fullName: s.full_name,
+      roleLabel: s.role_label,
+      email: s.email,
+    })),
+    events: events.map((e) => eventToStamp(e, signers)),
+    now,
+  });
+  const sha = await sha256Hex(stamped.bytes);
+  const stamp = now.toISOString().replace(/[:.]/g, "-");
+  const filePath = `koperty/${envelope.id}/${envelope.public_id}-stan-${stamp}.pdf`;
+  await uploadBytes(filePath, stamped.bytes);
+
+  const filename = `${envelope.public_id}-podpisany-czesciowo.pdf`;
+  const attach = stamped.bytes.byteLength <= ATTACHMENT_LIMIT;
+  const fileUrl = attach ? null : await signedFileUrl(filePath, 7 * 24 * 3600);
+  const vUrl = verifyUrl(envelope.verify_code);
+  const signedNames = signed.map(
+    (s) =>
+      `• ${capacityLabel(s.identity?.fullName || s.full_name, s.signed_capacity)} — ${formatSignedAt(s.signed_at)}`,
+  );
+  const pendingNames = pending.map(
+    (s) => `• ${s.full_name}${s.role_label ? ` (${s.role_label})` : ""} — jeszcze nie podpisano`,
+  );
+  const lines = [
+    ...(input.note ? [input.note, ""] : []),
+    `Przesyłamy dokument „${envelope.title}” (${envelope.public_id}) w stanie pośrednim — podpisało ${signed.length} z ${signers.length} stron.`,
+    "Podpisali:",
+    ...signedNames,
+    "Oczekuje na podpis:",
+    ...pendingNames,
+    `SHA-256 tego pliku: ${sha}`,
+    `Aktualny stan podpisów: ${vUrl}`,
+    attach
+      ? "Plik (ze znacznikiem na każdej stronie i Kartą podpisów) jest w załączniku. Po złożeniu wszystkich podpisów system wyśle plik końcowy."
+      : `Plik pobierzesz tutaj (link ważny 7 dni): ${fileUrl}`,
+  ];
+  const deliveries: Array<{ email: string; ok: boolean; error: string | null }> = [];
+  for (const email of [...new Set(input.recipients.map((r) => r.toLowerCase()))]) {
+    const res = await send({
+      to: email,
+      subject: `${envelope.title} (${envelope.public_id}) — podpisany częściowo, ${signed.length} z ${signers.length}`,
+      text: ["Dzień dobry,", "", ...lines, "", operatorName()].join("\n"),
+      html: htmlMail("Dokument podpisany częściowo", lines.filter((l) => l !== "").map(esc), {
+        label: "Stan podpisów",
+        url: vUrl,
+      }),
+      attachments: attach
+        ? [{ filename, content: bytesToBase64(stamped.bytes), contentType: "application/pdf" }]
+        : undefined,
+    });
+    deliveries.push({ email, ok: res.ok, error: res.error ?? null });
+    await logEsignEvent({
+      envelopeId: envelope.id,
+      eventType: "kopia_posrednia",
+      actorKind: "nadawca",
+      actorUserId: input.actorUserId,
+      payload: {
+        email: maskEmail(email),
+        ok: res.ok,
+        message_id: res.id ?? null,
+        sha256: sha,
+        signed: signed.length,
+        total: signers.length,
+      },
+    });
+  }
+  return {
+    file_path: filePath,
+    sha256: sha,
+    signed: signed.map((s) => s.full_name),
+    pending: pending.map((s) => s.full_name),
+    deliveries,
+  };
+}
+
 /** Maskowany opis celu OTP do Karty podpisów. */
 export function otpTargetMasked(channel: string, signer: SignerRow): string {
   return channel === "sms" ? maskPhone(signer.phone) : maskEmail(signer.email);

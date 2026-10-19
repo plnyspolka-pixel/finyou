@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "finance-you-mcp",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "title": "Finance You"
     },
     "tools": [
@@ -2522,6 +2522,355 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_esign_envelope",
+        "title": "Create e-signature envelope",
+        "description": "Tworzy kopertę podpisu dokumentowego (e-podpis Finance You) z wygenerowanej umowy (`generated_document_id` z `generate_contract_docx` / `list_generated_documents`; DOCX zamieniany na PDF) albo z wgranego PDF (`file_base64`). Podpisujący: `ja` (Ty), `klient` (klient pożyczkowy z systemu — dane i e-mail z karty klienta), `inwestor`, `zewnetrzny`. Każdy podpisujący przechodzi weryfikację tożsamości (Didit) i kod jednorazowy. Domyślnie zapisuje SZKIC (`send_now=false`) — pokaż użytkownikowi tytuł, dokument i listę podpisujących, a po potwierdzeniu wyślij `send_esign_envelope` albo od razu `send_now=true`. Zwraca id koperty, kod i link weryfikacji oraz adresy, na które poszły zaproszenia.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Wiadomość do podpisujących w zaproszeniu."
+            },
+            "generated_document_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Wygenerowana umowa (generated_documents.id)."
+            },
+            "file_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "file_base64": {
+              "type": "string",
+              "minLength": 16,
+              "description": "PDF w base64 (zamiast umowy z rejestru)."
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "signing_mode": {
+              "type": "string",
+              "enum": [
+                "rownolegle",
+                "kolejno"
+              ],
+              "default": "rownolegle",
+              "description": "rownolegle — wszyscy naraz; kolejno — wg order_no."
+            },
+            "expires_in_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90
+            },
+            "signers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ja",
+                      "klient",
+                      "inwestor",
+                      "zewnetrzny"
+                    ],
+                    "description": "ja — zalogowany użytkownik (nadawca podpisuje sam); klient — klient pożyczkowy z systemu (client_id); inwestor — konto inwestora (user_id); zewnetrzny — dowolna osoba (full_name + email)."
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Dla kind=klient: clients.id."
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Dla kind=inwestor: konto inwestora."
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 255
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 30
+                  },
+                  "role_label": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Rola w dokumencie, np. „Pożyczkodawca”, „Pożyczkobiorca”."
+                  },
+                  "order_no": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "description": "Kolejność przy signing_mode=kolejno."
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 10
+            },
+            "send_now": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "title",
+            "signers"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_esign_envelope",
+        "title": "Send e-signature envelope",
+        "description": "Wysyła szkic koperty e-podpisu: zaproszenia e-mail z linkiem do podpisu (przy trybie kolejno — do pierwszych w kolejce). Tylko na wyraźne polecenie użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "envelope_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_esign_envelopes",
+        "title": "List e-signature envelopes",
+        "description": "Koperty e-podpisu widoczne dla użytkownika (administrator — wszystkie; operator — personelu; inwestor — swoje): tytuł, status (szkic / wyslana / zakonczona / odrzucona / anulowana / wygasla), podpisujący i ich postęp.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "szkic",
+                "wyslana",
+                "zakonczona",
+                "odrzucona",
+                "anulowana",
+                "wygasla"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_esign_envelope",
+        "title": "Get e-signature envelope",
+        "description": "Szczegóły koperty e-podpisu: status, podpisujący (id do `resend_esign_link`), weryfikacja tożsamości, historia zdarzeń.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "envelope_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_esign_envelope_file",
+        "title": "Get e-signature envelope file link",
+        "description": "Podpisany link do pliku koperty: `zrodlo` (dokument wysłany do podpisu) albo `podpisany` (po zakończeniu, z kartą podpisów).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "which": {
+              "type": "string",
+              "enum": [
+                "zrodlo",
+                "podpisany"
+              ],
+              "default": "zrodlo"
+            }
+          },
+          "required": [
+            "envelope_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "resend_esign_link",
+        "title": "Resend e-signature link",
+        "description": "Ponownie wysyła podpisującemu e-mail z nowym linkiem do podpisu (stary link przestaje działać). `signer_id` z `get_esign_envelope`.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "signer_id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "signer_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "send_esign_interim_copy",
+        "title": "Send partially signed e-signature copy",
+        "description": "Wysyła wskazanym adresom (1–5) kopię dokumentu z koperty W TRAKCIE podpisywania, gdy część stron już podpisała: PDF ze znacznikiem na każdej stronie i Kartą podpisów w wariancie „podpisano częściowo n z N” — kto podpisał (z pełnym śladem) i kto jeszcze NIE. Koperta zostaje otwarta; plik końcowy pójdzie automatycznie po ostatnim podpisie. Plik zapisuje się obok koperty, wysyłka trafia do historii dokumentu. Realna wiadomość — tylko po pokazaniu adresów i treści i wyraźnym poleceniu użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "recipients": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "email",
+                "maxLength": 255
+              },
+              "minItems": 1,
+              "maxItems": 5
+            },
+            "note": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Krótki wstęp na początku maila (opcjonalnie)."
+            }
+          },
+          "required": [
+            "envelope_id",
+            "recipients"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "cancel_esign_envelope",
+        "title": "Cancel e-signature envelope",
+        "description": "Anuluje kopertę e-podpisu (linki przestają działać). Tylko na wyraźne polecenie użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "envelope_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 500
+            }
+          },
+          "required": [
+            "envelope_id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -6442,6 +6791,79 @@
           "required": [
             "offer_id",
             "decision"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "submit_investor_offer",
+        "title": "Submit investor offer",
+        "description": "Składa propozycję finansowania do wniosku z konta inwestora zalogowanego użytkownika — jak przycisk „Złóż propozycję” w panelu inwestora: harmonogram z silnika (odsetki od salda, prowizja inwestora w ratach, pułap raty → balon w ostatniej racie), zapis z RLS i strażnikiem statusów (konto z rolą administratora dostaje auto-akceptację), powiadomienie autora wniosku (operator/pośrednik/klient: e-mail, Messenger, krótki telefon). `status=szkic` zapisuje bez powiadomienia. Wykonuj tylko na wyraźne polecenie użytkownika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "loan_application_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Kwota Udzielona (PLN)."
+            },
+            "months": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 360
+            },
+            "annual_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Oprocentowanie roczne w %."
+            },
+            "commission_pln": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0,
+              "description": "Prowizja inwestora w PLN (rozłożona równo na raty)."
+            },
+            "max_monthly_payment": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Pułap raty; reszta kapitału w ostatniej racie (balon). Domyślnie rata annuitetowa."
+            },
+            "finance_you_fee": {
+              "type": "boolean",
+              "default": false,
+              "description": "Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji."
+            },
+            "note": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "szkic",
+                "zlozona"
+              ],
+              "default": "zlozona"
+            }
+          },
+          "required": [
+            "loan_application_id",
+            "amount",
+            "months",
+            "annual_rate"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -18001,7 +18423,7 @@
       {
         "name": "create_studio_video_job",
         "title": "Create studio video job",
-        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+        "description": "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. Przed zleceniem renderu sprawdzamy usługę caption-burner: gdy nie odpowiada, render w HeyGen nie rusza (kredyty zostają), zadanie czeka w kolejce, a odpowiedź ma pole `deferred` z powodem. Tick wstrzymuje kolejkę tak samo. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -18125,6 +18547,16 @@
               ],
               "description": "Kategoria w bibliotece materiałów (/admin/materialy), do której trafi gotowa rolka — to też zakładka w portalu pośrednika. Domyślnie sekret STUDIO_MATERIALS_AUDIENCE, a bez niego „klient”."
             },
+            "render_engine": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "caption_burner",
+                "remotion"
+              ],
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu.",
+              "default": "auto"
+            },
             "start_now": {
               "type": "boolean",
               "default": false
@@ -18138,7 +18570,7 @@
       {
         "name": "update_studio_job",
         "title": "Update studio video job",
-        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+        "description": "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. `render_engine` (caption-burner / Remotion) można zmienić w każdym statusie poza `captioning` (wykończenie w toku) — silnik czyta się przy domykaniu renderu, więc działa też dla zadania w `rendering`, a dla `failed` / `ready` przy ponowieniu i zmianie napisów. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -18229,6 +18661,15 @@
                   "tiktok"
                 ]
               }
+            },
+            "render_engine": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "caption_burner",
+                "remotion"
+              ],
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu."
             }
           },
           "required": [
@@ -18794,6 +19235,215 @@
           },
           "required": [
             "path"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_motion_catalog",
+        "title": "Get Remotion motion component catalog",
+        "description": "Katalog komponentów elementów dynamicznych rolki Studia (silnik Remotion): stat, range, threshold, versus, checklist, steps, keyword, mythFact, alert, cta — opis, kiedy użyć, propsy i limity znaków, strefy kadru, zasady kotwic czasu (sync = DOSŁOWNY fragment lektora). Zacznij od niego przed `set_studio_motion`.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "design_studio_motion",
+        "title": "Design dynamic elements for a studio reel (Claude)",
+        "description": "Projektuje elementy dynamiczne rolki Studia modelem Claude (scenariusz + czasy z SRT + katalog komponentów) i ZAPISUJE projekt przy zadaniu (`motion_design`) — wejdzie przy najbliższym wykończeniu Remotion (render, `retry_studio_job`, `restyle_studio_job_captions`). Zwraca projekt i podgląd osi czasu. Nie renderuje. Wymaga pliku SRT zadania (po renderze lektora) i ANTHROPIC_API_KEY. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_studio_motion",
+        "title": "Set dynamic elements of a studio reel",
+        "description": "Zapisuje WŁASNY projekt elementów dynamicznych rolki (lista elementów z `get_motion_catalog`) przy zadaniu — zastępuje projekt AI przy wykończeniu Remotion. Walidacja jak dla AI: element z za długim tekstem, złymi propsami albo nieznanym komponentem odpada (wynik pokazuje, ile przeszło i oś czasu z SRT). `elements: []` = rolka bez elementów (zostaną zwykłe karty); `elements: null` = wyczyść, przy wykończeniu zaprojektuje AI. Potem `restyle_studio_job_captions` / `retry_studio_job`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "elements": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Elementy: {component, zone, sync, endSync, itemSync, props} — wg get_motion_catalog."
+            }
+          },
+          "required": [
+            "id",
+            "elements"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_broll_assets",
+        "title": "List B-roll bank",
+        "description": "Bank przebitek (B-roll) Studia: grafiki dobierane do rolek po tagach do frazy planera (rotacja: najdawniej użyte). Zwraca id, tytuł, tagi, URL, źródło, orientację, aktywność i licznik użyć. Szukaj po tytule/tagach (`search`).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string"
+            },
+            "include_inactive": {
+              "type": "boolean",
+              "default": false
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_broll_asset",
+        "title": "Add image to B-roll bank",
+        "description": "Dodaje grafikę do banku przebitek z publicznego URL-a (http/https; JPG/PNG/WEBP, do 15 MB) — plik kopiujemy do naszego Storage. Bez `tags` grafikę opisuje AI (Claude patrzy na obraz: tytuł sceny po angielsku, tagi EN/PL, orientacja), żeby planer ją dobierał. Tytuł najlepiej jak fraza stockowa po angielsku. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "maxItems": 24
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_broll_asset_active",
+        "title": "Enable or disable a B-roll asset",
+        "description": "Włącza albo wyłącza przebitkę w banku — wyłączona nie wchodzi do doboru (np. nietrafiony kadr). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "active"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_broll_asset",
+        "title": "Delete a B-roll asset",
+        "description": "Usuwa przebitkę z banku razem z plikiem w Storage (nieodwracalne). Do ukrycia kadru wystarczy `set_broll_asset_active`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
