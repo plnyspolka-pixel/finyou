@@ -3,6 +3,8 @@
 // dobiera okładkę i publikuje z linkami wewnętrznymi (do innych artykułów na blogu)
 // i zewnętrznymi (źródłami z RSS).
 
+import { currentDateContext } from "./ai-date-context";
+import { checkHardRules, findStaleYears } from "./publishing-agent/compliance-rules";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseRssItems, type RssItem } from "@/lib/pr/core";
 import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
@@ -218,17 +220,16 @@ async function pickInternalLinks(): Promise<RelatedArticle[]> {
 
 /**
  * Wspólne zasady stylu, SEO i zgodności z serwisem dla KAŻDEGO artykułu
- * generowanego na blog. Komunikacja zwrotów: realne stopy zwrotu inwestorów
- * na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako
- * przedział od kilkunastu do nawet kilkudziesięciu procent rocznie — bez
- * gwarantowania wyniku i zawsze z zastrzeżeniem ryzyka.
+ * generowanego na blog. Od 19.10.2026 zgodnie z briefem agenta publikującego
+ * (docs/agent-publikujacy/BRIEF_DLA_CLAUDE_CODE.md, 2.3 i 5.7): bez stóp zwrotu,
+ * bez cen, tor pożyczkobiorcy wyłącznie B2B / cel gospodarczy.
  */
 const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
 - Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
 - SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
 - LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (program partnerski dla inwestorów: szkolenie i narzędzia), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
-- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): realne stopy zwrotu inwestorów na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako OD KILKUNASTU DO NAWET KILKUDZIESIĘCIU PROCENT ROCZNIE — używaj tego przedziału, gdy piszesz o zwrotach z tej klasy aktywów. Inne liczby (oprocentowanie lokat, obligacji, najmu itd.) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. NIE przedstawiaj zwrotu jako pewnego ani gwarantowanego: ZAKAZANE "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
-- W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
+- ZWROTY Z INWESTYCJI: NIE podawaj stóp zwrotu, oprocentowania ani przedziałów zysku dla pożyczek pod zastaw nieruchomości (ani „kilkunastu/kilkudziesięciu procent”) — opisuj mechanizm (LTV, zabezpieczenie hipoteczne, księga wieczysta, egzekucja), od czego zależy wynik i co może pójść nie tak. Liczby innych instrumentów (lokaty, obligacje, inflacja, stopy NBP) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. ZAKAZANE: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%", "stabilne zyski", "minimalne ryzyko", łączna wartość kapitału. Nie podawaj cen produktów Finance You.
+- W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że finansowanie jest wyłącznie dla przedsiębiorców na cel gospodarczy (bez celów konsumpcyjnych), kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących. Nie obiecuj finansowania „bez BIK”, „bez zdolności” ani „dla każdego” i nie wywieraj presji czasu.`;
 
 /**
  * Frazy niedozwolone w opublikowanym artykule — niespójne z komunikacją
@@ -296,12 +297,12 @@ async function writeArticleFromNews(
   } else if (kind === "legal_market_monitor") {
     audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[sprawdź bezpłatnie możliwości finansowania](https://financeyou.pl/dla-klienta)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, realne stopy zwrotu od kilkunastu do nawet kilkudziesięciu procent rocznie, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (mechanizm zarabiania „po stronie banku”, zabezpieczenie hipoteczne, LTV, ryzyko i jego ograniczanie, dywersyfikacja — bez obietnic wyniku i bez stóp zwrotu). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: PRZEDSIĘBIORCA potrzebujący finansowania NA CEL GOSPODARCZY pod zastaw nieruchomości (np. bank odmówił firmie, płynność, inwestycja, druga hipoteka na potrzeby firmy). Platforma jest B2B — nie pisz do konsumentów ani o celach prywatnych. Pisz językiem korzyści i jasnych procedur; klient jest bohaterem, bez presji czasu. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const sys = `${currentDateContext()}\n\nJesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
   const briefLabel =
     kind === "investor_review"
@@ -416,6 +417,16 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   const draft = await writeArticleFromNews(brief, internal, kind);
   const cover = pickCover(kind);
 
+  // Bramka przed publikacją: przestarzały rok w tytule (model bez daty pisał
+  // „w 2024”) albo naruszenie reguł twardych compliance → artykuł zostaje
+  // szkicem z wpisem w dzienniku zamiast wyjść na blog.
+  const staleYears = findStaleYears(`${draft.title}\n${draft.meta_title}`);
+  const violations = checkHardRules(`${draft.title}\n${draft.excerpt}\n${draft.content_md}`, {
+    kind: "article",
+    track: audience === "investor" ? "inwestor" : "pozyczkobiorca",
+  });
+  const holdAsDraft = staleYears.length > 0 || violations.length > 0;
+
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
 
@@ -439,14 +450,14 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       keywords: draft.keywords ?? [],
       word_count: wordCount,
       reading_minutes: Math.max(1, Math.round(wordCount / 200)),
-      status: "published",
+      status: holdAsDraft ? "draft" : "published",
       audience,
       cta_url: ctaUrl,
       cta_label: ctaLabel,
 
       source: "ai_autopilot",
       raw_ai_output: { ...draft, post_kind: kind } as any,
-      published_at: new Date().toISOString(),
+      published_at: holdAsDraft ? null : new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover.url,
       cover_image_alt: cover.alt || draft.cover_alt,
@@ -457,6 +468,22 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     .single();
 
   if (error) throw new Error(error.message);
+
+  if (holdAsDraft) {
+    await supabaseAdmin.from("ai_growth_action_log").insert({
+      module: "seo_content_engine",
+      action: "daily_autopost_held",
+      status: "blocked",
+      summary: `[${kind}] ${draft.title} — zatrzymany jako szkic: ${[
+        staleYears.length ? `przestarzały rok ${staleYears.join(", ")}` : "",
+        ...violations.map((v) => `${v.message} („${v.match}”)`),
+      ]
+        .filter(Boolean)
+        .join("; ")}`.slice(0, 2000),
+      payload: { article_id: inserted.id, slug: inserted.slug, kind, stale_years: staleYears, violations } as any,
+    });
+    return { ok: true, reason: "held_as_draft", slug: inserted.slug, id: inserted.id };
+  }
 
   await supabaseAdmin.from("ai_growth_action_log").insert({
     module: "seo_content_engine",

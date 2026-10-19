@@ -1,5 +1,6 @@
 // AI SEO (plan tematów, artykuły z AI) — logika wyniesiona z ai-seo.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
+import { currentDateContext } from "./ai-date-context";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { z } from "zod";
@@ -33,7 +34,7 @@ async function callAI(apiKey: string, model: string, system: string, user: strin
   const body: any = {
     model,
     messages: [
-      { role: "system", content: system },
+      { role: "system", content: `${system}\n\n${currentDateContext()}` },
       { role: "user", content: user },
     ],
   };
