@@ -58,4 +58,34 @@ describe("narzędzia e-podpisu w MCP", () => {
     )) as Result;
     expect(r.isError).toBe(true);
   });
+
+  it("odrzuca dwa źródła dokumentu naraz", async () => {
+    const r = await call(createEsignEnvelope, {
+      title: "Umowa pożyczki",
+      generated_document_id: "00000000-0000-0000-0000-000000000002",
+      document_blocks: [{ t: "tytul", tekst: "UMOWA" }],
+      signing_mode: "rownolegle",
+      send_now: false,
+      signers: [{ kind: "ja" }],
+    });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toContain("dokładnie jedno źródło");
+  });
+
+  it("bloki treści przechodzą walidację i składają się w PDF", async () => {
+    const { createEnvelopeInput } = await import("@/lib/esign/esign-schemas");
+    const bloki = [
+      { t: "tytul", tekst: "UMOWA POŻYCZKI" },
+      { t: "podtytul", tekst: "zawarta w dniu 17 września 2026 r." },
+      { t: "naglowek", tekst: "§ 1 Przedmiot umowy" },
+      { t: "akapit", runs: [{ tekst: "Pożyczkodawca udziela pożyczki — zażółć gęślą jaźń." }], wciecie: "ustep", etykieta: "1." },
+      { t: "tabela", szerokosci: [30, 70], wiersze: [{ komorki: [{ tekst: "Kwota", bold: true }, { tekst: "20 000,00 zł" }] }] },
+      { t: "podpisy", osoby: [{ rola: "POŻYCZKODAWCA", nazwa: "Finance You sp. z o.o." }, { rola: "POŻYCZKOBIORCA", nazwa: "Fundacja" }] },
+    ];
+    const data = createEnvelopeInput.parse({ title: "Umowa", documentBlocks: bloki, signers: [{ kind: "ja" }] });
+    expect(data.documentBlocks).toHaveLength(6);
+    const { pdfZBlokow } = await import("@/lib/legal/pdf-z-tekstu");
+    const pdf = await pdfZBlokow({ bloki: data.documentBlocks as any, title: "Umowa", version: "do podpisu" });
+    expect(new TextDecoder("latin1").decode(pdf.subarray(0, 5))).toBe("%PDF-");
+  });
 });

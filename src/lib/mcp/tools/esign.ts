@@ -6,6 +6,7 @@ import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { actorId, DESTRUCTIVE, handle, ok, requireUser, SENDS, userClient } from "../_helpers";
 import type { AuthCtx } from "@/lib/esign/esign.server";
+import { BlokSchema } from "@/lib/esign/esign-schemas";
 
 /** Kontekst nadawcy jak w server functions panelu: klient z tokenem użytkownika + id + claims. */
 function esignCtx(ctx: ToolContext): AuthCtx {
@@ -45,7 +46,7 @@ export const createEsignEnvelope = defineTool({
   name: "create_esign_envelope",
   title: "Create e-signature envelope",
   description:
-    "Tworzy kopertę podpisu dokumentowego (e-podpis Finance You) z wygenerowanej umowy (`generated_document_id` z `generate_contract_docx` / `list_generated_documents`; DOCX zamieniany na PDF) albo z wgranego PDF (`file_base64`). Podpisujący: `ja` (Ty), `klient` (klient pożyczkowy z systemu — dane i e-mail z karty klienta), `inwestor`, `zewnetrzny`. Każdy podpisujący przechodzi weryfikację tożsamości (Didit) i kod jednorazowy. Domyślnie zapisuje SZKIC (`send_now=false`) — pokaż użytkownikowi tytuł, dokument i listę podpisujących, a po potwierdzeniu wyślij `send_esign_envelope` albo od razu `send_now=true`. Zwraca id koperty, kod i link weryfikacji oraz adresy, na które poszły zaproszenia.",
+    "Tworzy kopertę podpisu dokumentowego (e-podpis Finance You) z wygenerowanej umowy (`generated_document_id` z `generate_contract_docx` / `list_generated_documents`; DOCX zamieniany na PDF) albo z wgranego PDF (`file_base64`), albo z treści w blokach (`document_blocks` — serwer sam składa PDF; najprostsza droga dla dokumentów spoza silnika umów). Podpisujący: `ja` (Ty), `klient` (klient pożyczkowy z systemu — dane i e-mail z karty klienta), `inwestor`, `zewnetrzny`. Każdy podpisujący przechodzi weryfikację tożsamości (Didit) i kod jednorazowy. Domyślnie zapisuje SZKIC (`send_now=false`) — pokaż użytkownikowi tytuł, dokument i listę podpisujących, a po potwierdzeniu wyślij `send_esign_envelope` albo od razu `send_now=true`. Zwraca id koperty, kod i link weryfikacji oraz adresy, na które poszły zaproszenia.",
   inputSchema: {
     title: z.string().trim().min(3).max(200),
     message: z
@@ -61,6 +62,14 @@ export const createEsignEnvelope = defineTool({
       .describe("Wygenerowana umowa (generated_documents.id)."),
     file_name: z.string().trim().min(1).max(200).optional(),
     file_base64: z.string().min(16).optional().describe("PDF w base64 (zamiast umowy z rejestru)."),
+    document_blocks: z
+      .array(BlokSchema)
+      .min(1)
+      .max(800)
+      .optional()
+      .describe(
+        "Treść dokumentu jako bloki — serwer składa z nich PDF A4 (font szeryfowy, polskie znaki). Typy: {t:'tytul',tekst} · {t:'podtytul',tekst} · {t:'naglowek',tekst} (np. '§ 1 Przedmiot umowy') · {t:'akapit',runs:[{tekst,bold?,italic?}],wciecie?:'ustep'|'podpunkt'|'lista',etykieta?:'1.',align?:'both'|'left'|'center'} · {t:'tabela',szerokosci:[30,70],wiersze:[{komorki:[{tekst,bold?,align?}],naglowek?}]} · {t:'podpisy',osoby:[{rola,nazwa?,wImieniu?:[...]}]}. Zamiast `file_base64` / `generated_document_id` — dokładnie jedno źródło.",
+      ),
     client_id: z.string().uuid().optional(),
     loan_application_id: z.string().uuid().optional(),
     signing_mode: z
@@ -84,6 +93,7 @@ export const createEsignEnvelope = defineTool({
         fileName: args.file_name ?? null,
         fileBase64: args.file_base64 ?? null,
         generatedDocumentId: args.generated_document_id ?? null,
+        documentBlocks: args.document_blocks ?? null,
         clientId: args.client_id ?? null,
         loanApplicationId: args.loan_application_id ?? null,
         context: { zrodlo: "mcp" },
