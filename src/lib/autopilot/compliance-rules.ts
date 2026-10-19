@@ -64,7 +64,12 @@ export const HARD_RULES: readonly HardRule[] = [
     id: "guarantee",
     scope: "common",
     pattern: new RegExp(String.raw`gwarant${L}|gwarancj${L}`, "iu"),
-    allow: [/Bankow\p{L}*\s+Fundusz\p{L}*\s+Gwarancyjn\p{L}*/giu, /\bBFG\b/gu],
+    allow: [
+      /Bankow\p{L}*\s+Fundusz\p{L}*\s+Gwarancyjn\p{L}*/giu,
+      /\bBFG\b/gu,
+      // Instrumenty publiczne opisywane w newsach (np. gwarancje BGK de minimis).
+      /gwarancj\p{L}*\s+(?:BGK|de\s+minimis|bankow\p{L}*|ubezpieczeniow\p{L}*|kontraktow\p{L}*)/giu,
+    ],
     reason: "Słowa „gwarantowany/gwarancja” — zakazane (sygnał ostrzegawczy KNF).",
   },
   {
@@ -78,7 +83,7 @@ export const HARD_RULES: readonly HardRule[] = [
     id: "sure_profit",
     scope: "common",
     pattern: new RegExp(
-      String.raw`(?:pewn|bezpieczn|stabiln|stał|przewidywaln|atrakcyjn|wysok)${L}\s+(?:\p{L}+\s+)?(?:zysk|zwrot|dochod|dochód|zarob|procent|odset)${L}|(?:zysk|zwrot|dochód|dochod)${L}\s+(?:jest\s+)?(?:pewn|bezpieczn|stabiln)${L}`,
+      String.raw`(?:pewn|bezpieczn|stabiln|stał|przewidywaln|atrakcyjn|wysok)${L}\s+(?:\p{L}+\s+)?(?:zysk|zwrot|dochod|dochód|zarob)${L}|(?:zysk|zwrot|dochód|dochod)${L}\s+(?:jest\s+)?(?:pewn|bezpieczn|stabiln)${L}`,
       "iu",
     ),
     reason: "„Pewny/bezpieczny/stabilny zysk” — obietnica wyniku.",
@@ -133,6 +138,9 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "institution_endorsement",
     scope: "common",
+    // Newsy prawno-rynkowe na blogu opisują działania KNF i banków jako fakty
+    // („KNF nadzoruje…”) — tam ocenia recenzent LLM.
+    exceptKinds: ["blog_article"],
     pattern:
       /(?:KNF|Komisj\p{L}*\s+Nadzoru\s+Finansowego|UOKiK|NBP|PKO|Pekao|mBank|ING|Santander|Millennium|BNP|Alior|Credit\s+Agricole)\s+(?:\p{L}+\s+){0,2}?(?:poleca|rekomend|zatwierdz|autoryz|nadzoruj|licencjonuj|współprac|partner)\p{L}*|(?:nadzorowan|zatwierdzon|rekomendowan|polecan|licencjonowan|autoryzowan)\p{L}*\s+przez\s+(?:KNF|Komisj\p{L}*|UOKiK|NBP|bank)/iu,
     reason: "Instytucja (KNF, bank) przedstawiona jako rekomendacja / partner.",
@@ -140,6 +148,8 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "time_pressure",
     scope: "common",
+    // Terminy ustawowe w newsach („ostatni dzień na złożenie…”) to fakt.
+    exceptKinds: ["blog_article"],
     pattern:
       /tylko\s+(?:dziś|dzisiaj|teraz|do\s+końca)|ostatni\p{L}*\s+(?:szans|dzień|dni|miejsc)\p{L}*|zostało\s+(?:tylko|już\s+tylko)|nie\s+zwlekaj|działaj\s+(?:teraz|natychmiast|szybko)|zanim\s+będzie\s+za\s+późno|ofert\p{L}*\s+(?:ograniczon|limitowan)\p{L}*|liczba\s+miejsc\s+(?:jest\s+)?ograniczon/iu,
     reason: "Presja czasu.",
@@ -165,6 +175,9 @@ export const HARD_RULES: readonly HardRule[] = [
   {
     id: "consumer_targeting",
     scope: "pozyczkobiorca",
+    // Blog relacjonuje prawo konsumenckie (UOKiK, kredyt konsumencki) jako
+    // fakt; ton B2B pilnuje prompt pisarza i recenzent LLM.
+    exceptKinds: ["blog_article"],
     pattern:
       /na\s+(?:dowolny|każdy|jakikolwiek)\s+cel|cel\p{L}*\s+konsumpcyjn\p{L}*|kredyt\p{L}*\s+konsumenck\p{L}*|pożycz\p{L}*\s+konsumenck\p{L}*|na\s+(?:wakacje|wesele|samochód|komuni\p{L}*|święta|remont\s+mieszkania)|dla\s+os(?:ób|oby)\s+prywatn\p{L}*|dla\s+każdego|bez\s+względu\s+na\s+cel/iu,
     reason: "Kierowanie do konsumentów / cel niegospodarczy — tor wyłącznie B2B.",

@@ -163,3 +163,20 @@ describe("inferTrack", () => {
     expect(inferTrack("Pożyczki pod zastaw nieruchomości")).toBe("oba");
   });
 });
+
+describe("checkHardRules — fakty w newsach nie są obietnicą", () => {
+  it("stała stopa procentowa i gwarancje BGK to fakt rynkowy", () => {
+    const ctx = { track: "pozyczkobiorca", kind: "post_caption" } as const;
+    expect(ids("Banki wracają do kredytów ze stałą stopą procentową.", ctx)).toEqual([]);
+    expect(ids("Firmy mogą skorzystać z gwarancji BGK de minimis.", ctx)).toEqual([]);
+  });
+  it("blog: KNF, terminy i prawo konsumenckie jako fakt", () => {
+    const ctx = { track: "pozyczkobiorca", kind: "blog_article" } as const;
+    const t =
+      "KNF nadzoruje rynek pożyczek. Ostatni dzień na złożenie wniosku mija w piątek. UOKiK o kredytach konsumenckich.";
+    expect(ids(t, ctx)).toEqual([]);
+    expect(ids(t, { ...ctx, kind: "video_script" })).toEqual(
+      expect.arrayContaining(["institution_endorsement", "time_pressure", "consumer_targeting"]),
+    );
+  });
+});
