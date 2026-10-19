@@ -163,7 +163,34 @@ export const SUBSCRIPTION_PRICE_SENTENCE = `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)
 
 /** Jak się płaci — to samo zdanie wszędzie. */
 export const SUBSCRIPTION_PAYMENT_SENTENCE =
-  "Płacisz jednorazowo za wybrany okres przez Tpay — przelewem albo BLIK-iem, bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.";
+  "Płacisz za wybrany okres przez Tpay — przelewem, BLIK-iem albo w ratach (także jako firma), bez konieczności podpinania karty kredytowej i bez automatycznego odnawiania.";
+
+// ── Raty przy zakupie abonamentu ────────────────────────────────────────────
+// Kanały ratalne są w bramce Tpay (włączone w Panelu Akceptanta): PragmaPay
+// dla firm (3, 6, 9 albo 12 rat lub odroczenie o 14/30/60 dni), Raty Pekao,
+// PayPo i Twisto dla osób prywatnych, a obok nich TubaPay w naszym formularzu.
+// Kod nie wybiera kanału — klient wybiera go w bramce. Ratę na stronie
+// liczymy orientacyjnie: cena / liczba rat, bez kosztów finansowania, które
+// ustala dostawca.
+
+/** Najdłuższy wariant rat dla firm w PragmaPay (Tpay). */
+export const SUBSCRIPTION_MAX_INSTALLMENTS = 12;
+/** Warianty rat PragmaPay dla firm. */
+export const SUBSCRIPTION_INSTALLMENT_OPTIONS = [3, 6, 9, 12] as const;
+
+/**
+ * Orientacyjna rata: cena / liczba rat, do pełnej złotówki — tak samo jak
+ * SUBSCRIPTION_YEARLY_PER_MONTH_PLN, żeby strona nie pokazywała dwóch kwot
+ * (w tekstach zawsze z „ok.").
+ */
+export function installmentEstimatePln(pricePln: number, installments: number): number {
+  if (!Number.isFinite(installments) || installments < 1) return pricePln;
+  return Math.round(pricePln / installments);
+}
+
+/** Zastrzeżenie przy każdej orientacyjnej racie. */
+export const SUBSCRIPTION_INSTALLMENT_NOTE =
+  "Rata orientacyjna: cena podzielona przez liczbę rat. Dostępność rat, ostateczny harmonogram i ewentualny koszt finansowania określa dostawca (PragmaPay, Raty Pekao, TubaPay) po decyzji, przed zawarciem umowy.";
 
 export interface TierPresentation {
   tier: InvestorTier;
@@ -197,14 +224,15 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
   periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
   tagline:
-    "Jeden abonament otwiera wszystkie moduły. Składasz Zlecenie, a my szukamy dla Ciebie Projektów. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości zostają u Ciebie.",
-  // Kolejność: cykl inwestycji — od pozyskania Projektu po windykację i naukę.
+    "Jeden abonament otwiera szkolenie i wszystkie narzędzia, a w bonusie — Projekty z ogólnopolskiej sieci sprzedaży. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości zostają u Ciebie.",
+  // Kolejność: Szkolenie (produkt główny), narzędzia w cyklu pożyczki, a na
+  // końcu sieć sprzedaży — BONUS (plakietka w cenniku, patrz investor-modules.ts).
   bullets: [
     {
-      cecha: "Ogólnopolska sieć sprzedaży",
+      cecha: "Szkolenie inwestora",
       zaleta:
-        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz Projekty z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia.",
-      korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
+        "Serce abonamentu: 7 modułów — strategia, prawo, operacje, analiza nieruchomości i klienta, case study i windykacja — oparte na 15 latach doświadczenia.",
+      korzysc: "Uczysz się na cudzym doświadczeniu, a nie na własnych błędach.",
     },
     {
       cecha: "Analityk AI",
@@ -236,10 +264,10 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
     {
-      cecha: "Akademia inwestora",
+      cecha: "Ogólnopolska sieć sprzedaży",
       zaleta:
-        "15 lat doświadczenia w jednym miejscu: strategia, prawo, analiza nieruchomości i klienta, case study i windykacja.",
-      korzysc: "Uczysz się na cudzym doświadczeniu, a nie na własnych błędach.",
+        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz Projekty z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia.",
+      korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
     },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,

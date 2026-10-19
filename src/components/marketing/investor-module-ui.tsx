@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { GRADE_BANDS, gradeRangeLabel } from "@/lib/risk-assessment/grade-bands";
 import { Icon3D } from "./icon-3d";
 import { investorModulePath, type FabRow, type InvestorModule } from "./investor-modules";
@@ -61,6 +61,95 @@ export function FeatureCards({ rows }: { rows: FabRow[] }) {
   );
 }
 
+// Slajdy karty: `image` + `slides`. Przewijają się same (bez przycisków —
+// cała karta jest linkiem), stoją pod kursorem i przy ograniczonym ruchu.
+const SLIDE_MS = 4500;
+
+function CardSlides({ m }: { m: InvestorModule }) {
+  const images = [m.image, ...(m.slides ?? [])];
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (images.length < 2 || paused) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => setIdx((i) => (i + 1) % images.length), SLIDE_MS);
+    return () => window.clearInterval(t);
+  }, [images.length, paused]);
+  return (
+    <div
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      style={{ position: "relative", aspectRatio: "3 / 2", overflow: "hidden" }}
+    >
+      {images.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          loading="lazy"
+          width={1536}
+          height={1024}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: i === idx ? 1 : 0,
+            transition: "opacity .6s ease",
+          }}
+        />
+      ))}
+      {m.bonus && (
+        <span
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            borderRadius: 999,
+            padding: "0.3rem 0.75rem",
+            fontSize: "0.75rem",
+            fontWeight: 900,
+            letterSpacing: "0.1em",
+            background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
+            color: "#101430",
+            boxShadow: "0 8px 24px -10px rgba(240,198,103,0.8)",
+          }}
+        >
+          BONUS
+        </span>
+      )}
+      {images.length > 1 && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            bottom: 10,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          {images.map((src, i) => (
+            <span
+              key={src}
+              style={{
+                width: i === idx ? 18 : 7,
+                height: 7,
+                borderRadius: 999,
+                background: i === idx ? "#f0c667" : "rgba(255,255,255,.55)",
+                transition: "all .3s ease",
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
   return (
     <a
@@ -78,26 +167,14 @@ function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
         boxShadow: "var(--shadow-sm)",
       }}
     >
-      {!compact && (
-        <img
-          src={m.image}
-          alt=""
-          loading="lazy"
-          width={1536}
-          height={1024}
-          style={{
-            display: "block",
-            width: "100%",
-            height: "auto",
-            aspectRatio: "3 / 2",
-            objectFit: "cover",
-          }}
-        />
-      )}
+      {!compact && <CardSlides m={m} />}
       <div
         style={{ display: "flex", flexDirection: "column", flex: 1, padding: "1rem 1.1rem 1.1rem" }}
       >
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 800 }}>{m.name}</h3>
+        <h3 style={{ fontSize: "1.05rem", fontWeight: 800 }}>
+          {m.bonus && compact && <span style={{ color: "#d4a03a" }}>BONUS · </span>}
+          {m.name}
+        </h3>
         <p
           style={{
             marginTop: "0.35rem",
@@ -117,7 +194,7 @@ function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
             color: "var(--accent)",
           }}
         >
-          Zobacz moduł →
+          {m.slug === "szkolenie" ? "Zobacz program →" : "Zobacz moduł →"}
         </span>
       </div>
     </a>

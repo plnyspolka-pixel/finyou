@@ -1,5 +1,5 @@
-// Podstrony modułów Klubu Inwestorów: /dla-inwestora/<moduł> (sieć sprzedaży,
-// Analityk AI, Kancelaria AI, AML/compliance, Windykator AI). Trasa nie jest
+// Podstrony szkolenia i modułów partnera: /dla-inwestora/<moduł> (szkolenie,
+// Analityk AI, Kancelaria AI, AML/compliance, Windykator AI, sieć sprzedaży). Trasa nie jest
 // zagnieżdżona w /dla-inwestora (podkreślnik w nazwie pliku) — landing nie
 // renderuje <Outlet />. Treść i kolejność modułów: components/marketing/
 // investor-modules.ts (ten sam plik zasila sub-menu "Inwestor" i karty na landingu).
@@ -74,8 +74,8 @@ export const Route = createFileRoute("/dla-inwestora_/$modul")({
     <MarketingShell page="inwestorModul">
       <Section>
         <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
-          Nie ma takiego modułu. <a href={ALL_MODULES}>Zobacz wszystkie moduły</a> Klubu Inwestorów
-          Hipotecznych.
+          Nie ma takiego modułu. <a href={ALL_MODULES}>Zobacz wszystkie moduły</a> partnera Finance
+          You.
         </p>
       </Section>
     </MarketingShell>
@@ -88,7 +88,7 @@ function InvestorModulePage() {
   if (!m) return null;
   const others = INVESTOR_MODULES.filter((o) => o.slug !== m.slug);
   return (
-    <MarketingShell page="inwestorModul" sticky={{ label: "Dołącz do klubu", href: PRICING }}>
+    <MarketingShell page="inwestorModul" sticky={{ label: "Zostań partnerem", href: PRICING }}>
       <ModuleHero m={m} />
 
       <Section id="co-zyskujesz">
@@ -117,7 +117,7 @@ function InvestorModulePage() {
       </Section>
 
       <Section id="pozostale-moduly">
-        <SectionHead center title="Pozostałe moduły" />
+        <SectionHead center title="Pozostałe elementy abonamentu" />
         <div style={{ marginTop: "2rem" }}>
           <ModuleCards modules={others} compact />
         </div>
@@ -125,9 +125,9 @@ function InvestorModulePage() {
 
       <CTASection
         single
-        title="Wszystkie moduły w jednym abonamencie"
-        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — bez opłat za Projekt i bez prowizji od Twojego zysku.`}
-        buttons={[{ label: "Dołącz do klubu", href: PRICING }]}
+        title="Szkolenie i wszystkie narzędzia w jednym abonamencie"
+        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — bez opłat za Projekt i bez prowizji od Twojego zysku. BONUS: abonament kupisz w ratach, także jako firma.`}
+        buttons={[{ label: "Zostań partnerem", href: PRICING }]}
       />
     </MarketingShell>
   );
@@ -176,6 +176,24 @@ function ModuleHero({ m }: { m: InvestorModule }) {
               overflowWrap: "break-word",
             }}
           >
+            {m.bonus && (
+              <span
+                style={{
+                  display: "inline-block",
+                  verticalAlign: "middle",
+                  marginRight: "0.6rem",
+                  borderRadius: 999,
+                  padding: "0.3rem 0.8rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 900,
+                  letterSpacing: "0.1em",
+                  background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
+                  color: "#101430",
+                }}
+              >
+                BONUS
+              </span>
+            )}
             {m.nameLead}{" "}
             <span
               style={{
@@ -231,7 +249,7 @@ function ModuleHero({ m }: { m: InvestorModule }) {
           </ul>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <MktButton variant="gold" size="xl" href={PRICING} style={{ maxWidth: "100%" }}>
-              <BrandIcon name="handCoins" size={20} /> Dołącz do klubu
+              <BrandIcon name="handCoins" size={20} /> Zostań partnerem
             </MktButton>
             <MktButton
               variant="outline"

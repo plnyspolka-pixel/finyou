@@ -204,7 +204,7 @@ const FAQS = [
   },
   {
     q: "Czy Finance You daje inwestorów?",
-    a: "Tak. Uzyskujesz dostęp do bazy inwestorów współpracujących z platformą.",
+    a: "Tak. Uzyskujesz dostęp do bazy inwestorów współpracujących z Finance You.",
   },
   {
     q: "Czy mogę korzystać z kampanii AI?",

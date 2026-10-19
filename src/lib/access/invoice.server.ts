@@ -53,7 +53,7 @@ export async function ensureInvoiceForAccessPayment(
     .select("label")
     .eq("id", payment.product_id)
     .maybeSingle();
-  const description = product?.label ?? "Dostęp do platformy Finance You";
+  const description = product?.label ?? "Abonament Finance You — szkolenie i narzędzia";
 
   // Klucz deduplikacji: identyfikator transakcji Tpay (spójny z historycznymi
   // fakturami z webhooka oraz wpisami rejestru sprzedaży osób fizycznych).
@@ -191,7 +191,7 @@ export async function sendAccessInvoiceEmail(
     to: payment.buyer_email,
     invoiceNumber: inv.invoice_number ?? null,
     invoiceId: inv.id,
-    productLabel: product?.label ?? "Dostęp do platformy Finance You",
+    productLabel: product?.label ?? "Abonament Finance You — szkolenie i narzędzia",
     amountGrosz: Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz),
     buyerType: payment.buyer_type,
   });

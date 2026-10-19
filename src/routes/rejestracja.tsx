@@ -71,7 +71,7 @@ const HERO_COPY: Record<SignupRole, { title: string; lead: string }> = {
   },
   inwestor: {
     title: "Załóż konto inwestora",
-    lead: "Dołącz do Klubu Inwestorów Hipotecznych — zyskasz możliwość składania Zleceń oraz dostęp do edukacji, dokumentów i narzędzi AI.",
+    lead: "Zostań partnerem Finance You — dostaniesz szkolenie inwestora, narzędzia do pracy i możliwość składania Zleceń.",
   },
 };
 

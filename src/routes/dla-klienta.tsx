@@ -132,7 +132,7 @@ const FAQS = [
   },
   {
     q: "Czy Finance You gwarantuje pożyczkę?",
-    a: "Nie. Finance You nie gwarantuje finansowania. Platforma porządkuje sprawę i może pokazać ją inwestorom oraz partnerom finansowym — decyzja należy do finansujących.",
+    a: "Nie. Finance You nie gwarantuje finansowania. Porządkujemy sprawę i może pokazać ją inwestorom oraz partnerom finansowym — decyzja należy do finansujących.",
   },
   {
     q: "Do kogo trafia mój wniosek?",

@@ -21,6 +21,9 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
   SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PLN,
+  SUBSCRIPTION_INSTALLMENT_NOTE,
+  SUBSCRIPTION_MAX_INSTALLMENTS,
+  installmentEstimatePln,
   plnLabel,
 } from "@/lib/investor-plan/plans";
 import { ChatWidget } from "@/components/landing/chat-widget";
@@ -65,7 +68,7 @@ const SHOW: Record<
   oferty: false, // przykładowe projekty
   pipeline: false, // oś dziewięciu kroków onboardingu
   system: false, // pokaz slajdów „Inteligentny system"
-  akademia: false, // pokaz slajdów Akademii inwestora
+  akademia: true, // Szkolenie inwestora — produkt główny, zaraz pod hero
   ochrona: false, // pokaz slajdów „7 warstw ochrony"
   windykacja: false, // pokaz slajdów windykacji AI
   moduly: true, // karty modułów prowadzące do podstron /dla-inwestora/<moduł>
@@ -171,17 +174,17 @@ export const Route = createFileRoute("/dla-inwestora")({
   head: () => ({
     meta: [
       {
-        title: "Klub Inwestorów Hipotecznych — inwestuj w pożyczki pod nieruchomości | Finance You",
+        title: "Zostań partnerem Finance You — szkolenie i narzędzia inwestora",
       },
       {
         name: "description",
-        content: `Klub Inwestorów Hipotecznych Finance You: abonament ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), bez karty kredytowej. Finansujesz Projekty firm zabezpieczone hipoteką (LTV do 60%), oprocentowanie do wysokości odsetek maksymalnych.`,
+        content: `Zostań partnerem Finance You: szkolenie inwestora i narzędzia w abonamencie ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), także w ratach. Pożyczki dla firm zabezpieczone hipoteką (LTV do 60%).`,
       },
-      { property: "og:title", content: "Klub Inwestorów Hipotecznych | Finance You" },
+      { property: "og:title", content: "Zostań partnerem Finance You" },
       {
         property: "og:description",
         content:
-          "Pożyczki dla firm zabezpieczone hipoteką: Projekty z całej Polski, ocena ryzyka A–E w ok. 15 minut, umowy, AML i windykacja — w jednym panelu.",
+          "Szkolenie inwestora i narzędzia w jednym abonamencie: ocena ryzyka A–E w ok. 15 minut, umowy, AML i windykacja. BONUS: raty i Projekty z ogólnopolskiej sieci sprzedaży.",
       },
       { property: "og:url", content: "https://financeyou.pl/dla-inwestora" },
       { property: "og:type", content: "website" },
@@ -384,19 +387,24 @@ const WINDYKACJA: TwoColSlide[] = [
 ];
 
 // FAQ inwestora — 9 podstawowych pytań, krótkie odpowiedzi bez rozwijania.
-// Finance You to zestaw narzędzi i szkolenie dla inwestora, nie platforma.
+// Finance You to szkolenie i zestaw narzędzi dla partnera (abonament, model
+// SaaS), nie platforma ani klub.
 // Fakty (opłaty, prowizja klienta, LTV, odsetki) muszą zgadzać się z Umową
 // ramową v7 (docs/legal/paczka-inwestor-v7/, docs/cennik-inwestora.md).
 // Bez stawek, które zmienia RPP (odsetki maksymalne pokazuje kalkulator).
 // Treść trafia także do JSON-LD FAQPage.
 const FAQ_ALL: FAQItem[] = [
   {
-    q: "Czym jest Finance You dla inwestora?",
-    a: "To szkolenie i zestaw narzędzi dla osób, które chcą finansować pożyczki dla firm zabezpieczone hipoteką. W abonamencie dostajesz Analityka AI, Kancelarię AI, moduł AML, Windykatora AI i Akademię inwestora, a po akceptacji bezpłatnych umów z Finance You — Projekty dopasowane do Twojego Zlecenia. Projekty pochodzą z ogólnopolskiej sieci sprzedaży: na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości.",
+    q: "Co znaczy „zostać partnerem Finance You”?",
+    a: "Wykupujesz abonament w modelu SaaS: szkolenie inwestora w 7 modułach i narzędzia do pracy — Analityka, Kancelarię, moduł AML i Windykatora. W bonusie, po akceptacji bezpłatnych umów z Finance You, dostajesz Projekty z ogólnopolskiej sieci sprzedaży dopasowane do Twojego Zlecenia: na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości.",
   },
   {
     q: "Ile to kosztuje?",
     a: `Abonament: ${SUBSCRIPTION_PRICE_SENTENCE}. Bez opłat za Projekt i bez opłaty sukcesu. ${SUBSCRIPTION_PAYMENT_SENTENCE}`,
+  },
+  {
+    q: "Czy mogę zapłacić w ratach?",
+    a: `Tak — to nasz BONUS. Abonament roczny rozłożysz nawet na ${SUBSCRIPTION_MAX_INSTALLMENTS} rat, czyli ok. ${plnLabel(installmentEstimatePln(SUBSCRIPTION_YEARLY_PLN, SUBSCRIPTION_MAX_INSTALLMENTS))} miesięcznie. Firma wybiera w bramce Tpay PragmaPay (3–12 rat albo zapłata za 14–60 dni), a osoba prywatna m.in. Raty Pekao albo raty TubaPay. ${SUBSCRIPTION_INSTALLMENT_NOTE}`,
   },
   {
     q: "Na czym zarabiam i kto płaci prowizję Finance You?",
@@ -416,19 +424,19 @@ const FAQ_ALL: FAQItem[] = [
   },
   {
     q: "Czy potrzebuję doświadczenia?",
-    a: "Nie musisz go mieć na start. Akademia inwestora prowadzi Cię od podstaw: od strategii i prawa, przez analizę nieruchomości i klienta, po case study i windykację. Każda pożyczka wiąże się jednak z ryzykiem, a decyzję podejmujesz samodzielnie.",
+    a: "Nie musisz go mieć na start. Szkolenie inwestora prowadzi Cię od podstaw: od strategii i prawa, przez analizę nieruchomości i klienta, po case study i windykację. Każda pożyczka wiąże się jednak z ryzykiem, a decyzję podejmujesz samodzielnie.",
   },
   {
     q: "Jak zacząć?",
-    a: "Wybierasz abonament i płacisz — konto i panel otwierają się po płatności. Potem przechodzisz zdalną weryfikację tożsamości (dokument i selfie), akceptujesz bezpłatne umowy z Finance You i składasz Zlecenie z maksymalną kwotą. Od tej chwili szukamy dla Ciebie Projektów.",
+    a: "Wybierasz abonament i płacisz (także w ratach) — konto, szkolenie i narzędzia otwierają się po płatności. Potem przechodzisz zdalną weryfikację tożsamości (dokument i selfie), akceptujesz bezpłatne umowy z Finance You i składasz Zlecenie z maksymalną kwotą. Od tej chwili szukamy dla Ciebie Projektów.",
   },
   {
     q: "Co jeśli klient nie płaci?",
-    a: "Uruchamiasz Windykatora AI. Każdą procedurę zaczynasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. System przygotowuje pisma w Twoim imieniu, a każdą decyzję podejmujesz Ty.",
+    a: "Uruchamiasz Windykatora. Każdą procedurę zaczynasz jednym kliknięciem — od pierwszego upomnienia, przez wezwania i ugodę, aż na biurko komornika. Narzędzie przygotowuje pisma w Twoim imieniu, a każdą decyzję podejmujesz Ty. Jak prowadzić windykację, uczysz się w ostatnim module szkolenia.",
   },
 ];
 
-// Duży złoty przycisk „Dołącz do klubu” — główny CTA strony, prowadzi do
+// Duży złoty przycisk „Zostań partnerem” — główny CTA strony, prowadzi do
 // cennika (#cennik): inwestor najpierw poznaje warunki (abonament miesięczny
 // albo roczny), potem zakłada konto. W one-pagerze to zwykła kotwica
 // sekcji; w układzie zakładek przewijanie do zakładki obsługuje InvestorTabs
@@ -446,16 +454,46 @@ function JoinClubButton() {
         maxWidth: "100%",
       }}
     >
-      <BrandIcon name="handCoins" size={22} /> Dołącz do klubu
+      <BrandIcon name="handCoins" size={22} /> Zostań partnerem
     </MktButton>
   );
 }
 
-const HERO_POINTS = [
-  "Ponad 400 punktów danych, klasa ryzyka A–E i raport PDF",
-  "Rezerwacja Projektu na 24 h (+12 h)",
-  "Stały abonament, bez prowizji od Twojego zysku",
+const YEARLY_INSTALLMENT_PLN = installmentEstimatePln(
+  SUBSCRIPTION_YEARLY_PLN,
+  SUBSCRIPTION_MAX_INSTALLMENTS,
+);
+
+// Punkty hero — `bonus` dostaje złotą plakietkę zamiast ptaszka.
+const HERO_POINTS: { t: string; bonus?: boolean }[] = [
+  { t: "Szkolenie inwestora w 7 modułach — od strategii i prawa po windykację" },
+  { t: "Narzędzia do pracy: ocena ryzyka A–E, umowy, AML i windykacja" },
+  { t: "Stały abonament, bez prowizji od Twojego zysku" },
+  {
+    t: `Abonament w ratach — od ok. ${plnLabel(YEARLY_INSTALLMENT_PLN)} / mies., także dla firm`,
+    bonus: true,
+  },
+  { t: "Projekty z ogólnopolskiej sieci sprzedaży", bonus: true },
 ];
+
+function BonusTag() {
+  return (
+    <span
+      style={{
+        flex: "0 0 auto",
+        borderRadius: 999,
+        padding: "0.12rem 0.5rem",
+        fontSize: "0.68rem",
+        fontWeight: 900,
+        letterSpacing: "0.08em",
+        background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
+        color: "#101430",
+      }}
+    >
+      BONUS
+    </span>
+  );
+}
 
 function Hero({ video }: { video: LandingVideoInfo | null }) {
   return (
@@ -471,7 +509,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
         }}
       >
         <div>
-          <MktBadge variant="secondary">Klub Inwestorów Hipotecznych</MktBadge>
+          <MktBadge variant="secondary">Program partnerski Finance You</MktBadge>
           <h1
             style={{
               marginTop: "1rem",
@@ -481,7 +519,7 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               letterSpacing: "-0.025em",
             }}
           >
-            Inwestuj w pożyczki dla firm{" "}
+            Zostań partnerem Finance You. Inwestuj w pożyczki dla firm{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 40%,#d4a03a)",
@@ -502,9 +540,9 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Podajesz w Zleceniu maksymalną kwotę, a my przedstawiamy Ci Projekty firm z całej
-            Polski. Ocenę ryzyka i wycenę nieruchomości masz w ok. 15 minut, a umowy, AML i
-            windykację prowadzisz w jednym panelu.
+            Jeden abonament w modelu SaaS: szkolenie, które uczy inwestować od podstaw, i narzędzia
+            do codziennej pracy — od oceny ryzyka i wyceny nieruchomości w ok. 15 minut, przez umowy
+            i AML, po windykację. Ty decydujesz, my dajemy wiedzę i warsztat.
           </p>
           <ul
             style={{
@@ -517,11 +555,13 @@ function Hero({ video }: { video: LandingVideoInfo | null }) {
           >
             {HERO_POINTS.map((h) => (
               <li
-                key={h}
+                key={h.t}
                 style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.95rem" }}
               >
-                <BrandIcon name="check" size={18} />
-                <span>{h}</span>
+                {h.bonus ? <BonusTag /> : <BrandIcon name="check" size={18} />}
+                <span style={h.bonus ? { fontWeight: 700, color: "#f6dc9c" } : undefined}>
+                  {h.t}
+                </span>
               </li>
             ))}
           </ul>
@@ -683,8 +723,8 @@ function CalculatorSection() {
             color: "var(--muted-foreground)",
           }}
         >
-          W klubie ten sam kalkulator pokaże pełny harmonogram rat, ostrzeże przed przekroczeniem
-          odsetek maksymalnych i podpowie kwotę hipoteki. Wynik pobierzesz w PDF.
+          W abonamencie ten sam kalkulator pokaże pełny harmonogram rat, ostrzeże przed
+          przekroczeniem odsetek maksymalnych i podpowie kwotę hipoteki. Wynik pobierzesz w PDF.
         </p>
         <JoinClubButton />
       </div>
@@ -851,12 +891,31 @@ function AkademiaSection() {
     <Section id="akademia">
       <SectionHead
         center
-        eyebrow="Akademia inwestora"
-        title="Program szkolenia w 7 modułach"
-        sub="Od wprowadzenia i strategii, przez marketing, prawo i operacje, po analizę nieruchomości, analizę klienta i praktyczne case studies."
+        eyebrow="Szkolenie inwestora"
+        title="Najpierw wiedza. Szkolenie w 7 modułach"
+        sub="Od wprowadzenia i strategii, przez prawo i operacje, po analizę nieruchomości, analizę klienta, case study i windykację. Każdy temat przećwiczysz na narzędziach z abonamentu."
       />
       <div style={{ marginTop: "2.5rem" }}>
         <TwoColSlider slides={AKADEMIA} />
+      </div>
+      <div
+        style={{
+          marginTop: "2rem",
+          display: "flex",
+          justifyContent: "center",
+          gap: "0.7rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <JoinClubButton />
+        <MktButton
+          variant="outline"
+          size="cta"
+          href="/dla-inwestora/szkolenie"
+          style={{ height: "4rem", maxWidth: "100%" }}
+        >
+          Zobacz program szkolenia
+        </MktButton>
       </div>
     </Section>
   );
@@ -909,9 +968,9 @@ function ModulesSection() {
     <Section id="moduly" tint>
       <SectionHead
         center
-        eyebrow="Moduły klubu"
-        title="Pięć modułów w jednym panelu"
-        sub="Na każdym etapie pożyczki — od Projektu po spłatę — masz pod ręką właściwe narzędzie."
+        eyebrow="Abonament partnera"
+        title="Szkolenie i narzędzia w jednym abonamencie"
+        sub="Uczysz się w szkoleniu, a na każdym etapie pożyczki masz pod ręką właściwe narzędzie. Na koniec bonus: Projekty z ogólnopolskiej sieci sprzedaży."
       />
       <div style={{ marginTop: "2.5rem" }}>
         <ModuleCards modules={INVESTOR_MODULES} cols={3} />
@@ -923,7 +982,12 @@ function ModulesSection() {
 function CennikSection({ products }: { products: AccessProduct[] }) {
   return (
     <Section id="cennik" tint>
-      <SectionHead center eyebrow="Cennik" title="Jeden abonament, pełny dostęp" />
+      <SectionHead
+        center
+        eyebrow="Cennik"
+        title="Jeden abonament: szkolenie i wszystkie narzędzia"
+        sub={`BONUS: zapłać w ratach — od ok. ${plnLabel(YEARLY_INSTALLMENT_PLN)} miesięcznie, także jako firma.`}
+      />
       <div style={{ marginTop: "2.5rem" }}>
         <InvestorPricing products={products} />
       </div>
@@ -1043,8 +1107,12 @@ function InvestorTabs({ products }: { products: AccessProduct[] }) {
 function InvestorLanding() {
   const { products, video } = Route.useLoaderData();
   return (
-    <MarketingShell page="inwestor" sticky={{ label: "Dołącz do klubu", href: PRICING_HASH }}>
+    <MarketingShell page="inwestor" sticky={{ label: "Zostań partnerem", href: PRICING_HASH }}>
       <Hero video={video} />
+
+      {/* Szkolenie — produkt główny, zaraz pod hero, potem narzędzia. */}
+      {!SHOW.zakladki && SHOW.akademia && <AkademiaSection />}
+      {SHOW.moduly && <ModulesSection />}
 
       {SHOW.kalkulator && <CalculatorSection />}
 
@@ -1061,20 +1129,18 @@ function InvestorLanding() {
         <SectionHead
           eyebrow="Co zyskujesz"
           title="My szukamy Projektów. Ty decydujesz, na czym zarabiasz."
-          sub="Od Zlecenia po spłatę — wszystko w jednym panelu."
+          sub="Od Zlecenia po spłatę — wiedza ze szkolenia i narzędzia w jednym miejscu."
         />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={BENEFITS} cols={3} icon3d />
         </div>
       </Section>
 
-      {SHOW.moduly && <ModulesSection />}
       {SHOW.prezentacja && <PresentationSection />}
 
       {!SHOW.zakladki && (
         <>
           {SHOW.system && <SmartOfferSection />}
-          {SHOW.akademia && <AkademiaSection />}
           {SHOW.ochrona && <OchronaSection />}
           {SHOW.windykacja && <WindykacjaSection />}
         </>
@@ -1114,18 +1180,18 @@ function InvestorLanding() {
 
       <CTASection
         single
-        title="Twój kapitał, Twoje decyzje. Projekty i narzędzia w jednym panelu."
-        sub="Bez opłat za Projekt i bez prowizji od Twojego zysku — wybierz abonament miesięczny albo roczny."
-        buttons={[{ label: "Dołącz do klubu", href: PRICING_HASH }]}
+        title="Twój kapitał, Twoje decyzje. Zostań partnerem Finance You."
+        sub={`Szkolenie i narzędzia w jednym abonamencie, bez prowizji od Twojego zysku. BONUS: raty od ok. ${plnLabel(YEARLY_INSTALLMENT_PLN)} / mies. i Projekty z ogólnopolskiej sieci sprzedaży.`}
+        buttons={[{ label: "Zostań partnerem", href: PRICING_HASH }]}
       />
 
       <ChatWidget
         source="dla-inwestora"
         endpoint="/api/public/investor-chat-widget"
         storageKey="fy_invest_chat_session_id"
-        greeting="Dzień dobry! Jestem asystentem AI Klubu Inwestorów Hipotecznych. Odpowiem na pytania o abonament, narzędzia i finansowanie pożyczek dla firm zabezpieczonych hipoteką. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
+        greeting="Dzień dobry! Jestem wirtualnym asystentem Finance You. Odpowiem na pytania o program partnerski, szkolenie, narzędzia, raty i pożyczki dla firm zabezpieczone hipoteką. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
         title="Asystent inwestora"
-        subtitle="Klub Inwestorów Hipotecznych · 24/7"
+        subtitle="Program partnerski Finance You · 24/7"
       />
     </MarketingShell>
   );

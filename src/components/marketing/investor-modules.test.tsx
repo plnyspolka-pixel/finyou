@@ -6,9 +6,12 @@ import { INVESTOR_MODULES, investorModuleBySlug, investorModulePath } from "./in
 import { WEIGHTS } from "@/lib/risk-assessment/risk-scoring";
 import { SiteHeader } from "./shell";
 
-describe("moduły Klubu Inwestorów — dane podstron", () => {
-  it("ma pięć modułów z unikalnymi slugami w formacie URL", () => {
-    expect(INVESTOR_MODULES).toHaveLength(5);
+describe("szkolenie i moduły partnera — dane podstron", () => {
+  it("ma szkolenie i pięć modułów z unikalnymi slugami w formacie URL", () => {
+    expect(INVESTOR_MODULES).toHaveLength(6);
+    // Szkolenie to produkt główny (pierwsza karta), sieć sprzedaży — BONUS na końcu.
+    expect(INVESTOR_MODULES[0].slug).toBe("szkolenie");
+    expect(INVESTOR_MODULES.at(-1)).toMatchObject({ slug: "siec-sprzedazy", bonus: true });
     const slugs = INVESTOR_MODULES.map((m) => m.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const s of slugs) expect(s).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
@@ -100,7 +103,7 @@ describe("sub-menu „Inwestor” — podstrony modułów", () => {
 
   it("na podstronie modułu CTA i FAQ prowadzą na landing inwestora", () => {
     render(<SiteHeader page="inwestorModul" />);
-    for (const a of screen.getAllByRole("link", { name: "Dołącz do klubu" })) {
+    for (const a of screen.getAllByRole("link", { name: "Zostań partnerem" })) {
       expect(a).toHaveAttribute("href", "/dla-inwestora#cennik");
     }
     expect(screen.getAllByRole("link", { name: "FAQ" })[0]).toHaveAttribute(

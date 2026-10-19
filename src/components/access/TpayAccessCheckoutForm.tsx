@@ -252,14 +252,13 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           </div>
         )}
         <div className="text-xs text-muted-foreground mt-1">
-          Płatność jednorazowa ·{" "}
           {product.duration_days
-            ? `dostęp na ${product.duration_days} dni`
-            : "jednorazowe odblokowanie okazji"}
+            ? `Dostęp na ${product.duration_days} dni`
+            : "Jednorazowe odblokowanie okazji"}
           .{" "}
           {isTubapay
             ? "Zostaniesz przeniesiony do TubaPay — podpiszesz umowę płatności podzielonej i opłacisz pierwszą ratę szybkim przelewem z własnego konta."
-            : "Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay (BLIK, karta, szybki przelew)."}
+            : "Zostaniesz przeniesiony do bezpiecznej bramki płatności Tpay. Zapłacisz od razu (BLIK, karta, szybki przelew), w ratach albo później — dla firm także raty i odroczona płatność PragmaPay."}
         </div>
       </div>
 
@@ -317,7 +316,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
                 !isTubapay ? "border-primary bg-primary/10 font-medium" : "hover:bg-muted"
               }`}
             >
-              Jednorazowo (Tpay)
+              Tpay — od razu, raty lub później
             </button>
             <button
               type="button"
@@ -398,14 +397,13 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
           {isTubapay ? (
             <p className="mt-2 text-xs text-muted-foreground">
               Raty TubaPay są dostępne tylko dla osób prywatnych (umowę z TubaPay zawiera osoba
-              fizyczna). Aby kupić jako firma, wybierz „Jednorazowo (Tpay)”.
+              fizyczna). Firma może rozłożyć płatność na raty w bramce Tpay — wybierz „Tpay”.
             </p>
           ) : (
-            tubapayOptions.length > 0 &&
             buyerType === "company" && (
               <p className="mt-2 text-xs text-muted-foreground">
-                Jako firma możesz zapłacić jednorazowo przez Tpay — raty TubaPay są tylko dla osób
-                prywatnych.
+                Firma? W bramce Tpay wybierz PragmaPay: rozłożysz płatność na 3, 6, 9 lub 12 rat
+                albo odroczysz ją o 14, 30 lub 60 dni. Fakturę wystawimy na firmę.
               </p>
             )
           )}

@@ -10,8 +10,11 @@ import { useState } from "react";
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
+  SUBSCRIPTION_INSTALLMENT_NOTE,
   SUBSCRIPTION_OPTIONS,
   SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
+  installmentEstimatePln,
+  plnLabel,
   type BenefitBullet,
   type BillingPeriod,
 } from "@/lib/investor-plan/plans";
@@ -25,22 +28,82 @@ import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 const CHECKOUT = "/abonament-inwestora";
 const PERIODS: BillingPeriod[] = ["miesiecznie", "rocznie"];
 
-/** Adres podstrony modułu o tej samej nazwie co punkt oferty (o ile istnieje). */
-function bulletHref(b: BenefitBullet): string | undefined {
-  const m = INVESTOR_MODULES.find((mod) => mod.name === b.cecha);
-  return m ? investorModulePath(m.slug) : undefined;
+// BONUS — raty w bramce Tpay. Rok rozkładamy na 12 rat, miesiąc na 3
+// (najkrótszy wariant PragmaPay). Kwota orientacyjna, patrz plans.ts.
+const BONUS_INSTALLMENTS: Record<BillingPeriod, number> = { miesiecznie: 3, rocznie: 12 };
+
+/** Złota plakietka „BONUS: w ratach” z orientacyjną ratą dla wybranego okresu. */
+export function InstallmentBonus({
+  period,
+  tone = "dark",
+}: {
+  period: BillingPeriod;
+  tone?: "dark" | "light";
+}) {
+  const n = BONUS_INSTALLMENTS[period];
+  const rate = installmentEstimatePln(SUBSCRIPTION_OPTIONS[period].pricePln, n);
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+        textAlign: "left",
+        borderRadius: "var(--radius-2xl)",
+        padding: "0.9rem 1rem",
+        background:
+          tone === "dark"
+            ? "linear-gradient(120deg, rgba(240,198,103,.22), rgba(246,220,156,.10))"
+            : "linear-gradient(120deg, oklch(0.95 0.06 88), oklch(0.98 0.03 88))",
+        border: "1px solid oklch(0.80 0.14 85 / 0.7)",
+        color: tone === "dark" ? "#fff" : "var(--foreground)",
+      }}
+    >
+      <span
+        style={{
+          flex: "0 0 auto",
+          borderRadius: 999,
+          padding: "0.25rem 0.6rem",
+          fontSize: "0.72rem",
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
+          color: "#101430",
+        }}
+      >
+        BONUS
+      </span>
+      <div style={{ lineHeight: 1.45 }}>
+        <div style={{ fontWeight: 800, fontSize: "0.98rem" }}>
+          W ratach już od ok. {plnLabel(rate)} / mies.
+        </div>
+        <div style={{ fontSize: "0.82rem", opacity: tone === "dark" ? 0.9 : 0.8 }}>
+          {n} rat × ok. {plnLabel(rate)} — także jako firma (PragmaPay: 3–12 rat albo zapłata za
+          14–60 dni). Wybierasz w bramce Tpay, bez karty kredytowej.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Moduł o tej samej nazwie co punkt oferty (o ile ma podstronę). */
+function bulletModule(b: BenefitBullet) {
+  return INVESTOR_MODULES.find((mod) => mod.name === b.cecha);
 }
 
 // Punkt oferty: nazwa jako pogrubiony nagłówek (link do podstrony modułu,
 // jeśli jest), pod nią JEDEN akapit — zaleta wyciszona, korzyść wyróżniona.
 // Bez etykiet części formuły i bez formy „Nazwa — Zdanie".
 function BenefitItem({ b }: { b: BenefitBullet }) {
-  const href = bulletHref(b);
+  const m = bulletModule(b);
+  const href = m ? investorModulePath(m.slug) : undefined;
   return (
     <li style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
       <BrandIcon name="check" size={18} />
       <div style={{ lineHeight: 1.45 }}>
         <div style={{ fontWeight: 700, color: "var(--foreground)" }}>
+          {m?.bonus && <span style={{ color: "#d4a03a", fontWeight: 900 }}>BONUS: </span>}
           {href ? (
             <a href={href} style={{ color: "inherit", textDecoration: "underline" }}>
               {b.cecha}
@@ -244,6 +307,9 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
           >
             <BrandIcon name="lock" size={16} /> Bez karty kredytowej i bez automatycznego odnawiania
           </div>
+          <div style={{ marginTop: "1rem" }}>
+            <InstallmentBonus period={period} />
+          </div>
         </div>
 
         <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", flex: 1 }}>
@@ -272,8 +338,8 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               color: "var(--muted-foreground)",
             }}
           >
-            Płatność jednorazowa przez Tpay — przelew albo BLIK. Ceny brutto. Sprzedawca:{" "}
-            {FUNDACJA.nazwa} (bez VAT),{" "}
+            Płatność przez Tpay — przelew, BLIK albo raty. {SUBSCRIPTION_INSTALLMENT_NOTE} Ceny
+            brutto. Sprzedawca: {FUNDACJA.nazwa} (bez VAT),{" "}
             <a href={REGULAMIN_ABONAMENTU_PATH} style={{ textDecoration: "underline" }}>
               regulamin abonamentu
             </a>
@@ -284,7 +350,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             href={`${CHECKOUT}?okres=${period}`}
             style={{ width: "100%", marginTop: "1rem" }}
           >
-            Dołącz do klubu
+            Zostań partnerem
           </MktButton>
         </div>
       </div>

@@ -67,7 +67,7 @@ export const listMyAccessPayments = createServerFn({ method: "GET" })
         id: r.id,
         createdAt: r.created_at,
         status: r.status,
-        productLabel: productById.get(r.product_id)?.label ?? "Dostęp do platformy",
+        productLabel: productById.get(r.product_id)?.label ?? "Abonament Finance You",
         audience: r.audience,
         amountGrosz: Number(r.paid_amount_grosz ?? r.expected_amount_grosz),
         currency: r.currency ?? "PLN",

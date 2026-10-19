@@ -314,7 +314,9 @@ export const Route = createFileRoute("/blog/$slug")({
   errorComponent: ({ error }) => (
     <MarketingShell page="blog">
       <Section>
-        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>{(error as Error).message}</p>
+        <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
+          {(error as Error).message}
+        </p>
       </Section>
     </MarketingShell>
   ),
@@ -381,9 +383,9 @@ function ArticlePage() {
     ? "Inwestuj w pożyczki zabezpieczone nieruchomościami"
     : "Szukasz finansowania pod zabezpieczenie nieruchomości?";
   const ctaSub = isInvestor
-    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. W Klubie Inwestorów Hipotecznych: możliwość składania Zleceń, Akademia inwestora, wzory dokumentów, narzędzia AI i wsparcie compliance."
+    ? "Inwestorzy na rynku pożyczek zabezpieczonych nieruchomościami realnie osiągają od kilkunastu do nawet kilkudziesięciu procent rocznie. Jako partner Finance You dostajesz szkolenie inwestora, wzory dokumentów, narzędzia do analizy i wsparcie compliance — a w bonusie możliwość składania Zleceń."
     : "Złóż bezpłatny wniosek — jedno zgłoszenie trafia do wielu prywatnych inwestorów i partnerów finansowych. Bez zobowiązań.";
-  const ctaLabel = isInvestor ? "Poznaj Klub Inwestorów" : "Sprawdź możliwości bezpłatnie";
+  const ctaLabel = isInvestor ? "Zostań partnerem Finance You" : "Sprawdź możliwości bezpłatnie";
   const ctaMicro = isInvestor
     ? "Realne stopy zwrotu: kilkanaście–kilkadziesiąt % rocznie • dostęp do zgłoszeń klientów • decyzja należy do Ciebie"
     : "Bezpłatne zgłoszenie • bez zobowiązań • liczy się nieruchomość, nie sam scoring";
