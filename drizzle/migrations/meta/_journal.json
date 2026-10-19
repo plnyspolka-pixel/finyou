@@ -239,13 +239,6 @@
       "when": 1792079695735,
       "tag": "0033_dedup_przenosi_operatora_partnera",
       "breakpoints": true
-    },
-    {
-      "idx": 34,
-      "version": "7",
-      "when": 1792411200000,
-      "tag": "0034_dokumenty_prawne_1_0",
-      "breakpoints": true
     }
   ]
 }
