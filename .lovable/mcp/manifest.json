@@ -887,10 +887,10 @@
       {
         "name": "get_updates_since",
         "title": "What's new since",
-        "description": "Raport „co nowego” na Finance You od wskazanego momentu: nowe leady, nowe wnioski pożyczkowe, wiadomości przychodzące od klientów i inwestorów (e-mail, Messenger, czat, SMS, telefon), nowe oferty inwestorów, odpowiedzi instytucji finansujących i opłacone dostępy. Zwraca liczniki, listy z linkami do panelu oraz `next_since` do użycia przy kolejnym wywołaniu. Bez `since` bierze ostatnią godzinę. Tylko administrator/operator.",
+        "description": "Raport „co nowego” na Finance You: nowe leady, nowe wnioski pożyczkowe, wiadomości przychodzące od klientów i inwestorów (e-mail, Messenger, czat, SMS, telefon), nowe oferty inwestorów, odpowiedzi instytucji finansujących i opłacone dostępy. Bez `since` raport liczy się od ostatniego odpytania tego użytkownika przez MCP (serwer pamięta znacznik; przy pierwszym odpytaniu bierze ostatnie 24 h) i przesuwa znacznik na koniec okna. Jawne `since` / `until` to zapytanie historyczne — nie przesuwa znacznika (chyba że `advance_cursor: true`). Zwraca liczniki, listy z linkami do panelu, `since`, `since_source` (`last_query` / `default` / `explicit`) i `since_label` — powiedz użytkownikowi, od kiedy liczony jest raport (np. „od Twojego ostatniego pytania, wt. 10:58”). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
-          "idempotentHint": true,
+          "idempotentHint": false,
           "openWorldHint": false
         },
         "inputSchema": {
@@ -899,7 +899,7 @@
             "since": {
               "type": "string",
               "format": "date-time",
-              "description": "Początek okna (ISO 8601, np. 2026-09-21T10:00:00Z). Domyślnie 60 minut wstecz."
+              "description": "Początek okna (ISO 8601, np. 2026-09-21T10:00:00Z) — tylko dla pytań o konkretny okres („od tygodnia”, „od 9:00”). Pomiń, by dostać nowości od ostatniego odpytania."
             },
             "until": {
               "type": "string",
@@ -911,6 +911,10 @@
               "minimum": 1,
               "maximum": 50,
               "description": "Maksymalna liczba pozycji na sekcję (domyślnie 20). Liczniki są zawsze pełne."
+            },
+            "advance_cursor": {
+              "type": "boolean",
+              "description": "Czy po raporcie zapamiętać `until` jako moment ostatniego odpytania. Domyślnie true bez `since`/`until`, false przy jawnym oknie."
             }
           },
           "additionalProperties": false,
