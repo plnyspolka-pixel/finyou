@@ -1,0 +1,71 @@
+{
+  "$comment": "System marki Finance You — jedno źródło prawdy dla generatorów (PDF, strony lead magnetów i narzędzi, maile, miniatury, grafiki w wideo). Wartości przeniesione z 'Finance You Design System' (src/styles.css, .fy-marketing) i COMPANY_DATA (src/lib/company.ts). Zmiana tylko commitem.",
+  "version": "2026-10-19.1",
+  "name": "Finance You",
+  "domain": "financeyou.pl",
+  "logo": {
+    "asset": "src/assets/financeyou-logo.png.asset.json",
+    "note": "Logo wygenerowane na jasnym beżowym tle — na ciemnym tle odwracamy (jak FinanceYouLogo variant=dark).",
+    "minWidthPx": 120,
+    "clearSpaceRatio": 0.25
+  },
+  "colors": {
+    "navy950": "#010533",
+    "background": "#070b22",
+    "surface": "#0d1638",
+    "navy800": "#122864",
+    "primary": "#2a6fdb",
+    "accent": "#4f8bf0",
+    "cyan": "#43b2e1",
+    "gold": "#eabe4a",
+    "goldLight": "#efce6f",
+    "foreground": "#e8eefc",
+    "mutedForeground": "#b2c5ec",
+    "border": "#2c3f6e",
+    "paper": "#ffffff",
+    "ink": "#111827",
+    "inkMuted": "#4b5563",
+    "riskBox": "#fff7e0",
+    "riskBorder": "#eabe4a"
+  },
+  "typography": {
+    "fontFamily": "Montserrat",
+    "fallback": "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+    "weights": { "regular": 400, "medium": 500, "semibold": 600, "bold": 700, "extrabold": 800 },
+    "scale": { "display": 40, "h1": 30, "h2": 22, "h3": 17, "body": 11, "small": 9, "caption": 8 },
+    "lineHeight": 1.45,
+    "note": "Skala w pt dla PDF (A4); strony www skalują x1.33 do px."
+  },
+  "grid": {
+    "pdf": { "page": "A4", "marginMm": 18, "columns": 12, "gutterMm": 4 },
+    "web": { "maxWidthPx": 1120, "gutterPx": 16, "radiusPx": 16 }
+  },
+  "style": {
+    "icons": "liniowe, 1.75px, zaokrąglone końcówki (lucide)",
+    "photos": "nieruchomości i dokumenty w ciepłym świetle; bez stockowych uśmiechów i banknotów; bez twarzy klientów",
+    "ctaButton": "złoty (gold) na granacie, tekst granatowy, zaokrąglenie 9999px"
+  },
+  "company": {
+    "legalName": "Finance You sp. z o.o.",
+    "krs": "0000635207",
+    "nip": "7010611803",
+    "address": "ul. Nowogrodzka 31, 00-511 Warszawa",
+    "email": "kontakt@financeyou.pl",
+    "phone": "+48 732 059 898",
+    "website": "https://financeyou.pl"
+  },
+  "mandatory": {
+    "footer": "Finance You sp. z o.o., KRS 0000635207, ul. Nowogrodzka 31, 00-511 Warszawa · kontakt@financeyou.pl · financeyou.pl",
+    "aiNotice": "Treść przygotowana z użyciem AI.",
+    "riskInvestor": "Materiał edukacyjny, nie stanowi oferty ani rekomendacji. Inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału.",
+    "riskBorrower": "Finansowanie wyłącznie dla przedsiębiorców, na cel związany z działalnością gospodarczą. Pożyczka zabezpieczona hipoteką — brak spłaty może skutkować utratą nieruchomości. Decyzja należy do finansujących.",
+    "versionLine": "Wersja {version} · {date}"
+  },
+  "allowedClaims": [
+    "ok. 15 lat na rynku finansowania pozabankowego",
+    "ok. 12 stałych partnerów finansowych",
+    "tysiące przeanalizowanych tematów",
+    "setki obsłużonych klientów",
+    "ponad 100 wypłaconych pożyczek"
+  ]
+}
