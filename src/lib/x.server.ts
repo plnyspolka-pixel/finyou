@@ -23,6 +23,7 @@
 //     wymaga pollingu (jak kontener IG albo publish_id TikToka).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withOriginFilter } from "@/lib/autopilot/state.server";
 import {
   X_TEXT_LIMIT,
   pickXMedia,
@@ -757,6 +758,11 @@ export async function processXQueueItem(id: string): Promise<{
       return { ok: true, preparing: true };
     }
     const msg = err instanceof Error ? err.message : String(err);
+    // HTTP 402 = brak kredytów API X – ponawianie nic nie da, a mieli limity.
+    if (isXCreditsError(msg)) {
+      await markFailed(item, `${X_CREDITS_MESSAGE} (${msg})`, { noRetry: true });
+      return { ok: false, error: X_CREDITS_MESSAGE };
+    }
     await markFailed(item, msg);
     return { ok: false, error: msg };
   }
@@ -885,6 +891,21 @@ async function processProcessingItems(): Promise<{ published: number; errors: st
  * YouTube/FB/IG/TikTok). Najpierw odświeżenie tokena, potem domknięcie wpisów
  * po uploadzie, na końcu JEDNA nowa publikacja.
  */
+/**
+ * Kanał X jest WYŁĄCZONY, dopóki właściciel nie zdecyduje o kredytach API
+ * (brief p. 8.4). Włączenie: zmienna środowiskowa X_PUBLISHING_ENABLED=true.
+ */
+export function isXPublishingEnabled(): boolean {
+  return (process.env.X_PUBLISHING_ENABLED ?? "").trim().toLowerCase() === "true";
+}
+
+export const X_CREDITS_MESSAGE =
+  "X: brak kredytów API (HTTP 402) – kanał wymaga doładowania planu API; wpis nie będzie ponawiany.";
+
+export function isXCreditsError(msg: string): boolean {
+  return /\(HTTP 402\)|HTTP 402\b/.test(msg);
+}
+
 export async function runXPublishTick(): Promise<{
   ok: boolean;
   processed: number;
@@ -903,6 +924,7 @@ export async function runXPublishTick(): Promise<{
   };
   const { configured } = getXEnv();
   if (!configured) return empty;
+  if (!isXPublishingEnabled()) return empty;
 
   const row = await getIntegrationRow();
   if (!row.refresh_token) return empty;
@@ -927,15 +949,18 @@ export async function runXPublishTick(): Promise<{
   });
   errors.push(...poll.errors);
 
-  const { data: due, error } = await supabaseAdmin
-    .from("social_publish_queue")
-    .select("id")
-    .eq("platform", "x")
-    .eq("status", "pending")
-    .is("x_media_status", null)
-    .lte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at", { ascending: true })
-    .limit(MAX_POSTS_PER_TICK);
+  const { data: due, error } = await withOriginFilter(
+    // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).
+    supabaseAdmin
+      .from("social_publish_queue")
+      .select("id")
+      .eq("platform", "x")
+      .eq("status", "pending")
+      .is("x_media_status", null)
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(MAX_POSTS_PER_TICK),
+  );
   if (error) throw new Error(error.message);
 
   let published = poll.published;

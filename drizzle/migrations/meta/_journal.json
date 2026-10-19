@@ -239,6 +239,27 @@
       "when": 1792079695735,
       "tag": "0033_dedup_przenosi_operatora_partnera",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792434076592,
+      "tag": "0034_autopilot_fundament",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792434136592,
+      "tag": "0035_autopilot_tick_cron",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792434196592,
+      "tag": "0036_autopilot_sekwencje_email",
+      "breakpoints": true
     }
   ]
 }

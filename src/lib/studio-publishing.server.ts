@@ -26,6 +26,7 @@
 //   * istniejący kontener IG jest ponawiany zamiast tworzenia nowego.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withOriginFilter } from "@/lib/autopilot/state.server";
 import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import {
   classifyGraphError,
@@ -368,6 +369,42 @@ async function deferAllDue(minutes: number, reason: string) {
     .lte("scheduled_at", new Date().toISOString());
 }
 
+/** Po tylu minutach w `publishing` uznajemy, że worker padł w trakcie publikacji. */
+export const META_STALLED_CLAIM_MIN = 60;
+
+/**
+ * Wpisy Meta, które utknęły w `publishing` (worker padł między przejęciem a
+ * zapisem wyniku – np. limit czasu Workera przy wysyłce dużego pliku).
+ *
+ * NIE wracają automatycznie do `pending`: Reels i posty FB nie mają klucza
+ * idempotencji, więc jeśli Meta zdążyła opublikować, ponowienie dałoby
+ * duplikat. Przechodzą do `failed` z jasnym opisem – tick ich nie bierze,
+ * a ponowienie (`retry_social_queue_item`) jest świadomą decyzją po
+ * sprawdzeniu strony. Kontenery IG nie wiszą w `publishing` (mają
+ * `processing` z własnym limitem czasu), więc ich to nie dotyczy.
+ */
+export async function reclaimStalledMetaClaims(now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - META_STALLED_CLAIM_MIN * 60_000).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("social_publish_queue")
+    .update({
+      status: "failed",
+      last_error:
+        `Publikacja przerwana – wpis wisiał w stanie „publishing” ponad ${META_STALLED_CLAIM_MIN} min ` +
+        "(worker przerwał pracę). Sprawdź na stronie/profilu, czy materiał nie został już opublikowany, " +
+        "i dopiero wtedy ponów (retry_social_queue_item).",
+    })
+    .eq("status", "publishing")
+    .in("platform", META_PLATFORMS)
+    .lt("updated_at", cutoff)
+    .select("id");
+  if (error) {
+    console.error("[social-publish] reclaimStalledMetaClaims:", error.message);
+    return 0;
+  }
+  return data?.length ?? 0;
+}
+
 type TickState = { rateLimited: boolean; retryAfterMin: number | null };
 
 // Publikacja jednego wpisu: optymistyczne przejęcie (pending → publishing)
@@ -544,19 +581,25 @@ export async function runSocialPublishTick(): Promise<{
 
   // Najpierw domykamy kontenery IG (najtańsze wywołania i najbliżej publikacji),
   // dopiero potem bierzemy nowe wpisy — przy limicie Meta liczy się kolejność.
+  const reclaimed = await reclaimStalledMetaClaims();
+  if (reclaimed > 0) errors.push(`Odzyskano ${reclaimed} wpis(y) wiszące w „publishing” → failed.`);
+
   const ig = await processInstagramProcessingItems(state);
   published += ig.published;
   errors.push(...ig.errors);
 
-  const { data: due, error } = await supabaseAdmin
-    .from("social_publish_queue")
-    .select("id")
-    .eq("status", "pending")
-    // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
-    .in("platform", META_PLATFORMS)
-    .lte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at", { ascending: true })
-    .limit(MAX_ITEMS_PER_TICK);
+  const { data: due, error } = await withOriginFilter(
+    // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).
+    supabaseAdmin
+      .from("social_publish_queue")
+      .select("id")
+      .eq("status", "pending")
+      // Wpisy TikToka i X-a biorą ich własne ticki — ta kolejka jest wspólna.
+      .in("platform", META_PLATFORMS)
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(MAX_ITEMS_PER_TICK),
+  );
   if (error) throw new Error(error.message);
 
   let processed = 0;

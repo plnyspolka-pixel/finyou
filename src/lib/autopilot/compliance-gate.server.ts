@@ -1,0 +1,150 @@
+// Bramka compliance – warstwa serwerowa: recenzent (Claude, gdy jest klucz;
+// inaczej Gemini Pro z osobnym promptem), autor poprawek (Gemini Flash) i
+// audyt każdej decyzji w ai_growth_action_log (module = compliance_gate).
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { claudeJson, isClaudeConfigured } from "@/lib/claude-json.server";
+import { AI_MODEL_FAST, AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
+import { currentDateContextPl } from "./date-context";
+import {
+  runGateLoop,
+  type GateDeps,
+  type GateResult,
+  type ReviewIssue,
+  type ReviewResult,
+} from "./compliance-gate";
+import type { RuleContext } from "./compliance-rules";
+import { COMPLIANCE_LOG_MODULE } from "./types";
+
+const TRACK_PL = {
+  pozyczkobiorca: "pożyczkobiorcy (wyłącznie firmy, cel gospodarczy)",
+  inwestor: "inwestorzy prywatni",
+};
+
+const REVIEWER_SYSTEM = `Jesteś niezależnym recenzentem zgodności treści marketingowych Finance You sp. z o.o. (platforma B2B finansowania pozabankowego pod zastaw nieruchomości oraz program dla prywatnych inwestorów). Nie jesteś autorem tekstu – oceniasz go krytycznie.
+Oceń ryzyko (0–100) i zwróć konkretne poprawki. Sprawdź:
+- wprowadzanie w błąd, obietnice zysku/zwrotu/finansowania, bagatelizowanie ryzyka, superlatywy bez pokrycia,
+- sygnały ostrzegawcze KNF/ESMA wobec finfluencerów (zamknięte grupy, „sam inwestuję”, inwestowanie jako zabawa, presja czasu),
+- ton wobec osób w trudnej sytuacji finansowej (bez straszenia i bez presji),
+- zgodność z torem: pożyczkobiorca = przedsiębiorca i cel gospodarczy (nigdy konsument); inwestor = szanse z uczciwą linią o ryzyku,
+- awatar AI może edukować i odpowiadać na FAQ, nie składa ofert, nie podaje stóp zwrotu i nie wywiera presji.
+verdict: "ok" gdy treść można opublikować bez zmian; "fix" gdy wystarczą poprawki; "reject" gdy temat jest nie do uratowania.`;
+
+const reviewSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    verdict: { type: "string", enum: ["ok", "fix", "reject"] },
+    risk: { type: "integer" },
+    issues: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: { problem: { type: "string" }, fix: { type: "string" } },
+        required: ["problem", "fix"],
+      },
+    },
+  },
+  required: ["verdict", "risk", "issues"],
+};
+
+function reviewUserMsg(text: string, ctx: RuleContext): string {
+  return `${currentDateContextPl()}
+Rodzaj treści: ${ctx.kind}${ctx.platform ? `, platforma: ${ctx.platform}` : ""}.
+Tor: ${ctx.track ? TRACK_PL[ctx.track] : "ogólny"}.
+
+TREŚĆ DO OCENY:
+"""
+${text}
+"""`;
+}
+
+function normalizeReview(r: Partial<ReviewResult> | null | undefined): ReviewResult {
+  const verdict = r?.verdict === "ok" || r?.verdict === "reject" ? r.verdict : "fix";
+  const risk = Math.max(0, Math.min(100, Math.round(Number(r?.risk ?? 100))));
+  const issues = Array.isArray(r?.issues)
+    ? r!.issues!.filter((i) => i && typeof i.problem === "string").slice(0, 10)
+    : [];
+  return { verdict, risk, issues };
+}
+
+export const llmGateDeps: GateDeps = {
+  async review(text, ctx) {
+    if (isClaudeConfigured()) {
+      const r = await claudeJson<ReviewResult>({
+        label: "compliance_review",
+        system: REVIEWER_SYSTEM,
+        content: [{ type: "text", text: reviewUserMsg(text, ctx) }],
+        schema: reviewSchema,
+        effort: "medium",
+        maxTokens: 4000,
+      });
+      return normalizeReview(r);
+    }
+    // Bez klucza Anthropic: inny model niż autor (Pro vs Flash) i osobny prompt.
+    const r = await lovableAiJson<ReviewResult>({
+      model: AI_MODEL_PRO,
+      system: `${REVIEWER_SYSTEM}\nZwróć wyłącznie JSON: {"verdict","risk","issues":[{"problem","fix"}]}.`,
+      user: reviewUserMsg(text, ctx),
+      temperature: 0,
+    });
+    return normalizeReview(r);
+  },
+  async rewrite(text, ctx, issues: ReviewIssue[]) {
+    const r = await lovableAiJson<{ text: string }>({
+      model: AI_MODEL_FAST,
+      system: `${currentDateContextPl()}
+Jesteś autorem treści Finance You. Popraw tekst DOKŁADNIE według uwag recenzenta zgodności, zachowując długość, styl (polski, hook w formie pytania, zadziornie, klient jest bohaterem) i sens edukacyjny. Nie dodawaj cen, stóp zwrotu ani obietnic. Zwróć JSON {"text": "..."}.`,
+      user: `Rodzaj: ${ctx.kind}; tor: ${ctx.track ?? "ogólny"}.
+UWAGI:
+${issues.map((i, n) => `${n + 1}. ${i.problem} → ${i.fix}`).join("\n")}
+
+TEKST:
+"""
+${text}
+"""`,
+      temperature: 0.3,
+    });
+    const out = typeof r?.text === "string" ? r.text.trim() : "";
+    if (!out) throw new Error("Autor poprawek zwrócił pusty tekst.");
+    return out;
+  },
+};
+
+/**
+ * Pełna bramka z audytem. `ref` wiąże decyzję z obiektem (np. studio job,
+ * wpis kolejki, lead magnet) – trafia do payloadu dziennika.
+ */
+export async function runComplianceGate(
+  input: { text: string; ctx: RuleContext; ref?: Record<string, unknown> },
+  deps: GateDeps = llmGateDeps,
+): Promise<GateResult & { logId: string | null }> {
+  const result = await runGateLoop({ text: input.text, ctx: input.ctx }, deps);
+  const last = result.iterations[result.iterations.length - 1];
+  const { data } = await supabaseAdmin
+    .from("ai_growth_action_log")
+    .insert({
+      module: COMPLIANCE_LOG_MODULE,
+      action: `gate_${input.ctx.kind}`,
+      status: result.status === "rejected" ? "blocked" : "ok",
+      summary: `[${result.status}] ${input.ctx.kind}${input.ctx.track ? `/${input.ctx.track}` : ""} – ${result.iterations.length} iter.${result.reason ? ` – ${result.reason}` : ""}`,
+      payload: {
+        rules_version: result.rulesVersion,
+        ctx: input.ctx,
+        ref: input.ref ?? null,
+        status: result.status,
+        reason: result.reason ?? null,
+        original_text: input.text,
+        final_text: result.text,
+        iterations: result.iterations.map((it) => ({
+          n: it.n,
+          blocks: it.blocks.map((b) => ({ code: b.code, match: b.match ?? null })),
+          review: it.review,
+        })),
+        last_risk: last?.review?.risk ?? null,
+      } as never,
+    })
+    .select("id")
+    .single();
+  return { ...result, logId: data?.id ?? null };
+}

@@ -13,6 +13,7 @@
 // stąd MAX_UPLOADS_PER_TICK = 2 i retry z odroczeniem zamiast pętli.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { withOriginFilter } from "@/lib/autopilot/state.server";
 
 const OAUTH_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -317,6 +318,12 @@ async function uploadShort(item: QueueRow): Promise<string> {
       status: {
         privacyStatus: item.privacy_status,
         selfDeclaredMadeForKids: false,
+        // Ujawnienie treści zmienionej/syntetycznej (awatar AI, lektor AI) –
+        // wymóg YouTube i AI Act art. 50. Domyślnie true: kolejka zasilana jest
+        // ze Studia (100% AI); materiał nagrany przez człowieka ma flagę false.
+        containsSyntheticMedia:
+          (item as { contains_synthetic_media?: boolean | null }).contains_synthetic_media !==
+          false,
       },
     }),
   });
@@ -413,13 +420,16 @@ export async function runYoutubeShortsTick(): Promise<{
   const row = await getIntegrationRow();
   if (!row.refresh_token) return { ok: true, processed: 0, published: 0, errors: [] };
 
-  const { data: due, error } = await supabaseAdmin
-    .from("youtube_publish_queue")
-    .select("id")
-    .eq("status", "pending")
-    .lte("scheduled_at", new Date().toISOString())
-    .order("scheduled_at", { ascending: true })
-    .limit(MAX_UPLOADS_PER_TICK);
+  const { data: due, error } = await withOriginFilter(
+    // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).
+    supabaseAdmin
+      .from("youtube_publish_queue")
+      .select("id")
+      .eq("status", "pending")
+      .lte("scheduled_at", new Date().toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(MAX_UPLOADS_PER_TICK),
+  );
   if (error) throw new Error(error.message);
 
   let published = 0;

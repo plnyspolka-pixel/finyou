@@ -6,6 +6,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseRssItems, type RssItem } from "@/lib/pr/core";
 import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
+import {
+  currentDateContextPl,
+  fixStaleYearInTitle,
+  weekRangePl,
+} from "@/lib/autopilot/date-context";
 
 function slugify(s: string): string {
   return s
@@ -227,7 +232,7 @@ const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
 - Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
 - SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
 - LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (program partnerski dla inwestorów: szkolenie i narzędzia), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
-- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): realne stopy zwrotu inwestorów na rynku prywatnych pożyczek pod zastaw nieruchomości komunikujemy jako OD KILKUNASTU DO NAWET KILKUDZIESIĘCIU PROCENT ROCZNIE — używaj tego przedziału, gdy piszesz o zwrotach z tej klasy aktywów. Inne liczby (oprocentowanie lokat, obligacji, najmu itd.) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. NIE przedstawiaj zwrotu jako pewnego ani gwarantowanego: ZAKAZANE "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
+- ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): NIE podawaj stóp zwrotu, oprocentowania ani łącznej wartości kapitału jako obietnicy lub typowego wyniku. Opisuj mechanizm (odsetki od pożyczki zabezpieczonej hipoteką, decyzja i ryzyko po stronie inwestora). Liczby rynkowe (stopy NBP, inflacja, oprocentowanie lokat, obligacji) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. ZAKAZANE: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
 - W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
 
 /**
@@ -296,12 +301,12 @@ async function writeArticleFromNews(
   } else if (kind === "legal_market_monitor") {
     audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, POŻYCZKOBIORCA, PROFESJONALIŚCI RYNKU (pośrednicy, doradcy, prawnicy) śledzący zmiany w prawie i sytuację rynkową. Styl newsroom / przegląd prawny — rzeczowo, bez sensacji, KAŻDA teza z datą i źródłem, KAŻDA sekcja kończy się zdaniem "Możliwy wpływ:" z konkretnym mechanizmem przełożenia na rynek nieruchomości / rynek pożyczek pod zastaw. Pisz tak, żeby czytelnik po lekturze wiedział, czy sytuacja jest dla niego korzystna, neutralna czy niekorzystna i dlaczego. CTA do "[sprawdź bezpłatnie możliwości finansowania](https://financeyou.pl/dla-klienta)" wpleć dyskretnie 1 raz w podsumowaniu.`;
   } else if (audience === "investor") {
-    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (pasywny dochód, realne stopy zwrotu od kilkunastu do nawet kilkudziesięciu procent rocznie, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
+    audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (mechanizm zarabiania na odsetkach jak bank, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja – BEZ podawania stóp zwrotu jako obietnicy). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: OSOBA POSZUKUJĄCA POŻYCZKI pod zastaw mieszkania/domu/działki (zła historia w BIK, brak zdolności w banku, II hipoteka, szybka gotówka). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: PRZEDSIĘBIORCA szukający finansowania WYŁĄCZNIE NA CEL GOSPODARCZY pod zastaw nieruchomości (bank odmówił lub trwa to za długo, II hipoteka, płynność firmy, inwestycja w firmie). Platforma jest B2B – nie kieruj treści do konsumentów i nie obiecuj finansowania „bez BIK” ani „bez zdolności”. Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
-  const sys = `Jesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const sys = `${currentDateContextPl()}\nJesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
 
   const briefLabel =
     kind === "investor_review"
@@ -313,7 +318,7 @@ async function writeArticleFromNews(
     kind === "investor_review"
       ? "Napisz dogłębny PRZEGLĄD INWESTYCYJNY porównujący klasy aktywów. Tytuł musi być porównawczy (np. zawierać 'vs', 'porównanie', 'ranking', 'co się bardziej opłaca')."
       : kind === "legal_market_monitor"
-        ? "Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia', datę tygodnia, 'Co zmieniło się w prawie i na rynku nieruchomości') — bez clickbaitu."
+        ? `Napisz cotygodniowy PRZEGLĄD PRAWNO-RYNKOWY za okres ${weekRangePl()}. Tytuł ma zawierać ramkę czasową (np. 'Przegląd tygodnia ${weekRangePl()}', 'Co zmieniło się w prawie i na rynku nieruchomości') — wyłącznie ten zakres dat, bez clickbaitu.`
         : `Napisz codzienny post blogowy dla ${audience === "investor" ? "INWESTORA" : "POŻYCZKOBIORCY"}. Tytuł musi sugerować aktualność i wyraźnie celować w tę grupę odbiorców.`;
 
   const userMsg = `${briefLabel}
@@ -366,7 +371,11 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
   for (const k of jsonSchema.required) {
     if ((parsed as any)?.[k] == null) throw new Error(`AI writer: brak pola ${k}`);
   }
-  return parsed as ArticleDraft;
+  // Ostatnia linia obrony przed „starym rokiem” w tytułach (patrz date-context.ts).
+  const draft = parsed as ArticleDraft;
+  draft.title = fixStaleYearInTitle(draft.title).text;
+  draft.meta_title = fixStaleYearInTitle(draft.meta_title).text;
+  return draft;
 }
 
 import { pickStockPhoto } from "./blog-stock-photos";
@@ -479,6 +488,8 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
     await supabaseAdmin.from("ai_growth_action_log").insert({
       module: "seo_content_engine",
       action: "compliance_warning",
+      // CHECK w ai_growth_action_log dopuszcza 'warning' od migracji
+      // 20261019180000 – wcześniej wpis był cicho odrzucany.
       status: "warning",
       summary: `Artykuł ${inserted.slug} zawiera frazy niezgodne z komunikacją serwisu: ${banned.join("; ")}`,
       payload: { article_id: inserted.id, slug: inserted.slug, banned_phrases: banned },

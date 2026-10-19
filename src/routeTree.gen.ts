@@ -43,6 +43,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
@@ -144,6 +145,7 @@ import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiado
 import { Route as KlientProfilRouteImport } from './routes/klient.profil'
 import { Route as KlientPropozycjeRouteImport } from './routes/klient.propozycje'
 import { Route as LSlugRouteImport } from './routes/l.$slug'
+import { Route as NarzedzieSlugRouteImport } from './routes/narzedzie.$slug'
 import { Route as OperatorIndexRouteImport } from './routes/operator.index'
 import { Route as OperatorCzatRouteImport } from './routes/operator.czat'
 import { Route as OperatorFakturyRouteImport } from './routes/operator.faktury'
@@ -269,6 +271,7 @@ import { Route as ApiPublicHooksAffiliateEventsTickRouteImport } from './routes/
 import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes/api/public/hooks/analysis-pipeline-tick'
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes/api/public/hooks/auto-distribution-tick'
+import { Route as ApiPublicHooksAutopilotTickRouteImport } from './routes/api/public/hooks/autopilot-tick'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
@@ -484,6 +487,11 @@ const RejestracjaRoute = RejestracjaRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WyborPaneluRoute = WyborPaneluRouteImport.update({
@@ -994,6 +1002,11 @@ const KlientPropozycjeRoute = KlientPropozycjeRouteImport.update({
 const LSlugRoute = LSlugRouteImport.update({
   id: '/l/$slug',
   path: '/l/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NarzedzieSlugRoute = NarzedzieSlugRouteImport.update({
+  id: '/narzedzie/$slug',
+  path: '/narzedzie/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OperatorIndexRoute = OperatorIndexRouteImport.update({
@@ -1658,6 +1671,12 @@ const ApiPublicHooksAutoDistributionTickRoute =
     path: '/api/public/hooks/auto-distribution-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksAutopilotTickRoute =
+  ApiPublicHooksAutopilotTickRouteImport.update({
+    id: '/api/public/hooks/autopilot-tick',
+    path: '/api/public/hooks/autopilot-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDailyBlogTickRoute =
   ApiPublicHooksDailyBlogTickRouteImport.update({
     id: '/api/public/hooks/daily-blog-tick',
@@ -1943,6 +1962,7 @@ export interface FileRoutesByFullPath {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2040,6 +2060,7 @@ export interface FileRoutesByFullPath {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2169,6 +2190,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2242,6 +2264,7 @@ export interface FileRoutesByTo {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2336,6 +2359,7 @@ export interface FileRoutesByTo {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2463,6 +2487,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2542,6 +2567,7 @@ export interface FileRoutesById {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2639,6 +2665,7 @@ export interface FileRoutesById {
   '/klient/profil': typeof KlientProfilRoute
   '/klient/propozycje': typeof KlientPropozycjeRoute
   '/l/$slug': typeof LSlugRoute
+  '/narzedzie/$slug': typeof NarzedzieSlugRoute
   '/operator/czat': typeof OperatorCzatRoute
   '/operator/faktury': typeof OperatorFakturyRoute
   '/operator/kalkulator': typeof OperatorKalkulatorRoute
@@ -2768,6 +2795,7 @@ export interface FileRoutesById {
   '/api/public/hooks/analysis-pipeline-tick': typeof ApiPublicHooksAnalysisPipelineTickRoute
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
+  '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2848,6 +2876,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -2945,6 +2974,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3074,6 +3104,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3147,6 +3178,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3241,6 +3273,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3368,6 +3401,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3446,6 +3480,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3543,6 +3578,7 @@ export interface FileRouteTypes {
     | '/klient/profil'
     | '/klient/propozycje'
     | '/l/$slug'
+    | '/narzedzie/$slug'
     | '/operator/czat'
     | '/operator/faktury'
     | '/operator/kalkulator'
@@ -3672,6 +3708,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/analysis-pipeline-tick'
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
+    | '/api/public/hooks/autopilot-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3751,6 +3788,7 @@ export interface RootRouteChildren {
   RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StartRoute: typeof StartRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
@@ -3766,6 +3804,7 @@ export interface RootRouteChildren {
   FakturaIdRoute: typeof FakturaIdRoute
   KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
+  NarzedzieSlugRoute: typeof NarzedzieSlugRoute
   PobierzPlikTokenRoute: typeof PobierzPlikTokenRoute
   PobierzSlugRoute: typeof PobierzSlugRoute
   PodpisTokenRoute: typeof PodpisTokenRoute
@@ -3813,6 +3852,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAnalysisPipelineTickRoute: typeof ApiPublicHooksAnalysisPipelineTickRoute
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksAutoDistributionTickRoute: typeof ApiPublicHooksAutoDistributionTickRoute
+  ApiPublicHooksAutopilotTickRoute: typeof ApiPublicHooksAutopilotTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -4093,6 +4133,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wybor-panelu': {
@@ -4800,6 +4847,13 @@ declare module '@tanstack/react-router' {
       path: '/l/$slug'
       fullPath: '/l/$slug'
       preLoaderRoute: typeof LSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/narzedzie/$slug': {
+      id: '/narzedzie/$slug'
+      path: '/narzedzie/$slug'
+      fullPath: '/narzedzie/$slug'
+      preLoaderRoute: typeof NarzedzieSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/operator/': {
@@ -5677,6 +5731,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAutoDistributionTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/autopilot-tick': {
+      id: '/api/public/hooks/autopilot-tick'
+      path: '/api/public/hooks/autopilot-tick'
+      fullPath: '/api/public/hooks/autopilot-tick'
+      preLoaderRoute: typeof ApiPublicHooksAutopilotTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/daily-blog-tick': {
       id: '/api/public/hooks/daily-blog-tick'
       path: '/api/public/hooks/daily-blog-tick'
@@ -6472,6 +6533,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminInwestoraRoute: RegulaminInwestoraRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StartRoute: StartRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
@@ -6488,6 +6550,7 @@ const rootRouteChildren: RootRouteChildren = {
   FakturaIdRoute: FakturaIdRoute,
   KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
+  NarzedzieSlugRoute: NarzedzieSlugRoute,
   PobierzPlikTokenRoute: PobierzPlikTokenRoute,
   PobierzSlugRoute: PobierzSlugRoute,
   PodpisTokenRoute: PodpisTokenRoute,
@@ -6538,6 +6601,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAniaCallbacksRoute: ApiPublicHooksAniaCallbacksRoute,
   ApiPublicHooksAutoDistributionTickRoute:
     ApiPublicHooksAutoDistributionTickRoute,
+  ApiPublicHooksAutopilotTickRoute: ApiPublicHooksAutopilotTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:

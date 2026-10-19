@@ -512,6 +512,12 @@ export type AiBadgeSpec = {
   border: string;
   borderWidth: number;
   textColor: string;
+  /**
+   * Pełna etykieta w pierwszych sekundach (AI Act art. 50 – oznaczenie
+   * najpóźniej przy pierwszym kontakcie), pod znaczkiem, potem znika;
+   * znaczek „AI” zostaje do końca filmu.
+   */
+  intro?: { text: string; seconds: number; fontSize: number };
 };
 
 export const AI_BADGE: AiBadgeSpec = {
@@ -528,6 +534,7 @@ export const AI_BADGE: AiBadgeSpec = {
   border: "#FFFFFF",
   borderWidth: 1.5,
   textColor: "#FFFFFF",
+  intro: { text: "Treść wygenerowana przez AI", seconds: 2.5, fontSize: 22 },
 };
 
 /** Do końca filmu — libass rysuje zdarzenie tylko w czasie trwania wideo. */
@@ -597,10 +604,23 @@ export function aiBadgeEvents(
   const label =
     `{\\an5\\pos(${cx},${cy})\\fnInter\\fs${spec.fontSize}\\b1\\fsp1` +
     `\\1c&H${assBgr(spec.textColor)}&\\1a&H38&\\bord0\\shad0}${escapeAss(spec.text)}`;
-  return [
+  const events = [
     `Dialogue: ${BADGE_LAYER},${assTime(0)},${end},AiBadge,,0,0,0,,${shape}`,
     `Dialogue: ${BADGE_LAYER + 1},${assTime(0)},${end},AiBadge,,0,0,0,,${label}`,
   ];
+  if (spec.intro) {
+    // Prawy brzeg wyrównany ze znaczkiem, tuż pod nim; obrys i cień dla
+    // czytelności na jasnym i ciemnym tle; wygaszenie 0,3 s.
+    const ix = dims.width - spec.marginRight;
+    const iy = spec.marginTop + spec.height + 8;
+    const introEnd = assTime(Math.round(spec.intro.seconds * 100));
+    events.push(
+      `Dialogue: ${BADGE_LAYER + 1},${assTime(0)},${introEnd},AiBadge,,0,0,0,,` +
+        `{\\an9\\pos(${ix},${iy})\\fnInter\\fs${spec.intro.fontSize}\\b1\\fad(0,300)` +
+        `\\1c&H${assBgr(spec.textColor)}&\\3c&H000000&\\3a&H40&\\bord2\\shad1}${escapeAss(spec.intro.text)}`,
+    );
+  }
+  return events;
 }
 
 // ── Nakładki dynamiczne ─────────────────────────────────────────────────────
