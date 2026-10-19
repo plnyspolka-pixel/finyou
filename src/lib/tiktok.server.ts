@@ -22,6 +22,7 @@
 // Limity TikToka: ~15 postów/dobę na konto, stąd MAX_POSTS_PER_TICK = 1
 // (jeden post na przebieg ticka, zgodnie ze specyfikacją).
 
+import { isAiGeneratedMedia } from "./publishing-agent/publication-gate";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   applyCreatorConstraints,
@@ -526,6 +527,8 @@ async function uploadVideo(
       // Ujawnienie treści komercyjnej („Your brand" / „Branded content").
       brand_organic_toggle: effective.brandOrganic,
       brand_content_toggle: effective.brandedContent,
+      // Oznaczenie treści generowanej przez AI (AI Act art. 50, zasady TikToka).
+      is_aigc: isAiGeneratedMedia({ videoUrl: item.video_url, origin: (item as { origin?: string | null }).origin }),
     },
     source_info: {
       source: "FILE_UPLOAD",
@@ -696,6 +699,41 @@ export async function processTiktokQueueItem(id: string): Promise<{
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as TiktokQueueRow;
+
+  // Bramka agenta publikującego — tylko przed init (po init wpis domykamy).
+  // TikTok bierze jako podpis sam tytuł, więc nic nie dopisujemy; oznaczenie
+  // AI idzie flagą `is_aigc` w post_info.
+  if (!item.tiktok_publish_id) {
+    const { guardQueuePublication } = await import("./publishing-agent/publish-guard.server");
+    const raw = claimed as TiktokQueueRow & { origin?: string | null; audience_track?: string | null };
+    const guard = await guardQueuePublication(
+      "social_publish_queue",
+      {
+        id,
+        platform: "tiktok",
+        title: item.title,
+        body: item.message,
+        video_url: item.video_url,
+        origin: raw.origin,
+        audience_track: raw.audience_track,
+      },
+      { appendMandatory: false },
+    );
+    if (guard.action !== "publish") {
+      const hold = guard.action === "hold";
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({
+          status: hold ? "pending" : "failed",
+          tiktok_status: null,
+          last_error: guard.message,
+          ...(hold ? { scheduled_at: guard.until.toISOString() } : {}),
+        })
+        .eq("id", id);
+      return { ok: false, error: guard.message };
+    }
+  }
+
   try {
     const token = await getAccessToken();
 

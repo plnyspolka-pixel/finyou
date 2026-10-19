@@ -399,6 +399,37 @@ export async function processSocialQueueItem(
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as QueueRow;
+
+  // Bramka agenta publikującego (compliance, wyłączone platformy, pauza) —
+  // przed pierwszym wywołaniem Meta. Kontener IG, który już istnieje, przeszedł
+  // ją przy tworzeniu (podpis jest w kontenerze), więc go nie sprawdzamy drugi raz.
+  if (!item.ig_creation_id) {
+    const { guardQueuePublication } = await import("./publishing-agent/publish-guard.server");
+    const raw = claimed as QueueRow & { origin?: string | null; audience_track?: string | null };
+    const guard = await guardQueuePublication("social_publish_queue", {
+      id,
+      platform: item.platform,
+      title: item.title,
+      body: item.message,
+      video_url: item.video_url,
+      image_url: item.image_url,
+      origin: raw.origin,
+      audience_track: raw.audience_track,
+    });
+    if (guard.action === "reject") {
+      await markFailed(item, guard.message, { noRetry: true });
+      return { ok: false, error: guard.message };
+    }
+    if (guard.action === "hold") {
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({ status: "pending", scheduled_at: guard.until.toISOString(), last_error: guard.message })
+        .eq("id", id);
+      return { ok: false, deferred: true, error: guard.message };
+    }
+    item.message = guard.body;
+  }
+
   try {
     if (item.platform === "facebook_post") {
       const postId = await publishFacebookPost(item);
@@ -529,6 +560,47 @@ async function processInstagramProcessingItems(
   return { published, errors };
 }
 
+/** Po ilu minutach w `publishing` wpis uznajemy za porzucony przez workera. */
+const STALLED_CLAIM_MIN = 30;
+/** Po ilu godzinach porzucony wpis FB (bez dowodu, że nic nie wyszło) idzie do `failed`. */
+const STALLED_FB_FAIL_HOURS = 6;
+
+/**
+ * Wpisy Meta porzucone w `publishing` (worker padł między claimem a zapisem
+ * wyniku). Dotąd nic ich nie odzyskiwało — wisiały w nieskończoność
+ * (np. FB Reel z 6.10.2026).
+ *  - IG bez kontenera: do Meta nic nie poszło → wracają do kolejki.
+ *  - FB post / FB Reel: nie wiemy, czy Meta zdążyła opublikować, więc NIE
+ *    ponawiamy automatycznie (ryzyko dubla), tylko po kilku godzinach
+ *    oznaczamy `failed` z instrukcją — wpis jest widoczny i trafia do raportu.
+ */
+export async function reclaimStalledMetaItems(now: Date = new Date()): Promise<{ requeued: number; failed: number }> {
+  const cutoff = new Date(now.getTime() - STALLED_CLAIM_MIN * 60_000).toISOString();
+  const { data: ig } = await supabaseAdmin
+    .from("social_publish_queue")
+    .update({ status: "pending", last_error: "Wznowione po przerwanej publikacji (do Meta nic nie wysłano)." })
+    .eq("platform", "instagram_reels")
+    .eq("status", "publishing")
+    .is("ig_creation_id", null)
+    .is("external_post_id", null)
+    .lt("updated_at", cutoff)
+    .select("id");
+  const fbCutoff = new Date(now.getTime() - STALLED_FB_FAIL_HOURS * 3600_000).toISOString();
+  const { data: fb } = await supabaseAdmin
+    .from("social_publish_queue")
+    .update({
+      status: "failed",
+      last_error:
+        "Publikacja przerwana (wpis wisiał w „publikowanie…”). Sprawdź na stronie FB, czy post wyszedł — jeśli nie, kliknij „Ponów”.",
+    })
+    .in("platform", ["facebook_post", "facebook_reels"])
+    .eq("status", "publishing")
+    .is("external_post_id", null)
+    .lt("updated_at", fbCutoff)
+    .select("id");
+  return { requeued: ig?.length ?? 0, failed: fb?.length ?? 0 };
+}
+
 export async function runSocialPublishTick(): Promise<{
   ok: boolean;
   processed: number;
@@ -541,6 +613,10 @@ export async function runSocialPublishTick(): Promise<{
   const errors: string[] = [];
   let published = 0;
   let deferred = 0;
+
+  await reclaimStalledMetaItems().catch(() => {
+    // Samonaprawa nie może wywalić ticka.
+  });
 
   // Najpierw domykamy kontenery IG (najtańsze wywołania i najbliżej publikacji),
   // dopiero potem bierzemy nowe wpisy — przy limicie Meta liczy się kolejność.

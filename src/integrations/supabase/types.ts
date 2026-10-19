@@ -1822,6 +1822,303 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_audience_profiles: {
+        Row: {
+          active: boolean
+          allowed_topics: string[]
+          cadence_share_pct: number
+          cadence_share_updated_at: string | null
+          forbidden_phrases: string[]
+          label: string
+          material_audience: string
+          monthly_ads_budget_pln: number
+          primary_cta_url: string
+          publish_slots: Json
+          target_audience: string
+          tone: string
+          track: string
+          updated_at: string
+          updated_by: string | null
+          weekly_long_target: number
+          weekly_reels_target: number
+        }
+        Insert: {
+          active?: boolean
+          allowed_topics?: string[]
+          cadence_share_pct?: number
+          cadence_share_updated_at?: string | null
+          forbidden_phrases?: string[]
+          label: string
+          material_audience: string
+          monthly_ads_budget_pln?: number
+          primary_cta_url: string
+          publish_slots?: Json
+          target_audience: string
+          tone: string
+          track: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_long_target?: number
+          weekly_reels_target?: number
+        }
+        Update: {
+          active?: boolean
+          allowed_topics?: string[]
+          cadence_share_pct?: number
+          cadence_share_updated_at?: string | null
+          forbidden_phrases?: string[]
+          label?: string
+          material_audience?: string
+          monthly_ads_budget_pln?: number
+          primary_cta_url?: string
+          publish_slots?: Json
+          target_audience?: string
+          tone?: string
+          track?: string
+          updated_at?: string
+          updated_by?: string | null
+          weekly_long_target?: number
+          weekly_reels_target?: number
+        }
+        Relationships: []
+      }
+      ai_compliance_checks: {
+        Row: {
+          actor: string
+          added_elements: Json
+          content_kind: string
+          created_at: string
+          decision: string
+          final_text: string | null
+          id: string
+          iteration: number
+          reviewer: Json | null
+          rules_version: string
+          stage: string
+          subject_id: string | null
+          subject_type: string
+          text_sha256: string | null
+          track: string | null
+          violations: Json
+        }
+        Insert: {
+          actor?: string
+          added_elements?: Json
+          content_kind: string
+          created_at?: string
+          decision: string
+          final_text?: string | null
+          id?: string
+          iteration?: number
+          reviewer?: Json | null
+          rules_version: string
+          stage?: string
+          subject_id?: string | null
+          subject_type: string
+          text_sha256?: string | null
+          track?: string | null
+          violations?: Json
+        }
+        Update: {
+          actor?: string
+          added_elements?: Json
+          content_kind?: string
+          created_at?: string
+          decision?: string
+          final_text?: string | null
+          id?: string
+          iteration?: number
+          reviewer?: Json | null
+          rules_version?: string
+          stage?: string
+          subject_id?: string | null
+          subject_type?: string
+          text_sha256?: string | null
+          track?: string | null
+          violations?: Json
+        }
+        Relationships: []
+      }
+      content_publication_metrics: {
+        Row: {
+          audience_track: string | null
+          avg_watch_pct: number | null
+          comments: number | null
+          cost_pln: number | null
+          created_at: string
+          duration_sec: number | null
+          external_id: string
+          follows: number | null
+          format: string | null
+          hook_text: string | null
+          hook_variant: string | null
+          id: string
+          keyword: string | null
+          lead_magnet_id: string | null
+          likes: number | null
+          measured_on: string
+          motion_components: string[] | null
+          platform: string
+          published_at: string | null
+          queue_id: string | null
+          queue_table: string | null
+          raw: Json | null
+          reach: number | null
+          saves: number | null
+          series: string | null
+          shares: number | null
+          slot_local: string | null
+          studio_job_id: string | null
+          views: number | null
+          visual_hook: string | null
+        }
+        Insert: {
+          audience_track?: string | null
+          avg_watch_pct?: number | null
+          comments?: number | null
+          cost_pln?: number | null
+          created_at?: string
+          duration_sec?: number | null
+          external_id: string
+          follows?: number | null
+          format?: string | null
+          hook_text?: string | null
+          hook_variant?: string | null
+          id?: string
+          keyword?: string | null
+          lead_magnet_id?: string | null
+          likes?: number | null
+          measured_on?: string
+          motion_components?: string[] | null
+          platform: string
+          published_at?: string | null
+          queue_id?: string | null
+          queue_table?: string | null
+          raw?: Json | null
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          slot_local?: string | null
+          studio_job_id?: string | null
+          views?: number | null
+          visual_hook?: string | null
+        }
+        Update: {
+          audience_track?: string | null
+          avg_watch_pct?: number | null
+          comments?: number | null
+          cost_pln?: number | null
+          created_at?: string
+          duration_sec?: number | null
+          external_id?: string
+          follows?: number | null
+          format?: string | null
+          hook_text?: string | null
+          hook_variant?: string | null
+          id?: string
+          keyword?: string | null
+          lead_magnet_id?: string | null
+          likes?: number | null
+          measured_on?: string
+          motion_components?: string[] | null
+          platform?: string
+          published_at?: string | null
+          queue_id?: string | null
+          queue_table?: string | null
+          raw?: Json | null
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          slot_local?: string | null
+          studio_job_id?: string | null
+          views?: number | null
+          visual_hook?: string | null
+        }
+        Relationships: []
+      }
+      publishing_agent_settings: {
+        Row: {
+          auto_pause_reason: string | null
+          auto_paused_at: string | null
+          cost_spike_factor: number
+          daily_ai_budget_pln: number
+          daily_report_hour: number
+          disabled_platforms: string[]
+          double_opt_in: boolean
+          id: boolean
+          kill_switch: boolean
+          kill_switch_at: string | null
+          kill_switch_by: string | null
+          kill_switch_reason: string | null
+          last_daily_report_at: string | null
+          last_weekly_report_at: string | null
+          max_consecutive_publish_failures: number
+          max_emails_per_recipient_per_week: number
+          max_posts_per_day_per_platform: number
+          mode: string
+          monthly_heygen_credit_limit: number | null
+          owner_email: string | null
+          owner_phone: string | null
+          updated_at: string
+          updated_by: string | null
+          weekly_report_dow: number
+        }
+        Insert: {
+          auto_pause_reason?: string | null
+          auto_paused_at?: string | null
+          cost_spike_factor?: number
+          daily_ai_budget_pln?: number
+          daily_report_hour?: number
+          disabled_platforms?: string[]
+          double_opt_in?: boolean
+          id?: boolean
+          kill_switch?: boolean
+          kill_switch_at?: string | null
+          kill_switch_by?: string | null
+          kill_switch_reason?: string | null
+          last_daily_report_at?: string | null
+          last_weekly_report_at?: string | null
+          max_consecutive_publish_failures?: number
+          max_emails_per_recipient_per_week?: number
+          max_posts_per_day_per_platform?: number
+          mode?: string
+          monthly_heygen_credit_limit?: number | null
+          owner_email?: string | null
+          owner_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          weekly_report_dow?: number
+        }
+        Update: {
+          auto_pause_reason?: string | null
+          auto_paused_at?: string | null
+          cost_spike_factor?: number
+          daily_ai_budget_pln?: number
+          daily_report_hour?: number
+          disabled_platforms?: string[]
+          double_opt_in?: boolean
+          id?: boolean
+          kill_switch?: boolean
+          kill_switch_at?: string | null
+          kill_switch_by?: string | null
+          kill_switch_reason?: string | null
+          last_daily_report_at?: string | null
+          last_weekly_report_at?: string | null
+          max_consecutive_publish_failures?: number
+          max_emails_per_recipient_per_week?: number
+          max_posts_per_day_per_platform?: number
+          mode?: string
+          monthly_heygen_credit_limit?: number | null
+          owner_email?: string | null
+          owner_phone?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          weekly_report_dow?: number
+        }
+        Relationships: []
+      }
       ai_growth_settings: {
         Row: {
           automation_mode: string
@@ -13430,6 +13727,10 @@ export type Database = {
       }
       social_publish_queue: {
         Row: {
+          audience_track: string | null
+          compliance_check_id: string | null
+          compliance_rules_version: string | null
+          origin: string
           attempt_count: number
           created_at: string
           created_by: string | null
@@ -13457,6 +13758,10 @@ export type Database = {
           x_media_status: string | null
         }
         Insert: {
+          audience_track?: string | null
+          compliance_check_id?: string | null
+          compliance_rules_version?: string | null
+          origin?: string
           attempt_count?: number
           created_at?: string
           created_by?: string | null
@@ -13484,6 +13789,10 @@ export type Database = {
           x_media_status?: string | null
         }
         Update: {
+          audience_track?: string | null
+          compliance_check_id?: string | null
+          compliance_rules_version?: string | null
+          origin?: string
           attempt_count?: number
           created_at?: string
           created_by?: string | null
@@ -14788,6 +15097,10 @@ export type Database = {
       }
       youtube_publish_queue: {
         Row: {
+          audience_track: string | null
+          compliance_check_id: string | null
+          compliance_rules_version: string | null
+          origin: string
           attempt_count: number
           created_at: string
           created_by: string | null
@@ -14805,6 +15118,10 @@ export type Database = {
           youtube_video_id: string | null
         }
         Insert: {
+          audience_track?: string | null
+          compliance_check_id?: string | null
+          compliance_rules_version?: string | null
+          origin?: string
           attempt_count?: number
           created_at?: string
           created_by?: string | null
@@ -14822,6 +15139,10 @@ export type Database = {
           youtube_video_id?: string | null
         }
         Update: {
+          audience_track?: string | null
+          compliance_check_id?: string | null
+          compliance_rules_version?: string | null
+          origin?: string
           attempt_count?: number
           created_at?: string
           created_by?: string | null

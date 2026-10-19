@@ -269,6 +269,8 @@ export type QueueRow = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Ustawiane przez bramkę agenta: materiał AI → containsSyntheticMedia. */
+  synthetic?: boolean;
 };
 
 function shortsTitle(title: string): string {
@@ -317,6 +319,8 @@ async function uploadShort(item: QueueRow): Promise<string> {
       status: {
         privacyStatus: item.privacy_status,
         selfDeclaredMadeForKids: false,
+        // Oznaczenie treści zmienionej / syntetycznej (awatar i głos AI).
+        ...(item.synthetic ? { containsSyntheticMedia: true } : {}),
       },
     }),
   });
@@ -357,6 +361,36 @@ export async function processQueueItem(
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as QueueRow;
+
+  // Bramka agenta publikującego (compliance, wyłączone platformy, pauza).
+  {
+    const { guardQueuePublication } = await import("./publishing-agent/publish-guard.server");
+    const raw = claimed as QueueRow & { origin?: string | null; audience_track?: string | null };
+    const guard = await guardQueuePublication("youtube_publish_queue", {
+      id,
+      platform: "youtube",
+      title: item.title,
+      body: item.description,
+      video_url: item.source_video_url,
+      origin: raw.origin,
+      audience_track: raw.audience_track,
+    });
+    if (guard.action !== "publish") {
+      const hold = guard.action === "hold";
+      await supabaseAdmin
+        .from("youtube_publish_queue")
+        .update({
+          status: hold ? "pending" : "failed",
+          last_error: guard.message,
+          ...(hold ? { scheduled_at: guard.until.toISOString() } : {}),
+        })
+        .eq("id", id);
+      return { ok: false, error: guard.message };
+    }
+    item.description = guard.body;
+    item.synthetic = guard.aiGenerated;
+  }
+
   try {
     const videoId = await uploadShort(item);
     await supabaseAdmin

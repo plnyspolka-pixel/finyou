@@ -700,6 +700,42 @@ export async function processXQueueItem(id: string): Promise<{
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as XQueueRow;
+
+  // Bramka agenta publikującego — przed uploadem (po uploadzie domykamy).
+  if (!item.x_media_id) {
+    const { guardQueuePublication } = await import("./publishing-agent/publish-guard.server");
+    const raw = claimed as XQueueRow & {
+      origin?: string | null;
+      audience_track?: string | null;
+      image_url?: string | null;
+      video_url?: string | null;
+    };
+    const guard = await guardQueuePublication("social_publish_queue", {
+      id,
+      platform: "x",
+      title: item.title,
+      body: item.message,
+      video_url: raw.video_url,
+      image_url: raw.image_url,
+      origin: raw.origin,
+      audience_track: raw.audience_track,
+    });
+    if (guard.action !== "publish") {
+      const hold = guard.action === "hold";
+      await supabaseAdmin
+        .from("social_publish_queue")
+        .update({
+          status: hold ? "pending" : "failed",
+          x_media_status: null,
+          last_error: guard.message,
+          ...(hold ? { scheduled_at: guard.until.toISOString() } : {}),
+        })
+        .eq("id", id);
+      return { ok: false, error: guard.message };
+    }
+    item.message = guard.body;
+  }
+
   try {
     const text = textFor(item);
     const media = pickXMedia(item);
@@ -906,6 +942,14 @@ export async function runXPublishTick(): Promise<{
 
   const row = await getIntegrationRow();
   if (!row.refresh_token) return empty;
+
+  // Kanał wyłączony w ustawieniach agenta (domyślnie X — brak kredytów API):
+  // wpisy czekają w kolejce, nic nie jest wysyłane.
+  {
+    const { getAgentSettings } = await import("./publishing-agent/agent-settings.server");
+    const { isPlatformDisabled } = await import("./publishing-agent/safeguards");
+    if (isPlatformDisabled(await getAgentSettings(), "x")) return empty;
+  }
 
   const errors: string[] = [];
   const refresh = await refreshXTokenIfNeeded();
