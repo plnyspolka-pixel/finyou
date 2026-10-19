@@ -1,30 +1,25 @@
 /**
- * Buduje migrację dokumentów prawnych w wersji 1.0 z plików w docs/legal.
+ * Buduje dane dokumentów prawnych 1.0 z plików w docs/legal.
  *
  *   npx tsx scripts/legal/build-dokumenty.ts
  *
  * Wejście: docs/legal/klient/regulamin-klienta.md, polityka-prywatnosci.md,
  *          docs/legal/pakiet-inwestora/*.txt i *.docx
  * Wynik:   docs/legal/pakiet-inwestora/CONTENT.sha256, MANIFEST.sha256 oraz
- *          migracja 20261019120000 (+ lustro drizzle 0034).
+ *          src/lib/legal/dokumenty-1-0.dane.ts (treść dla narzędzia
+ *          apply_legal_documents_1_0, które wgrywa dokumenty do bazy).
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  PAKIET_PLIKI,
-  migracjaDokumentow,
-  sha256Hex,
-  type DokumentPakietu,
-  type KodPakietu,
-} from "../../src/lib/legal/dokumenty-1-0";
+import { PAKIET_PLIKI, sha256Hex, type KodPakietu } from "../../src/lib/legal/dokumenty-1-0";
 
 const ROOT = process.cwd();
 const KLIENT = join(ROOT, "docs", "legal", "klient");
 const PAKIET = join(ROOT, "docs", "legal", "pakiet-inwestora");
-const MIGRATION = join(ROOT, "supabase", "migrations", "20261019120000_dokumenty_prawne_1_0.sql");
-const MIGRATION_DRIZZLE = join(ROOT, "drizzle", "migrations", "0034_dokumenty_prawne_1_0.sql");
+const DANE = join(ROOT, "src", "lib", "legal", "dokumenty-1-0.dane.ts");
 
-const pakiet: DokumentPakietu[] = (Object.keys(PAKIET_PLIKI) as KodPakietu[]).map((code) => ({
+const kody = Object.keys(PAKIET_PLIKI) as KodPakietu[];
+const pakiet = kody.map((code) => ({
   code,
   content_text: readFileSync(join(PAKIET, `${PAKIET_PLIKI[code]}.txt`), "utf8"),
   docx: readFileSync(join(PAKIET, `${PAKIET_PLIKI[code]}.docx`)),
@@ -37,11 +32,28 @@ writeFileSync(
   join(PAKIET, "MANIFEST.sha256"),
   pakiet.map((d) => `${sha256Hex(d.docx)}  ${PAKIET_PLIKI[d.code]}.docx`).join("\n") + "\n",
 );
-const sql = migracjaDokumentow(
-  readFileSync(join(KLIENT, "regulamin-klienta.md"), "utf8"),
-  readFileSync(join(KLIENT, "polityka-prywatnosci.md"), "utf8"),
-  pakiet,
+
+const dane = {
+  regulamin: readFileSync(join(KLIENT, "regulamin-klienta.md"), "utf8"),
+  polityka: readFileSync(join(KLIENT, "polityka-prywatnosci.md"), "utf8"),
+  pakiet: Object.fromEntries(
+    pakiet.map((d) => [
+      d.code,
+      { content_text: d.content_text, docx_base64: Buffer.from(d.docx).toString("base64") },
+    ]),
+  ),
+};
+writeFileSync(
+  DANE,
+  `// Plik wygenerowany: npx tsx scripts/legal/build-dokumenty.ts — nie edytować ręcznie.
+// Treść dokumentów prawnych 1.0 z docs/legal (tylko po stronie serwera).
+/* eslint-disable */
+// prettier-ignore
+import type { DaneDokumentow } from "./dokumenty-1-0";
+
+// prettier-ignore
+export const DANE_DOKUMENTOW_1_0: DaneDokumentow = ${JSON.stringify(dane)};
+`,
+  "utf8",
 );
-writeFileSync(MIGRATION, sql, "utf8");
-writeFileSync(MIGRATION_DRIZZLE, sql, "utf8");
-console.log("migracja:", sql.length, "znaków");
+console.log("dane:", JSON.stringify(dane).length, "znaków");
