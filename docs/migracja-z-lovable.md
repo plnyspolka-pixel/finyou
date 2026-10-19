@@ -418,9 +418,10 @@ zawiera tylko `migration_target`, brak hooków Auth (custom access token itp.).
 
 **Do zrobienia przed przełączeniem (decyzje/akcje właściciela, wszystko przygotowane):**
 1. **Funkcje Edge** — repo ma 4 (`supabase/functions/`: `didit-webhook`, `rcn-proxy`, `registry-proxy`,
-   `tpay-proxy`), nowy projekt ma **0**. Wdrożenie: `supabase functions deploy --project-ref
-   vkzndnaoxhdxrxlpntcb` (`config.toml`: `verify_jwt = false` dla `rcn-proxy`, `tpay-proxy`,
-   `registry-proxy`) albo `deploy_edge_function` przez konektor. Sekrety funkcji (Dashboard → Edge
+   `tpay-proxy`) — **wszystkie 4 wdrożone w nowym projekcie (19.10.2026, `deploy_edge_function`
+   przez konektor, `verify_jwt = false`; smoke test: odrzucają obce hosty kodem 400)**. Ponowne
+   wdrożenie po zmianach: `supabase functions deploy --project-ref vkzndnaoxhdxrxlpntcb`
+   (`config.toml`) albo konektor. Sekrety funkcji (Dashboard → Edge
    Functions → Secrets): `DIDIT_WEBHOOK_SECRET`, `PROXY_SHARED_SECRET` (`SUPABASE_URL` i
    `SUPABASE_SERVICE_ROLE_KEY` są wstrzykiwane automatycznie). W panelu Didit zmienić adres webhooka
    na `https://vkzndnaoxhdxrxlpntcb.supabase.co/functions/v1/didit-webhook`. Pozostałe webhooki
