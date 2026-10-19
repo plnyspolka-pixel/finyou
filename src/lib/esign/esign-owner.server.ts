@@ -665,8 +665,10 @@ export async function createEnvelopeImpl(
   data: z.infer<typeof createEnvelopeInput>,
   context: AuthCtx,
 ) {
+  data = createEnvelopeInput.parse(data);
   const { userId } = context;
   const role = await resolveOwnerRole(context.supabase as any, userId);
+  if (data.documentMarkdown != null && role !== "admin") throw new Error("Wymagana rola administrator.");
   const sender = await senderIdentity(role, userId, context.claims);
 
   // Źródło: wgrany PDF albo wygenerowana umowa (PDF; DOCX zamieniany na PDF).
@@ -682,6 +684,9 @@ export async function createEnvelopeImpl(
     loanApplicationId = loanApplicationId ?? src.loanApplicationId;
   } else if (data.fileBase64) {
     bytes = base64ToBytes(data.fileBase64);
+  } else if (data.documentMarkdown != null) {
+    const { renderEsignMarkdown } = await import("./esign-markdown");
+    bytes = await renderEsignMarkdown(data.documentMarkdown, data.documentHeader ?? undefined);
   } else {
     throw new Error("Wgraj plik PDF albo wskaż wygenerowaną umowę.");
   }
@@ -851,6 +856,7 @@ export async function createEnvelopeImpl(
       title: env.title,
       source_sha256: sourceSha,
       pages: info.pages,
+      ...(data.documentMarkdown != null ? { source_kind: "markdown", source_bytes: bytes.byteLength } : {}),
       signers: resolved.map((r) => ({ name: r.row.full_name, email: r.row.email })),
     },
   });

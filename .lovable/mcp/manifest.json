@@ -2531,7 +2531,7 @@
       {
         "name": "create_esign_envelope",
         "title": "Create e-signature envelope",
-        "description": "Tworzy kopertę podpisu dokumentowego (e-podpis Finance You) z wygenerowanej umowy (`generated_document_id` z `generate_contract_docx` / `list_generated_documents`; DOCX zamieniany na PDF) albo z wgranego PDF (`file_base64`). Podpisujący: `ja` (Ty), `klient` (klient pożyczkowy z systemu — dane i e-mail z karty klienta), `inwestor`, `zewnetrzny`. Każdy podpisujący przechodzi weryfikację tożsamości (Didit) i kod jednorazowy. Domyślnie zapisuje SZKIC (`send_now=false`) — pokaż użytkownikowi tytuł, dokument i listę podpisujących, a po potwierdzeniu wyślij `send_esign_envelope` albo od razu `send_now=true`. Zwraca id koperty, kod i link weryfikacji oraz adresy, na które poszły zaproszenia.",
+        "description": "Tworzy kopertę e-podpisu z dokładnie jednego źródła: generated_document_id XOR file_base64 XOR document_markdown (maks. 200 000 znaków, PDF A4). Markdown i opcjonalny document_header na każdej stronie są dostępne tylko administratorowi. Obsługuje nagłówki, bold/italic, listy, tabele, ->tytuł<- i \\pagebreak. Przed utworzeniem można użyć preview_esign_document. Podpisujący: ja, klient, inwestor, zewnetrzny. Zachowuje standardową weryfikację tożsamości i kod podpisu. Domyślnie SZKIC (send_now=false); wysyłka tylko po zgodzie przez send_esign_envelope lub send_now=true. Zwraca id, kod weryfikacji i adresy zaproszeń.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -2565,6 +2565,17 @@
               "type": "string",
               "minLength": 16,
               "description": "PDF w base64 (zamiast umowy z rejestru)."
+            },
+            "document_markdown": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200000,
+              "description": "Treść dokumentu Markdown, do 200 000 znaków; alternatywa dla pliku i generated_document_id. Tylko administrator."
+            },
+            "document_header": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Krótki nagłówek każdej strony PDF, tylko z document_markdown."
             },
             "client_id": {
               "type": "string",
@@ -2654,6 +2665,37 @@
           "required": [
             "title",
             "signers"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preview_esign_document",
+        "title": "Preview e-signature document",
+        "description": "Tylko administrator: renderuje document_markdown do PDF A4 z opcjonalnym document_header; zapisuje prywatny podgląd bez koperty i wysyłki, zwraca podpisany link ważny 1 godzinę, page_count i sha256.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "document_markdown": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200000
+            },
+            "document_header": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "document_markdown"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
@@ -20837,6 +20879,531 @@
               "default": 25
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_status",
+        "title": "Autopilot status",
+        "description": "Stan autopilota agenta publikującego: tryb (off / manual_review / semi_auto / full_autopilot), wyłącznik awaryjny, profile dwóch torów (pożyczkobiorca, inwestor), podział kadencji, limity, dzisiejsze zużycie (koszt AI, publikacje, błędy z rzędu) i wykryte anomalie. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_kill_switch",
+        "title": "Autopilot kill switch",
+        "description": "Wyłącznik awaryjny autopilota: `paused: true` natychmiast wstrzymuje produkcję i publikację wpisów autopilota (ręczne publikacje zespołu działają dalej); `paused: false` wznawia (tylko administrator). Podaj powód – trafia do dziennika.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "paused": {
+              "type": "boolean"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            }
+          },
+          "required": [
+            "paused",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_set_mode",
+        "title": "Set autopilot mode",
+        "description": "Zmienia tryb modułu autopilota (off / manual_review / semi_auto / full_autopilot). Decyzja właściciela – tylko administrator, wymaga `confirm: true`. Nie zmienia ai_growth_settings.automation_mode innych silników.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "manual_review",
+                "semi_auto",
+                "full_autopilot"
+              ]
+            },
+            "confirm": {
+              "type": "boolean",
+              "const": true
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 300
+            }
+          },
+          "required": [
+            "mode",
+            "confirm",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_update_profiles",
+        "title": "Update autopilot audience profiles",
+        "description": "Zmienia profile torów (pożyczkobiorca / inwestor): grupa docelowa, ton, CTA, tematy, frazy zakazane, sloty, rolki/tydz., budżet AI toru, wartość leada. Pola podane nadpisują zapisane; budżet reklam (`monthlyAdBudgetPln`) zmienia tylko administrator przez `autopilot_update_limits`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "profiles": {
+              "type": "object",
+              "properties": {
+                "pozyczkobiorca": {
+                  "type": "object",
+                  "properties": {
+                    "track": {
+                      "type": "string",
+                      "enum": [
+                        "pozyczkobiorca",
+                        "inwestor"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 2
+                    },
+                    "targetGroup": {
+                      "type": "string",
+                      "minLength": 5
+                    },
+                    "tone": {
+                      "type": "string",
+                      "minLength": 5
+                    },
+                    "ctaUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "ctaLabel": {
+                      "type": "string",
+                      "minLength": 2
+                    },
+                    "allowedTopics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "forbiddenPhrases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "platform": {
+                            "type": "string",
+                            "enum": [
+                              "instagram_reels",
+                              "facebook_reels",
+                              "youtube",
+                              "tiktok",
+                              "x"
+                            ]
+                          },
+                          "weekdays": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 7
+                            },
+                            "minItems": 1
+                          },
+                          "time": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          }
+                        },
+                        "required": [
+                          "platform",
+                          "weekdays",
+                          "time"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "default": []
+                    },
+                    "weeklyReels": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 21
+                    },
+                    "weeklyLongform": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    },
+                    "dailyAiBudgetPln": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000
+                    },
+                    "monthlyAdBudgetPln": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100000
+                    },
+                    "leadValuePln": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "inwestor": {
+                  "type": "object",
+                  "properties": {
+                    "track": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/track"
+                    },
+                    "label": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/label"
+                    },
+                    "targetGroup": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/targetGroup"
+                    },
+                    "tone": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/tone"
+                    },
+                    "ctaUrl": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/ctaUrl"
+                    },
+                    "ctaLabel": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/ctaLabel"
+                    },
+                    "allowedTopics": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/allowedTopics"
+                    },
+                    "forbiddenPhrases": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/forbiddenPhrases"
+                    },
+                    "slots": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/slots"
+                    },
+                    "weeklyReels": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/weeklyReels"
+                    },
+                    "weeklyLongform": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/weeklyLongform"
+                    },
+                    "dailyAiBudgetPln": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/dailyAiBudgetPln"
+                    },
+                    "monthlyAdBudgetPln": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/monthlyAdBudgetPln"
+                    },
+                    "leadValuePln": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/leadValuePln"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "profiles"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_update_limits",
+        "title": "Update autopilot limits",
+        "description": "Limity bezpieczników autopilota: dzienny budżet AI, minimum kredytów HeyGen, budżet podbić per tor i miesiąc, maks. publikacji/dobę/platformę, maks. maili/odbiorcę/tydzień, progi auto-pauzy. Tylko administrator (decyzja właściciela).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limits": {
+              "type": "object",
+              "properties": {
+                "dailyAiBudgetPln": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "heygenMinRemainingCredits": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "monthlyAdBudgetPln": {
+                  "type": "object",
+                  "properties": {
+                    "pozyczkobiorca": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "inwestor": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "pozyczkobiorca",
+                    "inwestor"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxPostsPerDayPerPlatform": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 20
+                },
+                "maxEmailsPerRecipientPerWeek": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 14
+                },
+                "maxConsecutivePublishFailures": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 50
+                },
+                "costSpikeFactor": {
+                  "type": "number",
+                  "minimum": 1.5,
+                  "maximum": 20
+                },
+                "maxQcRejectRate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "limits"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_check_compliance",
+        "title": "Check content with compliance gate",
+        "description": "Sprawdza treść bramką compliance autopilota. `mode: rules` – tylko reguły twarde (bez kosztu); `mode: full` – reguły + niezależny recenzent LLM + pętla poprawek (maks. 3), decyzja zapisana w dzienniku. Zwraca status (passed / rewritten / rejected), finalny tekst i uwagi. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 20000
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "script",
+                "title",
+                "description",
+                "comment_reply",
+                "email",
+                "lead_magnet",
+                "landing",
+                "ad"
+              ]
+            },
+            "track": {
+              "type": "string",
+              "enum": [
+                "pozyczkobiorca",
+                "inwestor"
+              ]
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "instagram_reels",
+                "facebook_reels",
+                "facebook_post",
+                "youtube",
+                "tiktok",
+                "x"
+              ]
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "rules",
+                "full"
+              ],
+              "default": "rules"
+            }
+          },
+          "required": [
+            "text",
+            "kind"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_report",
+        "title": "Autopilot report",
+        "description": "Raport autopilota za ostatnie N dni (1 = dzienny, 7 = tygodniowy): publikacje, mediana wyświetleń, zapisy na listę, leady i koszt per tor, outliery, zmiany agenta i alarmy. Nic nie wysyła. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 7
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_calculators",
+        "title": "Lead-magnet calculators",
+        "description": "Narzędzia-lead-magnety budowane z konfiguracji (silnik kalkulatorów na zweryfikowanych funkcjach systemu): lista konfiguracji z wynikiem kontroli jakości, opcjonalnie obliczenie dla podanych danych (`slug` + `input`). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string"
+            },
+            "input": {
+              "type": "object",
+              "additionalProperties": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_provision_tools",
+        "title": "Provision lead-magnet tools",
+        "description": "Zakłada albo aktualizuje rekordy lead magnetów dla narzędzi-kalkulatorów (/narzedzie/<slug>, hasła ILE / RATA / LTV): kontrola jakości formuł i reguły compliance, zgoda RODO i automat „komentarz z hasłem → link” z mechanizmu lead magnetów. `publish: true` otwiera zapisy i reakcje na hasło (tylko administrator). W trybie full_autopilot tick robi to sam.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "publish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "apply_legal_documents_1_0",
+        "title": "Wgraj dokumenty prawne 1.0",
+        "description": "Wgrywa do bazy dokumenty prawne w wersji 1.0 (regulamin klienta, polityka prywatności, pakiet inwestora FY-LEGAL-1.0) z treści w kodzie. USUWA wcześniejsze wersje regulaminu i polityki oraz WSZYSTKIE akceptacje regulaminu, polityki i pakietu inwestora — użytkownicy akceptują 1.0 od nowa. Idempotentne: gdy baza ma już te dokumenty, nic nie zmienia. Wymaga confirm = \"WGRAJ DOKUMENTY 1.0\". Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "confirm": {
+              "type": "string",
+              "const": "WGRAJ DOKUMENTY 1.0"
+            }
+          },
+          "required": [
+            "confirm"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },

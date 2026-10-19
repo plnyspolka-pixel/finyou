@@ -2,6 +2,7 @@
 // importów serwerowych: trafia także do paczki klienta (typy + walidacja).
 import { z } from "zod";
 import { TOKEN_TTL_DAYS } from "./esign-core";
+import { documentMarkdownSchema, documentHeaderSchema } from "./esign-markdown";
 
 export const CompanySchema = z.object({
   name: z.string().trim().min(2).max(300),
@@ -40,6 +41,8 @@ export const CreateInput = z
     fileBase64: z.string().min(16).optional().nullable(),
     /** Źródło B: wygenerowana umowa (generated_documents.id; PDF albo DOCX → PDF). */
     generatedDocumentId: z.string().uuid().optional().nullable(),
+    documentMarkdown: documentMarkdownSchema.optional().nullable(),
+    documentHeader: documentHeaderSchema.optional().nullable(),
     /** Powiązania koperty z klientem pożyczkowym i wnioskiem. */
     clientId: z.string().uuid().optional().nullable(),
     loanApplicationId: z.string().uuid().optional().nullable(),
@@ -47,8 +50,11 @@ export const CreateInput = z
     signers: z.array(SignerInput).min(1).max(10),
     sendNow: z.boolean().default(true),
   })
-  .refine((v) => Boolean(v.fileBase64) || Boolean(v.generatedDocumentId), {
-    message: "Wgraj plik PDF albo wskaż wygenerowaną umowę.",
+  .refine((v) => [v.fileBase64, v.generatedDocumentId, v.documentMarkdown].filter((x) => x != null).length === 1, {
+    message: "Wskaż dokładnie jedno źródło: wgraj plik PDF albo wskaż wygenerowaną umowę, albo document_markdown.",
+  })
+  .refine((v) => !v.documentHeader || v.documentMarkdown != null, {
+    message: "document_header wymaga document_markdown.",
   });
 
 export type CreateEnvelopeInput = z.infer<typeof CreateInput>;
