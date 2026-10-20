@@ -40,6 +40,24 @@ const signerSchema = z.object({
     .max(50)
     .optional()
     .describe("Kolejność przy signing_mode=kolejno."),
+  capacity_mode: z
+    .enum(["osoba", "firma"])
+    .optional()
+    .describe(
+      "Dla kind=zewnetrzny/klient: osoba — podpis we własnym imieniu; firma — w imieniu podmiotu z `company`. Ta sama osoba (ten sam e-mail) może być na liście kilka razy, jeśli podpisuje w imieniu różnych podmiotów.",
+    ),
+  company: z
+    .object({
+      name: z.string().trim().min(2).max(300),
+      nip: z.string().trim().max(20).optional(),
+      krs: z.string().trim().max(20).optional(),
+      regon: z.string().trim().max(20).optional(),
+      legal_form: z.string().trim().max(120).optional(),
+      address: z.string().trim().max(300).optional(),
+      role: z.string().trim().max(120).optional().describe("Funkcja, np. „Prezes Zarządu”."),
+    })
+    .optional()
+    .describe("Podmiot reprezentowany przy capacity_mode=firma."),
 });
 
 export const createEsignEnvelope = defineTool({
@@ -107,6 +125,20 @@ export const createEsignEnvelope = defineTool({
           phone: s.phone ?? null,
           roleLabel: s.role_label ?? null,
           ...(s.order_no ? { orderNo: s.order_no } : {}),
+          ...(s.capacity_mode ? { capacityMode: s.capacity_mode } : {}),
+          ...(s.company
+            ? {
+                company: {
+                  name: s.company.name,
+                  nip: s.company.nip ?? null,
+                  krs: s.company.krs ?? null,
+                  regon: s.company.regon ?? null,
+                  legalForm: s.company.legal_form ?? null,
+                  address: s.company.address ?? null,
+                  role: s.company.role ?? null,
+                },
+              }
+            : {}),
         })),
       });
       return ok(await (await owner()).createEnvelopeImpl(data, context));

@@ -2886,6 +2886,54 @@
                     "minimum": 1,
                     "maximum": 50,
                     "description": "Kolejność przy signing_mode=kolejno."
+                  },
+                  "capacity_mode": {
+                    "type": "string",
+                    "enum": [
+                      "osoba",
+                      "firma"
+                    ],
+                    "description": "Dla kind=zewnetrzny/klient: osoba — podpis we własnym imieniu; firma — w imieniu podmiotu z `company`. Ta sama osoba (ten sam e-mail) może być na liście kilka razy, jeśli podpisuje w imieniu różnych podmiotów."
+                  },
+                  "company": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 300
+                      },
+                      "nip": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "krs": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "regon": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "legal_form": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "address": {
+                        "type": "string",
+                        "maxLength": 300
+                      },
+                      "role": {
+                        "type": "string",
+                        "maxLength": 120,
+                        "description": "Funkcja, np. „Prezes Zarządu”."
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Podmiot reprezentowany przy capacity_mode=firma."
                   }
                 },
                 "required": [
