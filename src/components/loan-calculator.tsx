@@ -490,26 +490,6 @@ export function LoanCalculator({
   // konsumenckim nie ma zastosowania; zostaje tylko kontrola rażącej dysproporcji.
   const nonInterestExceeds = false;
   const commissionOver45 = nonInterestTotal > amount * 0.45 + 1e-9;
-  // Krótkie ostrzeżenia pod suwakiem prowizji — tylko sygnał, bez wyjaśnień.
-  const commissionWarnings: { text: string; danger: boolean }[] = [];
-  if (commissionAboveReference)
-    commissionWarnings.push({ text: "powyżej wartości referencyjnej", danger: false });
-  if (commissionPct >= 20)
-    commissionWarnings.push({ text: "wysoka prowizja — może zniechęcić klienta", danger: false });
-  if (commissionPct >= 30)
-    commissionWarnings.push({ text: "ryzyko zakwestionowania prowizji", danger: false });
-  if (commissionPct >= 20 && annualRate >= MAX_INTEREST_RATE - 1e-9)
-    commissionWarnings.push({
-      text: "odsetki maksymalne + wysoka prowizja — podwyższone ryzyko prawne",
-      danger: true,
-    });
-  if (commissionPct >= 40)
-    commissionWarnings.push({ text: "ryzyko uznania umowy za wyzysk", danger: true });
-  if (commissionOver45)
-    commissionWarnings.push({
-      text: "powyżej 45% kwoty — ryzyko rażącej dysproporcji",
-      danger: true,
-    });
   const krotnoscWarn = krotnosc > 1.5;
   const krotnoscDanger = krotnosc > KROTNOSC_PROG;
   const krotnoscLabel = `${krotnosc.toFixed(2).replace(".", ",")}×`;
@@ -1153,25 +1133,24 @@ export function LoanCalculator({
                 <span>
                   {`${commissionPct.toFixed(1).replace(".", ",")}% (${plnLabel(commissionPln)}) · klient spłaca ją w ratach`}
                 </span>
+                {commissionOver45 && (
+                  <span className="text-destructive font-medium">
+                    powyżej 45% kwoty — ryzyko rażącej dysproporcji
+                  </span>
+                )}
               </div>
             ) : (
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
+                {commissionOver45 ? (
+                  <span className="text-destructive font-medium">
+                    powyżej 45% kwoty — ryzyko rażącej dysproporcji
+                  </span>
+                ) : (
+                  <span />
+                )}
                 <span>50%</span>
               </div>
-            )}
-            {commissionWarnings.length > 0 && (
-              <ul className="space-y-0.5 text-xs font-medium">
-                {commissionWarnings.map((w) => (
-                  <li
-                    key={w.text}
-                    className={`flex items-start gap-1.5 ${w.danger ? "text-destructive" : "text-amber-400"}`}
-                  >
-                    <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
-                    <span>{w.text}</span>
-                  </li>
-                ))}
-              </ul>
             )}
           </div>
 
