@@ -792,11 +792,21 @@ export async function createEnvelopeImpl(
     if (!email) throw new Error(`Podaj adres e-mail podpisującego nr ${i + 1}.`);
     if (capacity_mode === "firma" && !company?.name)
       throw new Error(`Podaj dane podmiotu, w imieniu którego podpisuje osoba nr ${i + 1}.`);
-    if (seenEmails.has(email))
+    // Ta sama osoba może podpisać dokument kilka razy wyłącznie w imieniu RÓŻNYCH
+    // podmiotów (np. prezes po stronie pożyczkodawcy i pożyczkobiorcy) — każdy
+    // podpis ma własny token i własną weryfikację.
+    const representedKey =
+      capacity_mode === "firma"
+        ? `firma:${(company?.nip || company?.krs || company?.name || "").replace(/\s+/g, "").toLowerCase()}`
+        : "osoba";
+    const emailKey = `${email}|${representedKey}`;
+    if (seenEmails.has(emailKey))
       throw new Error(
-        `Adres ${email} powtarza się — każdy podpisujący musi mieć własny adres e-mail.`,
+        capacity_mode === "firma"
+          ? `Adres ${email} powtarza się dla tego samego podmiotu — jedna osoba podpisuje raz w imieniu danego podmiotu.`
+          : `Adres ${email} powtarza się — każdy podpisujący musi mieć własny adres e-mail (ta sama osoba może podpisać kilka razy tylko w imieniu różnych podmiotów).`,
       );
-    seenEmails.add(email);
+    seenEmails.add(emailKey);
 
     const token = randomToken();
     resolved.push({
