@@ -1403,9 +1403,9 @@ export function LoanCalculator({
             {AML_THRESHOLD_LABEL} wpisujesz do rejestru i zgłaszasz do GIIF w ciągu 7 dni.
           </>
         );
-        // Podgląd na landingu pokazuje tylko czerwony alert przekroczenia odsetek —
-        // bez niego nie renderujemy pustego kontenera (dodatkowy odstęp space-y).
-        if (marketingPreview && !investorGuidance && !interestExceeds) return null;
+        // Podgląd na landingu: te same statusy prowizji i krotności co w panelu,
+        // ale skrócone do samego tytułu (bez podstaw prawnych i wyjaśnień).
+        const previewStatuses = marketingPreview && !investorGuidance;
         return (
           <div className="space-y-3">
             {/* 1) Odsetki maksymalne (art. 359 §2¹ KC); w podglądzie bez zielonego „w limicie" */}
@@ -1431,6 +1431,45 @@ export function LoanCalculator({
                   </AlertDescription>
                 </Alert>
               )
+            )}
+
+            {previewStatuses && (
+              <>
+                <Alert
+                  className={
+                    commissionOver45 ? dangerCls : commissionAboveReference ? warnCls : okCls
+                  }
+                >
+                  {commissionOver45 ? (
+                    <ShieldAlert className="h-4 w-4 !text-rose-300" />
+                  ) : commissionAboveReference ? (
+                    <AlertTriangle className="h-4 w-4 !text-amber-300" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                  )}
+                  <AlertTitle>
+                    {commissionOver45
+                      ? "Prowizja inwestora — ryzyko rażącej dysproporcji"
+                      : commissionAboveReference
+                        ? "Prowizja inwestora — powyżej wartości referencyjnej"
+                        : "Prowizja inwestora — w wartości referencyjnej"}
+                  </AlertTitle>
+                </Alert>
+                <Alert className={krotnoscDanger ? dangerCls : krotnoscWarn ? warnCls : okCls}>
+                  {krotnoscDanger ? (
+                    <ShieldAlert className="h-4 w-4 !text-rose-300" />
+                  ) : krotnoscWarn ? (
+                    <AlertTriangle className="h-4 w-4 !text-amber-300" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
+                  )}
+                  <AlertTitle>
+                    Krotność {krotnoscLabel} —{" "}
+                    {krotnoscDanger ? "powyżej" : krotnoscWarn ? "blisko" : "poniżej"}{" "}
+                    orientacyjnego progu {KROTNOSC_PROG_LABEL}
+                  </AlertTitle>
+                </Alert>
+              </>
             )}
 
             {/* 2) Prowizja inwestora: wartość referencyjna (wzór MPKK), nie limit ustawowy —
