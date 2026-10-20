@@ -364,6 +364,17 @@ export async function processQueueItem(
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as QueueRow;
+  {
+    // Kontrola końcowa compliance przed wysyłką (brief 5.7).
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("youtube_publish_queue", {
+      ...item,
+      platform: "youtube",
+      message: item.description,
+    });
+    if (!gate.proceed) return { ok: false, error: gate.error };
+    item.description = gate.message;
+  }
   try {
     const videoId = await uploadShort(item);
     await supabaseAdmin

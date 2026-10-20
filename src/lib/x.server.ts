@@ -701,6 +701,13 @@ export async function processXQueueItem(id: string): Promise<{
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as XQueueRow;
+  if (!item.x_media_id) {
+    // Kontrola końcowa compliance przed wysyłką (brief 5.7).
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("social_publish_queue", item);
+    if (!gate.proceed) return { ok: false, error: gate.error };
+    item.message = gate.message;
+  }
   try {
     const text = textFor(item);
     const media = pickXMedia(item);

@@ -436,6 +436,14 @@ export async function processSocialQueueItem(
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
   const item = claimed as QueueRow;
+  // Kontrola końcowa compliance tuż przed wysyłką (brief 5.7). Wpis IG
+  // z istniejącym kontenerem przeszedł ją przy tworzeniu kontenera.
+  if (!item.ig_creation_id) {
+    const { gateClaimedItem } = await import("./autopilot/publish-gate.server");
+    const gate = await gateClaimedItem("social_publish_queue", item);
+    if (!gate.proceed) return { ok: false, error: gate.error };
+    item.message = gate.message;
+  }
   try {
     if (item.platform === "facebook_post") {
       const postId = await publishFacebookPost(item);

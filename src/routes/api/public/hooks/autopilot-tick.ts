@@ -1,8 +1,9 @@
 // Tick autopilota (co godzinę, pg_cron – migracja 20261019181000):
 //   • strażnik anomalii → automatyczna pauza + SMS alarmowy,
 //   • raport dzienny o 20:xx (Warszawa), tygodniowy w poniedziałek o 8:xx.
-// Sam tick niczego nie publikuje – produkcja i publikacja jadą istniejącymi
-// tickami Studia i kolejek, które respektują wyłącznik (withOriginFilter).
+// W full_autopilot tick planuje gotowe rolki Studia w slotach torów (po
+// bramce compliance); samą wysyłkę robią istniejące ticki kolejek, które
+// respektują wyłącznik (withOriginFilter) i mają kontrolę końcową compliance.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
@@ -38,6 +39,14 @@ async function runTick(force?: string | null): Promise<Response> {
     if (cfg.state.mode === "full_autopilot" && !cfg.state.paused && hour === 6) {
       const { ensureToolMagnets } = await import("@/lib/autopilot/tools.server");
       reports.tools = await ensureToolMagnets({ publish: true });
+    }
+    // Gotowe rolki Studia → bramka compliance → sloty torów (tylko
+    // full_autopilot bez wyłącznika; funkcja sama sprawdza tryb).
+    if (cfg.state.mode === "full_autopilot" && !cfg.state.paused) {
+      const { scheduleReadyReels } = await import("@/lib/autopilot/ready-reels.server");
+      reports.readyReels = await scheduleReadyReels(now).catch((e) => ({
+        error: e instanceof Error ? e.message : String(e),
+      }));
     }
     if (hour === 20 || force === "daily")
       reports.daily = (await runScheduledReport("daily", now)).sms;
