@@ -3,6 +3,7 @@
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import {
+  actorId,
   daysAgo,
   handle,
   isoDate,
@@ -12,6 +13,7 @@ import {
   requireUser,
   rowsOf,
   section,
+  SENDS,
   userRoles,
 } from "../_helpers";
 import { defineListTool, flag, search, since, text, uuid, until } from "../_list-tool";
@@ -272,6 +274,88 @@ export const listBrokerSettlements = defineListTool({
   },
 });
 
+export const issueSalesInvoice = defineTool({
+  name: "issue_sales_invoice",
+  title: "Issue sales invoice (KSeF)",
+  description:
+    "Wystawia fakturę sprzedaży z rejestru (`sales_invoices`): nadaje numer, gdy go brak, i — gdy podmiot rozlicza się przez KSeF — wysyła ją do KSeF (status, numer KSeF i UPO zapisywane w fakturze). Ta sama ścieżka co przycisk „Wystaw” w panelu księgowości. Czynność urzędowa: wywołuj wyłącznie po wyraźnym poleceniu użytkownika dla konkretnej faktury. Opcjonalnie przed wysyłką ustawia datę wystawienia (`issue_date`, np. dzisiejszą) i/lub datę sprzedaży (`sale_date`). Tylko administrator/księgowość.",
+  inputSchema: {
+    invoice_id: z.string().uuid().describe("sales_invoices.id"),
+    issue_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .describe("Data wystawienia (RRRR-MM-DD) ustawiana przed wysyłką; nie może być z przyszłości."),
+    sale_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .describe("Data sprzedaży / wykonania usługi (RRRR-MM-DD) ustawiana przed wysyłką."),
+  },
+  annotations: SENDS,
+  handler: ({ invoice_id, issue_date, sale_date }, ctx: ToolContext) =>
+    handle(async () => {
+      requireUser(ctx);
+      const uid = actorId(ctx);
+      const { accountingDb } = await import("@/lib/accounting/db");
+      const { assertAccounting } = await import("@/lib/affiliate/db");
+      await assertAccounting(accountingDb, uid);
+      const { data: inv } = await accountingDb
+        .from("sales_invoices")
+        .select("id, invoice_number, status, ksef_status, ksef_reference_number")
+        .eq("id", invoice_id)
+        .maybeSingle();
+      if (!inv) throw new Error("Nie znaleziono faktury.");
+      if (inv.ksef_reference_number || inv.ksef_status === "accepted")
+        throw new Error(`Faktura ${inv.invoice_number ?? ""} jest już w KSeF (${inv.ksef_reference_number ?? inv.ksef_status}).`);
+      const today = new Date().toISOString().slice(0, 10);
+      if (issue_date && issue_date > today) throw new Error("Data wystawienia nie może być z przyszłości.");
+      const patch: Record<string, string> = {};
+      if (issue_date) patch.issue_date = issue_date;
+      if (sale_date) patch.sale_date = sale_date;
+      if (Object.keys(patch).length) {
+        const { error } = await accountingDb.from("sales_invoices").update(patch).eq("id", invoice_id);
+        if (error) throw new Error(`Nie udało się zapisać dat faktury: ${error.message}`);
+      }
+      const { issueSalesInvoice: issue } = await import("@/lib/accounting/issue");
+      const result = await issue(accountingDb, invoice_id, uid);
+      const { data: chk } = await accountingDb
+        .from("sales_invoices")
+        .select("provider, ksef_status, ksef_reference_number")
+        .eq("id", invoice_id)
+        .maybeSingle();
+      // Bez realnej wysyłki (KSeF wyłączony / brak tokenu / tryb testowy) faktura
+      // podmiotu KSeF NIE może zostać oznaczona jako wystawiona.
+      if (
+        chk?.provider === "ksef" &&
+        (chk.ksef_status === "disabled" || String(chk.ksef_reference_number ?? "").startsWith("MOCK-"))
+      ) {
+        await accountingDb
+          .from("sales_invoices")
+          .update({
+            status: inv.status,
+            ksef_status: inv.ksef_status ?? "not_sent",
+            ksef_reference_number: null,
+            ksef_element_reference: null,
+            ksef_upo_xml: null,
+            error_message: result.message ?? "KSeF niedostępny — faktura nie została wysłana.",
+          })
+          .eq("id", invoice_id);
+        throw new Error(
+          `Faktura NIE trafiła do KSeF (${chk.ksef_status}${result.message ? `: ${result.message}` : ""}). Status przywrócony.`,
+        );
+      }
+      const { data: after } = await accountingDb
+        .from("sales_invoices")
+        .select(
+          "id, invoice_number, status, ksef_status, ksef_reference_number, issue_date, sale_date, gross_amount, buyer_name, buyer_nip, error_message, pdf_url",
+        )
+        .eq("id", invoice_id)
+        .maybeSingle();
+      return ok({ result, invoice: after });
+    }),
+});
+
 export const financeTools = [
   listAccessPayments,
   listAccessEntitlements,
@@ -281,4 +365,5 @@ export const financeTools = [
   listAccountingDocuments,
   getRevenueReport,
   listBrokerSettlements,
+  issueSalesInvoice,
 ];
