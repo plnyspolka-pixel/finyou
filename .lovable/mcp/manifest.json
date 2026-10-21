@@ -19158,7 +19158,7 @@
       {
         "name": "restyle_studio_job_captions",
         "title": "Restyle captions of a ready studio video",
-        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym stylu (reels / tiktok / box / minimal): czysty master + nasz plik SRT (tekst scenariusza z czasami ElevenLabs) idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL; link do czystego mastera HeyGena wygasa po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+        "description": "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym stylu (reels / tiktok / box / minimal): czysty master + nasz plik SRT (tekst scenariusza z czasami ElevenLabs) idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Przy silniku Remotion dokłada hook wizualny (planuje go i generuje zasoby, jeśli zadanie go nie ma) i kadruje ujęcia poziomych awatarów — tak starsza rolka dostaje hook bez nowego renderu HeyGena. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL albo Remotion; link do czystego mastera HeyGena wygasa po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,

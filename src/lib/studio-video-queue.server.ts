@@ -653,6 +653,24 @@ async function submitBadgeBurn(
     .eq("id", job.id);
 }
 
+/**
+ * Ponowne wykończenie gotowej / nieudanej rolki (restyle, retry) w Remotion:
+ * hook zaplanowany i z zasobami, zanim plan pójdzie na Lambdę — tak stara
+ * rolka dostaje hook bez nowego renderu HeyGena. Klip Flows w toku = błąd
+ * z prośbą o ponowienie za kilka minut.
+ */
+async function ensureHookReady(job: JobRow): Promise<void> {
+  const { resolveRenderEngine } = await import("./studio-render-engine");
+  if (resolveRenderEngine(job.render_engine) !== "remotion") return;
+  const { hookForFinish } = await import("./studio-hook.server");
+  const h = await hookForFinish(job.id);
+  if (h.waiting) {
+    throw new Error(
+      "Klip hooka (ElevenLabs Flows) jeszcze się generuje — ponów zmianę napisów za kilka minut.",
+    );
+  }
+}
+
 /** Hook i kadrowanie awatarów dla planu Remotion (patrz studio-hook.server.ts). */
 async function reelExtrasForJob(job: JobRow) {
   const { reelExtrasForJob: extras } = await import("./studio-hook.server");
@@ -1010,6 +1028,7 @@ export async function restyleJobCaptions(
   }
   const clean = job.video_url_clean ?? (!job.captions ? job.video_url : null);
   if (!clean) throw new Error("Brak czystego mastera bez napisów — nie ma na czym wypalić nowych.");
+  await ensureHookReady(job);
   if (!job.subtitle_url)
     throw new Error(
       "Brak pliku SRT (tekst scenariusza z czasami ElevenLabs) — nie ma z czego zbudować napisów.",
@@ -1042,6 +1061,9 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
     job.subtitle_url &&
     (await burner.isFinisherConfigured(job.render_engine))
   ) {
+    await ensureHookReady(job).catch((e) =>
+      console.warn(`[Studio] hook przy ponowieniu (${job.id}): ${errMsg(e)}`),
+    );
     const plan = planCaptionBurn({
       captions: true,
       captionStyle: job.caption_style,
