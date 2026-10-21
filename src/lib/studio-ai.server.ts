@@ -7,6 +7,14 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sanitizeOverlayCards, type OverlayCard } from "./caption-style";
 import { MIN_SCENES_FOR_BROLL, type SceneDecision } from "./studio-scenes";
+import { HOOK_RULES, sanitizeHookSpec, type HookSpec } from "./studio-hook";
+import {
+  TRACK_HOOK_EXAMPLES,
+  TRACK_SCRIPT_RULES,
+  b2bMentions,
+  overstressesB2b,
+} from "./autopilot/track-voice";
+import type { Track } from "./autopilot/types";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const STORAGE_BUCKET = "studio-media";
@@ -40,20 +48,43 @@ const BRAND_CONTEXT =
   "Język polski, bez clickbaitu, konkret + korzyść + CTA.";
 
 // Scenariusz mówiony dla awatara HeyGen: 30-60 s tekstu ciągłego (bez didaskaliów),
-// bo trafia 1:1 do ElevenLabs TTS.
-export async function generateVideoScript(prompt: string): Promise<{
+// bo trafia 1:1 do ElevenLabs TTS. Z torem (autopilot / material_audience)
+// dostaje zasady toru (track-voice.ts) — w torze pożyczkobiorcy bez akcentu
+// „tylko dla firm”; tekst z więcej niż jedną taką wzmianką idzie raz do poprawki.
+export async function generateVideoScript(
+  prompt: string,
+  opts: { track?: Track | null } = {},
+): Promise<{
   script: string;
   title: string;
   description: string;
   hashtags: string[];
 }> {
-  const parsed = await chatJson(
-    `Jesteś scenarzystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
-Napisz tekst MÓWIONY dla lektora: 60-140 słów, hook w pierwszym zdaniu, prosty język, zero didaskaliów, zero emoji — tekst idzie prosto do syntezy mowy.
-Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","description":"opis 1-3 zdania","hashtags":["#tag1","#tag2","#tag3"]}`,
-    prompt,
-  );
-  const script = typeof parsed.script === "string" ? parsed.script.trim() : "";
+  const trackRules = opts.track ? `\n${TRACK_SCRIPT_RULES[opts.track]}` : "";
+  const system = `Jesteś scenarzystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}${trackRules}
+Napisz tekst MÓWIONY dla lektora: 60-140 słów, hook w pierwszym zdaniu (teza albo pytanie, nie zagadka), prosty język, zero didaskaliów, zero emoji — tekst idzie prosto do syntezy mowy.
+Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","description":"opis 1-3 zdania","hashtags":["#tag1","#tag2","#tag3"]}`;
+  let parsed = await chatJson(system, prompt);
+  let script = typeof parsed.script === "string" ? parsed.script.trim() : "";
+  if (
+    script &&
+    opts.track === "pozyczkobiorca" &&
+    overstressesB2b(`${script} ${parsed.title ?? ""}`)
+  ) {
+    try {
+      const again = await chatJson(
+        system,
+        `${prompt}\n\nPoprzednia wersja za mocno akcentowała, że oferta jest dla firm (${b2bMentions(script).join(", ")}). Napisz ją jeszcze raz: o pożyczce pod zastaw nieruchomości po prostu, słowa „firma/przedsiębiorca/działalność” najwyżej raz.\n\nPOPRZEDNIA WERSJA:\n${script}`,
+      );
+      const s2 = typeof again.script === "string" ? again.script.trim() : "";
+      if (s2 && b2bMentions(s2).length < b2bMentions(script).length) {
+        parsed = again;
+        script = s2;
+      }
+    } catch {
+      // zostaje pierwsza wersja — bramka compliance i tak ją sprawdzi
+    }
+  }
   if (!script) throw new Error("AI nie zwróciło scenariusza.");
   return {
     script,
@@ -63,6 +94,35 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
       ? parsed.hashtags.filter((h: unknown): h is string => typeof h === "string")
       : [],
   };
+}
+
+/**
+ * Warianty hooka wizualnego (3) dla gotowego scenariusza — obraz-metafora,
+ * 2–4 słowa na ekran, słowo w złocie, dźwięk uderzenia. Ranking i wybór
+ * robi studio-hook.server.ts (scoreHook + compliance).
+ */
+export async function generateHookIdeas(input: {
+  script: string;
+  topic: string;
+  track?: Track | null;
+  count?: number;
+}): Promise<HookSpec[]> {
+  const count = Math.min(Math.max(input.count ?? 3, 1), 5);
+  const track = input.track ?? null;
+  const parsed = await chatJson(
+    `Jesteś reżyserem pierwszych sekund krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
+${track ? TRACK_SCRIPT_RULES[track] : ""}
+${HOOK_RULES}
+Hook ma pasować do PIERWSZEGO ZDANIA lektora (widz słyszy je pod obrazem) i do problemu widza.${track ? ` Przykładowe pierwsze zdania tego toru: ${TRACK_HOOK_EXAMPLES[track].map((e) => `„${e}”`).join(" ")}` : ""}
+Podaj ${count} RÓŻNE warianty (różne metafory).
+Zwracaj WYŁĄCZNIE JSON: {"hooks":[{"visual_prompt":"...","text":"...","highlight":"...","sfx_prompt":"..."}]}`,
+    `Temat: ${input.topic}\n\nScenariusz lektora:\n${input.script}`,
+  );
+  const raw = Array.isArray(parsed.hooks) ? parsed.hooks : [];
+  return raw
+    .map((h) => sanitizeHookSpec({ ...(h as object), source: "auto" }))
+    .filter((h): h is HookSpec => h !== null && Boolean(h.visual_prompt))
+    .slice(0, count);
 }
 
 // Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je

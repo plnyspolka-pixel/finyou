@@ -38,6 +38,8 @@ export function createFakeSupabase(tables: Record<string, Row[]> = {}): FakeDb {
         neq: (c: string, v: unknown) => (filters.push((r) => r[c] !== v), q),
         is: (c: string, v: unknown) => (filters.push((r) => (r[c] ?? null) === v), q),
         in: (c: string, vs: unknown[]) => (filters.push((r) => vs.includes(r[c])), q),
+        gte: (c: string, v: unknown) => (filters.push((r) => String(r[c]) >= String(v)), q),
+        lte: (c: string, v: unknown) => (filters.push((r) => String(r[c]) <= String(v)), q),
         order: () => q,
         limit: () => q,
         update: (p: Row) => ((mode = "update"), (patch = p), q),

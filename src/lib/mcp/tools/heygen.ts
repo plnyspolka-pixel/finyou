@@ -134,8 +134,33 @@ async function defaults() {
 }
 
 /** Zestaw domyślnych w kształcie dla czatu: pozycja od 1 (1 = prowadzi rolkę, mówi hook). */
-function defaultAvatarsPayload(set: StudioDefaultAvatar[]) {
-  return set.map((a, i) => ({ position: i + 1, id: a.avatar_id, name: a.name, kind: a.kind }));
+function defaultAvatarsPayload(
+  set: StudioDefaultAvatar[],
+  orientation: Map<string, { orientation: string }> = new Map(),
+) {
+  return set.map((a, i) => {
+    const o = orientation.get(a.avatar_id)?.orientation ?? null;
+    return {
+      position: i + 1,
+      id: a.avatar_id,
+      name: a.name,
+      kind: a.kind,
+      // Poziome zdjęcie HeyGen wkleja do 9:16 z pasami — nie prowadzi rolki
+      // (Studio samo wybiera pionowego prowadzącego, a ujęcia kadruje Remotion).
+      orientation: o,
+      lead_ok: o !== "landscape",
+    };
+  });
+}
+
+/** Orientacje zestawu domyślnych (cache; brakujące wykrywa z podglądu). */
+async function defaultOrientations(set: StudioDefaultAvatar[]) {
+  try {
+    const { ensureAvatarOrientations } = await import("@/lib/studio-avatar-orientation.server");
+    return await ensureAvatarOrientations(set.map((a) => a.avatar_id));
+  } catch {
+    return new Map();
+  }
 }
 
 const DEFAULT_AVATARS_NOTE =
@@ -178,7 +203,7 @@ export const heygenStatus = defineTool({
               region: r.region,
               function_name: r.functionName || null,
             },
-            note: "Silnik wykończenia rolki (napisy, znaczek „AI”, nakładki) po renderze HeyGena: `caption_burner` (FFmpeg) albo `remotion` (StudioReel na AWS Lambda). Wybór per zadanie polem `render_engine` w `create_studio_video_job` / `update_studio_job`; `auto` = STUDIO_RENDER_ENGINE (domyślnie caption-burner).",
+            note: "Silnik wykończenia rolki (napisy, znaczek „AI”, nakładki) po renderze HeyGena: `caption_burner` (FFmpeg) albo `remotion` (StudioReel na AWS Lambda). Wybór per zadanie polem `render_engine` w `create_studio_video_job` / `update_studio_job`; `auto` = STUDIO_RENDER_ENGINE, a bez niego Remotion, gdy skonfigurowany (tylko on rysuje hook wizualny i kadruje poziome awatary). Gdy caption-burner nie odpowiada, zadania same przechodzą na Remotion (wpis w raporcie autopilota).",
           };
         })(),
         default_caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
@@ -207,7 +232,10 @@ export const heygenStatus = defineTool({
         default_avatar: { id: d.avatarId, name: d.avatarName, source: d.avatarSource },
         studio_default_avatars: {
           count: d.defaultAvatars.length,
-          avatars: defaultAvatarsPayload(d.defaultAvatars),
+          avatars: defaultAvatarsPayload(
+            d.defaultAvatars,
+            await defaultOrientations(d.defaultAvatars),
+          ),
           note: d.defaultAvatars.length ? DEFAULT_AVATARS_NOTE : NO_DEFAULT_AVATARS_NOTE,
         },
         default_elevenlabs_voice_id: d.voiceId,
@@ -308,7 +336,10 @@ export const listHeygenAvatars = defineTool({
       const payload = {
         total: items.length,
         default_avatar_id: d.avatarId,
-        default_avatars: defaultAvatarsPayload(d.defaultAvatars),
+        default_avatars: defaultAvatarsPayload(
+          d.defaultAvatars,
+          await defaultOrientations(d.defaultAvatars),
+        ),
         default_avatars_note: d.defaultAvatars.length
           ? DEFAULT_AVATARS_NOTE
           : NO_DEFAULT_AVATARS_NOTE,
@@ -842,8 +873,51 @@ export const generateStudioImage = defineTool({
 const RENDER_ENGINE = z
   .enum(RENDER_ENGINES)
   .describe(
-    "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu.",
+    "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`; bez niego Remotion, gdy skonfigurowany). Hook wizualny i kadrowanie poziomych awatarów rysuje tylko Remotion; gdy caption-burner nie odpowiada, zadanie samo przechodzi na Remotion. HeyGen i ElevenLabs działają tak samo przy obu.",
   );
+
+const HOOK_INPUT = z
+  .object({
+    visual_prompt: z
+      .string()
+      .max(700)
+      .optional()
+      .describe(
+        "Obraz-metafora problemu widza po ANGIELSKU, w ruchu, z uderzeniem w pierwszych 0,3 s (np. „heavy bank vault door slams shut in front of the camera”). Bez tekstu w kadrze — model dostaje zakaz liter.",
+      ),
+    text: z
+      .string()
+      .max(60)
+      .optional()
+      .describe(
+        "1–4 słowa na ekran (duży tekst na całą szerokość, rysuje Remotion), np. „BANK MÓWI NIE?”.",
+      ),
+    highlight: z.string().max(40).nullable().optional().describe("Słowo z `text` w złocie."),
+    sfx_prompt: z
+      .string()
+      .max(220)
+      .optional()
+      .describe("Efekt dźwiękowy uderzenia po ANGIELSKU (ElevenLabs Sound Effects)."),
+    source: z
+      .enum(["auto", "flows_video", "flows_image", "studio_image", "broll"])
+      .optional()
+      .describe(
+        "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam.",
+      ),
+    music_prompt: z
+      .string()
+      .max(220)
+      .nullable()
+      .optional()
+      .describe("Opcjonalny podkład (`compose_music`), ściszony pod lektorem."),
+  })
+  .describe(
+    "Hook wizualny 0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora + efekt dźwiękowy + duży tekst. Bez pola hook zaplanuje generator (wariant A/B). Rysuje go silnik Remotion.",
+  );
+
+const HOOK_VARIANT = z
+  .enum(["A", "B", "C"])
+  .describe("Wariant hooka do testu A/B (`hook_variant`); bez pola przydział naprzemienny.");
 
 export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
@@ -898,6 +972,8 @@ export const createStudioVideoJob = defineTool({
     publish_description: z.string().max(5000).optional(),
     material_audience: MATERIAL_AUDIENCE.optional(),
     render_engine: RENDER_ENGINE.default("auto"),
+    hook: HOOK_INPUT.optional(),
+    hook_variant: HOOK_VARIANT.optional(),
     start_now: z.boolean().default(false),
   },
   annotations: WRITE,
@@ -932,15 +1008,28 @@ export const createStudioVideoJob = defineTool({
       // Bramka caption-burnera przed HeyGenem: gdy usługa nie odpowiada,
       // `start_now` nie zleca renderu (kredyty zostają), zadanie idzie do
       // kolejki, a tick Studia ruszy je, gdy usługa wróci.
-      const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
+      const { resolveFinisherForRender, CAPTION_BURNER_GUARD_NOTE, finisherFallbackNote } =
         await import("@/lib/caption-burner.server");
       const gate = a.start_now
-        ? await captionBurnerPreflight({ captions: a.captions, engine: a.render_engine })
+        ? await resolveFinisherForRender({ captions: a.captions, engine: a.render_engine })
         : null;
       const startNow = a.start_now && gate?.ok !== false;
+      // caption-burner padł, Remotion skonfigurowany → wykończy Remotion.
+      const renderEngine = gate?.ok && gate.fallback ? "remotion" : a.render_engine;
+      if (gate?.ok && gate.fallback) {
+        const { reportFinisherFallback } = await import("@/lib/studio-video-queue.server");
+        await reportFinisherFallback(gate.fallback.reason);
+      }
       if (!script && startNow) {
         const { generateVideoScript } = await import("@/lib/studio-ai.server");
-        const gen = await generateVideoScript(prompt);
+        const gen = await generateVideoScript(prompt, {
+          track:
+            a.material_audience === "inwestor"
+              ? "inwestor"
+              : a.material_audience === "klient"
+                ? "pozyczkobiorca"
+                : null,
+        });
         script = gen.script;
         if (!title) title = gen.title;
         if (!description)
@@ -949,12 +1038,25 @@ export const createStudioVideoJob = defineTool({
       // Rotacja twarzy: podana wprost (prowadzący pierwszy, jak w panelu), a gdy
       // nie — prowadzący + partnerzy z zestawu domyślnych dobrani po ostatnich
       // rolkach (najdawniej użyty pierwszy), żeby cały zestaw dostawał ekran.
-      const leadAvatar = a.avatar_id ?? d.avatarId;
       const given = (a.avatar_ids ?? []).filter(Boolean);
-      const { defaultReelRotation } = await import("@/lib/studio-avatars.server");
+      const { defaultReelRotation, portraitLead } = await import("@/lib/studio-avatars.server");
+      // Poziome zdjęcie nie prowadzi rolki (HeyGen dałby ~70% pasów) — gdy
+      // w puli jest pionowy awatar, przejmuje on prowadzenie.
+      const lead = await portraitLead(a.avatar_id ?? d.avatarId, given);
+      const leadAvatar = lead.lead;
       const avatarIds = given.length
         ? [...new Set([leadAvatar, ...given])]
         : await defaultReelRotation(leadAvatar, a.avatars_per_reel);
+      const { sanitizeHook } = await import("@/lib/studio-hook");
+      const hook = a.hook ? sanitizeHook({ source: "auto", ...a.hook }) : null;
+      if (a.hook && !hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
+      const createNotes = [
+        gate && !gate.ok ? `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` : null,
+        gate?.ok && gate.fallback ? finisherFallbackNote(gate.fallback.reason) : null,
+        lead.swapped
+          ? `Prowadzący zmieniony na pionowego awatara ${leadAvatar} (wskazany ma poziome zdjęcie).`
+          : null,
+      ].filter((n): n is string => Boolean(n));
       const row = {
         prompt,
         script,
@@ -963,10 +1065,12 @@ export const createStudioVideoJob = defineTool({
         voice_id: a.voice_id ?? d.voiceId,
         tts_model_id: ttsModelId,
         status: startNow ? "generating_audio" : "queued",
-        ...(gate && !gate.ok ? { last_error: `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` } : {}),
+        ...(createNotes.length ? { last_error: createNotes.join(" ") } : {}),
+        ...(hook ? { hook } : {}),
+        ...(a.hook_variant ? { hook_variant: a.hook_variant } : {}),
         captions: a.captions,
         caption_style: captionStyle,
-        render_engine: a.render_engine,
+        render_engine: renderEngine,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
         reel_structure: a.reel_structure,
         auto_publish_platforms: a.auto_publish_platforms,
@@ -1028,6 +1132,8 @@ export const createStudioVideoJob = defineTool({
           },
           "id, status, heygen_video_id, publish_title, avatar_id, avatar_ids, reel_structure, tts_model_id, auto_publish_platforms, last_error",
         );
+        const { startHookIfRemotion } = await import("@/lib/studio-video-queue.server");
+        await startHookIfRemotion(job.id, renderEngine);
         return ok({
           ok: true,
           job: updated,
@@ -1068,13 +1174,19 @@ export const updateStudioJob = defineTool({
     publish_privacy: z.enum(PRIVACY).optional(),
     auto_publish_platforms: z.array(z.enum(PLATFORMS)).optional(),
     render_engine: RENDER_ENGINE.optional(),
+    hook: HOOK_INPUT.nullable()
+      .optional()
+      .describe(
+        "Zmiana hooka wizualnego (pola częściowe łączą się z zapisanym; zmiana obrazu / źródła / dźwięku kasuje wygenerowane zasoby). `null` = usuń — generator zaplanuje nowy przy wykończeniu. Gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen).",
+      ),
+    hook_variant: HOOK_VARIANT.optional(),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
       const s = await requireTeamAdmin(ctx);
       const job = await oneOf(
-        s.from("studio_video_jobs").select("id, status, auto_published_at").eq("id", a.id),
+        s.from("studio_video_jobs").select("id, status, auto_published_at, hook").eq("id", a.id),
         "studio_video_jobs",
       );
       if (!job) return fail("Nie znaleziono zadania.");
@@ -1114,14 +1226,32 @@ export const updateStudioJob = defineTool({
           "Wykończenie rolki jest w toku (captioning) — zmień silnik po jego zakończeniu albo niepowodzeniu.",
         );
       }
-      const patch = { ...renderPatch, ...publishPatch, ...enginePatch };
+      const hookPatch: Record<string, unknown> = {};
+      if (a.hook !== undefined || a.hook_variant !== undefined) {
+        if (job.status === "captioning") {
+          return fail(
+            "Wykończenie rolki jest w toku (captioning) — zmień hook po jego zakończeniu.",
+          );
+        }
+        const { mergeHookPatch, sanitizeHook, applyHookVariant } =
+          await import("@/lib/studio-hook");
+        let hook = a.hook === null ? null : sanitizeHook(job.hook);
+        if (a.hook) {
+          hook = mergeHookPatch(hook, a.hook);
+          if (!hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
+        }
+        if (a.hook_variant && hook) hook = applyHookVariant(hook, a.hook_variant);
+        hookPatch.hook = hook;
+        if (a.hook_variant) hookPatch.hook_variant = a.hook_variant;
+      }
+      const patch = { ...renderPatch, ...publishPatch, ...enginePatch, ...hookPatch };
       if (!Object.keys(patch).length) return fail("Brak pól do zmiany.");
       const updated = await updateOne(
         s,
         "studio_video_jobs",
         a.id,
         patch,
-        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, render_engine, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id",
+        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, render_engine, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id, hook, hook_variant",
       );
       return ok({ ok: true, job: updated, actor: actorId(ctx) });
     }),
