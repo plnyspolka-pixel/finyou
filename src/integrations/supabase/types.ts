@@ -13795,39 +13795,6 @@ export type Database = {
         }
         Relationships: []
       }
-      studio_avatar_orientations: {
-        Row: {
-          avatar_id: string
-          checked_at: string
-          focus_x: number
-          focus_y: number
-          height: number | null
-          orientation: string
-          source: string
-          width: number | null
-        }
-        Insert: {
-          avatar_id: string
-          checked_at?: string
-          focus_x?: number
-          focus_y?: number
-          height?: number | null
-          orientation: string
-          source?: string
-          width?: number | null
-        }
-        Update: {
-          avatar_id?: string
-          checked_at?: string
-          focus_x?: number
-          focus_y?: number
-          height?: number | null
-          orientation?: string
-          source?: string
-          width?: number | null
-        }
-        Relationships: []
-      }
       studio_broll_assets: {
         Row: {
           active: boolean
@@ -13997,7 +13964,6 @@ export type Database = {
           created_by: string | null
           dynamic_scenes: boolean
           heygen_video_id: string | null
-          hook: Json | null
           hook_variant: string | null
           id: string
           last_error: string | null
@@ -14047,7 +14013,6 @@ export type Database = {
           created_by?: string | null
           dynamic_scenes?: boolean
           heygen_video_id?: string | null
-          hook?: Json | null
           hook_variant?: string | null
           id?: string
           last_error?: string | null
@@ -14097,7 +14062,6 @@ export type Database = {
           created_by?: string | null
           dynamic_scenes?: boolean
           heygen_video_id?: string | null
-          hook?: Json | null
           hook_variant?: string | null
           id?: string
           last_error?: string | null
