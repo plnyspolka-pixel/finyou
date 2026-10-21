@@ -274,6 +274,13 @@
       "when": 1792632053028,
       "tag": "0038_studio_hook_wizualny",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792584706056,
+      "tag": "0039_studio_hook_wizualny",
+      "breakpoints": true
     }
   ]
 }
