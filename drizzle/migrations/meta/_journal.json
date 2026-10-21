@@ -260,6 +260,13 @@
       "when": 1792434196592,
       "tag": "0036_autopilot_sekwencje_email",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792545653028,
+      "tag": "0037_migration_storage_manifest",
+      "breakpoints": true
     }
   ]
 }

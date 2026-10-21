@@ -1824,9 +1824,18 @@ export type Database = {
       }
       ai_growth_settings: {
         Row: {
+          audience_profiles: Json | null
           automation_mode: string
+          autopilot_limits: Json
+          autopilot_mode: string
+          autopilot_paused: boolean
+          autopilot_paused_at: string | null
+          autopilot_paused_by: string | null
+          autopilot_paused_reason: string | null
           brand_description: string | null
           brand_name: string
+          cadence_split: Json
+          cadence_split_updated_at: string | null
           daily_ai_budget_pln: number
           default_model: string
           id: string
@@ -1837,9 +1846,18 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          audience_profiles?: Json | null
           automation_mode?: string
+          autopilot_limits?: Json
+          autopilot_mode?: string
+          autopilot_paused?: boolean
+          autopilot_paused_at?: string | null
+          autopilot_paused_by?: string | null
+          autopilot_paused_reason?: string | null
           brand_description?: string | null
           brand_name?: string
+          cadence_split?: Json
+          cadence_split_updated_at?: string | null
           daily_ai_budget_pln?: number
           default_model?: string
           id?: string
@@ -1850,9 +1868,18 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          audience_profiles?: Json | null
           automation_mode?: string
+          autopilot_limits?: Json
+          autopilot_mode?: string
+          autopilot_paused?: boolean
+          autopilot_paused_at?: string | null
+          autopilot_paused_by?: string | null
+          autopilot_paused_reason?: string | null
           brand_description?: string | null
           brand_name?: string
+          cadence_split?: Json
+          cadence_split_updated_at?: string | null
           daily_ai_budget_pln?: number
           default_model?: string
           id?: string
@@ -2249,6 +2276,128 @@ export type Database = {
           url?: string | null
         }
         Relationships: []
+      }
+      ai_publication_metrics: {
+        Row: {
+          avg_view_s: number | null
+          captured_on: string
+          comments: number | null
+          completion_rate: number | null
+          created_at: string
+          duration_s: number | null
+          external_post_id: string
+          follows: number | null
+          format: string | null
+          hook_text: string | null
+          hook_variant: string | null
+          id: string
+          keyword: string | null
+          lead_magnet_id: string | null
+          likes: number | null
+          platform: string
+          published_at: string | null
+          raw: Json
+          reach: number | null
+          saves: number | null
+          series: string | null
+          shares: number | null
+          social_queue_id: string | null
+          studio_job_id: string | null
+          track: string | null
+          views: number | null
+          visual_hook: string | null
+          youtube_queue_id: string | null
+        }
+        Insert: {
+          avg_view_s?: number | null
+          captured_on?: string
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          duration_s?: number | null
+          external_post_id: string
+          follows?: number | null
+          format?: string | null
+          hook_text?: string | null
+          hook_variant?: string | null
+          id?: string
+          keyword?: string | null
+          lead_magnet_id?: string | null
+          likes?: number | null
+          platform: string
+          published_at?: string | null
+          raw?: Json
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          social_queue_id?: string | null
+          studio_job_id?: string | null
+          track?: string | null
+          views?: number | null
+          visual_hook?: string | null
+          youtube_queue_id?: string | null
+        }
+        Update: {
+          avg_view_s?: number | null
+          captured_on?: string
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          duration_s?: number | null
+          external_post_id?: string
+          follows?: number | null
+          format?: string | null
+          hook_text?: string | null
+          hook_variant?: string | null
+          id?: string
+          keyword?: string | null
+          lead_magnet_id?: string | null
+          likes?: number | null
+          platform?: string
+          published_at?: string | null
+          raw?: Json
+          reach?: number | null
+          saves?: number | null
+          series?: string | null
+          shares?: number | null
+          social_queue_id?: string | null
+          studio_job_id?: string | null
+          track?: string | null
+          views?: number | null
+          visual_hook?: string | null
+          youtube_queue_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_publication_metrics_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_publication_metrics_social_queue_id_fkey"
+            columns: ["social_queue_id"]
+            isOneToOne: false
+            referencedRelation: "social_publish_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_publication_metrics_studio_job_id_fkey"
+            columns: ["studio_job_id"]
+            isOneToOne: false
+            referencedRelation: "studio_video_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_publication_metrics_youtube_queue_id_fkey"
+            columns: ["youtube_queue_id"]
+            isOneToOne: false
+            referencedRelation: "youtube_publish_queue"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_seo_articles: {
         Row: {
@@ -5100,6 +5249,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      email_sequence_sends: {
+        Row: {
+          error: string | null
+          id: string
+          sent_at: string
+          sequence: string
+          status: string
+          step: number
+          subscriber_id: string
+        }
+        Insert: {
+          error?: string | null
+          id?: string
+          sent_at?: string
+          sequence: string
+          status?: string
+          step: number
+          subscriber_id: string
+        }
+        Update: {
+          error?: string | null
+          id?: string
+          sent_at?: string
+          sequence?: string
+          status?: string
+          step?: number
+          subscriber_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sequence_sends_subscriber_id_fkey"
+            columns: ["subscriber_id"]
+            isOneToOne: false
+            referencedRelation: "email_subscribers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_subscribers: {
         Row: {
@@ -10455,6 +10642,24 @@ export type Database = {
         }
         Relationships: []
       }
+      migration_export_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
       missing_info_follow_up_sends: {
         Row: {
           attempt_number: number
@@ -13431,25 +13636,34 @@ export type Database = {
       social_publish_queue: {
         Row: {
           attempt_count: number
+          compliance_rules_version: string | null
+          contains_synthetic_media: boolean
           created_at: string
           created_by: string | null
           external_post_id: string | null
           id: string
+          idempotency_key: string | null
           ig_container_at: string | null
           ig_creation_id: string | null
           image_url: string | null
+          keyword: string | null
           last_error: string | null
+          lead_magnet_id: string | null
           message: string
+          origin: string
           platform: string
           published_at: string | null
           scheduled_at: string
+          series: string | null
           status: string
+          studio_job_id: string | null
           tiktok_fail_reason: string | null
           tiktok_post_options: Json | null
           tiktok_publish_id: string | null
           tiktok_status: string | null
           tiktok_upload_at: string | null
           title: string
+          track: string | null
           updated_at: string
           video_url: string | null
           x_media_at: string | null
@@ -13458,25 +13672,34 @@ export type Database = {
         }
         Insert: {
           attempt_count?: number
+          compliance_rules_version?: string | null
+          contains_synthetic_media?: boolean
           created_at?: string
           created_by?: string | null
           external_post_id?: string | null
           id?: string
+          idempotency_key?: string | null
           ig_container_at?: string | null
           ig_creation_id?: string | null
           image_url?: string | null
+          keyword?: string | null
           last_error?: string | null
+          lead_magnet_id?: string | null
           message?: string
+          origin?: string
           platform: string
           published_at?: string | null
           scheduled_at?: string
+          series?: string | null
           status?: string
+          studio_job_id?: string | null
           tiktok_fail_reason?: string | null
           tiktok_post_options?: Json | null
           tiktok_publish_id?: string | null
           tiktok_status?: string | null
           tiktok_upload_at?: string | null
           title?: string
+          track?: string | null
           updated_at?: string
           video_url?: string | null
           x_media_at?: string | null
@@ -13485,32 +13708,56 @@ export type Database = {
         }
         Update: {
           attempt_count?: number
+          compliance_rules_version?: string | null
+          contains_synthetic_media?: boolean
           created_at?: string
           created_by?: string | null
           external_post_id?: string | null
           id?: string
+          idempotency_key?: string | null
           ig_container_at?: string | null
           ig_creation_id?: string | null
           image_url?: string | null
+          keyword?: string | null
           last_error?: string | null
+          lead_magnet_id?: string | null
           message?: string
+          origin?: string
           platform?: string
           published_at?: string | null
           scheduled_at?: string
+          series?: string | null
           status?: string
+          studio_job_id?: string | null
           tiktok_fail_reason?: string | null
           tiktok_post_options?: Json | null
           tiktok_publish_id?: string | null
           tiktok_status?: string | null
           tiktok_upload_at?: string | null
           title?: string
+          track?: string | null
           updated_at?: string
           video_url?: string | null
           x_media_at?: string | null
           x_media_id?: string | null
           x_media_status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "social_publish_queue_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_publish_queue_studio_job_id_fkey"
+            columns: ["studio_job_id"]
+            isOneToOne: false
+            referencedRelation: "studio_video_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storage_migration_log: {
         Row: {
@@ -13709,10 +13956,15 @@ export type Database = {
           caption_style: string
           caption_wait_since: string | null
           captions: boolean
+          compliance_rules_version: string | null
+          compliance_status: string | null
+          cost_breakdown: Json
+          cost_pln: number
           created_at: string
           created_by: string | null
           dynamic_scenes: boolean
           heygen_video_id: string | null
+          hook_variant: string | null
           id: string
           last_error: string | null
           material_audience:
@@ -13728,10 +13980,12 @@ export type Database = {
           resolution: string
           scene_plan: Json | null
           script: string
+          series: string | null
           status: string
           subtitle_url: string | null
           thumbnail_url: string | null
           tiktok_post_options: Json | null
+          track: string | null
           tts_model_id: string | null
           updated_at: string
           video_url: string | null
@@ -13751,10 +14005,15 @@ export type Database = {
           caption_style?: string
           caption_wait_since?: string | null
           captions?: boolean
+          compliance_rules_version?: string | null
+          compliance_status?: string | null
+          cost_breakdown?: Json
+          cost_pln?: number
           created_at?: string
           created_by?: string | null
           dynamic_scenes?: boolean
           heygen_video_id?: string | null
+          hook_variant?: string | null
           id?: string
           last_error?: string | null
           material_audience?:
@@ -13770,10 +14029,12 @@ export type Database = {
           resolution?: string
           scene_plan?: Json | null
           script: string
+          series?: string | null
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
           tiktok_post_options?: Json | null
+          track?: string | null
           tts_model_id?: string | null
           updated_at?: string
           video_url?: string | null
@@ -13793,10 +14054,15 @@ export type Database = {
           caption_style?: string
           caption_wait_since?: string | null
           captions?: boolean
+          compliance_rules_version?: string | null
+          compliance_status?: string | null
+          cost_breakdown?: Json
+          cost_pln?: number
           created_at?: string
           created_by?: string | null
           dynamic_scenes?: boolean
           heygen_video_id?: string | null
+          hook_variant?: string | null
           id?: string
           last_error?: string | null
           material_audience?:
@@ -13812,10 +14078,12 @@ export type Database = {
           resolution?: string
           scene_plan?: Json | null
           script?: string
+          series?: string | null
           status?: string
           subtitle_url?: string | null
           thumbnail_url?: string | null
           tiktok_post_options?: Json | null
+          track?: string | null
           tts_model_id?: string | null
           updated_at?: string
           video_url?: string | null
@@ -14789,56 +15057,98 @@ export type Database = {
       youtube_publish_queue: {
         Row: {
           attempt_count: number
+          compliance_rules_version: string | null
+          contains_synthetic_media: boolean
           created_at: string
           created_by: string | null
           description: string
           id: string
+          idempotency_key: string | null
+          keyword: string | null
           last_error: string | null
+          lead_magnet_id: string | null
+          origin: string
           privacy_status: string
           published_at: string | null
           scheduled_at: string
+          series: string | null
           source_video_url: string
           status: string
+          studio_job_id: string | null
           tags: string[]
           title: string
+          track: string | null
           updated_at: string
           youtube_video_id: string | null
         }
         Insert: {
           attempt_count?: number
+          compliance_rules_version?: string | null
+          contains_synthetic_media?: boolean
           created_at?: string
           created_by?: string | null
           description?: string
           id?: string
+          idempotency_key?: string | null
+          keyword?: string | null
           last_error?: string | null
+          lead_magnet_id?: string | null
+          origin?: string
           privacy_status?: string
           published_at?: string | null
           scheduled_at?: string
+          series?: string | null
           source_video_url: string
           status?: string
+          studio_job_id?: string | null
           tags?: string[]
           title: string
+          track?: string | null
           updated_at?: string
           youtube_video_id?: string | null
         }
         Update: {
           attempt_count?: number
+          compliance_rules_version?: string | null
+          contains_synthetic_media?: boolean
           created_at?: string
           created_by?: string | null
           description?: string
           id?: string
+          idempotency_key?: string | null
+          keyword?: string | null
           last_error?: string | null
+          lead_magnet_id?: string | null
+          origin?: string
           privacy_status?: string
           published_at?: string | null
           scheduled_at?: string
+          series?: string | null
           source_video_url?: string
           status?: string
+          studio_job_id?: string | null
           tags?: string[]
           title?: string
+          track?: string | null
           updated_at?: string
           youtube_video_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "youtube_publish_queue_lead_magnet_id_fkey"
+            columns: ["lead_magnet_id"]
+            isOneToOne: false
+            referencedRelation: "lead_magnets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "youtube_publish_queue_studio_job_id_fkey"
+            columns: ["studio_job_id"]
+            isOneToOne: false
+            referencedRelation: "studio_video_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -15125,6 +15435,15 @@ export type Database = {
           id: string
           similarity: number
           title: string
+        }[]
+      }
+      migration_list_storage_objects: {
+        Args: { p_bucket: string; p_limit: number; p_offset: number }
+        Returns: {
+          etag: string
+          mimetype: string
+          name: string
+          size: number
         }[]
       }
       partner_owns_application: {

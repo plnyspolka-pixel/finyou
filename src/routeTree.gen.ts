@@ -218,6 +218,7 @@ import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/adm
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
 import { Route as AdminScreeningSprawaCaseIdRouteImport } from './routes/admin.screening-sprawa.$caseId'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
+import { Route as ApiMigrationStorageManifestRouteImport } from './routes/api/migration/storage-manifest'
 import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
@@ -1385,6 +1386,12 @@ const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   path: '/wnioski/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiMigrationStorageManifestRoute =
+  ApiMigrationStorageManifestRouteImport.update({
+    id: '/api/migration/storage-manifest',
+    path: '/api/migration/storage-manifest',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAgentConfigRoute = ApiPublicAgentConfigRouteImport.update({
   id: '/api/public/agent-config',
   path: '/api/public/agent-config',
@@ -2133,6 +2140,7 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
@@ -2430,6 +2438,7 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
@@ -2738,6 +2747,7 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
@@ -3047,6 +3057,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
@@ -3344,6 +3355,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
@@ -3651,6 +3663,7 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
     | '/api/public/chat-widget'
@@ -3821,6 +3834,7 @@ export interface RootRouteChildren {
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiMigrationStorageManifestRoute: typeof ApiMigrationStorageManifestRoute
   ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
   ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
@@ -5360,6 +5374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/migration/storage-manifest': {
+      id: '/api/migration/storage-manifest'
+      path: '/api/migration/storage-manifest'
+      fullPath: '/api/migration/storage-manifest'
+      preLoaderRoute: typeof ApiMigrationStorageManifestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/agent-config': {
       id: '/api/public/agent-config'
       path: '/api/public/agent-config'
@@ -6567,6 +6588,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiMigrationStorageManifestRoute: ApiMigrationStorageManifestRoute,
   ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
   ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
