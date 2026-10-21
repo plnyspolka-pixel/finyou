@@ -81,18 +81,17 @@ describe("resolveFinisherForRender — zejście na Remotion", () => {
       }),
     );
 
-  it("caption-burner nie odpowiada, Remotion skonfigurowany → render rusza na Remotion", async () => {
+  it("caption-burner nie odpowiada, Remotion skonfigurowany → render rusza (Remotion zawsze, burner nie jest pytany)", async () => {
     configure();
     remotionEnv();
     vi.stubEnv("STUDIO_RENDER_ENGINE", "caption_burner");
     burnerTimesOut();
     const { resolveFinisherForRender } = await import("./caption-burner.server");
+    const { resolveRenderEngine } = await import("./studio-render-engine");
     const g = await resolveFinisherForRender({ captions: true, engine: "auto" });
     expect(g.ok).toBe(true);
-    if (g.ok) {
-      expect(g.engine).toBe("remotion");
-      expect(g.fallback?.reason).toContain("caption-burner nie odpowiada");
-    }
+    expect(resolveRenderEngine("auto")).toBe("remotion");
+    expect(resolveRenderEngine("caption_burner")).toBe("remotion");
   });
 
   it("bez Remotion — kolejka czeka jak dotąd", async () => {
@@ -118,11 +117,11 @@ describe("resolveFinisherForRender — zejście na Remotion", () => {
     expect(g).toEqual({ ok: true, engine: "auto", fallback: null });
   });
 
-  it("auto bez STUDIO_RENDER_ENGINE i ze skonfigurowanym Remotion → Remotion (hook wizualny)", async () => {
+  it("ze skonfigurowanym Remotion zawsze Remotion (decyzja 21.10: bez FFmpeg)", async () => {
     remotionEnv();
     vi.stubEnv("STUDIO_RENDER_ENGINE", "");
     const { resolveRenderEngine } = await import("./studio-render-engine");
     expect(resolveRenderEngine("auto")).toBe("remotion");
-    expect(resolveRenderEngine("caption_burner")).toBe("caption_burner");
+    expect(resolveRenderEngine("caption_burner")).toBe("remotion");
   });
 });
