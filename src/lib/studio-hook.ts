@@ -260,7 +260,7 @@ const THEMES: Theme[] = [
     test: /odm[oó]w|powiedzia\p{L}* nie|\bnie\b.{0,20}bank|bank.{0,30}\bnie\b/iu,
     spec: {
       visual_prompt:
-        "Extreme close-up: a heavy red rubber stamp slams down onto a loan application form on a dark wooden desk, papers jump, dust and ink burst on impact, blank stamp face",
+        "Extreme close-up: a heavy red rubber stamp slams down onto a sheet of paper on a dark wooden desk, papers jump, red ink splashes on impact; blank stamp face, the paper shows only soft blurred grey lines, nothing readable",
       text: "BANK MÓWI NIE?",
       highlight: "NIE?",
       sfx_prompt: "heavy rubber stamp slam on a wooden desk, sharp thud with paper rustle",
