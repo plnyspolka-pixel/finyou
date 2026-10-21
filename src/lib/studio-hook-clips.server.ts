@@ -1,6 +1,8 @@
 // Bank klipów hooka (`clip_bank`) — I/O: dobór klipu z tabeli
-// `studio_hook_clips`, odnotowanie użycia i import (kopia pliku do naszego
-// Storage — adresy fal.media wygasają). Czyste reguły: studio-hook-clips.ts.
+// `studio_hook_clips` do TREŚCI rolki (AI, a bez AI słowa kluczowe; brak
+// dopasowania = brak klipu), odnotowanie użycia i import (kopia pliku do
+// naszego Storage — adresy fal.media wygasają). Czyste reguły:
+// studio-hook-clips.ts.
 //
 // Każdy klip kończy się nieruchomą klatką ściany z logo financeyou.pl — tym
 // samym tłem co pionowe awatary e0db… i 65ef… — więc gra w całości i tnie
@@ -8,10 +10,15 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Track } from "./autopilot/types";
 import {
+  acceptAiClipMatch,
+  groupHookClipConcepts,
+  hookClipConceptList,
+  hookClipMatchText,
+  matchHookClipByKeywords,
   mp4DurationSeconds,
-  rankHookClips,
   sanitizeHookClipItem,
   type HookClip,
+  type HookClipMatch,
   type HookClipTrack,
 } from "./studio-hook-clips";
 
@@ -28,11 +35,12 @@ export type HookClipRow = HookClip & {
   storage_path: string | null;
   source_url: string | null;
   tags: string[];
+  description: string | null;
   created_at: string;
 };
 
 const COLUMNS =
-  "id, slug, concept, title, track, model, rating, media_url, storage_path, source_url, duration_s, tags, active, use_count, last_used_at, created_at";
+  "id, slug, concept, title, description, track, model, rating, media_url, storage_path, source_url, duration_s, tags, active, use_count, last_used_at, created_at";
 
 const normalize = (r: Record<string, unknown>): HookClipRow =>
   ({
@@ -58,20 +66,66 @@ export async function listHookClips(
   return ((data ?? []) as Record<string, unknown>[]).map(normalize);
 }
 
+export type HookClipMatchInput = {
+  track: Track | null;
+  script?: string | null;
+  topic?: string | null;
+  hookText?: string | null;
+  visualPrompt?: string | null;
+};
+
+export type HookClipPick = Omit<HookClipMatch, "clip"> & { clip: HookClipRow };
+
 /**
- * Klip dla toru rolki: aktywne klipy toru albo `both` (null = dowolny), wyżej
- * oceniane z rotacją „najdawniej użyte” (rankHookClips). Null = bank pusty.
+ * Klip dopasowany do TREŚCI rolki. Kandydaci: aktywne klipy toru albo `both`
+ * (null = dowolny), zwinięte do konceptów. AI wybiera koncept (wynik ≥ 55/100,
+ * inaczej null); gdy AI nie odpowie — słowa kluczowe (powyżej progu, inaczej
+ * null). W koncepcie najwyżej oceniony klip (remis → najdawniej użyty).
+ * Null = brak pasującego klipu → kolejne źródło hooka (nigdy losowy klip).
  */
-export async function pickHookClip(track: Track | null): Promise<HookClipRow | null> {
+export async function pickHookClip(input: HookClipMatchInput): Promise<HookClipPick | null> {
   let q = db().from("studio_hook_clips").select(COLUMNS).eq("active", true);
-  if (track) q = q.in("track", [track, "both"]);
+  if (input.track) q = q.in("track", [input.track, "both"]);
   const { data, error } = await q.limit(1000);
   if (error) throw new Error(`studio_hook_clips: ${error.message}`);
   const rows = ((data ?? []) as Record<string, unknown>[]).map(normalize);
-  return (rankHookClips(rows, track)[0] as HookClipRow | undefined) ?? null;
+  const concepts = groupHookClipConcepts(rows, input.track);
+  if (!concepts.length) return null;
+  const text = hookClipMatchText(input);
+  if (!text.trim()) return null;
+  let match: HookClipMatch | null;
+  try {
+    const { matchHookClipConcept } = await import("./studio-ai.server");
+    const raw = await matchHookClipConcept({
+      script: input.script ?? "",
+      topic: input.topic ?? "",
+      hookText: input.hookText ?? "",
+      visualPrompt: input.visualPrompt ?? "",
+      conceptList: hookClipConceptList(concepts),
+    });
+    match = acceptAiClipMatch(raw, concepts);
+  } catch (e) {
+    match = matchHookClipByKeywords(text, concepts);
+    if (match) {
+      const why = e instanceof Error ? e.message : String(e);
+      match = { ...match, reason: `${match.reason}; AI niedostępne: ${why.slice(0, 80)}` };
+    }
+  }
+  return match ? { ...match, clip: match.clip as HookClipRow } : null;
 }
 
-/** Odnotowuje użycie — napędza rotację przy kolejnych rolkach. */
+/** Klip po slugu (przypięty w hooku `clip_slug`); null = nie ma takiego. */
+export async function getHookClipBySlug(slug: string): Promise<HookClipRow | null> {
+  const { data, error } = await db()
+    .from("studio_hook_clips")
+    .select(COLUMNS)
+    .eq("slug", slug.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw new Error(`studio_hook_clips: ${error.message}`);
+  return data ? normalize(data) : null;
+}
+
+/** Odnotowuje użycie — przy remisie ocen w koncepcie wygrywa najdawniej użyty. */
 export async function markHookClipUsed(id: string): Promise<void> {
   const { data } = await db()
     .from("studio_hook_clips")
@@ -127,6 +181,7 @@ export async function importHookClip(
     model: item.model,
     rating: item.rating,
     tags: item.tags,
+    description: item.description,
     source_url: item.source_url,
   };
 

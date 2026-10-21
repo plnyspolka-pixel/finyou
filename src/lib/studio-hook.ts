@@ -53,13 +53,17 @@ export type HookSpec = {
   sfx_prompt: string;
   /**
    * Skąd klip: auto = bank klipów hooka (`studio_hook_clips`, klip ~5 s
-   * kończący się na ścianie z logo za pionowymi awatarami e0db…/65ef… —
-   * rolka z klipem powinna zaczynać się od jednego z nich) → grafika Studia →
+   * DOBRANY DO TREŚCI rolki — AI, bez AI słowa kluczowe; brak dopasowania =
+   * dalej, nigdy losowo — kończący się na ścianie z logo za pionowymi
+   * awatarami e0db…/65ef…; rolka z klipem powinna zaczynać się od jednego
+   * z nich) → grafika Studia →
    * bank przebitek. `flows_*` (ElevenLabs) tylko przy fladze STUDIO_HOOK_FLOWS=1.
    */
   source: HookSource;
   /** Opcjonalny podkład muzyczny (`compose_music`), ściszony pod lektorem. */
   music_prompt?: string | null;
+  /** Przypięty klip z banku klipów hooka (slug) — pomija dopasowanie do treści. */
+  clip_slug?: string | null;
 };
 
 export type HookAssetStatus = "pending" | "ready" | "failed";
@@ -81,6 +85,9 @@ export type HookAssets = {
   /** Klip z banku klipów hooka (`studio_hook_clips.id`) i jego długość w s. */
   clip_id?: string | null;
   clip_duration?: number | null;
+  /** Koncept klipu i dlaczego pasuje do treści (AI / słowa kluczowe / przypięty). */
+  clip_concept?: string | null;
+  clip_match_reason?: string | null;
   /** Flows (gdy włączone flagą) zwróciło 402 — konto bez planu Pro. */
   pro_plan_required?: boolean;
   notes: string[];
@@ -120,6 +127,7 @@ export function sanitizeHookSpec(raw: unknown): HookSpec | null {
   const hl = str(o.highlight, 40);
   const match = hl ? w.find((x) => bare(x) === bare(hl)) : undefined;
   const source = HOOK_SOURCES.find((s) => s === o.source) ?? "auto";
+  const clipSlug = sanitizeClipSlug(o.clip_slug);
   return {
     visual_prompt: str(o.visual_prompt, HOOK_LIMITS.visualPrompt),
     text,
@@ -127,7 +135,14 @@ export function sanitizeHookSpec(raw: unknown): HookSpec | null {
     sfx_prompt: str(o.sfx_prompt, HOOK_LIMITS.sfxPrompt),
     source,
     music_prompt: str(o.music_prompt, HOOK_LIMITS.musicPrompt) || null,
+    ...(clipSlug ? { clip_slug: clipSlug } : {}),
   };
+}
+
+/** Slug klipu z banku (małe litery, cyfry, _ i -) albo null. */
+export function sanitizeClipSlug(v: unknown): string | null {
+  const slug = str(v, 80).toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]*$/.test(slug) ? slug : null;
 }
 
 function sanitizeAssets(raw: unknown): HookAssets | null {
@@ -150,6 +165,9 @@ function sanitizeAssets(raw: unknown): HookAssets | null {
     image_generation_id: typeof o.image_generation_id === "string" ? o.image_generation_id : null,
     started_at: typeof o.started_at === "string" ? o.started_at : null,
     clip_id: typeof o.clip_id === "string" ? o.clip_id : null,
+    clip_concept: typeof o.clip_concept === "string" ? o.clip_concept.slice(0, 80) : null,
+    clip_match_reason:
+      typeof o.clip_match_reason === "string" ? o.clip_match_reason.slice(0, 300) : null,
     clip_duration:
       typeof o.clip_duration === "number" && Number.isFinite(o.clip_duration) && o.clip_duration > 0
         ? o.clip_duration
@@ -194,8 +212,8 @@ export function mergeHookPatch(
   if (!next) return null;
   const assetsStale =
     !current ||
-    (["visual_prompt", "source", "sfx_prompt", "music_prompt"] as const).some(
-      (k) => patch[k] !== undefined && patch[k] !== current[k],
+    (["visual_prompt", "source", "sfx_prompt", "music_prompt", "clip_slug"] as const).some(
+      (k) => patch[k] !== undefined && (patch[k] ?? null) !== (current[k] ?? null),
     );
   if (assetsStale) next.assets = null;
   // Edytowany główny spec zastępuje swój wpis na liście wariantów.

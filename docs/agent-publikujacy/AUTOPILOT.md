@@ -84,9 +84,17 @@ Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/stu
   `e0db8779828f484a8311fd427e815abe` i `65ef986081bc48ed890c742cfa73d42e`, więc rolka z takim
   hookiem powinna zaczynać się od jednego z nich. Klip gra w całości (hook trwa długość klipu,
   bez najazdu, wstrząsu, błysku i wygaszenia — styl `clip`), tekst z winietą znika między
-  2,2 a 2,6 s, na końcu twarde cięcie do awatara. Dobór: tor rolki albo `both`, wyżej
-  oceniane z rotacją „najdawniej użyte”. MCP: `import_hook_clips` (kopia z URL-a do Storage,
-  upsert po `slug`), `list_hook_clips`, `set_hook_clip_active`.
+  2,2 a 2,6 s, na końcu twarde cięcie do awatara. **Dobór do TREŚCI rolki (nie losowanie,
+  nie rotacja):** kandydaci to aktywne klipy toru rolki albo `both`, zwinięte do konceptów
+  (ta sama metafora z różnych modeli). AI dostaje scenariusz, tekst hooka i listę konceptów
+  (tytuł, `description`, `tags`) i wskazuje jeden z wynikiem 0–100 — klip wchodzi tylko przy
+  wyniku ≥ 55. Bez AI (błąd / brak klucza) — słowa kluczowe (polskie znaki zdjęte, rdzeń
+  z 5 pierwszych liter), też z progiem. Brak dopasowania = brak klipu (grafika Studia).
+  W koncepcie wygrywa najwyższa ocena; najdawniej użyty rozstrzyga tylko remis ocen.
+  Zasoby hooka mają `clip_id`, `clip_concept`, `clip_match_reason`. Pole hooka `clip_slug`
+  przypina konkretny klip (pomija dopasowanie). MCP: `import_hook_clips` (kopia z URL-a do
+  Storage, upsert po `slug`, `description` i `tags`), `list_hook_clips`,
+  `set_hook_clip_active`.
 - **Planer:** rolka bez hooka dostaje 3 warianty z AI (odsiew compliance + `scoreHook`), bez
   AI — motyw zapasowy. Dwa najlepsze idą do testu A/B (`hook_variant` A/B, przydział po id).
 - **MCP:** `hook` / `hook_variant` w `create_studio_video_job` i `update_studio_job`,

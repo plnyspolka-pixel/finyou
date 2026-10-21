@@ -21,8 +21,12 @@ const flows = {
 };
 vi.mock("./elevenlabs-flows.server", () => flows);
 const studioImage = vi.fn(async () => ({ id: "i1", image_url: "https://storage/hook.png" }));
+const matchClip = vi.fn(async (_i: unknown): Promise<Record<string, unknown>> => {
+  throw new Error("brak AI w teście");
+});
 vi.mock("./studio-ai.server", () => ({
   generateStudioImage: (...a: unknown[]) => studioImage(...(a as [])),
+  matchHookClipConcept: (i: unknown) => matchClip(i),
   generateHookIdeas: vi.fn(async () => {
     throw new Error("brak AI w teście");
   }),
@@ -60,6 +64,7 @@ beforeEach(() => {
   db = createFakeSupabase({ ai_growth_action_log: [] });
   for (const f of Object.values(flows)) (f as ReturnType<typeof vi.fn>).mockClear();
   studioImage.mockClear();
+  matchClip.mockClear();
   logAutopilot.mockClear();
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -90,7 +95,7 @@ describe("źródła hooka (decyzja właściciela 21.10: bez grafiki ElevenLabs)"
   });
 });
 
-describe("bank klipów hooka (clip_bank)", () => {
+describe("bank klipów hooka (clip_bank) — dobór do treści", () => {
   const row = (over: Record<string, unknown>) => ({
     slug: "x",
     track: "both",
@@ -100,66 +105,123 @@ describe("bank klipów hooka (clip_bank)", () => {
     active: true,
     use_count: 0,
     last_used_at: null,
+    tags: [],
+    description: "",
     ...over,
   });
+  const BANK = () => [
+    row({
+      id: "stamp-k",
+      slug: "h02_stamp_kling",
+      concept: "h02_stamp",
+      track: "pozyczkobiorca",
+      rating: 4,
+      media_url: "https://storage/stamp.mp4",
+      description: "Odmowa banku, odrzucony wniosek kredytowy, bank powiedział nie.",
+      tags: ["odmowa banku", "bank powiedział nie", "odrzucony wniosek"],
+    }),
+    row({
+      id: "stamp-f",
+      slug: "h02_stamp_flux",
+      concept: "h02_stamp",
+      track: "pozyczkobiorca",
+      rating: 3,
+      description: "Odmowa banku, odrzucony wniosek kredytowy, bank powiedział nie.",
+      tags: ["odmowa banku", "bank powiedział nie", "odrzucony wniosek"],
+    }),
+    row({
+      id: "jar",
+      slug: "h24_jar_kling",
+      concept: "h24_jar",
+      track: "inwestor",
+      rating: 4,
+      media_url: "https://storage/jar.mp4",
+      description: "Pieniądze nudzą się na koncie, kurzą się na lokacie, nie pracują.",
+      tags: ["pieniądze nudzą się", "pieniądze na koncie", "lokata"],
+    }),
+  ];
+  const CTX = {
+    track: "pozyczkobiorca" as const,
+    script: "Bank powiedział nie? Twoja nieruchomość może powiedzieć tak.",
+    topic: "Odmowa kredytu",
+  };
 
-  it("klip toru rolki: gotowy film z banku, długość i id w zasobach, użycie odnotowane", async () => {
-    db.tables.studio_hook_clips = [
-      row({ id: "c-poz", slug: "poz", track: "pozyczkobiorca", rating: 4 }),
-      row({
-        id: "c-inw",
-        slug: "inw",
-        track: "inwestor",
-        rating: 4,
-        media_url: "https://storage/inw.mp4",
-      }),
-      row({ id: "c-off", slug: "off", track: "inwestor", rating: 4, active: false }),
-    ];
-    const a = await startHookAssets(HOOK, "test", "inwestor");
+  it("AI wskazuje koncept: najlepszy klip konceptu, powód w zasobach, użycie odnotowane", async () => {
+    db.tables.studio_hook_clips = BANK();
+    matchClip.mockResolvedValueOnce({ concept: "h02_stamp", score: 88, reason: "odmowa banku" });
+    const a = await startHookAssets(HOOK, "test", CTX);
     expect(a).toMatchObject({
       status: "ready",
       kind: "video",
-      url: "https://storage/inw.mp4",
+      url: "https://storage/stamp.mp4",
       source_used: "clip_bank",
-      clip_id: "c-inw",
+      clip_id: "stamp-k",
+      clip_concept: "h02_stamp",
       clip_duration: 5.04,
       sfx_url: "https://storage/sfx.mp3",
     });
+    expect(a.clip_match_reason).toMatch(/AI 88\/100: odmowa banku/);
     expect(studioImage).not.toHaveBeenCalled();
-    const used = db.tables.studio_hook_clips.find((r) => r.id === "c-inw")!;
-    expect(used.use_count).toBe(1);
-    expect(used.last_used_at).toBeTruthy();
+    // AI dostało tekst hooka, scenariusz i listę konceptów tylko z toru rolki.
+    const arg = matchClip.mock.calls[0][0] as Record<string, string>;
+    expect(arg.hookText).toBe("BANK MÓWI NIE?");
+    expect(arg.script).toMatch(/Bank powiedział nie/);
+    expect(arg.conceptList).toMatch(/h02_stamp/);
+    expect(arg.conceptList).not.toMatch(/h24_jar/);
+    expect(db.tables.studio_hook_clips.find((r) => r.id === "stamp-k")!.use_count).toBe(1);
   });
 
-  it("brak klipu dla toru → grafika Studia (z notatką)", async () => {
-    db.tables.studio_hook_clips = [row({ id: "c-poz", track: "pozyczkobiorca" })];
-    const a = await startHookAssets(HOOK, "test", "inwestor");
-    expect(a).toMatchObject({ status: "ready", source_used: "studio_image", clip_id: null });
-    expect(a.notes.join(" ")).toMatch(/clip_bank/);
+  it("AI: słabe dopasowanie → brak klipu, grafika Studia (bez losowania)", async () => {
+    db.tables.studio_hook_clips = BANK();
+    matchClip.mockResolvedValueOnce({ concept: "h02_stamp", score: 30, reason: "luźno" });
+    const a = await startHookAssets(HOOK, "test", CTX);
+    expect(a).toMatchObject({ source_used: "studio_image", clip_id: null });
+    expect(a.notes.join(" ")).toMatch(/żaden klip nie pasuje/);
   });
 
-  it("przy wykończeniu tor bierze się z zadania", async () => {
-    db.tables.studio_hook_clips = [
-      row({ id: "c-inw", track: "inwestor" }),
-      row({ id: "c-poz", track: "pozyczkobiorca", media_url: "https://storage/poz.mp4" }),
-    ];
+  it("bez AI: słowa kluczowe z treści", async () => {
+    db.tables.studio_hook_clips = BANK();
+    const a = await startHookAssets(HOOK, "test", CTX);
+    expect(a).toMatchObject({ source_used: "clip_bank", clip_concept: "h02_stamp" });
+    expect(a.clip_match_reason).toMatch(/słowa kluczowe/);
+  });
+
+  it("przypięty `clip_slug` pomija dopasowanie i wygrywa z `source`", async () => {
+    db.tables.studio_hook_clips = BANK();
+    const a = await startHookAssets(
+      { ...HOOK, source: "studio_image", clip_slug: "h02_stamp_flux" },
+      "test",
+      { track: "inwestor" },
+    );
+    expect(a).toMatchObject({ source_used: "clip_bank", clip_id: "stamp-f" });
+    expect(a.clip_match_reason).toMatch(/przypięty/);
+    expect(matchClip).not.toHaveBeenCalled();
+    expect(hookSourceChain("studio_image", false, true)).toEqual([
+      "clip_bank",
+      "studio_image",
+      "broll",
+    ]);
+  });
+
+  it("przy wykończeniu tor i scenariusz biorą się z zadania", async () => {
+    db.tables.studio_hook_clips = BANK();
     db.tables.studio_video_jobs = [
       {
         id: "job-2",
-        prompt: "Bank odmówił",
-        script: "Bank powiedział nie? Twoja nieruchomość może powiedzieć tak.",
+        prompt: "Lokata",
+        script: "Pieniądze nudzą Ci się na koncie? Mogą pracować na hipotece.",
         hook: null,
         hook_variant: null,
-        track: "pozyczkobiorca",
-        material_audience: "klient",
+        track: "inwestor",
+        material_audience: "inwestor",
         publish_title: "",
       },
     ];
     const r = await hookForFinish("job-2");
     expect(r.hook?.assets).toMatchObject({
       source_used: "clip_bank",
-      url: "https://storage/poz.mp4",
-      clip_id: "c-poz",
+      url: "https://storage/jar.mp4",
+      clip_concept: "h24_jar",
     });
   });
 });
