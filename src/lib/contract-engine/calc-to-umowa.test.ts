@@ -69,7 +69,7 @@ describe("kalkulacjaDoSzkicu", () => {
     expect(p.meta).toBeUndefined();
   });
 
-  it("kalkulacja bez prowizji FY daje JAWNE null (silnik nie dolicza 5 %)", () => {
+  it("kalkulacja bez prowizji FY daje JAWNE null (silnik nie dolicza 7 %)", () => {
     const p = kalkulacjaDoSzkicu({ ...payload, financeYouFeePct: 0, financeYouFeePln: 0 });
     expect(p.warunki.prowizja_finance_you).toBeNull();
     expect(p.warunki.rachunki).toBeUndefined();
