@@ -18932,7 +18932,7 @@
                     "flows_video",
                     "flows_image"
                   ],
-                  "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
+                  "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                 },
                 "music_prompt": {
                   "anyOf": [
@@ -18945,6 +18945,18 @@
                     }
                   ],
                   "description": "Opcjonalny podkład (`compose_music`), ściszony pod lektorem."
+                },
+                "clip_slug": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 80
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie."
                 }
               },
               "additionalProperties": false,
@@ -19115,7 +19127,7 @@
                         "flows_video",
                         "flows_image"
                       ],
-                      "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
+                      "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                     },
                     "music_prompt": {
                       "anyOf": [
@@ -19128,6 +19140,18 @@
                         }
                       ],
                       "description": "Opcjonalny podkład (`compose_music`), ściszony pod lektorem."
+                    },
+                    "clip_slug": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 80
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie."
                     }
                   },
                   "additionalProperties": false,
@@ -19930,7 +19954,7 @@
       {
         "name": "preview_studio_hook",
         "title": "Preview the visual hook of a studio reel",
-        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich; twarde cięcie, bez efektów) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
+        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -20003,6 +20027,18 @@
                   "type": "null"
                 }
               ]
+            },
+            "clip_slug": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 80
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie (znów dopasowanie do treści)."
             },
             "hook_variant": {
               "type": "string",
@@ -20077,7 +20113,7 @@
       {
         "name": "import_hook_clips",
         "title": "Import clips into the studio hook clip bank",
-        "description": "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
+        "description": "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Klip trafia do rolki tylko wtedy, gdy pasuje do jej TREŚCI — dlatego podawaj `description` (po polsku: co klip znaczy, jaki problem widza ilustruje) i `tags` (frazy, którymi mówi o tym lektor); klipy jednego `concept` (ta sama metafora z różnych modeli) dobieramy razem, w koncepcie wygrywa najwyższy `rating`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -20122,11 +20158,15 @@
                     "minimum": 1,
                     "maximum": 5
                   },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
                   "tags": {
                     "type": "array",
                     "items": {
                       "type": "string",
-                      "maxLength": 40
+                      "maxLength": 60
                     },
                     "maxItems": 24
                   },
@@ -20161,7 +20201,7 @@
       {
         "name": "list_hook_clips",
         "title": "List studio hook clip bank",
-        "description": "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
+        "description": "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, opis, tagi, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Klip do rolki dobiera się po treści (opis + tagi konceptu); slug przypniesz polem hooka `clip_slug`. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,

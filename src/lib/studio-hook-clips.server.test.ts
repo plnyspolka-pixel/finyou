@@ -20,7 +20,17 @@ vi.mock("./media-storage.server", () => ({
   storeMedia: (...a: unknown[]) => storeMedia(...(a as [unknown, { name?: string }])),
 }));
 
-import { HOOK_CLIP_MAX_BYTES, importHookClip, pickHookClip } from "./studio-hook-clips.server";
+const matchClip = vi.fn(async (_i: unknown): Promise<Record<string, unknown>> => {
+  throw new Error("brak AI w teście");
+});
+vi.mock("./studio-ai.server", () => ({ matchHookClipConcept: (i: unknown) => matchClip(i) }));
+
+import {
+  HOOK_CLIP_MAX_BYTES,
+  getHookClipBySlug,
+  importHookClip,
+  pickHookClip,
+} from "./studio-hook-clips.server";
 
 const ITEM = {
   slug: "h01_vault_kling",
@@ -29,6 +39,8 @@ const ITEM = {
   track: "both",
   model: "kling",
   rating: 4,
+  description: "Otwarcie dostępu do pieniędzy.",
+  tags: ["skarbiec", "zabezpieczenie"],
   source_url: "https://v3b.fal.media/files/b/x/output.mp4",
 };
 
@@ -36,6 +48,7 @@ beforeEach(() => {
   db = createFakeSupabase({ studio_hook_clips: [] });
   fetchBytes.mockReset();
   storeMedia.mockClear();
+  matchClip.mockClear();
   fetchBytes.mockResolvedValue({ bytes: new ArrayBuffer(64), contentType: "video/mp4" });
 });
 
@@ -53,6 +66,8 @@ describe("importHookClip", () => {
       slug: "h01_vault_kling",
       track: "both",
       rating: 4,
+      description: "Otwarcie dostępu do pieniędzy.",
+      tags: ["skarbiec", "zabezpieczenie"],
       media_url: "https://storage/h01_vault_kling.mp4",
       source_url: ITEM.source_url,
     });
@@ -89,40 +104,68 @@ describe("importHookClip", () => {
   });
 });
 
-describe("pickHookClip", () => {
-  it("aktywny klip toru albo `both`, nieużyty przed użytym", async () => {
-    db.tables.studio_hook_clips = [
-      {
-        id: "a",
-        slug: "a",
-        track: "both",
-        rating: 4,
-        media_url: "https://s/a.mp4",
-        active: true,
-        last_used_at: "2026-10-21T00:00:00Z",
-      },
-      {
-        id: "b",
-        slug: "b",
-        track: "inwestor",
-        rating: 3,
-        media_url: "https://s/b.mp4",
-        active: true,
-        last_used_at: null,
-      },
-      {
-        id: "c",
-        slug: "c",
-        track: "pozyczkobiorca",
-        rating: 4,
-        media_url: "https://s/c.mp4",
-        active: true,
-        last_used_at: null,
-      },
-    ];
-    expect((await pickHookClip("inwestor"))?.id).toBe("b");
-    expect((await pickHookClip(null))?.id).toBe("c");
+describe("pickHookClip — dobór do treści", () => {
+  const row = (id: string, concept: string, track: string, rating: number, tags: string[]) => ({
+    id,
+    slug: id,
+    concept,
+    track,
+    rating,
+    tags,
+    description: "",
+    media_url: `https://s/${id}.mp4`,
+    active: true,
+    last_used_at: null,
+  });
+  const bank = () => [
+    row("jar_k", "h24_jar", "inwestor", 4, ["pieniądze nudzą się", "pieniądze na koncie"]),
+    row("jar_f", "h24_jar", "inwestor", 3, ["pieniądze nudzą się", "pieniądze na koncie"]),
+    row("stamp", "h02_stamp", "pozyczkobiorca", 4, ["bank powiedział nie", "odmowa banku"]),
+    row("vault", "h01_vault", "both", 3, ["skarbiec", "zabezpieczenie"]),
+  ];
+
+  it("AI: koncept z toru, najlepszy klip konceptu; inny tor nie trafia na listę", async () => {
+    db.tables.studio_hook_clips = bank();
+    matchClip.mockResolvedValueOnce({
+      concept: "h24_jar",
+      score: 77,
+      reason: "pieniądze na koncie",
+    });
+    const p = await pickHookClip({
+      track: "inwestor",
+      script: "Pieniądze nudzą Ci się na koncie?",
+      hookText: "NUDNE PIENIĄDZE?",
+    });
+    expect(p).toMatchObject({
+      method: "ai",
+      clip: { id: "jar_k" },
+      concept: { concept: "h24_jar" },
+    });
+    const list = (matchClip.mock.calls[0][0] as { conceptList: string }).conceptList;
+    expect(list).toMatch(/h01_vault/);
+    expect(list).not.toMatch(/h02_stamp/);
+  });
+
+  it("AI poniżej progu → null (bez zapasu na słowa kluczowe)", async () => {
+    db.tables.studio_hook_clips = bank();
+    matchClip.mockResolvedValueOnce({ concept: "h24_jar", score: 40 });
+    expect(
+      await pickHookClip({ track: "inwestor", script: "Pieniądze nudzą Ci się na koncie?" }),
+    ).toBeNull();
+  });
+
+  it("bez AI: słowa kluczowe; brak dopasowania albo pusty bank → null", async () => {
+    db.tables.studio_hook_clips = bank();
+    const p = await pickHookClip({ track: "pozyczkobiorca", script: "Bank powiedział nie?" });
+    expect(p).toMatchObject({ method: "keywords", clip: { id: "stamp" } });
+    expect(await pickHookClip({ track: "inwestor", script: "Pogoda w górach." })).toBeNull();
     db.tables.studio_hook_clips = [];
-    expect(await pickHookClip("inwestor")).toBeNull();
+    expect(await pickHookClip({ track: "inwestor", script: "Pieniądze na koncie" })).toBeNull();
+  });
+
+  it("getHookClipBySlug", async () => {
+    db.tables.studio_hook_clips = bank();
+    expect((await getHookClipBySlug("JAR_F"))?.id).toBe("jar_f");
+    expect(await getHookClipBySlug("nie-ma")).toBeNull();
   });
 });

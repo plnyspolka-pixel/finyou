@@ -125,6 +125,34 @@ Zwracaj WYŁĄCZNIE JSON: {"hooks":[{"visual_prompt":"...","text":"...","highlig
     .slice(0, count);
 }
 
+// Dobór klipu z banku klipów hooka do TREŚCI rolki: AI dostaje scenariusz,
+// tekst hooka i ponumerowaną listę konceptów (tytuł, opis, tagi) i wskazuje
+// JEDEN koncept z wynikiem 0–100. Próg i walidacja odpowiedzi:
+// acceptAiClipMatch (studio-hook-clips.ts) — słabe dopasowanie = brak klipu.
+export async function matchHookClipConcept(input: {
+  script: string;
+  topic: string;
+  hookText: string;
+  visualPrompt: string;
+  conceptList: string;
+}): Promise<Record<string, unknown>> {
+  return chatJson(
+    `Dobierasz klip otwierający (pierwsze sekundy) krótkiego pionowego wideo firmy finansowej. ${BRAND_CONTEXT}
+Dostajesz scenariusz lektora, tekst hooka na ekranie i ponumerowaną listę konceptów klipów (metafora wizualna: tytuł, znaczenie, tagi).
+Wybierz JEDEN koncept, który znaczeniowo najlepiej ilustruje PIERWSZE ZDANIE lektora i tekst hooka (problem widza). Oceń dopasowanie 0–100: 80+ = metafora mówi dokładnie o tym samym; 55–79 = wyraźnie pasuje; poniżej 55 = luźny związek albo brak — wtedy daj niski wynik, NIE naciągaj.
+Zwracaj WYŁĄCZNIE JSON: {"concept":"<klucz konceptu z nawiasu kwadratowego>","score":0-100,"reason":"krótko po polsku, dlaczego"}`,
+    `Tekst hooka: ${input.hookText || "(brak)"}
+Temat: ${input.topic || "(brak)"}
+Opis obrazu hooka: ${input.visualPrompt || "(brak)"}
+
+Scenariusz lektora:
+${input.script.slice(0, 2000) || "(brak)"}
+
+Koncepty klipów:
+${input.conceptList}`,
+  );
+}
+
 // Scenariusze dla pytań z paczki 250 NIE przechodzą przez AI — składa je
 // deterministycznie buildShortsScript (src/lib/shorts-script.ts) z gotowej,
 // sprawdzonej treści pliku źródłowego.

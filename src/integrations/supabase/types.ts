@@ -13932,6 +13932,7 @@ export type Database = {
           active: boolean | null
           concept: string | null
           created_at: string | null
+          description: string | null
           duration_s: number | null
           id: string
           last_used_at: string | null
@@ -13950,6 +13951,7 @@ export type Database = {
           active?: boolean | null
           concept?: string | null
           created_at?: string | null
+          description?: string | null
           duration_s?: number | null
           id?: string
           last_used_at?: string | null
@@ -13968,6 +13970,7 @@ export type Database = {
           active?: boolean | null
           concept?: string | null
           created_at?: string | null
+          description?: string | null
           duration_s?: number | null
           id?: string
           last_used_at?: string | null

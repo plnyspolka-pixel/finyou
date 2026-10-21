@@ -902,7 +902,7 @@ const HOOK_INPUT = z
       .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
       .optional()
       .describe(
-        "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane.",
+        "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane.",
       ),
     music_prompt: z
       .string()
@@ -910,10 +910,31 @@ const HOOK_INPUT = z
       .nullable()
       .optional()
       .describe("Opcjonalny podkład (`compose_music`), ściszony pod lektorem."),
+    clip_slug: z
+      .string()
+      .max(80)
+      .nullable()
+      .optional()
+      .describe(
+        "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie.",
+      ),
   })
   .describe(
     "Hook wizualny 0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora + efekt dźwiękowy + duży tekst. Bez pola hook zaplanuje generator (wariant A/B). Rysuje go silnik Remotion.",
   );
+
+/** Walidacja `clip_slug` hooka: poprawny format i klip istnieje w banku. */
+async function hookClipSlugError(
+  given: string | null | undefined,
+  sanitized: string | null | undefined,
+): Promise<string | null> {
+  if (typeof given !== "string" || !given.trim()) return null;
+  if (!sanitized) return "Nieprawidłowy `clip_slug` (małe litery, cyfry, _ i -).";
+  const { getHookClipBySlug } = await import("@/lib/studio-hook-clips.server");
+  return (await getHookClipBySlug(sanitized))
+    ? null
+    : `Nie ma klipu „${sanitized}” w banku klipów hooka (list_hook_clips).`;
+}
 
 const HOOK_VARIANT = z
   .enum(["A", "B", "C"])
@@ -1050,6 +1071,8 @@ export const createStudioVideoJob = defineTool({
       const { sanitizeHook } = await import("@/lib/studio-hook");
       const hook = a.hook ? sanitizeHook({ source: "auto", ...a.hook }) : null;
       if (a.hook && !hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
+      const clipErr = await hookClipSlugError(a.hook?.clip_slug, hook?.clip_slug);
+      if (clipErr) return fail(clipErr);
       const createNotes = [
         gate && !gate.ok ? `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` : null,
         gate?.ok && gate.fallback ? finisherFallbackNote(gate.fallback.reason) : null,
@@ -1239,6 +1262,8 @@ export const updateStudioJob = defineTool({
         if (a.hook) {
           hook = mergeHookPatch(hook, a.hook);
           if (!hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
+          const clipErr = await hookClipSlugError(a.hook.clip_slug, hook.clip_slug);
+          if (clipErr) return fail(clipErr);
         }
         if (a.hook_variant && hook) hook = applyHookVariant(hook, a.hook_variant);
         hookPatch.hook = hook;

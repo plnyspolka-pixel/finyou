@@ -26,13 +26,21 @@ const HOOK_FIELDS = {
     .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
     .optional(),
   music_prompt: z.string().max(220).nullable().optional(),
+  clip_slug: z
+    .string()
+    .max(80)
+    .nullable()
+    .optional()
+    .describe(
+      "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie (znów dopasowanie do treści).",
+    ),
 };
 
 export const previewStudioHook = defineTool({
   name: "preview_studio_hook",
   title: "Preview the visual hook of a studio reel",
   description:
-    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich; twarde cięcie, bez efektów) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
+    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid().optional(),
     script: z.string().max(5000).optional(),
@@ -100,6 +108,14 @@ export const previewStudioHook = defineTool({
         if (!hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
       }
       if (!hook) return fail("Nie udało się zaplanować hooka.");
+      if (hook.clip_slug) {
+        const bank = await import("@/lib/studio-hook-clips.server");
+        if (!(await bank.getHookClipBySlug(hook.clip_slug))) {
+          return fail(`Nie ma klipu „${hook.clip_slug}” w banku klipów hooka (list_hook_clips).`);
+        }
+      } else if (typeof a.clip_slug === "string" && a.clip_slug.trim()) {
+        return fail("Nieprawidłowy `clip_slug` (małe litery, cyfry, _ i -).");
+      }
       const key = hookLib.chooseHookVariant(
         hook,
         job?.id ?? "podglad",
@@ -109,9 +125,10 @@ export const previewStudioHook = defineTool({
       if (a.generate_assets && hook.assets?.status !== "ready") {
         try {
           const name = job?.publish_title || topic || "hook";
+          const ctxClip = { track, script, topic };
           const started = hook.assets
-            ? (await srv.advanceHookAssets(hook, name, new Date(), track)).assets
-            : await srv.startHookAssets(hook, name, track);
+            ? (await srv.advanceHookAssets(hook, name, new Date(), ctxClip)).assets
+            : await srv.startHookAssets(hook, name, ctxClip);
           hook = { ...hook, assets: started };
         } catch (e) {
           note = [note, `Zasoby hooka nieudane: ${errMsg(e)}`].filter(Boolean).join(" ");
@@ -218,7 +235,7 @@ export const importHookClips = defineTool({
   name: "import_hook_clips",
   title: "Import clips into the studio hook clip bank",
   description:
-    "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
+    "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Klip trafia do rolki tylko wtedy, gdy pasuje do jej TREŚCI — dlatego podawaj `description` (po polsku: co klip znaczy, jaki problem widza ilustruje) i `tags` (frazy, którymi mówi o tym lektor); klipy jednego `concept` (ta sama metafora z różnych modeli) dobieramy razem, w koncepcie wygrywa najwyższy `rating`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
   inputSchema: {
     items: z
       .array(
@@ -229,7 +246,8 @@ export const importHookClips = defineTool({
           track: CLIP_TRACK,
           model: z.string().max(40).optional(),
           rating: z.number().int().min(1).max(5).optional(),
-          tags: z.array(z.string().max(40)).max(24).optional(),
+          description: z.string().max(500).optional(),
+          tags: z.array(z.string().max(60)).max(24).optional(),
           source_url: z.string().url(),
         }),
       )
@@ -269,7 +287,7 @@ export const listHookClips = defineTool({
   name: "list_hook_clips",
   title: "List studio hook clip bank",
   description:
-    "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
+    "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, opis, tagi, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Klip do rolki dobiera się po treści (opis + tagi konceptu); slug przypniesz polem hooka `clip_slug`. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
   inputSchema: {
     track: CLIP_TRACK.optional(),
     active: z.boolean().optional(),

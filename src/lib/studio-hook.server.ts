@@ -6,8 +6,10 @@
 // Decyzja właściciela 21.10.2026: obrazu hooka NIE generujemy w ElevenLabs
 // (bez planu Pro). Źródło klipu (pole `source`, domyślnie `auto`):
 //   (1) `clip_bank` — bank gotowych klipów hooka (`studio_hook_clips`,
-//       studio-hook-clips.server.ts): klip ~5 s dobrany po torze rolki
-//       (wyżej oceniane, rotacja „najdawniej użyte”), gra w całości i kończy
+//       studio-hook-clips.server.ts): klip ~5 s DOBRANY DO TREŚCI rolki
+//       (AI wybiera koncept z wynikiem ≥ 55/100, bez AI słowa kluczowe;
+//       brak dopasowania = kolejne źródło, nigdy losowo; `clip_slug`
+//       przypina konkretny klip), gra w całości i kończy
 //       się na ścianie z logo za pionowymi awatarami e0db…/65ef… — rolka
 //       z klipem powinna zaczynać się od jednego z nich (twarde cięcie),
 //   (2) grafika Studia (`generate_studio_image`) + animacja w Remotion,
@@ -164,10 +166,28 @@ const CHAIN: Record<HookSource, ClipSource[]> = {
   broll: ["broll"],
 };
 
-/** Łańcuch źródeł dla hooka — bez flagi Flows źródła ElevenLabs odpadają. */
-export function hookSourceChain(source: HookSource, flows = isFlowsHookEnabled()): ClipSource[] {
-  return CHAIN[source].filter((s) => flows || (s !== "flows_video" && s !== "flows_image"));
+/**
+ * Łańcuch źródeł dla hooka — bez flagi Flows źródła ElevenLabs odpadają.
+ * Przypięty klip (`clip_slug`) idzie pierwszy niezależnie od `source`.
+ */
+export function hookSourceChain(
+  source: HookSource,
+  flows = isFlowsHookEnabled(),
+  pinnedClip = false,
+): ClipSource[] {
+  const chain = CHAIN[source].filter((s) => flows || (s !== "flows_video" && s !== "flows_image"));
+  return pinnedClip ? ["clip_bank", ...chain.filter((s) => s !== "clip_bank")] : chain;
 }
+
+const chainFor = (hook: StudioHook) =>
+  hookSourceChain(hook.source, isFlowsHookEnabled(), Boolean(hook.clip_slug));
+
+/** Kontekst rolki do doboru klipu z banku: tor i treść. */
+export type HookClipContext = {
+  track?: Track | null;
+  script?: string | null;
+  topic?: string | null;
+};
 
 const addNote = (a: HookAssets, n: string) => {
   if (!a.notes.includes(n)) a.notes = [...a.notes, n].slice(-12);
@@ -182,7 +202,7 @@ async function acquireClip(
   assets: HookAssets,
   sources: Array<Exclude<HookSource, "auto">>,
   name: string,
-  track: Track | null = null,
+  ctx: HookClipContext = {},
 ): Promise<HookAssets> {
   const prompt = hookVisualPrompt(hook);
   for (const source of sources) {
@@ -220,20 +240,52 @@ async function acquireClip(
         return ready(assets, "image", stored.url, "flows_image");
       }
       if (source === "clip_bank") {
-        // Bank gotowych klipów hooka: tor rolki (albo `both`), wyżej oceniane
-        // z rotacją. Pusty bank → kolejne źródło z łańcucha.
+        // Bank gotowych klipów hooka: przypięty `clip_slug` albo klip
+        // dopasowany do TREŚCI rolki. Brak dopasowania → kolejne źródło.
         const bank = await import("./studio-hook-clips.server");
-        const clip = await bank.pickHookClip(track);
-        if (!clip) {
-          addNote(assets, "clip_bank: brak aktywnego klipu dla toru");
+        let pick: Awaited<ReturnType<typeof bank.pickHookClip>> = null;
+        if (hook.clip_slug) {
+          const clip = await bank.getHookClipBySlug(hook.clip_slug);
+          if (!clip) {
+            addNote(assets, `clip_bank: brak klipu „${hook.clip_slug}” w banku`);
+            continue;
+          }
+          pick = {
+            clip,
+            concept: {
+              concept: clip.concept || clip.slug,
+              title: "",
+              description: "",
+              tags: [],
+              clips: [clip],
+            },
+            score: 100,
+            reason: `przypięty klip ${clip.slug}`,
+            method: "pinned",
+          };
+        } else {
+          pick = await bank.pickHookClip({
+            track: ctx.track ?? null,
+            script: ctx.script ?? null,
+            topic: ctx.topic ?? null,
+            hookText: hook.text,
+            visualPrompt: hook.visual_prompt,
+          });
+        }
+        if (!pick) {
+          addNote(assets, "clip_bank: żaden klip nie pasuje do treści rolki");
           continue;
         }
-        await bank.markHookClipUsed(clip.id).catch(() => {});
-        return {
-          ...ready(assets, "video", clip.media_url, "clip_bank"),
-          clip_id: clip.id,
-          clip_duration: clip.duration_s ?? null,
+        await bank.markHookClipUsed(pick.clip.id).catch(() => {});
+        const done: HookAssets = {
+          ...ready(assets, "video", pick.clip.media_url, "clip_bank"),
+          clip_id: pick.clip.id,
+          clip_duration: pick.clip.duration_s ?? null,
+          clip_concept: pick.concept.concept,
+          clip_match_reason: pick.reason,
         };
+        addNote(done, `clip_bank: ${pick.clip.slug} — ${pick.reason}`.slice(0, 240));
+        return done;
       }
       if (source === "studio_image") {
         const { generateStudioImage } = await import("./studio-ai.server");
@@ -280,6 +332,8 @@ function ready(
     image_generation_id: null,
     clip_id: null,
     clip_duration: null,
+    clip_concept: null,
+    clip_match_reason: null,
   };
 }
 
@@ -331,10 +385,10 @@ async function acquireAudio(
 export async function startHookAssets(
   hook: StudioHook,
   name: string,
-  track: Track | null = null,
+  ctx: HookClipContext = {},
 ): Promise<HookAssets> {
   const base: HookAssets = { ...emptyAssets(), notes: hook.assets?.notes ?? [] };
-  const clip = await acquireClip(hook, base, hookSourceChain(hook.source), name, track);
+  const clip = await acquireClip(hook, base, chainFor(hook), name, ctx);
   return acquireAudio(hook, clip, name);
 }
 
@@ -347,18 +401,18 @@ export async function advanceHookAssets(
   hook: StudioHook,
   name: string,
   now = new Date(),
-  track: Track | null = null,
+  ctx: HookClipContext = {},
 ): Promise<{ assets: HookAssets; waiting: boolean }> {
-  let assets = hook.assets ?? (await startHookAssets(hook, name, track));
+  let assets = hook.assets ?? (await startHookAssets(hook, name, ctx));
   if (assets.status !== "pending") return { assets, waiting: false };
   const kind = assets.video_generation_id ? "video" : assets.image_generation_id ? "image" : null;
   const id = assets.video_generation_id ?? assets.image_generation_id;
   const nextSources = (from: "flows_video" | "flows_image") => {
-    const chain = hookSourceChain(hook.source);
+    const chain = chainFor(hook);
     return chain.slice(chain.indexOf(from) + 1);
   };
   if (!kind || !id) {
-    assets = await acquireClip(hook, assets, hookSourceChain(hook.source), name, track);
+    assets = await acquireClip(hook, assets, chainFor(hook), name, ctx);
     return { assets, waiting: assets.status === "pending" };
   }
   const flows = await import("./elevenlabs-flows.server");
@@ -385,10 +439,16 @@ export async function advanceHookAssets(
     { ...assets, video_generation_id: null, image_generation_id: null },
     nextSources(kind === "video" ? "flows_video" : "flows_image"),
     name,
-    track,
+    ctx,
   );
   return { assets, waiting: assets.status === "pending" };
 }
+
+const clipContext = (job: HookJob): HookClipContext => ({
+  track: trackOfJob(job),
+  script: job.script,
+  topic: job.prompt,
+});
 
 async function freshHookJob(jobId: string): Promise<HookJob | null> {
   const { data } = await supabaseAdmin
@@ -412,7 +472,7 @@ export async function prepareHookForJob(jobId: string): Promise<void> {
     const hook = await planHookForJob(job);
     if (!hook) return;
     if (hook.assets?.status === "ready" || hook.assets?.video_generation_id) return;
-    const assets = await startHookAssets(hook, job.publish_title || job.prompt, trackOfJob(job));
+    const assets = await startHookAssets(hook, job.publish_title || job.prompt, clipContext(job));
     await saveHook(jobId, { ...hook, assets });
   } catch (e) {
     console.warn(`[Studio] hook wizualny (${jobId}) nieudany: ${errMsg(e)}`);
@@ -438,7 +498,7 @@ export async function hookForFinish(
       hook,
       job.publish_title || job.prompt,
       now,
-      trackOfJob(job),
+      clipContext(job),
     );
     const withAudio = assets.status === "ready" ? await acquireAudio(hook, assets, jobId) : assets;
     const next = { ...hook, assets: withAudio };
