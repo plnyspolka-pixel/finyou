@@ -6,6 +6,7 @@
 // nadawca z KRS, oznaczenie AI, wersja).
 import { COMPANY_DATA } from "@/lib/company";
 import { ReportWriter, type ReportFonts } from "@/lib/pdf/report-writer";
+import type { FontyPdf } from "@/lib/legal/pdf-z-tekstu";
 import {
   CATALOG_VERSION,
   catalogFooterLines,
@@ -17,8 +18,13 @@ export const PDF_BRAND = "Finance You · Materiał edukacyjny";
 
 export async function renderLeadMagnetPdf(
   m: LeadMagnetBlueprint,
-  opts: { generatedAt?: Date; fonts?: ReportFonts } = {},
+  opts: { generatedAt?: Date; fonts?: ReportFonts; serifFonts?: FontyPdf } = {},
 ): Promise<Uint8Array> {
+  if (m.custom_pdf === "wzor-umowy") {
+    // Wzór umowy: treść z silnika klauzul, skład pdfZBlokow (serif, jak .docx umowy).
+    const { renderWzorUmowyPdf } = await import("./wzor-umowy-pdf");
+    return renderWzorUmowyPdf(m, { generatedAt: opts.generatedAt, fonts: opts.serifFonts });
+  }
   const w = await ReportWriter.create({
     title: m.title,
     subject: `${m.slug} · wersja ${CATALOG_VERSION}`,

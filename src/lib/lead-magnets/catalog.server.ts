@@ -5,7 +5,7 @@
 // kontrolę jakości: reguły twarde compliance (strona, PDF, mail) i próbny
 // render PDF — z problemem nie jest publikowany.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { evaluateCompliance } from "@/lib/autopilot/compliance-rules";
+import { checkHardRules, evaluateCompliance } from "@/lib/autopilot/compliance-rules";
 import { logAutopilot } from "@/lib/autopilot/state.server";
 import type { Track } from "@/lib/autopilot/types";
 import {
@@ -53,6 +53,19 @@ export async function checkCatalogMagnet(m: LeadMagnetBlueprint): Promise<string
     // Strona ma tylko nagłówki — stopkę niesie PDF i mail.
     if (label !== "strona")
       for (const q of r.requires) problems.push(`compliance (${label}): ${q.code}`);
+  }
+  if (m.custom_pdf === "wzor-umowy") {
+    // Treść umowy to tekst prawny z biblioteki klauzul — nie podlega regułom
+    // marketingowym, ale nie może nieść danych osobowych ani numerów ksiąg.
+    const { wzorUmowyTekst } = await import("./wzor-umowy");
+    const osobowe = new Set(["pesel", "numer_kw", "telefon", "email"]);
+    try {
+      for (const h of checkHardRules(wzorUmowyTekst(), { kind: "lead_magnet", track: m.track })) {
+        if (osobowe.has(h.code)) problems.push(`umowa: ${h.code}${h.match ? ` „${h.match}”` : ""}`);
+      }
+    } catch (e) {
+      problems.push(`umowa: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
   try {
     const { renderLeadMagnetPdf } = await import("./pdf");

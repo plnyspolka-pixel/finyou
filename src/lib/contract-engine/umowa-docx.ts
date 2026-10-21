@@ -348,7 +348,8 @@ function wniosekBloki(d: any): Blok[] {
 
 // ── 2. Umowa ───────────────────────────────────────────────────
 
-function umowaBloki(d: any, doc: Dokument): Blok[] {
+/** Część „Umowa pożyczki” kompletu (tytuł, komparycja, paragrafy, spis załączników, podpisy). */
+export function umowaBloki(d: any, doc: Dokument): Blok[] {
   const out: Blok[] = [{ t: "tytul", tekst: "UMOWA POŻYCZKI" }];
   if (doc.meta?.numer_umowy) out.push({ t: "podtytul", tekst: `nr ${doc.meta.numer_umowy}` });
   const k = doc.komparycja;

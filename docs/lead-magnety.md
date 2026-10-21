@@ -107,9 +107,17 @@ Hasła są tymi samymi, które serie rolek mają jako `defaultKeyword`
 | pożyczkobiorca | `DOKUMENTY` | `checklista-dokumentow` — dokumenty firmy, nieruchomości, celu, osób             | przygotowanie | wniosek                |
 | pożyczkobiorca | `PROCES`    | `od-wniosku-do-wyplaty` — 10 kroków, notariusz, rozliczenie wypłaty, mit vs fakt | decyzja       | wniosek                |
 
-Kalkulatory `ILE` / `RATA` / `LTV` zakłada `autopilot_provision_tools`; wzór
-umowy (`UMOWA`) pochodzi z szablonów właściciela (rekord `wzor-umowy-pozyczki`),
-nie z kodu. `resolveKeywordTarget(hasło)` zwraca materiał z katalogu albo
+Kalkulatory `ILE` / `RATA` / `LTV` zakłada `autopilot_provision_tools`. Wzór
+umowy (`UMOWA`) nie jest pisany przez AI: `wzor-umowy.ts` składa go tym samym
+potokiem co prawdziwą umowę (`przetworzSzkic` → `renderuj` → `umowaBloki` z
+biblioteki klauzul silnika umów) na przykładowych warunkach (100 000 zł, 12 rat,
+hipoteka i art. 777 do 260 000 zł), a dane stron, PESEL, NIP, numer KW i rachunki
+maskuje polami w nawiasach kwadratowych. PDF (`wzor-umowy-pdf.ts`, `pdfZBlokow`,
+serif jak w .docx): okładka i wprowadzenie z katalogu → umowa (ze spisem
+Załączników 1–4 w treści) → strona „Załączniki do umowy — w pakiecie dokumentów”
+(wniosek + Zał. 1–4 z opisem i miejscem, gdzie są) → zakończenie. Testy
+`wzor-umowy.test.ts` pilnują braku błędów walidacji silnika i braku danych
+identyfikujących. `resolveKeywordTarget(hasło)` zwraca materiał z katalogu albo
 kalkulator — do opisu-lejka („Skomentuj HASŁO, a wyślę Ci …”).
 
 Każdy materiał niesie oznaczenie AI, nadawcę z KRS i linię ryzyka (PDF i mail)

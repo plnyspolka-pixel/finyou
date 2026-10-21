@@ -25,13 +25,19 @@ if (cmd === "dump") {
 } else if (cmd === "render") {
   // Poza Vite import `?inline` nie działa — fonty czytamy z dysku.
   const fontDir = new URL("../src/lib/legal/fonts/", import.meta.url);
+  const ttf = (name: string) => new Uint8Array(readFileSync(new URL(name, fontDir)));
   const fonts = {
-    regular: new Uint8Array(readFileSync(new URL("LiberationSans-Regular.ttf", fontDir))),
-    bold: new Uint8Array(readFileSync(new URL("LiberationSans-Bold.ttf", fontDir))),
+    regular: ttf("LiberationSans-Regular.ttf"),
+    bold: ttf("LiberationSans-Bold.ttf"),
+  };
+  const serifFonts = {
+    regular: ttf("LiberationSerif-Regular.ttf"),
+    bold: ttf("LiberationSerif-Bold.ttf"),
+    italic: ttf("LiberationSerif-Italic.ttf"),
   };
   mkdirSync(outDir, { recursive: true });
   for (const m of LEAD_MAGNET_CATALOG) {
-    const bytes = await renderLeadMagnetPdf(m, { fonts });
+    const bytes = await renderLeadMagnetPdf(m, { fonts, serifFonts });
     const file = join(outDir, m.file_name);
     writeFileSync(file, bytes);
     console.log(`${file}  ${(bytes.byteLength / 1024).toFixed(0)} KB`);

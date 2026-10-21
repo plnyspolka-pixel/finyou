@@ -93,6 +93,11 @@ export interface LeadMagnetBlueprint {
   /** Następny krok lejka pokazywany po zapisie i w mailu. */
   next: LeadMagnetAction;
   file_name: string;
+  /**
+   * Własny skład PDF zamiast sekcji ReportWriter: „wzor-umowy” = treść umowy
+   * z silnika klauzul (wzor-umowy.ts) + okładka/wprowadzenie z `pdf.sections`.
+   */
+  custom_pdf?: "wzor-umowy";
   pdf: {
     eyebrow: string;
     subtitle: string;
@@ -696,7 +701,7 @@ const bledyInwestora = defineMagnet({
   track: "inwestor",
   keyword: "BŁĘDY",
   stage: "decyzja",
-  series: ["3-bledy-inwestora", "nie-mow-powiedz-inwestor"],
+  series: ["3-bledy-inwestora"],
   title: "7 błędów inwestora w pożyczkach pod hipotekę – i jak ich uniknąć",
   headline:
     "7 błędów, przez które inwestorzy tracą pieniądze w pożyczkach pod hipotekę – i prosta procedura, która przed nimi chroni",
@@ -940,6 +945,103 @@ const bledyInwestora = defineMagnet({
     closing: {
       heading: "Co dalej?",
       text: "W programie dla inwestorów Finance You większość tej listy dostajesz w gotowej formie: raport o zabezpieczeniu z analizą księgi wieczystej i oceną ryzyka, generator umowy z zatwierdzonych szablonów, harmonogram zaakceptowany przez klienta oraz obsługę spłat i windykacji. Zobacz, jak to działa.",
+      actions: INVESTOR_ACTIONS,
+    },
+  },
+});
+
+const wzorUmowyPozyczki = defineMagnet({
+  slug: "wzor-umowy-pozyczki",
+  track: "inwestor",
+  keyword: "UMOWA",
+  synonyms: ["WZÓR"],
+  stage: "decyzja",
+  series: ["nie-mow-powiedz-inwestor"],
+  custom_pdf: "wzor-umowy",
+  title: "Wzór umowy pożyczki pod hipotekę dla inwestora",
+  headline:
+    "Wzór umowy pożyczki pod hipotekę, w której pożyczkodawcą jesteś Ty – złożony z biblioteki klauzul, z której Finance You składa prawdziwe umowy",
+  subheadline:
+    "Pełny tekst umowy na przykładzie 100 000 zł udzielonych przez osobę prywatną przedsiębiorcy: hipoteka do 260 000 zł, poddanie się egzekucji z art. 777 k.p.c., oświadczenia wyłączające charakter konsumencki, windykacja i wypowiedzenie. Bez załączników – komplet z Zał. 1–4 daje pakiet dokumentów.",
+  benefits: [
+    "Tekst umowy z zatwierdzonej biblioteki klauzul silnika umów Finance You, nie „z internetu” – 7 paragrafów, od przedmiotu po wypowiedzenie",
+    "Pożyczkodawcą jest osoba fizyczna – dokładnie Twoja rola jako inwestora prywatnego",
+    "Hipoteka do 260 000 zł przy 100 000 zł kapitału, art. 777 § 1 pkt 5 k.p.c., zakaz dalszego obciążania, warunki wejścia w życie i wypłaty",
+    "Oświadczenia B2B wyłączające ustawę o kredycie konsumenckim i hipotecznym, o stanie nieruchomości i braku zaległości wobec US i ZUS",
+    "Windykacja i wypowiedzenie: kolejność zaliczania wpłat, odsetki za opóźnienie, wypowiedzenie po 14 dniach, spłata całości w 7 dni",
+    "Pola do wypełnienia w nawiasach kwadratowych – widać, jakie dane zebrać przed notariuszem",
+    "Spis załączników 1–4 (harmonogram, protokół negocjacji, tabela opłat, dyspozycja wypłaty) – komplet składa generator umowy w pakiecie dokumentów",
+  ],
+  cta_text: "Wyślij mi wzór umowy",
+  meta_description:
+    "Wzór umowy pożyczki pod hipotekę dla inwestora prywatnego z biblioteki klauzul Finance You: hipoteka, art. 777 k.p.c., oświadczenia B2B, windykacja. Bez załączników – komplet w pakiecie dokumentów.",
+  thank_you_message:
+    "Dziękujemy! Wzór wysłaliśmy też na Twój e-mail. Komplet z załącznikami 1–4 (harmonogram, protokół negocjacji, tabela opłat, dyspozycja wypłaty) składa generator umowy w programie dla inwestorów.",
+  email_subject: "Twój wzór umowy pożyczki pod hipotekę: {tytul}",
+  email_intro:
+    "oto „{tytul}”: {link}\n\nTo sama umowa – bez załączników. Zwróć uwagę na § 2 (warunki wejścia w życie i wypłaty), § 3 (hipoteka i art. 777 k.p.c.) oraz § 7 (wypowiedzenie). Załączniki 1–4, które umowa wymienia, składa dla konkretnej transakcji generator umowy w pakiecie dokumentów programu dla inwestorów – razem z wnioskiem i wersją do e-podpisu.",
+  next: { label: "Program dla inwestorów Finance You (pakiet dokumentów)", url: INVESTOR_PAGE_URL },
+  pdf: {
+    eyebrow: "Wzór umowy · dla inwestora prywatnego",
+    subtitle:
+      "Sama umowa pożyczki zabezpieczonej hipoteką – z biblioteki klauzul silnika umów Finance You, na przykładowych warunkach, z polami do wypełnienia. Załączniki 1–4 i wniosek: w pakiecie dokumentów.",
+    sections: [
+      {
+        heading: "Jak czytać ten wzór",
+        blocks: [
+          {
+            type: "lead",
+            text: "Ten dokument to tekst umowy, jaką Finance You składa dla inwestorów finansujących przedsiębiorców pod hipotekę. Nie jest napisany od zera na potrzeby materiału: pochodzi z tej samej biblioteki klauzul, z której generator umowy składa prawdziwe dokumenty do podpisu.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "Pola w nawiasach kwadratowych, np. [numer księgi wieczystej], to dane konkretnej transakcji – uzupełnia je generator.",
+              "Kwoty, terminy i oprocentowanie są przykładowe: 100 000 zł kapitału, 12 rat, hipoteka i poddanie się egzekucji do 260 000 zł. Oprocentowanie przykładu jest równe odsetkom maksymalnym na dzień wydania materiału.",
+              "Pożyczkodawcą jest osoba fizyczna (inwestor), pożyczkobiorcą – przedsiębiorca prowadzący jednoosobową działalność. Dla spółek, poręczycieli, współwłasności i wcześniejszych hipotek biblioteka ma osobne klauzule, które generator włącza automatycznie.",
+              "Umowa wymienia cztery załączniki (1–4). Nie ma ich w tym wzorze – opis i miejsce, gdzie są, znajdziesz na stronie po umowie.",
+            ],
+          },
+          {
+            type: "important",
+            text: "Wzór ma charakter edukacyjny. Przed użyciem we własnej transakcji skonsultuj treść z własną kancelarią – każda umowa wymaga dopasowania do stron, nieruchomości i warunków.",
+          },
+        ],
+      },
+      {
+        heading: "Na co zwrócić uwagę",
+        blocks: [
+          {
+            type: "keyValues",
+            rows: [
+              [
+                "§ 2 – wypłata i wejście w życie",
+                "wypłata dopiero po dokumentach: oryginał umowy, wypisy aktów z żądaniem wpisu hipoteki i poddaniem się egzekucji, komplet oryginałów.",
+              ],
+              [
+                "§ 3 – zabezpieczenia",
+                "hipoteka do sumy obejmującej kapitał, odsetki i koszty; art. 777 § 1 pkt 5 k.p.c.; zakaz zbycia i dalszego obciążania bez zgody wierzyciela.",
+              ],
+              [
+                "§ 4 – windykacja",
+                "odsetki za opóźnienie, kolejność zaliczania wpłat, koszty według tabeli opłat (Załącznik nr 3).",
+              ],
+              [
+                "§ 5 – oświadczenia",
+                "status przedsiębiorcy i cel gospodarczy, stan nieruchomości, brak zaległości wobec US i ZUS, majątek osobisty, aktywna działalność.",
+              ],
+              [
+                "§ 7 – wypowiedzenie",
+                "po 14 dniach opóźnienia i przy nieprawdziwych oświadczeniach; spłata całości w 7 dni od doręczenia.",
+              ],
+            ],
+          },
+        ],
+      },
+    ],
+    closing: {
+      heading: "Co dalej?",
+      text: "Komplet do podpisu – wniosek, umowę i załączniki 1–4 dla konkretnej transakcji – składa generator umowy w programie dla inwestorów Finance You. Tam też jest analiza księgi wieczystej i ocena ryzyka zabezpieczenia, harmonogram zaakceptowany przez klienta oraz obsługa spłat i windykacji.",
       actions: INVESTOR_ACTIONS,
     },
   },
@@ -1636,6 +1738,7 @@ export const LEAD_MAGNET_CATALOG: readonly LeadMagnetBlueprint[] = [
   startInwestora,
   checklistaKsiegi,
   bledyInwestora,
+  wzorUmowyPozyczki,
   bankOdmowil,
   checklistaDokumentow,
   odWnioskuDoWyplaty,
@@ -1694,6 +1797,7 @@ export function resolveKeywordTarget(keyword: string | null | undefined): Keywor
 
 function keywordName(m: LeadMagnetBlueprint): string {
   if (m.slug.startsWith("checklista")) return `checklistę „${m.title}”`;
+  if (m.slug.startsWith("wzor")) return `wzór „${m.title}”`;
   if (m.slug === "od-wniosku-do-wyplaty") return `mapę procesu „${m.title}”`;
   return `przewodnik „${m.title}”`;
 }

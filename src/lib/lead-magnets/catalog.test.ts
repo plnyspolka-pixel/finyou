@@ -33,14 +33,14 @@ describe("katalog — struktura", () => {
     expect(new Set(slugs).size).toBe(slugs.length);
     expect([...slugs].sort()).toEqual([...CATALOG_SLUGS].sort());
     for (const s of slugs) expect(isCatalogSlug(s)).toBe(true);
-    expect(isCatalogSlug("wzor-umowy-pozyczki")).toBe(false);
+    expect(isCatalogSlug("inny-material")).toBe(false);
     expect(catalogBySlug("nie-ma")).toBeNull();
   });
 
-  it("każdy tor ma trzy materiały pokrywające trzy etapy lejka", () => {
+  it("każdy tor ma co najmniej trzy materiały pokrywające trzy etapy lejka", () => {
     for (const track of TRACKS) {
       const list = catalogForTrack(track);
-      expect(list).toHaveLength(3);
+      expect(list.length).toBeGreaterThanOrEqual(3);
       expect(new Set(list.map((m) => m.stage))).toEqual(
         new Set(["swiadomosc", "przygotowanie", "decyzja"]),
       );
@@ -57,14 +57,10 @@ describe("katalog — struktura", () => {
     for (const m of LEAD_MAGNET_CATALOG) expect(m.keywords[0]).toBe(m.keyword);
   });
 
-  it("serie rolek mają gotowy materiał pod swoje hasło (poza UMOWA — szablon właściciela)", () => {
+  it("każda seria rolek ma gotowy materiał pod swoje hasło", () => {
     for (const s of SERIES) {
       if (!s.defaultKeyword) continue;
       const t = resolveKeywordTarget(s.defaultKeyword);
-      if (s.defaultKeyword === "UMOWA") {
-        expect(t).toBeNull();
-        continue;
-      }
       expect(t, `${s.slug} → ${s.defaultKeyword}`).not.toBeNull();
       expect(t!.track).toBe(s.track);
     }
@@ -83,6 +79,8 @@ describe("katalog — struktura", () => {
     expect(resolveKeywordTarget("Błędy")?.kind).toBe("catalog");
     expect(resolveKeywordTarget("ltv")).toMatchObject({ kind: "tool", slug: "kalkulator-ltv" });
     expect(resolveKeywordTarget("start")?.name).toContain("przewodnik");
+    expect(resolveKeywordTarget("umowa")?.slug).toBe("wzor-umowy-pozyczki");
+    expect(resolveKeywordTarget("wzor")?.name).toContain("wzór");
     expect(resolveKeywordTarget("")).toBeNull();
     expect(resolveKeywordTarget("NIEMA")).toBeNull();
   });
@@ -91,7 +89,8 @@ describe("katalog — struktura", () => {
     for (const m of LEAD_MAGNET_CATALOG) {
       expect(m.next.url).toMatch(/^https:\/\//);
       expect(m.pdf.closing.actions.length).toBeGreaterThanOrEqual(3);
-      expect(m.pdf.sections.length).toBeGreaterThanOrEqual(4);
+      // Wzór umowy niesie treść z silnika klauzul — sekcje katalogu to tylko wprowadzenie.
+      expect(m.pdf.sections.length).toBeGreaterThanOrEqual(m.custom_pdf ? 1 : 4);
     }
     expect(catalogBySlug("checklista-dokumentow")!.next.url).toContain("wniosek");
     expect(catalogBySlug("start-inwestora")!.next.url).toContain("kalkulator-ltv");
@@ -201,7 +200,7 @@ describe("katalog — render PDF", () => {
       expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
       const doc = await PDFDocument.load(bytes);
       expect(doc.getPageCount()).toBeGreaterThanOrEqual(4);
-      expect(doc.getPageCount()).toBeLessThanOrEqual(14);
+      expect(doc.getPageCount()).toBeLessThanOrEqual(16);
       expect(doc.getTitle()).toBe(m.title);
       expect(doc.getSubject()).toContain(CATALOG_VERSION);
       expect(doc.getAuthor()).toBe("Finance You");

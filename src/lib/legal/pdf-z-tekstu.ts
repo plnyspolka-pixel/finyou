@@ -48,6 +48,8 @@ export interface PdfZBlokowOpts extends Omit<PdfZTekstuOpts, "contentText" | "fo
   bloki: Blok[];
   /** Domyślnie Liberation Serif (metryka Times New Roman — jak w .docx). */
   fonts?: FontyPdf;
+  /** Metadane „Creator”; domyślnie „Finance You — dokument do podpisu”. */
+  creator?: string;
 }
 
 /** Nazwa załącznika PDF z nazwy pliku .docx (`x.docx` → `x.pdf`). */
@@ -453,6 +455,7 @@ interface BudujOpts extends Omit<PdfZTekstuOpts, "contentText" | "fonts"> {
   bloki: Blok[];
   fonts: FontyPdf;
   umowa: boolean;
+  creator?: string;
 }
 
 async function budujPdf(opts: BudujOpts): Promise<PDFDocument> {
@@ -501,7 +504,8 @@ async function budujPdf(opts: BudujOpts): Promise<PDFDocument> {
   doc.setAuthor("Finance You");
   doc.setProducer("Finance You");
   doc.setCreator(
-    opts.umowa ? "Finance You — dokument do podpisu" : "Finance You — pakiet umów inwestora",
+    opts.creator ??
+      (opts.umowa ? "Finance You — dokument do podpisu" : "Finance You — pakiet umów inwestora"),
   );
   doc.setLanguage("pl-PL");
   doc.setCreationDate(date);

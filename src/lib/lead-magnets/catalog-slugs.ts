@@ -8,6 +8,7 @@ export const CATALOG_SLUGS = [
   "bank-odmowil-co-dalej",
   "checklista-dokumentow",
   "od-wniosku-do-wyplaty",
+  "wzor-umowy-pozyczki",
 ] as const;
 
 export type CatalogSlug = (typeof CATALOG_SLUGS)[number];
