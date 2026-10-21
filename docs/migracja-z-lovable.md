@@ -1,0 +1,568 @@
+# Migracja z Lovable
+
+Cel: całkowicie odciąć projekt od Lovable. Kod rozwijany w Claude Code, AI w aplikacji
+na Claude API, baza na własnym Supabase (Frankfurt), hosting na własnym koncie.
+
+## Stan na 2026-10-09 (ustalenia)
+
+### Do czego służy Lovable
+
+| Obszar | Gdzie | Zamiennik |
+|---|---|---|
+| Baza / auth / storage (Lovable Cloud, Supabase `jqvepxhulxdnbwbogkhe`) | wszędzie | własny Supabase `finyou-prod`, Frankfurt, plan Pro |
+| Hosting (`project--5394e6ca-…lovable.app`, Cloudflare Workers) | `vite.config.ts`, `wrangler.jsonc` | własne konto Cloudflare albo AWS |
+| Crony w bazie z `base_url` na `lovable.app` | ~20 migracji, 34 joby `cron.job` | nowy adres w jednym ustawieniu |
+| AI Gateway `ai.gateway.lovable.dev` + `LOVABLE_API_KEY` | ~40 plików, `src/lib/lovable-ai.server.ts` | Claude API; obrazy → Gemini API, embeddingi → Voyage/OpenAI, transkrypcja → ElevenLabs STT |
+| Connector gateway (Resend, Mailgun, Twilio, Stripe, Google Drive/Sheets/Docs) | ~13 plików | oficjalne API z własnymi kluczami |
+| `@lovable.dev/cloud-auth-js`, `email-js`, `webhooks-js`, `mcp-js`, `vite-tanstack-config` | `src/integrations/lovable`, `src/routes/lovable/email/*`, `src/lib/mcp/` | `supabase.auth.signInWithOAuth`, Resend, `@modelcontextprotocol/sdk`, zwykły config Vite |
+| Assety CDN (`*.asset.json`, 48 szt.) | `src/assets` | `public/` albo Storage |
+
+### Baza (Lovable Cloud nie ma eksportu ani transferu)
+
+- Projekt Supabase nie jest na koncie właściciela (sprawdzone: GitHub i e-mail).
+- Dostęp tylko przez `mcp__Lovable__query_database` jako `postgres` (nie superuser).
+- PostgreSQL 17.6; 245 tabel w `public`; 419 MB, z czego ok. 190 MB to logi techniczne
+  (`net._http_response` 142 MB, `cron.job_run_details` 50 MB) — NIE przenosić.
+- `auth.users`: 389 kont, 380 z hashem hasła; `auth.identities`: 406 (email, google, apple).
+- Rozszerzenia `postgres_fdw` i `dblink` dostępne (niezainstalowane), `pg_cron` 1.6.4, `pg_net` 0.20.0.
+- Incydent: lead `8e20abbc-48f9-4df4-be2f-fdf04f2db0de` (adres w `financeyou.pl`) ma 45 329
+  wpisów e-mail w `lead_communications` z 16–18.06 (pętla autoodpowiedzi) — pominąć przy migracji.
+- `email_subscribers`: 60 663 z `baza_posrednikow` — do weryfikacji podstawy prawnej (RODO).
+
+### Storage (4,7 GB, 2530 plików, 13 bucketów)
+
+- `marketing-materials` 2,0 GB, `training-videos` 1,0 GB, `pliki-klienta` 0,9 GB (dane osobowe),
+  `studio-media` 0,7 GB (publiczny), reszta drobna, 5 pustych.
+- ~930 MB prawdopodobnych duplikatów (ten sam rozmiar); m.in. leady `f4c7438c…` (484 pliki,
+  17 unikalnych) i `b2238d53…` (559 plików, 20 unikalnych) z 28–30.07 — przenosić tylko unikalne
+  (po sumie kontrolnej), zachowując odwołania w bazie.
+- 19 filmów Akademii ma mimetype `application/octet-stream` — poprawić na `video/mp4`.
+
+## Nowy projekt Supabase (utworzony 2026-10-09)
+
+- Organizacja „Finance you sp z oo” (Pro), projekt „Finance you produkcja”
+- Ref `vkzndnaoxhdxrxlpntcb`, URL `https://vkzndnaoxhdxrxlpntcb.supabase.co`
+- Central EU (Frankfurt, eu-central-1), Micro, Postgres (nie OrioleDB)
+- Data API: włączone; automatyczne wystawianie nowych tabel: WYŁĄCZONE (granty kopiujemy
+  dokładnie z produkcji); automatyczny RLS: włączony; GitHub: niepodłączony (świadomie)
+
+## Narzędzia dostępu (stan 2026-10-09)
+
+- **Stara baza (Lovable):** `mcp__Lovable__query_database`, projekt Lovable
+  `5394e6ca-0160-41ed-aa82-1afa633ecc0c`, rola `postgres` (nie superuser).
+- **Nowa baza:** konektor claude.ai **Supabase** (OAuth) — `mcp__Supabase__execute_sql`,
+  `apply_migration`, `list_tables`, `get_advisors` itd. Widzi tylko projekt
+  `vkzndnaoxhdxrxlpntcb`. Token Management API NIE jest potrzebny.
+- Kontener sesji wychodzi do sieci tylko przez proxy HTTPS — Postgres (5432) z kontenera
+  nie działa, więc `psql`/`pg_dump` odpadają.
+- Do kopiowania Storage potrzebny network secret z kluczem `service_role` nowego projektu
+  (host `vkzndnaoxhdxrxlpntcb.supabase.co`, nagłówki `apikey` bez prefiksu i
+  `Authorization` z prefiksem `Bearer`) — jeszcze NIEdodany. Nigdy w czacie/repo/zmiennych.
+
+## Ustalenia dotyczące schematu (2026-10-09)
+
+- Produkcja ma **231** zastosowane migracje (ostatnia `20260916162804`), repo ma **304**
+  pliki (najnowszy 2026-10-09). Migracje z repo ≠ produkcja → **schemat kopiujemy z katalogu
+  produkcji**, nie odtwarzamy z `supabase/migrations/`.
+- Produkcja (`public`): 243 tabele, 2 widoki, 231 funkcji (~129 kB DDL), 374 polityki RLS,
+  145 triggerów, 38 enumów, 677 indeksów, 740 constraintów, 3612 kolumn. `storage`:
+  36 polityk, 13 bucketów. `auth`: trigger `on_auth_user_created -> handle_new_user`.
+- Rozszerzenia produkcji: pg_cron, pg_net, pg_stat_statements, pg_trgm, pgcrypto, pgmq,
+  supabase_vault, uuid-ossp, vector (w schemacie `public`). Schemat `drizzle` też istnieje.
+- Nowa baza ma domyślnie tylko: plpgsql, pgcrypto, uuid-ossp, pg_stat_statements,
+  supabase_vault. `dblink`, `postgres_fdw`, `pg_cron`, `pg_net`, `pgmq`, `vector`, `pg_trgm`
+  dostępne do włączenia.
+- **Crony: 34 aktywne, 30 woła `lovable.app`.** W nowej bazie tworzyć je WYŁĄCZONE
+  i z nowym adresem — inaczej nowa baza uruchamiałaby zadania produkcji drugi raz
+  (podwójne maile/SMS-y). Włączyć dopiero przy przełączeniu.
+
+## Wybrana metoda: baza → baza przez `dblink` (schemat i dane)
+
+Ani schemat, ani dane nie idą przez czat ani kontener — stara baza łączy się z nową.
+
+1. Nowa baza (konektor): tymczasowa rola **`migrator`** (login, losowe hasło;
+   `grant migrator to postgres`; `usage, create` w `public`). Pierwotny pomysł
+   (`alter role postgres password …`) jest na Supabase zablokowany — `postgres` to rola
+   uprzywilejowana, hasło zmienia tylko panel — więc hasło `postgres` zostaje nietknięte.
+   Obiekty powstają jako `migrator`; na końcu `reassign owned by migrator to postgres`
+   (sprawdzone w wycofanej transakcji: tabele i funkcje trafiają do `postgres`) i
+   `drop role migrator`. `grant postgres to migrator` jest zablokowany (brak `set role`).
+2. Stara baza (produkcja): `create extension dblink with schema extensions` — zmiana tylko
+   dodająca, aplikacja z niej nie korzysta; usunąć po migracji. Connection string do nowej
+   bazy leży w Vault starej bazy jako sekret `migration_target` (hasło w SQL pojawiło się
+   raz; każde zapytanie `dblink` czyta `vault.decrypted_secrets`).
+3. Test połączenia stara → nowa (pooler sesyjny, port 5432). Jeśli Lovable blokuje ruch
+   wychodzący — stop, szukamy innej drogi.
+4. Schemat generowany z katalogu produkcji (enumy, sekwencje, tabele, constrainty, indeksy,
+   widoki, funkcje, triggery, RLS + polityki, granty dokładnie jak w produkcji, komentarze,
+   buckety i polityki storage, trigger auth) i wykonany w nowej bazie przez `dblink_exec`.
+   Crony wyłączone.
+5. Weryfikacja: liczby obiektów po obu stronach + `get_advisors` (security, performance).
+6. (Osobna zgoda) Dane: `INSERT … SELECT` tabela po tabeli, w tym `auth.users` (z hashami)
+   i `auth.identities`; pominąć `net._http_response`, `cron.job_run_details` i 45 329 wpisów
+   pętli mailowej leada `8e20abbc…`. Porównanie liczby wierszy w każdej tabeli.
+7. Storage przez Storage API (deduplikacja po sumie kontrolnej, poprawa mimetype filmów).
+8. Sprzątanie: stara baza — `drop extension dblink`, `delete from vault.secrets where
+   name='migration_target'`; nowa baza — `drop schema _mig cascade` (tabele `ddl`, `ddl_log`,
+   funkcje `run`, `run2`), `drop owned by migrator`, `drop role migrator`. Uwaga: konektor
+   Supabase wymaga osobnego potwierdzenia dla `drop`/`delete`.
+9. Najpierw próbna kopia; finalna kopia i przełączenie w oknie serwisowym.
+
+Alternatywa odrzucona jako gorsza: przenoszenie schematu porcjami przez czat (~500 kB DDL).
+
+### Postęp (2026-10-09, wieczór)
+
+Właściciel zatwierdził kroki 1–3 (rola `migrator` zamiast hasła `postgres`, `dblink`
+w produkcji, sekret w Vault). Wykonane i zweryfikowane:
+
+- Stara baza: `dblink` 1.2 w schemacie `extensions`; sekret Vault `migration_target`
+  (id `8b2ef014-2cb5-43dd-81c1-371cc1ff33f6`).
+- Nowa baza: rola `migrator` (login, bez `createrole`/`bypassrls`), `postgres` jest jej
+  członkiem, `migrator` ma `usage, create` na `public`. Żadnych obiektów użytkownika.
+- **Połączenie stara → nowa działa** w obu wariantach: session pooler
+  `aws-1-eu-central-1.pooler.supabase.com:5432` (user `migrator.vkzndnaoxhdxrxlpntcb`;
+  `aws-0` zwraca „tenant/user not found”) oraz **bezpośrednio** `db.vkzndnaoxhdxrxlpntcb.supabase.co:5432`
+  (tylko IPv6 — stara baza ma wyjście IPv6, do IPv4 używa NAT64). Wybrano wariant
+  bezpośredni (bez limitów Supavisora przy długich sesjach); sekret zaktualizowany.
+- Nierozstrzygnięte: czy `migrator` może tworzyć polityki na `storage.objects` i trigger
+  na `auth.users` (właściciele: `supabase_storage_admin`, `supabase_auth_admin`). Jeśli nie —
+  te nieliczne obiekty (36 polityk storage, 1 trigger auth, 34 crony) wykonać przez
+  konektor jako `postgres`; duży schemat `public` idzie przez `dblink`.
+
+### Krok 4 (schemat) — przebieg (2026-10-10)
+
+Zmiana metody wykonania względem pierwotnego planu (lepsza, uzgodniona z właścicielem):
+stara baza tylko **generuje** DDL z katalogu (czyste `SELECT`-y, plik `docs/migracja/ddl-generators.sql`) i wysyła go przez `dblink` do tabeli roboczej `_mig.ddl` w nowej bazie; **wykonuje**
+go konektor jako `postgres` (funkcja `_mig.run(faza_od, faza_do, limit)`: każda instrukcja
+w osobnej podtransakcji, błędy w `_mig.ddl_log`, ponowienia tylko nieudanych; limit konektora
+2 min/wywołanie → porcje). Dzięki temu właścicielem obiektów jest od razu `postgres`
+(bez `reassign owned`), a polityki `storage`, trigger `auth` i crony nie wymagają sztuczek
+(sprawdzone w wycofanych transakcjach). Rola `migrator` jest tylko kurierem (właściciel `_mig`).
+
+- Rozszerzenia w nowej bazie = produkcja (10 szt.; `vector` 0.8.2 w `public`, `pg_net` 0.20.4,
+  `pg_cron` 1.6.4, `pgmq` 1.5.1, `pg_trgm` 1.6; produkcja ma dodatkowo tylko `dblink` na czas migracji).
+- Wygenerowano i przesłano **3875 instrukcji (727 952 B)**, transport zweryfikowany co do bajta.
+  Fazy: 0 schematy (`drizzle`, `supabase_migrations`), 1 enumy 38, 2 sekwencje nie-identity 6,
+  3 tabele 245 (243 + 2), 4 `owned by` 5, 5 constrainty 743 (p 245, u 89, c 211, f 198),
+  6 indeksy poza PK/unique 346, 7 funkcje 113 (118 funkcji `vector` pochodzą z rozszerzenia),
+  8 widoki 2, 9 triggery 145, 10 RLS 243 + polityki 374, 11 `revoke`/`grant` 260 + 746 na
+  relacjach i 113 + 297 na funkcjach (dokładnie jak produkcja; granty roli `sandbox_exec`
+  Lovable pominięte, bo rola nie istnieje), 12 komentarze 79, 13 buckety 13 + polityki storage 36,
+  14 trigger `auth.users` 1, 15 crony 34 × (`cron.schedule` + `alter_job active=false`).
+- Świadome różnice względem produkcji: brak `sandbox_exec`; **default privileges nie są
+  kopiowane** (właściciel wyłączył auto-wystawianie nowych tabel w nowej bazie — nowe tabele
+  tworzone w przyszłości NIE dostaną automatycznie grantów dla `anon`/`authenticated`/
+  `service_role`; migracje aplikacji muszą nadawać granty jawnie albo trzeba to włączyć);
+  `jobid` cronów nie są zachowane (nazwy tak); polecenia cronów zawierają stary URL
+  `lovable.app` i klucz `anon` starego projektu — do przepisania przy przełączeniu.
+- Generatory przeszły niezależną recenzję adwersarialną (5 perspektyw + weryfikacja każdego
+  znaleziska) przed wykonaniem; wynik i poprawki — niżej.
+
+
+
+#### Wynik kroku 4 i weryfikacja (krok 5) — 2026-10-10
+
+Recenzja generatorów (5 perspektyw, 16 znalezisk, 4 obalone jako już poprawione) — przyjęte:
+- **crony atomowo** — `cron.alter_job(job_id := cron.schedule(...), active := false)` w jednej
+  instrukcji (osobne wiersze mogły zostać rozdzielone granicą porcji i job przez chwilę byłby aktywny);
+- bucket: dodana kolumna `versioning_status`; `lifecycle_*` celowo NULL (trigger storage);
+- pozycje sekwencji (`setval`) to stan danych → faza 16 generatorów, do uruchomienia **po** danych;
+- wykonawca `_mig.run2` (licznik prób, pierwszy błąd w wyniku, `search_path` przypięty) i transfer
+  upsertem z kontrolą obecności sekretu; kontrole wstępne: uprawnienia EXECUTE 118 funkcji `vector`
+  identyczne (118/118/118), `supabase_migrations.schema_migrations` nie istniała wcześniej.
+
+Wykonanie: **3841 instrukcji, 0 błędów, 0 ponowień** w trzech wywołaniach (fazy 0–6: 1385;
+7–14: 2422; 15: 34). Crony: 34 zaplanowane, **0 aktywnych**.
+
+Weryfikacja: liczby obiektów identyczne z produkcją (243 tabele, 2 widoki, 12 sekwencji, 38 enumów,
+113 funkcji własnych, 145 + 1 triggerów, 374 + 36 polityk, RLS 243/243, 677 indeksów, 740 constraintów,
+79 komentarzy, granty tabel anon 222 / authenticated 243 / service_role 245, 256 grantów funkcji dla
+ról API, 13 bucketów, wszystko własnością `postgres`). Diff strukturalny baza↔baza przez `dblink`
+(`docs/migracja/schema-diff.sql`, ~3 800 podpisów: kolumny, constrainty, indeksy, definicje funkcji,
+triggery, polityki, widoki, enumy, sekwencje, granty, komentarze): **jedyna różnica to
+`public.rls_auto_enable()` + event trigger `ensure_rls`** — opcja Supabase „automatyczny RLS”
+zaznaczona przy tworzeniu projektu (zostaje; włącza RLS na nowych tabelach w `public`).
+
+`get_advisors` nowej bazy — wszystko odziedziczone z produkcji, nic nie wynika z migracji:
+- security: 14 funkcji `SECURITY DEFINER` wykonywalnych przez `anon` i 72 przez `authenticated`
+  — w tym **`exec_admin_any(_sql text)`, `exec_admin_select`, `exec_admin_write`** (wykonują SQL
+  przekazany jako tekst; zakładam kontrolę roli wewnątrz — **do osobnego przeglądu bezpieczeństwa**);
+  5 tabel z RLS bez polityk (`messenger_outbox`, `push_subscriptions`, `tiktok_integration`,
+  `x_integration`, `youtube_integration` — jak w produkcji, dostęp tylko przez `service_role`);
+  `esign_events_immutable` bez `search_path`; `vector` w `public` (świadome); `_mig.run` (sprzątanie).
+- performance: 85 FK bez indeksu, 355 polityk z `auth.uid()` bez `(select …)`, 92 tabele z wieloma
+  politykami permisywnymi, 2 pary zduplikowanych indeksów (`kw_fetch_attempts`, `kw_section_sources`),
+  325 „nieużywanych” indeksów (pusta baza). Materiał na optymalizację po migracji, nie przed.
+
+Przy finalnej kopii (okno serwisowe), jeśli schemat produkcji zmieni się do tego czasu: ponownie
+uruchomić `schema-diff.sql`, a różnice dogenerować z `ddl-generators.sql` (upsert do `_mig.ddl`,
+`_mig.run2` ponawia tylko zmienione wiersze).
+
+### Krok 6 (dane) — próbna kopia wykonana (2026-10-10, ok. 10:00 UTC)
+
+Właściciel zatwierdził: `postgres_fdw`, kopiowanie `supabase_migrations.schema_migrations` (231 wierszy)
+i zakres `auth` = `users` + `identities`.
+
+**Metoda.** Stara baza: `postgres_fdw` (schemat `extensions`), `server newdb` (bezpośredni host IPv6,
+`sslmode=require`, `batch_size=1000`), `user mapping` roli `migrator`, schemat roboczy `_mig_remote`
+z `import foreign schema` (249 tabel obcych: `public`, `drizzle`, `supabase_migrations`, staging `_mig`).
+Kopiowanie: `insert into _mig_remote.<t> (<kolumny bez generated>) select … from public.<t>` w blokach
+`DO` (jedno wywołanie = jedna transakcja; wynik per tabela w tabeli tymczasowej).
+
+**Nowa baza na czas ładowania** (wszystko odwrócone po załadowaniu): `migrator` z `bypassrls`
+i grantami na tabele/sekwencje; `disable trigger user` na 245 tabelach; 7 kolumn identity na
+`generated by default`; `handle_new_user()` tymczasowo jako no-op (`create or replace`; oryginał
+odtworzony z `_mig.ddl`) — bo trigger na `auth.users` nie da się wyłączyć bez własności, a konektor
+anulował `drop`; para FK w cyklu `ai_seo_articles ↔ ai_seo_topics` jako `deferrable initially deferred`
+i załadowana w jednej transakcji. **FK nie były zdejmowane** (wywołanie z `drop constraint` zostało
+anulowane przez konektor) — zamiast tego ładowanie w kolejności topologicznej grafu FK (185 krawędzi,
+6 poziomów, jedyny rodzic zewnętrzny: `auth.users`), więc integralność referencyjna była wymuszana
+przez cały import. Ograniczenia platformy sprawdzone w wycofanych transakcjach: `postgres` NIE może
+`set session_replication_role` ani `disable trigger` na `auth.users`; MOŻE nadać `bypassrls`,
+`disable trigger user`, `drop trigger` na `auth.users`.
+
+**Kolejność:** (1) `auth.users` 389 (380 z hasłem) + `auth.identities` 406 (email 380, google 24,
+apple 2) przez staging `_mig.auth_*` → `insert` jako `postgres` (bez kolumny generated `confirmed_at`);
+(2) poziomy 0–5 (138 / 36 / 40 / 13 / 11 / 5 tabel) + para w cyklu; `lead_communications` z filtrem
+`lead_id <> '8e20abbc…'` (22 901 z 68 230). Całość ~1,5 min czystego transferu (największe:
+`screening_name_index` 73 720 wierszy / 4,7 s, `email_subscribers` 60 968 / 3,9 s,
+`lead_communications` 22 901 / 18 s, `call_queue` 5 690 / 13,8 s).
+
+**Po załadowaniu:** identity z powrotem `always` (7/7), `enable trigger user` (145/145), FK cyklu
+`not deferrable`, `handle_new_user` = oryginał (md5 zgodne), faza 16 `setval` (10 sekwencji;
+np. `cookie_consent_log_id_seq` 59 → następny id 60), `migrator` bez `bypassrls` i bez grantów.
+**Uwaga:** staging `_mig.auth_users` nadal zawiera hashe haseł i tokeny (konektor anulował `update`
+zerujący te kolumny) — do usunięcia przy sprzątaniu (`drop schema _mig cascade`) albo ręcznie
+w panelu SQL: `update _mig.auth_users set encrypted_password = null, confirmation_token = null,
+recovery_token = null, email_change_token_new = null, email_change_token_current = null,
+phone_change_token = null, reauthentication_token = null, raw_user_meta_data = '{}';
+update _mig.auth_identities set identity_data = '{}';`
+
+**Weryfikacja:** liczby wierszy 245/245 tabel zgodne (268 127 wierszy w nowej bazie; jedyna
+różnica zamierzona: `lead_communications` −45 329). Sumy kontrolne per tabela (ten sam SQL po obu
+stronach: `md5(string_agg(md5(wiersz::text) order by PK))`, identyczne `timezone`/`DateStyle`/
+`extra_float_digits`): **240/245 identyczne**; 5 różnych to dryf żywej produkcji po kopii
+(`loan_applications` 1 wiersz, `loan_reminder_email_variants` 1, `meta_lead_forms` 4,
+`reminder_email_schedule` 1 — `updated_at` późniejsze niż kopia, zbieżne z uruchomieniami cronów
+`loan-reminder*-tick`, `meta-leads-pull`; `loan_reminder_email_sends` 2 wiersze — tylko kolumny
+`open_count`/`opened_at`, czyli śledzenie otwarć e-maili). Bez wierszy brakujących/nadmiarowych.
+
+**Finalna kopia (okno serwisowe), procedura:** (a) zatrzymać ruch do starej bazy (publikacja
+Lovable/aplikacja, crony produkcji wstrzymane), (b) `schema-diff.sql` → ewentualne różnice schematu
+dogenerować, (c) w nowej bazie: `grant`y + `bypassrls` dla `migrator`, `disable trigger user`,
+identity `by default`, `handle_new_user` no-op, FK cyklu `deferred`; `truncate` tabel docelowych
+i `auth.users`/`auth.identities` (konektor poprosi o potwierdzenie) albo ładowanie przyrostowe po
+`updated_at`/PK; (d) ładowanie w tej samej kolejności topologicznej; (e) przywrócenie + `setval`
++ liczby wierszy + sumy kontrolne (oczekiwane 245/245); (f) storage (krok 7), zmiana adresu w cronach
+i ich włączenie, przełączenie kluczy w aplikacji.
+
+**Otwarte przed przełączeniem:** krok 7 (Storage API: 4,7 GB, deduplikacja, mimetype filmów —
+potrzebny network secret z kluczem `service_role` nowego projektu); crony: podmiana `lovable.app`
+→ nowy adres hooków i klucza `anon` w poleceniach, dopiero wtedy `active = true`; sekrety
+funkcji/API aplikacji (poza bazą); `supabase_migrations` vs 304 pliki w repo — ustalić baseline
+przed pierwszym `supabase db push`.
+
+**Sprzątanie po migracji (zaktualizowane):** stara baza — `drop schema _mig_remote cascade`,
+`drop user mapping for postgres server newdb`, `drop server newdb`, `drop extension postgres_fdw`,
+`drop extension dblink`, `delete from vault.secrets where name = 'migration_target'`; nowa baza —
+`drop schema _mig cascade`, `drop role migrator` (`drop owned by migrator` wcześniej). Konektor
+Supabase wymaga potwierdzenia dla `drop`/`delete`/`truncate`.
+
+### Historia migracji: repo vs produkcja (2026-10-10)
+
+Repo: 304 pliki `supabase/migrations/` (20260518124329 … 20261009130000). Produkcja
+(`supabase_migrations.schema_migrations`, skopiowana do nowej bazy): 231 wersji
+(20260518124328 … 20260916162804). Dopasowanie (nazwa pliku = `name` wersji, UUID w nazwie
+albo znacznik czasu ±5 s): **~166 par**. Pozostałe: ~138 plików „nazwanych” (ręczne migracje:
+`*_project_module_core`, `*_pep_screening` …) bez wpisu w historii oraz ~65 wersji zastosowanych
+przez Lovable (20.07–16.09, nazwy UUID) bez pliku w repo — Lovable nadawał własne znaczniki przy
+stosowaniu ręcznych migracji, więc historia i pliki rozjechały się dwustronnie. Wniosek:
+`supabase db push` z obecną historią uznałby wszystkie 304 pliki za niezastosowane.
+
+Kontrola treści niedopasowanych plików względem schematu (773 obiektów: tabele, funkcje,
+indeksy, kolumny, polityki) wykazała, że **nie wszystko z repo trafiło do produkcji**:
+- brak tabel: `comms_suppressions` (20260730090000_bot_loop_guard), `pr_opportunities`,
+  `pr_outreach_log` (20260803160000_pr_module), `rcn_transactions` (20260718130001),
+  `seo_location_pages` (20260803150000), `seo_location_report_entries` (20260803153000),
+  `video_pipeline` (20260803170000);
+- brak funkcji: `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`
+  (kolejka e-mail na pgmq z `email_infra`; produkcja nie ma kolejek pgmq),
+  `investor_module_access_active` (20260802120000_module_access_full_investor);
+- brak 20 indeksów, m.in. `call_queue`/`lead_communications` z
+  20260925130000_dogonienie_cennika_i_indeksy_timeoutow (plik zastosowany **częściowo**),
+  `access_payments_unlock_one_in_flight`, `investor_assistant_messages_user_idx`;
+- brak kolumn: `text_agent_knowledge.audience`, `ai_seo_articles.youtube_video_id`,
+  `seo_location_pages.youtube_video_id`; brak 10 polityk (w tym `investors.investors_partner_select`,
+  `affiliate_commission_rules.rules_select_all`, `affiliate_unregistered_activity_limits.limits_select_all`).
+Narzędzia MCP aplikacji (`list_pr_opportunities`, `list_seo_location_pages`, `generate_video`…)
+odwołują się do brakujących tabel — te funkcje w produkcji nie mogą działać.
+
+**Migracja „dogonienie” — gotowa, przetestowana, nie zastosowana.** Plik
+`supabase/migrations/20261010120000_dogonienie_niezastosowanych_z_repo.sql` (442 linie) zbiera
+brakujące obiekty, treść 1:1 z plików źródłowych (podanych w nagłówkach sekcji), wszystko
+idempotentnie (`CREATE TABLE/INDEX IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, polityki i triggery
+w blokach `DO` z kontrolą istnienia, funkcje `CREATE OR REPLACE`): 7 tabel z RLS, 3 kolumny,
+20 indeksów, 7 polityk, 5 triggerów `updated_at`, 4 funkcje pgmq (`enqueue_email`,
+`read_email_batch`, `delete_email`, `move_to_dlq`) oraz osobny plik `20261010120100_dogonienie_usuniecia.sql` z 4 `DROP FUNCTION IF EXISTS`
+(`reconcile_object_names/shadow_upsert/shadow_delete`, `free_investor_usage`; bez zależności w katalogu i użyć
+w kodzie; wydzielone, bo konektor wykonuje DROP tylko po potwierdzeniu).
+**Stan 2026-10-19:** część 1 (`20261010120000`) **zastosowana w nowej bazie** przez konektor, wersja wpisana do
+`supabase_migrations.schema_migrations` (kontrola: 7 tabel, 4 funkcje, 7 polityk). Część 2 czeka na wykonanie
+przez Management API albo panel SQL. Świadomie pominięte (uzasadnienie w nagłówku
+pliku): `investors_partner_select` (usunięta celowo przez 20260719123238), `rules_select_all` /
+`limits_select_all` (produkcja ma wersje tylko dla kadry), `investor_module_access_active` (0 użyć).
+Próbne wykonanie w nowej bazie 2026-10-10 w transakcji wycofanej na końcu (`begin; … rollback;`):
+**0 błędów**, po wycofaniu żadna z tabel ani funkcji nie została (kontrola w `pg_class`/`pg_proc`).
+
+Dwie rzeczy, których pliki źródłowe nie miały, a nowa baza wymaga:
+- **jawne granty** — nowy projekt ma wyłączone automatyczne wystawianie tabel przez API
+  (default privileges ról `anon`/`authenticated`/`service_role` nie zawierają nowych tabel; funkcje
+  domyślnie tylko `postgres`), więc migracja nadaje `GRANT` 1:1 z intencją plików źródłowych
+  (`authenticated`/`service_role`; `anon` tylko `SELECT` na dwóch tabelach SEO z publicznymi
+  politykami). **Ta sama zasada obowiązuje każdą przyszłą migrację** — bez grantu tabela jest
+  niewidoczna przez PostgREST niezależnie od polityk RLS;
+- **utwardzenie wrapperów pgmq** — `SECURITY DEFINER` bez `search_path` i wykonywalne przez
+  wszystkich w plikach źródłowych; tutaj `SET search_path = ''`, `REVOKE … FROM PUBLIC, anon,
+  authenticated`, `GRANT EXECUTE … TO service_role` (woła je tylko backend przez klucz service_role,
+  `src/routes/lovable/email/queue/process.ts`).
+
+**Baseline historii — gotowy do decyzji właściciela.** Cel: historia w nowej bazie = dokładnie
+pliki z repo, żeby `supabase db push` miał czystą bazę. Stan: 231 wersji Lovable w bazie vs 304 plików
+w repo (bez dogonienia); **wspólne tylko 23**, 208 wersji Lovable nie ma odpowiednika w repo. Po drodze
+wyszły **4 pary plików o tej samej wersji** (`version` jest kluczem głównym historii, więc `db push`
+i `migration repair` wywaliłyby się na drugim pliku pary) — drugi plik każdej pary przesunięty
+o 1 s: `20260718130001_rcn_transactions`, `20260721120001_didit_kyc`,
+`20260730120001_offer_card_distribution`, `20260802120001_remove_investor_free_tier` (zmiana tylko
+nazwy; treść i baza nietknięte; odwołania w docs poprawione).
+
+Narzędzia (`docs/migracja/`): `baseline-historii.py` generuje z repo i listy wersji z bazy:
+`baseline-wersje-repo.txt` (304), `baseline-wersje-lovable.txt` (208 do usunięcia) i
+`baseline-historii.sql` — (1) archiwum starej historii do `_mig.lovable_schema_migrations`,
+(2) **DELETE** 208 wierszy (destrukcyjne — konektor poprosi o potwierdzenie), (3) `INSERT … ON CONFLICT`
+304 wierszy, (4) kontrola — składnia i semantyka `on conflict` sprawdzone w nowej bazie w transakcji
+wycofanej (archiwum 231 wierszy, wersja wspólna: nazwa nadpisana, `statements` zachowane). Wariant
+w repo ma `statements = NULL` (100 KB); wariant z treścią plików
+(bez `--no-statements`, 3,8 MB) generuje się na żądanie. Równoważnik przez CLI (zapisuje też
+`statements`, wymaga hasła bazy): `supabase migration repair --status reverted $(cat
+baseline-wersje-lovable.txt)` → `--status applied $(cat baseline-wersje-repo.txt)` → `migration list`
+→ `db push` (zastosuje i zarejestruje `20261010120000` dogonienie). **Nie** rejestrować dogonienia
+przez `apply_migration` konektora — nadaje własną wersję (bieżący czas), co znów rozjedzie historię
+z plikiem; przez konektor: `execute_sql` z treścią pliku + jawny `insert` wersji `20261010120000`.
+Alternatywa (gorsza): zostawić historię Lovable i puścić `db push` — uznałby 281 plików za
+niezastosowane, a pliki zastosowane częściowo wywaliłyby się na `create table` bez `if not exists`.
+Zastosowanie dogonienia przed finalną kopią danych jest bezpieczne: `data-sync.sql` ładuje tylko
+tabele istniejące w produkcji, a nowe tabele są puste.
+
+**Druga ścieżka migracji: Drizzle.** Oprócz `supabase/migrations/` repo ma `drizzle/migrations/` (31 plików
+`0000`–`0030` + `meta/_journal.json`), a deploy Lovable stosował je przez `drizzle-kit migrate` (`drizzle.config.ts`,
+zmienna `LOVABLE_DB_MIGRATION_URL`) — tak „ręczne” migracje od 24.09 trafiały do produkcji (test
+`src/lib/security/migrations-mirror.test.ts` pilnuje luster supabase↔drizzle). Tabela `drizzle.__drizzle_migrations`
+(32 wiersze) została skopiowana do nowej bazy razem z danymi — parytet potwierdzony (32/32, te same hashe i
+`created_at`), więc `drizzle-kit migrate` na nowej bazie nie zrobi nic ponad nowe pliki. **Po odejściu od Lovable
+deploy musi sam uruchamiać `drizzle-kit migrate`** (albo zespół przechodzi na jedną ścieżkę `supabase db push` —
+decyzja). 30/32 wpisów pasuje do obecnych plików; 2 nie: id 31 = wcześniejsza wersja `0030_pep_screening`
+(zastosowana dwa razy, finalna treść = HEAD) oraz **id 25 = `0024_prowizja_od_pozyczkobiorcy` zastosowany 30.09,
+a plik przepisany 1.10 (commit 5a8a9bc „Prowizja Finance You 5%”) bez nowego `when`** — Drizzle porównuje tylko
+`when`, więc nigdy go nie powtórzył.
+
+**Skutek: pakiet prawny „5%” nie jest w produkcji.** `legal_documents.umowa_ramowa v7` ma sha256 `887010c826b8…`
+= treść z commita 103e61f (30.09; 6 wzmianek o 7%), repo ma `e5b6d1a4e924…` (26×5%, 0×7%);
+`consent_documents.terms v3` (aktywny regulamin klienta) md5 `1f25eed96f04…` = 103e61f (2×7%), repo
+`a32bb67d7091…` (2×5%). NDA v6 zgodne. Nowa baza (kopia próbna) ma dokładnie to, co produkcja. Naprawa to decyzja
+właściciela z prawnikiem: nowa migracja (nowa wersja supabase + lustro drizzle z nowym `when`) wstawiająca **nowe
+wersje** dokumentów (umowa v8 / terms v4), nie podmiana treści w miejscu — użytkownicy akceptowali v7/v3 w brzmieniu
+z 30.09.
+
+**Skan DROP-ów.** Wcześniejsza kontrola brała pod uwagę obiekty tworzone; dodatkowy skan 304 plików wskazał
+45 obiektów, których ostatnią akcją w repo jest DROP — 41 w produkcji już nie ma, zostały 4 funkcje
+(`reconcile_*` ×3 z 20260718130000_cleanup_reconcile_helpers, `free_investor_usage` z
+20260802120001_remove_investor_free_tier) → dopisane do migracji dogonienia. Ograniczenie: migracji zmieniających
+tylko dane albo robiących `ALTER` nie da się zweryfikować z katalogu — przykład z pakietem prawnym to dokładnie ta klasa.
+
+### Storage (krok 7) — inwentarz i droga
+
+Inwentarz `storage.objects`: 2 535 obiektów, 4,63 GB; **unikalnych po eTag 3,99 GB**
+(283 grupy duplikatów = 1 451 zbędnych kopii / 655 MB; `pliki-klienta`: 2 020 obiektów → 630
+unikalnych, 901 → 532 MB). Buckety wg rozmiaru: `marketing-materials` 2 051 MB (351),
+`training-videos` 1 038 MB (35; 19 filmów `application/octet-stream` = 814 MB → `video/mp4`),
+`pliki-klienta` 901 MB, `studio-media` 730 MB (publiczny), reszta < 15 MB; 5 bucketów pustych.
+Największe pliki 147 MB i 106 MB — przekraczają limit 100 MB części bucketów (na czas kopii:
+`file_size_limit = null`, potem przywrócić). Odwołania do ścieżek w bazie: `documents.file_path/
+file_url`, `marketing_materials.storage_path`, `training_videos.file_path`, `studio_images.storage_path`,
+`lead_magnets.file_path/file_url`, `aml_*.*_storage_path`, `esign_envelopes.source_bucket` …
+→ kopia 1:1 (tryb `full`) jest bezpieczna; deduplikacja (`dedup`) wymaga przepisania odwołań.
+
+Skrypt: `docs/migracja/storage-copy.py` (lista rekurencyjna, pobranie, poprawa mimetype, upload
+z `x-upsert`, wznawialny, 4 wątki). Kontener dosięga obu projektów (sprawdzone). **Potrzebne od
+właściciela (jako sekrety sieciowe środowiska, nigdy w czacie):** `NEW_SERVICE_KEY` (service_role
+nowego projektu — Supabase → Settings → API) oraz `OLD_SERVICE_KEY` (service_role starego projektu,
+jeśli Lovable Cloud go pokazuje). Awaryjnie bez klucza starego projektu: MCP aplikacji
+`supabase_storage/signed_url` (do 7 dni) — ~1 100 unikalnych plików = ~1 100 wywołań, manifest
+`--signed-manifest`. `app.settings.jwt_secret` w starej bazie nie jest czytelny.
+
+### Crony — przepisanie na nowy adres
+
+`docs/migracja/cron-rewrite.sql`: podmiana `https://project--5394e6ca-….lovable.app` →
+`__NEW_HOOKS_BASE__` (adres nowego hostingu — do uzupełnienia) i klucza `anon` starego projektu na
+nowy (`eyJ…ImpxdmVweGh1bHhkbmJ3Ym9na2hlI…` → klucz z `get_publishable_keys` nowego projektu;
+URL API: `https://vkzndnaoxhdxrxlpntcb.supabase.co`). Włączenie dopiero przy przełączeniu;
+4 joby czysto SQL-owe można włączyć wcześniej.
+
+### Poza bazą: co przełączyć w aplikacji i w projekcie Supabase (inwentarz 2026-10-10)
+
+Sprawdzone pod kątem rzeczy, których kopia katalogu nie obejmuje. **Parytet potwierdzony:** rozszerzenia
+(nowa baza ma wszystkie poza `dblink`/`postgres_fdw`, które w starej są tylko narzędziem migracji),
+publikacja Realtime pusta po obu stronach, brak webhooków bazodanowych (`supabase_functions.hooks`)
+i triggerów `pg_net`, brak kolejek pgmq (rozszerzenie jest, kolejek nie ma), Vault w starej bazie
+zawiera tylko `migration_target`, brak hooków Auth (custom access token itp.).
+
+**Stan 19.10.2026:** konektor Supabase nie wykonuje DELETE/DROP bez potwierdzenia w czacie
+(operacje „cancelled”) i nie zapisuje sekretów funkcji z sesji automatycznej, a sesja chmurowa nie ma
+przeglądarki — dlatego punkty 1 (sekrety), 4 (Auth), sprzątanie historii migracji i wdrożenie Workera
+zbiera jeden skrypt **`scripts/migracja/po-tokenach.sh`** (Management API + wrangler), który potrzebuje
+tylko `SUPABASE_PAT`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` w środowisku
+(prompt na założenie tokenów: `docs/migracja/prompt-przegladarka.md`).
+
+**Do zrobienia przed przełączeniem (decyzje/akcje właściciela, wszystko przygotowane):**
+1. **Funkcje Edge** — repo ma 4 (`supabase/functions/`: `didit-webhook`, `rcn-proxy`, `registry-proxy`,
+   `tpay-proxy`) — **wszystkie 4 wdrożone w nowym projekcie (19.10.2026, `deploy_edge_function`
+   przez konektor, `verify_jwt = false`; smoke test: odrzucają obce hosty kodem 400)**. Ponowne
+   wdrożenie po zmianach: `supabase functions deploy --project-ref vkzndnaoxhdxrxlpntcb`
+   (`config.toml`) albo konektor. Sekrety funkcji (Dashboard → Edge
+   Functions → Secrets): `DIDIT_WEBHOOK_SECRET`, `PROXY_SHARED_SECRET` (`SUPABASE_URL` i
+   `SUPABASE_SERVICE_ROLE_KEY` są wstrzykiwane automatycznie). W panelu Didit zmienić adres webhooka
+   na `https://vkzndnaoxhdxrxlpntcb.supabase.co/functions/v1/didit-webhook`. Pozostałe webhooki
+   zewnętrzne (Tpay, Resend, Meta, Twilio, ElevenLabs) wskazują adres aplikacji, nie projektu.
+2. **Konfiguracja aplikacji** (stary ref `jqvepxhulxdnbwbogkhe` siedzi w): `.env` (6 zmiennych:
+   `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PROJECT_ID` i ich odpowiedniki `VITE_*`),
+   `wrangler.jsonc` (`vars.SUPABASE_URL`; sekrety workera — `SUPABASE_SERVICE_ROLE_KEY` użyty w 72
+   miejscach po stronie serwera — przez `wrangler secret put`), `supabase/config.toml` (`project_id`),
+   `.lovable/mcp/manifest.json` (`issuer` = Auth starego projektu; po nim logują się konektory MCP,
+   np. „Finance you” w tej sesji), `src/routes/dla-inwestora.tsx:76` (zaszyty publiczny URL filmu
+   z bucketu `studio-media`). Nowy klucz anon jest w `cron-rewrite.sql`.
+3. **Hosting i adres hooków** — dziś backend chodzi na hostingu Lovable (`project--5394e6ca-….lovable.app`,
+   tam biją crony; `finyou.lovable.app` w README); `wrangler.jsonc` to gotowa konfiguracja Cloudflare
+   Workers na własne konto. Kod zakłada `https://app.financeyou.pl` jako adres aplikacji (domyślne
+   `APP_URL`, linki w mailach, reply-to `kontakt@app.financeyou.pl`) → proponowane
+   `__NEW_HOOKS_BASE__ = https://app.financeyou.pl`, o ile domena przechodzi razem z aplikacją.
+4. **Auth w nowym projekcie** (ustawienia panelu, nieczytelne z SQL starego projektu — spisać z panelu
+   Lovable Cloud): Site URL i Redirect URLs (`https://app.financeyou.pl/**`, `https://financeyou.pl/**`,
+   adres dev); **własny SMTP** (domyślny SMTP Supabase ma limit kilku maili/godz. — np. Resend SMTP)
+   i polskie szablony maili Auth; logowanie społecznościowe idzie dziś przez `@lovable.dev/cloud-auth-js`
+   (klienci OAuth Google/Apple zarządzani przez Lovable) → własne klienty OAuth w Google Cloud / Apple
+   Developer + zamiana w kodzie na `supabase.auth.signInWithOAuth` (`src/components/auth/social-sign-in.tsx`,
+   `src/integrations/lovable/index.ts`). Tożsamości: 24 Google (`sub` Google jest globalny dla konta,
+   więc powinny dopasować się 1:1), 2 Apple (`sub` zależy od zespołu Apple Developer — przy innym
+   zespole powstanie nowa tożsamość, Supabase dołączy ją do konta po zweryfikowanym e-mailu).
+   Hasła (bcrypt) skopiowane — użytkownicy logują się dotychczasowymi; inny sekret JWT = wszystkie
+   sesje wygasają w chwili przełączenia (oczekiwane).
+5. **Realtime** — `src/components/chat-thread-view.tsx` subskrybuje `postgres_changes`, a publikacja
+   `supabase_realtime` w produkcji jest pusta, więc czat nie odświeża się na żywo już dziś; po migracji
+   opcjonalnie `alter publication supabase_realtime add table <tabela wiadomości czatu>` (poza zakresem).
+6. **Klucze usług** — poza Lovable Connector gateway (tabela na początku dokumentu) także
+   `VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_*`/`MAPBOX` w `.env` → własne klucze.
+
+**Kolejność przełączenia (szkic do zatwierdzenia):** T−1: baseline historii + dogonienie (sekcja wyżej),
+funkcje Edge + sekrety, Auth (SMTP, redirecty, OAuth), wdrożenie aplikacji na własny hosting pod
+adresem tymczasowym z nowymi kluczami → test na próbnej kopii danych (loguje się, wnioski, pliki).
+T0 (okno serwisowe): crony w starej bazie `active = false` i zatrzymanie publikacji Lovable → finalna
+kopia danych (`data-sync.sql`) → delta Storage (`storage-copy.py`, wznawialny) → przepięcie domeny
+`app.financeyou.pl` → `cron-rewrite.sql` i włączenie cronów w nowej bazie → webhook Didit → kontrola
+(logowanie, wniosek, plik, mail, cron) → sprzątanie (sekcja kroku 6).
+
+### Przegląd bezpieczeństwa funkcji RPC (2026-10-10)
+
+**Metoda.** 113 funkcji w `public` z EXECUTE dla `anon`/`authenticated`/PUBLIC (83 SECURITY DEFINER, właściciel
+`postgres` z BYPASSRLS) — wszystko, co PostgREST wystawia pod `/rest/v1/rpc/<nazwa>`. Przegląd w 13 niezależnych
+partiach; każde znalezisko critical/high sprawdzane przez 2 niezależnych weryfikatorów z dostępem do kodu i żywego
+katalogu nowej bazy (= produkcja). Wynik po weryfikacji: **1 krytyczne, 1 wysokie, 20 średnich, 24 niskie, 67 bez
+uwag** (31 agentów; weryfikator nr 2 dla `protect_loan_application_staff_fields` nie dokończył — limit sesji — więc
+to znalezisko ma jeden głos).
+
+- **Krytyczne — `dedup_loan_applications()`** (2/2): każdy zalogowany użytkownik może uruchomić jako `postgres`
+  4-przebiegowe scalanie wszystkich niezamkniętych wniosków po numerze KW / telefonie / e-mailu. Samodzielnie
+  zarejestrowany klient zakłada klienta i wniosek z danymi ofiary; scalanie przepina ~44 tabele (dokumenty,
+  nieruchomości, oferty, analizy KW, koperty e-sign…) na jego wniosek i wypełnia jego rekord klienta danymi ofiary.
+  Grant dla `authenticated` to dryf: migracje 20260718054115/054214/110000 go odbierają, ale po kolejnym
+  `CREATE OR REPLACE` stary projekt nadał go z powrotem (domyślne uprawnienia Lovable Cloud). Cron
+  `dedup-loan-applications` jest w produkcji nieaktywny, więc RPC jest dziś jedyną drogą do tej procedury.
+- **Wysokie — `increment_order_rejections(uuid)`** (2/2): każdy zalogowany może podbijać licznik odrzuceń
+  dowolnego Zlecenia inwestora, a po 5 wywołaniach wygasić je z fabrykowanym uzasadnieniem umownym; zero
+  wywołań w kodzie.
+- **Średnie (20):** `exec_admin_any/select/write` (bramka administratora poprawna, ale wystawienie dla
+  `authenticated` oznacza, że wyciek dowolnego JWT administratora = dowolny SQL jako `postgres`; jedyny
+  wywołujący to backend przez `supabaseAdmin`); wyrocznie o cudzych kontach po dowolnym UUID (`is_internal_staff`,
+  `is_external_partner`, `investor_has_full_access`, `has_active_paid_access`, `investor_*` ×4 — te ostatnie także
+  dla `anon`); liczniki bez sprawdzenia właściciela (`increment_loan_view`, `increment_email_variant_*` ×3); dryf
+  grantów wbrew migracji 20260722102000 (`project_assignment_open`, `project_expire_assignments`);
+  `reconcile_object_names` (listowanie wszystkich ścieżek bucketu `pliki-klienta` z pominięciem RLS);
+  `redeem_operator_invite` (zaproszenie nie jest wiązane z e-mailem adresata, `max_uses` może być NULL);
+  `protect_loan_application_staff_fields` / `loan_applications_block_internal_updates` — triggery tylko
+  BEFORE UPDATE, więc **INSERT do `loan_applications` przez klienta nie jest strzeżony**: da się wstawić wniosek od
+  razu ze statusem `wyslany_do_inwestorow`, oceną, LTV, operatorem (weryfikator potwierdził w żywym katalogu).
+- **Obniżone po weryfikacji:** `handle_new_user` (rola `posrednik` z metadanych rejestracji — tak samo działa
+  sankcjonowana ścieżka `selectAccountRole`, a polityka `investors_partner_select`, która dawałaby przez nią
+  dostęp, nigdy nie trafiła do produkcji → bez ryzyka, do decyzji produktowej); `dedup_leads` (ta sama procedura
+  i tak odpala się z triggera przy każdym anonimowym leadzie → niskie); `reconcile_shadow_delete/upsert`
+  (DELETE blokowany przez trigger `storage.protect_delete` → bez ryzyka; i tak usuwane przez dogonienie).
+
+**Co z tym zrobić — przygotowane:**
+- `supabase/migrations/20261010130000_utwardzenie_grantow_rpc.sql` (szkic, **nie zastosowany**): 11 funkcji
+  wołanych tylko przez backend lub cron → EXECUTE tylko `service_role` (`dedup_*` ×2, `exec_admin_*` ×3,
+  `increment_order_rejections`, `increment_email_variant_*` ×3, `project_assignment_open`,
+  `project_expire_assignments`); 4 wyrocznie `investor_*` → bez `anon`/PUBLIC. Każda sprawdzona w katalogu
+  (0 polityk, triggerów, widoków, domyślnych wartości) i w kodzie (klient `supabaseAdmin` albo cron jako
+  `postgres`); test w wycofanej transakcji: po `revoke` zostają `postgres`+`service_role` (A) oraz
+  `postgres`+`authenticated`+`service_role` (B). Nie dotyka funkcji z polityk RLS (`has_role` 228 polityk,
+  `is_internal_staff` 106, `investor_has_full_access` 25) ani wołanych z przeglądarki (`increment_loan_view`,
+  `redeem_operator_invite`, `get_operator_invite`, `get_public_tracking_settings`).
+- Te same `revoke` warto wykonać **od razu w produkcji Lovable** (narzędzie `query_database`) — luka jest żywa
+  dziś. Nowy projekt ma wyłączone automatyczne granty dla nowych funkcji, więc ten rodzaj dryfu nie wróci.
+- Do osobnych zadań w kodzie (poza migracją): strażnik INSERT na `loan_applications` (trigger
+  `BEFORE INSERT OR UPDATE`), wiązanie zaproszenia operatora z e-mailem + `max_uses NOT NULL DEFAULT 1`, bramka
+  `auth.uid()` w `increment_loan_view` i wyroczniach, `is_internal_staff` zamiast `has_role(…,'operator')`
+  w `loan_applications_block_internal_updates`, zakres `dedup_leads` do wstawionego wiersza, audyt `exec_admin_*`.
+  Pełny raport (113 wpisów z dowodami): plik wyjściowy workflow w tej sesji; skrót powyżej.
+
+### Kod bez Lovable (2026-10-19, gałąź `claude/dazzling-ritchie-qn9w8w`)
+
+Właściciel: „zgoda na wszystko”, priorytet: nieprzerwane działanie aplikacji. Wykonane w kodzie
+(typy czyste, 1 791 testów przechodzi):
+- **AI**: nowa warstwa `src/lib/ai.server.ts` (Claude przez `@anthropic-ai/sdk`; `aiFetch` udaje
+  dawną bramkę w formacie OpenAI, więc ~40 miejsc wywołań zmieniło tylko transport). Embeddingi i
+  transkrypcja: OpenAI API (ten sam model, wektory w bazie zgodne). Grafiki: Gemini API. Modele
+  domyślnie `claude-opus-5-5` (zmienne `AI_MODEL_FAST`/`AI_MODEL_PRO`, `AI_EFFORT=low`).
+- **Bramki konektorów** → API dostawców: Resend, Mailgun, Twilio (Basic auth na koncie), Google
+  Sheets/Drive/Docs (konto usługi przez istniejący `google-auth.server.ts`), Stripe (klient bez
+  bramki). Pakiety `@lovable.dev/cloud-auth-js`, `email-js`, `webhooks-js` usunięte; zostają
+  `@lovable.dev/mcp-js` (biblioteka MCP; wysyła statystyki użycia do `api.lovable.dev`, nieszkodliwe)
+  i `@lovable.dev/vite-tanstack-config` (konfiguracja builda).
+- **Logowanie społecznościowe**: `src/integrations/lovable/index.ts` → `supabase.auth.signInWithOAuth`
+  (ta sama nazwa eksportu). W nowym projekcie trzeba włączyć dostawcę Google (własny klient OAuth).
+- **Maile Auth**: `src/routes/lovable/email/auth/webhook.ts` to teraz hook Supabase „Send Email”
+  (podpis Standard Webhooks, sekret `SEND_EMAIL_HOOK_SECRET`), wysyłka przez Resend z dotychczasowymi
+  szablonami. Alternatywa bez hooka: SMTP Resend w ustawieniach Auth.
+- **7% wszędzie**: cofnięte zmiany „5%” z 1.10 w kodzie, testach, dokumentach i migracjach (stała
+  `FY_COMMISSION_PCT = 7`; logika MPKK bez zmian). Repo i produkcja znów mają te same teksty umów.
+- **Konfiguracja**: `.env`, `wrangler.jsonc`, `supabase/config.toml`, `.lovable/mcp/manifest.json`
+  wskazują nowy projekt `vkzndnaoxhdxrxlpntcb`. Pełna lista sekretów do wpisania:
+  `docs/migracja/sekrety-aplikacji.md`.
+- **Nowy projekt**: cron-y przepisane na `https://app.financeyou.pl` (nadal wyłączone), funkcja Edge
+  `didit-webhook` wdrożona (czeka na sekret), granty RPC utwardzone (migracja 20261010130000
+  zastosowana i wpisana do historii), produkcja Lovable też załatana tymi samymi `revoke`.
+
+- **Build**: `bun run build` (Vite 7 + TanStack Start + Nitro/Cloudflare) przechodzi; paczka gotowa do
+  `wrangler deploy` po wpisaniu sekretów i tokenu Cloudflare.
+- **Historia migracji w nowej bazie**: archiwum `_mig.lovable_schema_migrations` (233 wiersze) i 304
+  wersje z repo wpisane (`on conflict` — razem 514); do zrobienia przez Management API albo panel SQL:
+  `delete from supabase_migrations.schema_migrations where version not in (…)` z
+  `baseline-historii.sql` (208 wierszy Lovable) oraz 4 `DROP FUNCTION` z `20261010120100`.
+
+**Nadal po stronie właściciela / wymaga dostępu do paneli:** sekrety (lista wyżej), token
+Management API Supabase (klucz service_role, Auth: SMTP/redirecty/Google, sekrety funkcji, DROP-y i
+baseline historii), Cloudflare (wdrożenie Workera, DNS), kopia Storage.
+
+## Do sprawdzenia w kodzie (osobno)
+
+- Zabezpieczenie przed pętlą mailową (odpowiedzi na własną domenę / autorespondery).
+- Idempotencja zapisu załączników do `pliki-klienta` (zdublowane uploady z lipca).

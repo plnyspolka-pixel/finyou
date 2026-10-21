@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // One-off seeder: generates N evergreen SEO articles for the blog.
 // GET/POST /api/public/hooks/seed-blog?count=10
 import { createFileRoute } from "@tanstack/react-router";
@@ -36,7 +37,7 @@ async function uniqueSlug(base: string): Promise<string> {
 }
 
 async function aiJSON(key: string, sys: string, user: string, tool: any) {
-  const res = await fetch(AI_URL, {
+  const res = await aiFetch(AI_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -56,7 +57,7 @@ async function aiJSON(key: string, sys: string, user: string, tool: any) {
 
 async function genCover(key: string, prompt: string): Promise<string | null> {
   try {
-    const res = await fetch(IMAGE_URL, {
+    const res = await aiFetch(IMAGE_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -79,8 +80,8 @@ async function genCover(key: string, prompt: string): Promise<string | null> {
 }
 
 async function seed(count: number) {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
 
   // Idempotency guard: don't re-seed if we already have enough autopilot articles.
   const { count: existing } = await supabaseAdmin

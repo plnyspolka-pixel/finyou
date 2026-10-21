@@ -9,6 +9,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { CorrespondenceIntel } from "./types";
 
+import { aiFetch } from "@/lib/ai.server";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 
@@ -157,10 +158,10 @@ export async function analyzeCorrespondence(args: {
   }
   const channels = [...new Set(messages.map((m) => CHANNEL_LABELS[m.channel] ?? m.channel))];
 
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     const r = emptyResult(
-      `Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak LOVABLE_API_KEY — ekstrakcja faktów pominięta.`,
+      `Zebrano ${messages.length} wiadomości (${channels.join(", ")}), ale brak ANTHROPIC_API_KEY — ekstrakcja faktów pominięta.`,
     );
     r.messagesAnalyzed = messages.length;
     r.channels = channels;
@@ -168,7 +169,7 @@ export async function analyzeCorrespondence(args: {
   }
 
   try {
-    const res = await fetch(AI_GATEWAY, {
+    const res = await aiFetch(AI_GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

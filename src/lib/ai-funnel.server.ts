@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Lejek AI (statystyki, insighty) — logika wyniesiona z ai-funnel.functions.ts: wspólna dla
 // server functions panelu (cienkie delegaty) i narzędzi MCP. Zachowanie 1:1.
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -142,8 +143,8 @@ export async function generateFunnelInsights(
   userId: string,
   data: GenerateFunnelInsightsInput,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("Brak LOVABLE_API_KEY.");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Brak ANTHROPIC_API_KEY.");
 
   // Reuse stats logic inline
   const from = new Date(Date.now() - data.days * 86400_000).toISOString();
@@ -190,7 +191,7 @@ Wygeneruj JSON:
   "recommendations": [{ "title": "...", "action": "...", "expected_impact": "wysoki|średni|niski" }]
 }`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({

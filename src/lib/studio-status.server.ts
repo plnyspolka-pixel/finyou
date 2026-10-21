@@ -37,7 +37,7 @@ export async function collectStudioStatus(): Promise<StudioStatus> {
     xConnected,
     heygenConfigured: !!process.env.HEYGEN_API_KEY,
     elevenlabsConfigured: !!process.env.ELEVENLABS_API_KEY,
-    aiConfigured: !!process.env.LOVABLE_API_KEY,
+    aiConfigured: !!process.env.ANTHROPIC_API_KEY,
     captionBurnerConfigured: (await import("./caption-burner.server")).isCaptionBurnerConfigured(),
     aiBadgeEnabled: (await import("./caption-burner.server")).isAiBadgeEnabled(),
     remotionConfigured: (await import("./remotion-render.server")).isRemotionConfigured(),

@@ -30,6 +30,7 @@ import {
   type ThreadQuestion,
 } from "./qa-questions";
 
+import { aiFetch } from "@/lib/ai.server";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 /** Znacznik agenta w metadanych wysyłek (ślad w audycie skrzynki). */
@@ -81,9 +82,9 @@ function tryParseJson(s: string): any | null {
 }
 
 async function callGateway(system: string, user: string): Promise<any | null> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
-  const res = await fetch(AI_GATEWAY, {
+  const res = await aiFetch(AI_GATEWAY, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({

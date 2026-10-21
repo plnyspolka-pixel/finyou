@@ -3,22 +3,19 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizePolishPhone } from "@/lib/phone";
 
-const SHEETS_GW = "https://connector-gateway.lovable.dev/google_sheets/v4";
-const DRIVE_GW = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
+// API Google bezpośrednio (konto usługi GOOGLE_SERVICE_ACCOUNT_JSON — arkusze/foldery trzeba
+// udostępnić adresowi e-mail konta usługi; patrz src/lib/google-auth.server.ts).
+const SHEETS_GW = "https://sheets.googleapis.com/v4";
+const DRIVE_GW = "https://www.googleapis.com/drive/v3";
 
-function authHeaders(kind: "sheets" | "drive") {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const apiKey =
-    kind === "sheets" ? process.env.GOOGLE_SHEETS_API_KEY : process.env.GOOGLE_DRIVE_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
-  if (!apiKey)
-    throw new Error(
-      `${kind === "sheets" ? "GOOGLE_SHEETS_API_KEY" : "GOOGLE_DRIVE_API_KEY"} not configured`,
-    );
-  return {
-    Authorization: `Bearer ${lovableKey}`,
-    "X-Connection-Api-Key": apiKey,
-  };
+async function authHeaders(kind: "sheets" | "drive"): Promise<Record<string, string>> {
+  const { googleAccessToken } = await import("@/lib/google-auth.server");
+  const scope =
+    kind === "sheets"
+      ? "https://www.googleapis.com/auth/spreadsheets.readonly"
+      : "https://www.googleapis.com/auth/drive.readonly";
+  const { token } = await googleAccessToken([scope]);
+  return { Authorization: `Bearer ${token}` };
 }
 
 // Lista arkuszy z Google Drive (mimeType = spreadsheet)
@@ -35,7 +32,7 @@ export const listDriveSpreadsheets = createServerFn({ method: "POST" })
         .filter(Boolean)
         .join(" and ");
       const url = `${DRIVE_GW}/files?q=${encodeURIComponent(q)}&pageSize=50&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime,owners(displayName,emailAddress),webViewLink)`;
-      const res = await fetch(url, { headers: authHeaders("drive") });
+      const res = await fetch(url, { headers: await authHeaders("drive") });
       const json: any = await res.json();
       if (!res.ok)
         return { ok: false, error: json?.error?.message || `HTTP ${res.status}`, files: [] };
@@ -52,7 +49,7 @@ export const getSpreadsheetMeta = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const url = `${SHEETS_GW}/spreadsheets/${data.spreadsheetId}?fields=properties.title,sheets(properties(sheetId,title,gridProperties))`;
-      const res = await fetch(url, { headers: authHeaders("sheets") });
+      const res = await fetch(url, { headers: await authHeaders("sheets") });
       const json: any = await res.json();
       if (!res.ok) return { ok: false, error: json?.error?.message || `HTTP ${res.status}` };
       return {
@@ -80,7 +77,7 @@ export const previewSheetRange = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const url = `${SHEETS_GW}/spreadsheets/${data.spreadsheetId}/values/${data.range}`;
-      const res = await fetch(url, { headers: authHeaders("sheets") });
+      const res = await fetch(url, { headers: await authHeaders("sheets") });
       const json: any = await res.json();
       if (!res.ok)
         return {
@@ -117,7 +114,7 @@ export const syncGoogleSheet = createServerFn({ method: "POST" })
     let rows: any[][] = [];
     try {
       const url = `${SHEETS_GW}/spreadsheets/${sheet.spreadsheetId}/values/${sheet.range || "Sheet1!A:Z"}`;
-      const res = await fetch(url, { headers: authHeaders("sheets") });
+      const res = await fetch(url, { headers: await authHeaders("sheets") });
       const json: any = await res.json();
       if (!res.ok) throw new Error(json?.error?.message || `HTTP ${res.status}`);
       rows = json.values || [];

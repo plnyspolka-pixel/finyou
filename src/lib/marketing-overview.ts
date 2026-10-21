@@ -109,7 +109,7 @@ export function channelReadiness(status: {
   );
   add(status.heygenConfigured, "heygen", "Sekret HEYGEN_API_KEY.");
   add(status.elevenlabsConfigured, "elevenlabs", "Sekret ELEVENLABS_API_KEY.");
-  add(status.aiConfigured, "ai", "Sekret LOVABLE_API_KEY (scenariusze, opisy, grafiki).");
+  add(status.aiConfigured, "ai", "Sekret ANTHROPIC_API_KEY (scenariusze, opisy; grafiki: GEMINI_API_KEY).");
   if (status.captionBurnerConfigured !== undefined) {
     add(
       status.captionBurnerConfigured,

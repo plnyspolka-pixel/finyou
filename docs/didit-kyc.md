@@ -28,7 +28,7 @@ klienta.
 | Server functions (start / list / refresh) | `src/lib/didit.functions.ts` |
 | Webhook (weryfikacja podpisu, zapis decyzji) | `supabase/functions/didit-webhook/index.ts` |
 | Panel UI weryfikacji | `src/components/aml/didit-kyc-panel.tsx` |
-| Tabela + RLS | `supabase/migrations/20260721120000_didit_kyc.sql` |
+| Tabela + RLS | `supabase/migrations/20260721120001_didit_kyc.sql` |
 
 `didit_verifications` ma RLS jak tabele `aml_*` (właściciel `user_id = auth.uid()`
 lub personel wewnętrzny). Zapis z webhooka idzie `service_role` (omija RLS).
@@ -79,7 +79,7 @@ Uwaga: workflow „KYC + AML" (`1612939d…` prod, `d762fc3c…` sandbox) jest p
 2. Wdróż Edge Function `didit-webhook` (`supabase functions deploy didit-webhook`
    albo panel) — musi widzieć `DIDIT_WEBHOOK_SECRET` oraz standardowe
    `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`.
-3. Zastosuj migrację `20260721120000_didit_kyc.sql` (`supabase db push` / panel)
+3. Zastosuj migrację `20260721120001_didit_kyc.sql` (`supabase db push` / panel)
    i zregeneruj typy `Database` (`src/integrations/supabase/types.ts`) — potem
    można usunąć luźny `any` (`loose`) w `didit.functions.ts`.
 

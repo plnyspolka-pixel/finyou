@@ -402,7 +402,7 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
   slug?: string;
   id?: string;
 }> {
-  if (!process.env.LOVABLE_API_KEY) return { ok: false, reason: "LOVABLE_API_KEY missing" };
+  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, reason: "ANTHROPIC_API_KEY missing" };
 
   // Nie publikuj 2 razy tego samego dnia (chyba że force=1)
   if (!opts.force) {

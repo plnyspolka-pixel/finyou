@@ -8,6 +8,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import { aiFetch } from "@/lib/ai.server";
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const HISTORY_LIMIT = 30;
 
@@ -129,9 +130,9 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
     messages.push({ role: "user", content: data.message });
 
     if (!reply) {
-      const apiKey = process.env.LOVABLE_API_KEY;
+      const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("Asystent jest chwilowo niedostępny.");
-      const res = await fetch(GATEWAY, {
+      const res = await aiFetch(GATEWAY, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),

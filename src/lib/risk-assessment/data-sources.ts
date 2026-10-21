@@ -47,7 +47,7 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     purpose: "Odczyt operatów, wypisów, umów, zaświadczeń i innych skanów",
     provides: "Parametry nieruchomości, dane właściciela, obciążenia, wartości z operatu",
     provider: "Gemini 2.5 (Lovable AI Gateway)",
-    envKey: "LOVABLE_API_KEY",
+    envKey: "ANTHROPIC_API_KEY",
   },
   // 2. Księga wieczysta
   {
@@ -153,7 +153,7 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provides:
       "zaludnienie, większe miasto, zbiornik wodny, kurort, sanatorium, atrakcje turystyczne, dostępność drogowa, popyt na najem",
     provider: "Gemini 2.5 Pro (Lovable AI Gateway) na danych z portali nieruchomości",
-    envKey: "LOVABLE_API_KEY",
+    envKey: "ANTHROPIC_API_KEY",
   },
   {
     key: "local_market_offers",

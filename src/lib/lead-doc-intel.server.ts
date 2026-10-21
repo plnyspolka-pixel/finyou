@@ -11,6 +11,7 @@ import { maybePromoteLeadToApplication } from "@/lib/lead-enrichment.server";
 import { extractKwOwnerPersons } from "@/lib/risk-assessment/kw-parser.server";
 import { decodeMaybeBase64, normalizeKwNumber } from "@/lib/kw-fetch.server";
 
+import { aiFetch } from "@/lib/ai.server";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 const MAX_FILES_PER_RUN = 3;
@@ -114,7 +115,7 @@ async function ocrOneAttachment(att: OcrAttachment, apiKey: string): Promise<Ocr
     userContent.push({ type: "image_url", image_url: { url: dataUrl } });
   }
 
-  const resp = await fetch(AI_GATEWAY, {
+  const resp = await aiFetch(AI_GATEWAY, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -164,7 +165,7 @@ export async function ocrLeadAttachmentsAndEnrich(opts: {
   attachments?: OcrAttachment[];
 }): Promise<LeadOcrResult> {
   const none: LeadOcrResult = { processed: 0, kwFound: 0, nameFilled: false };
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return none;
 
   const { data: lead } = await supabaseAdmin

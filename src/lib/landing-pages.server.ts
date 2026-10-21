@@ -1,3 +1,4 @@
+import { aiFetch } from "@/lib/ai.server";
 // Server-only helpers for landing pages (AI copy generation)
 
 export async function generateLandingContent(brief: string): Promise<{
@@ -14,8 +15,8 @@ export async function generateLandingContent(brief: string): Promise<{
   }>;
   meta_description: string;
 }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!lovableKey) throw new Error("LOVABLE_API_KEY missing");
+  const lovableKey = process.env.ANTHROPIC_API_KEY;
+  if (!lovableKey) throw new Error("ANTHROPIC_API_KEY missing");
 
   const sys = `Jesteś copywriterem konwersji w branży finansowej (pożyczki pod nieruchomość, inwestowanie w wierzytelności w Polsce). Twórz mocne, konkretne treści po polsku, bez clickbaitu i bez ogólników.
 Zwracaj WYŁĄCZNIE JSON o schemacie:
@@ -34,7 +35,7 @@ Zwracaj WYŁĄCZNIE JSON o schemacie:
 }
 Dawaj 3-5 sekcji. Nie wymyślaj cyfr, których nie da się obronić.`;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

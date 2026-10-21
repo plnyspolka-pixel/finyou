@@ -88,7 +88,7 @@ export function kalkulacjaDoSzkicu(payload: LoanCalcPayload): Record<string, any
   });
   // Prowizja FY zawsze JAWNIE (po `usunPuste`, które wycina null): kwota albo
   // `null` = „bez prowizji Finance You". Pominięcie pola znaczy w silniku
-  // „dolicz 5 %", więc kalkulacja bez prowizji (Pożyczkodawcą jest FY, oferta
+  // „dolicz 7 %", więc kalkulacja bez prowizji (Pożyczkodawcą jest FY, oferta
   // wewnętrzna pośrednika, Zlecenie z wyłączoną prowizją) musi dać null.
   warunki.prowizja_finance_you = prowizjaFY > 0 ? { kwota: kwota(prowizjaFY) } : null;
 

@@ -1,4 +1,4 @@
-// Wysyłka maili wychodzących przez Resend (przez Lovable connector gateway).
+// Wysyłka maili wychodzących przez Resend (API Resend bezpośrednio, klucz RESEND_API_KEY).
 // Każdy mail jest automatycznie obrandowany (logo + wordmark + linki),
 // chyba że html ma marker data-fy-branded lub przekazano noBranding=true.
 //
@@ -13,7 +13,7 @@ import {
   type EmailCategory,
 } from "./email-unsubscribe.server";
 
-const GATEWAY = "https://connector-gateway.lovable.dev/resend";
+const RESEND_API = "https://api.resend.com";
 
 const FROM_DOMAIN = process.env.RESEND_FROM_DOMAIN ?? "financeyou.pl";
 const FROM_ADDR = process.env.RESEND_FROM_ADDRESS ?? `kontakt@financeyou.pl`;
@@ -39,10 +39,9 @@ export async function sendResendEmail(opts: {
   /** Prawdziwe załączniki maila (base64) — a nie linki w treści. */
   attachments?: Array<{ filename: string; content: string; contentType?: string }>;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.RESEND_API_KEY;
-  if (!lovableKey || !connKey) {
-    return { ok: false, error: "Resend env missing (LOVABLE_API_KEY / RESEND_API_KEY)" };
+  if (!connKey) {
+    return { ok: false, error: "Resend env missing (RESEND_API_KEY)" };
   }
   const subject = (opts.subject ?? "").trim();
   if (!subject) {
@@ -110,12 +109,11 @@ export async function sendResendEmail(opts: {
     }));
   }
 
-  const res = await fetch(`${GATEWAY}/emails`, {
+  const res = await fetch(`${RESEND_API}/emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": connKey,
+      Authorization: `Bearer ${connKey}`,
     },
     body: JSON.stringify(body),
   });

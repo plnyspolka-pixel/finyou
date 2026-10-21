@@ -29,7 +29,7 @@ const pakiet = (Object.keys(PAKIET_PLIKI) as KodPakietu[]).map((code) => ({
 }));
 
 describe("dokumenty prawne — wersja 1.0", () => {
-  it("regulamin klienta i polityka prywatności: wersja 1.0, Serwis, prowizja 5%", () => {
+  it("regulamin klienta i polityka prywatności: wersja 1.0, Serwis, prowizja 7%", () => {
     expect(regulamin).toContain("**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**");
     expect(polityka).toContain("**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**");
     for (const doc of [regulamin, polityka]) {
@@ -37,8 +37,8 @@ describe("dokumenty prawne — wersja 1.0", () => {
       expect(doc).not.toMatch(/wersji [2-9]\b|wersja [2-9]\b/);
     }
     expect(regulamin).toContain("platformą finansowania społecznościowego");
-    expect(regulamin).toContain("**5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**");
-    expect(regulamin).not.toMatch(/\b7% Kwoty/);
+    expect(regulamin).toContain("**7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**");
+    expect(regulamin).not.toMatch(/\b5% Kwoty/);
   });
 
   it("pakiet inwestora FY-LEGAL-1.0, bez „platformy”, cena zgodna z regulaminem abonamentu", () => {
