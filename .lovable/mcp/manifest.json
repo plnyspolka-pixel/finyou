@@ -15890,7 +15890,7 @@
       {
         "name": "generate_video",
         "title": "Generate video (ElevenLabs)",
-        "description": "Zleca wygenerowanie wideo z opisu przez API ElevenLabs (opcjonalnie model, długość, proporcje, rozdzielczość, obraz startowy, dodatkowe pola 1:1). Ścieżka endpointu pochodzi z ELEVENLABS_VIDEO_CREATE_PATH albo z `endpoint_path`; bez konfiguracji narzędzie zwraca instrukcję. Zwraca odpowiedź API i `job_id` do `get_video_status`. Zużywa kredyty. Tylko administrator/operator.",
+        "description": "Zleca wygenerowanie wideo z opisu przez API ElevenLabs (opcjonalnie model, długość, proporcje, rozdzielczość, obraz startowy, dodatkowe pola 1:1). Domyślnie ElevenLabs Flows (`POST /v1/flows/video`, model `veo-3.1-fast-generate-001`, 9:16, 4/6/8 s; wymaga planu Pro — bez niego 402); ścieżkę nadpisuje ELEVENLABS_VIDEO_CREATE_PATH albo `endpoint_path`. Zwraca odpowiedź API i `job_id` do `get_video_status`. Zużywa kredyty. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -15951,7 +15951,7 @@
       {
         "name": "get_video_status",
         "title": "Get video generation status",
-        "description": "Status zadania wideo (ELEVENLABS_VIDEO_STATUS_PATH z {id} albo `endpoint_path`). Gdy API zwraca gotowy plik, zapisuje go w Storage i zwraca publiczny link; gdy JSON — zwraca go z wykrytym adresem wideo. Tylko administrator/operator.",
+        "description": "Status zadania wideo (domyślnie `GET /v1/flows/video/{id}`; nadpisuje ELEVENLABS_VIDEO_STATUS_PATH albo `endpoint_path`). Gotowa generacja (`content_url`, wygasa po ~1 h) albo plik trafia do Storage jako trwały publiczny link; inaczej zwraca JSON ze statusem. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -18889,8 +18889,74 @@
                 "caption_burner",
                 "remotion"
               ],
-              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu.",
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`; bez niego Remotion, gdy skonfigurowany). Hook wizualny i kadrowanie poziomych awatarów rysuje tylko Remotion; gdy caption-burner nie odpowiada, zadanie samo przechodzi na Remotion. HeyGen i ElevenLabs działają tak samo przy obu.",
               "default": "auto"
+            },
+            "hook": {
+              "type": "object",
+              "properties": {
+                "visual_prompt": {
+                  "type": "string",
+                  "maxLength": 700,
+                  "description": "Obraz-metafora problemu widza po ANGIELSKU, w ruchu, z uderzeniem w pierwszych 0,3 s (np. „heavy bank vault door slams shut in front of the camera”). Bez tekstu w kadrze — model dostaje zakaz liter."
+                },
+                "text": {
+                  "type": "string",
+                  "maxLength": 60,
+                  "description": "1–4 słowa na ekran (duży tekst na całą szerokość, rysuje Remotion), np. „BANK MÓWI NIE?”."
+                },
+                "highlight": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Słowo z `text` w złocie."
+                },
+                "sfx_prompt": {
+                  "type": "string",
+                  "maxLength": 220,
+                  "description": "Efekt dźwiękowy uderzenia po ANGIELSKU (ElevenLabs Sound Effects)."
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "auto",
+                    "flows_video",
+                    "flows_image",
+                    "studio_image",
+                    "broll"
+                  ],
+                  "description": "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam."
+                },
+                "music_prompt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 220
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Opcjonalny podkład (`compose_music`), ściszony pod lektorem."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Hook wizualny 0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora + efekt dźwiękowy + duży tekst. Bez pola hook zaplanuje generator (wariant A/B). Rysuje go silnik Remotion."
+            },
+            "hook_variant": {
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "C"
+              ],
+              "description": "Wariant hooka do testu A/B (`hook_variant`); bez pola przydział naprzemienny."
             },
             "start_now": {
               "type": "boolean",
@@ -19004,7 +19070,81 @@
                 "caption_burner",
                 "remotion"
               ],
-              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`, domyślnie caption-burner). HeyGen i ElevenLabs działają tak samo przy obu."
+              "description": "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`; bez niego Remotion, gdy skonfigurowany). Hook wizualny i kadrowanie poziomych awatarów rysuje tylko Remotion; gdy caption-burner nie odpowiada, zadanie samo przechodzi na Remotion. HeyGen i ElevenLabs działają tak samo przy obu."
+            },
+            "hook": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "visual_prompt": {
+                      "type": "string",
+                      "maxLength": 700,
+                      "description": "Obraz-metafora problemu widza po ANGIELSKU, w ruchu, z uderzeniem w pierwszych 0,3 s (np. „heavy bank vault door slams shut in front of the camera”). Bez tekstu w kadrze — model dostaje zakaz liter."
+                    },
+                    "text": {
+                      "type": "string",
+                      "maxLength": 60,
+                      "description": "1–4 słowa na ekran (duży tekst na całą szerokość, rysuje Remotion), np. „BANK MÓWI NIE?”."
+                    },
+                    "highlight": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 40
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Słowo z `text` w złocie."
+                    },
+                    "sfx_prompt": {
+                      "type": "string",
+                      "maxLength": 220,
+                      "description": "Efekt dźwiękowy uderzenia po ANGIELSKU (ElevenLabs Sound Effects)."
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "flows_video",
+                        "flows_image",
+                        "studio_image",
+                        "broll"
+                      ],
+                      "description": "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam."
+                    },
+                    "music_prompt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 220
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Opcjonalny podkład (`compose_music`), ściszony pod lektorem."
+                    }
+                  },
+                  "additionalProperties": false,
+                  "description": "Hook wizualny 0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora + efekt dźwiękowy + duży tekst. Bez pola hook zaplanuje generator (wariant A/B). Rysuje go silnik Remotion."
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zmiana hooka wizualnego (pola częściowe łączą się z zapisanym; zmiana obrazu / źródła / dźwięku kasuje wygenerowane zasoby). `null` = usuń — generator zaplanuje nowy przy wykończeniu. Gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen)."
+            },
+            "hook_variant": {
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "C"
+              ],
+              "description": "Wariant hooka do testu A/B (`hook_variant`); bez pola przydział naprzemienny."
             }
           },
           "required": [
@@ -19779,6 +19919,152 @@
           },
           "required": [
             "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "preview_studio_hook",
+        "title": "Preview the visual hook of a studio reel",
+        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi klip i dźwięk: ElevenLabs Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek; brak planu Pro (402) zgłasza i schodzi niżej sam. Klip Flows wideo generuje się kilka minut — wynik `pending` odbierze kolejka przy wykończeniu. `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty ElevenLabs / AI. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "script": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "topic": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "track": {
+              "type": "string",
+              "enum": [
+                "pozyczkobiorca",
+                "inwestor"
+              ]
+            },
+            "visual_prompt": {
+              "type": "string",
+              "maxLength": 700
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 60
+            },
+            "highlight": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sfx_prompt": {
+              "type": "string",
+              "maxLength": 220
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "flows_video",
+                "flows_image",
+                "studio_image",
+                "broll"
+              ]
+            },
+            "music_prompt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "hook_variant": {
+              "type": "string",
+              "enum": [
+                "A",
+                "B",
+                "C"
+              ]
+            },
+            "generate_assets": {
+              "type": "boolean",
+              "default": true
+            },
+            "save": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_studio_avatar_framing",
+        "title": "Set avatar orientation / framing for studio reels",
+        "description": "Orientacja zdjęcia awatara HeyGen i punkt kadru dla Remotion. Studio wykrywa orientację samo (z podglądu awatara); poziome zdjęcie nie prowadzi rolki (pionowy z zestawu przejmuje hook), a jego ujęcia Remotion kadruje „cover” do pełnego pionu. Tu poprawisz wynik: `orientation`, `focus_x` / `focus_y` (0–1, punkt zdjęcia, który zostaje w kadrze; domyślnie 0,5 / 0,35 — środek, górna część z twarzą). `detect=true` wykrywa od nowa z podglądu. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "avatar_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "orientation": {
+              "type": "string",
+              "enum": [
+                "portrait",
+                "landscape",
+                "square"
+              ]
+            },
+            "focus_x": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "focus_y": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "detect": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "avatar_id"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
