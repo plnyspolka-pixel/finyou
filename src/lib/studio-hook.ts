@@ -1,9 +1,10 @@
 // Hook wizualny rolki Studia (0–2,5 s) — czyste dane i reguły, bez I/O.
 //
 // Hook to pełnoekranowy obraz w ruchu nałożony na pierwsze zdanie lektora:
-// klip z banku klipów hooka albo obraz z naszego generatora / banku
-// przebitek animowany w Remotion (push-in, wstrząs na uderzeniu, błysk),
-// efekt dźwiękowy ElevenLabs zgrany
+// gotowy klip z banku klipów hooka (gra w całości, ~5 s, i kończy się na
+// ścianie z logo za awatarami — twarde cięcie do awatara) albo obraz z
+// naszego generatora / banku przebitek animowany w Remotion (push-in,
+// wstrząs na uderzeniu, błysk), efekt dźwiękowy ElevenLabs zgrany
 // z uderzeniem i duży kinetyczny tekst na całą szerokość kadru (3–4 słowa,
 // jedno słowo złote). Napisy lektora i elementy dynamiczne czekają, aż hook
 // się skończy. Tekst rysuje WYŁĄCZNIE Remotion — model obrazu/wideo dostaje
@@ -15,6 +16,7 @@
 // `hook_variant` zadania mówi, który wariant poszedł do renderu (test A/B).
 
 import type { Track } from "./autopilot/types";
+import { HOOK_CLIP_DEFAULT_SECONDS } from "./studio-hook-clips";
 
 export const HOOK_SOURCES = [
   "auto",
@@ -50,12 +52,18 @@ export type HookSpec = {
   /** Opis efektu dźwiękowego uderzenia (ElevenLabs Sound Effects). */
   sfx_prompt: string;
   /**
-   * Skąd klip: auto = bank klipów hooka (w przygotowaniu) → grafika Studia →
+   * Skąd klip: auto = bank klipów hooka (`studio_hook_clips`, klip ~5 s
+   * DOBRANY DO TREŚCI rolki — AI, bez AI słowa kluczowe; brak dopasowania =
+   * dalej, nigdy losowo — kończący się na ścianie z logo za pionowymi
+   * awatarami e0db…/65ef…; rolka z klipem powinna zaczynać się od jednego
+   * z nich) → grafika Studia →
    * bank przebitek. `flows_*` (ElevenLabs) tylko przy fladze STUDIO_HOOK_FLOWS=1.
    */
   source: HookSource;
   /** Opcjonalny podkład muzyczny (`compose_music`), ściszony pod lektorem. */
   music_prompt?: string | null;
+  /** Przypięty klip z banku klipów hooka (slug) — pomija dopasowanie do treści. */
+  clip_slug?: string | null;
 };
 
 export type HookAssetStatus = "pending" | "ready" | "failed";
@@ -74,6 +82,12 @@ export type HookAssets = {
   video_generation_id?: string | null;
   image_generation_id?: string | null;
   started_at?: string | null;
+  /** Klip z banku klipów hooka (`studio_hook_clips.id`) i jego długość w s. */
+  clip_id?: string | null;
+  clip_duration?: number | null;
+  /** Koncept klipu i dlaczego pasuje do treści (AI / słowa kluczowe / przypięty). */
+  clip_concept?: string | null;
+  clip_match_reason?: string | null;
   /** Flows (gdy włączone flagą) zwróciło 402 — konto bez planu Pro. */
   pro_plan_required?: boolean;
   notes: string[];
@@ -113,6 +127,7 @@ export function sanitizeHookSpec(raw: unknown): HookSpec | null {
   const hl = str(o.highlight, 40);
   const match = hl ? w.find((x) => bare(x) === bare(hl)) : undefined;
   const source = HOOK_SOURCES.find((s) => s === o.source) ?? "auto";
+  const clipSlug = sanitizeClipSlug(o.clip_slug);
   return {
     visual_prompt: str(o.visual_prompt, HOOK_LIMITS.visualPrompt),
     text,
@@ -120,7 +135,14 @@ export function sanitizeHookSpec(raw: unknown): HookSpec | null {
     sfx_prompt: str(o.sfx_prompt, HOOK_LIMITS.sfxPrompt),
     source,
     music_prompt: str(o.music_prompt, HOOK_LIMITS.musicPrompt) || null,
+    ...(clipSlug ? { clip_slug: clipSlug } : {}),
   };
+}
+
+/** Slug klipu z banku (małe litery, cyfry, _ i -) albo null. */
+export function sanitizeClipSlug(v: unknown): string | null {
+  const slug = str(v, 80).toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]*$/.test(slug) ? slug : null;
 }
 
 function sanitizeAssets(raw: unknown): HookAssets | null {
@@ -130,7 +152,8 @@ function sanitizeAssets(raw: unknown): HookAssets | null {
   const url = typeof o.url === "string" && /^https:\/\//.test(o.url) ? o.url : null;
   const httpsOrNull = (v: unknown) => (typeof v === "string" && /^https:\/\//.test(v) ? v : null);
   const used = HOOK_SOURCES.find((s) => s === o.source_used && s !== "auto") as
-    Exclude<HookSource, "auto"> | undefined;
+    | Exclude<HookSource, "auto">
+    | undefined;
   return {
     status,
     kind: o.kind === "video" || o.kind === "image" ? o.kind : null,
@@ -141,6 +164,14 @@ function sanitizeAssets(raw: unknown): HookAssets | null {
     video_generation_id: typeof o.video_generation_id === "string" ? o.video_generation_id : null,
     image_generation_id: typeof o.image_generation_id === "string" ? o.image_generation_id : null,
     started_at: typeof o.started_at === "string" ? o.started_at : null,
+    clip_id: typeof o.clip_id === "string" ? o.clip_id : null,
+    clip_concept: typeof o.clip_concept === "string" ? o.clip_concept.slice(0, 80) : null,
+    clip_match_reason:
+      typeof o.clip_match_reason === "string" ? o.clip_match_reason.slice(0, 300) : null,
+    clip_duration:
+      typeof o.clip_duration === "number" && Number.isFinite(o.clip_duration) && o.clip_duration > 0
+        ? o.clip_duration
+        : null,
     pro_plan_required: o.pro_plan_required === true,
     notes: Array.isArray(o.notes)
       ? o.notes.filter((n): n is string => typeof n === "string").slice(0, 12)
@@ -181,8 +212,8 @@ export function mergeHookPatch(
   if (!next) return null;
   const assetsStale =
     !current ||
-    (["visual_prompt", "source", "sfx_prompt", "music_prompt"] as const).some(
-      (k) => patch[k] !== undefined && patch[k] !== current[k],
+    (["visual_prompt", "source", "sfx_prompt", "music_prompt", "clip_slug"] as const).some(
+      (k) => patch[k] !== undefined && (patch[k] ?? null) !== (current[k] ?? null),
     );
   if (assetsStale) next.assets = null;
   // Edytowany główny spec zastępuje swój wpis na liście wariantów.
@@ -327,6 +358,12 @@ export type ReelHook = {
   centerY: number;
   sfx: { url: string; at: number; volume: number } | null;
   music: { url: string; volume: number } | null;
+  /**
+   * `still` (domyślnie) — obraz/klip z najazdem, wstrząsem, błyskiem
+   * i wygaszeniem; `clip` — klip z banku gra w całości bez efektów, tekst
+   * znika przed końcem, na końcu twarde cięcie do awatara.
+   */
+  style?: "still" | "clip";
 };
 
 /** Średnia szerokość wielkiej litery Inter 800 w em (z zapasem na polskie znaki). */
@@ -414,7 +451,10 @@ export function buildReelHook(hook: StudioHook | null, videoDuration?: number): 
   if (!hook?.assets || hook.assets.status !== "ready" || !hook.assets.url || !hook.assets.kind) {
     return null;
   }
-  const end = Math.min(HOOK_SECONDS, Math.max(1.2, (videoDuration ?? HOOK_SECONDS + 1) - 0.5));
+  const clip = hook.assets.source_used === "clip_bank" && hook.assets.kind === "video";
+  // Klip z banku gra w całości (kończy się na ścianie z logo za awatarem).
+  const want = clip ? (hook.assets.clip_duration ?? HOOK_CLIP_DEFAULT_SECONDS) : HOOK_SECONDS;
+  const end = Math.max(1.2, Math.min(want, (videoDuration ?? want + 1) - 0.5));
   const { lines, fontSize } = layoutHookText(hook.text, hook.highlight);
   return {
     start: 0,
@@ -426,5 +466,6 @@ export function buildReelHook(hook: StudioHook | null, videoDuration?: number): 
     centerY: 0.5,
     sfx: hook.assets.sfx_url ? { url: hook.assets.sfx_url, at: 0, volume: 0.9 } : null,
     music: hook.assets.music_url ? { url: hook.assets.music_url, volume: 0.12 } : null,
+    style: clip ? "clip" : "still",
   };
 }

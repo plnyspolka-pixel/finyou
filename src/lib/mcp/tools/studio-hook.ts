@@ -1,6 +1,6 @@
 // Studio publikacji — narzędzia robota do HOOKA WIZUALNEGO rolki (podgląd,
-// generowanie zasobów) i KADROWANIA AWATARÓW (orientacja zdjęcia, punkt
-// kadru). Te same funkcje co kolejka Studia (studio-hook.server.ts).
+// generowanie zasobów, bank klipów hooka `clip_bank`) i KADROWANIA AWATARÓW
+// (orientacja zdjęcia, punkt kadru). Te same funkcje co kolejka Studia (studio-hook.server.ts).
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import {
@@ -15,6 +15,7 @@ import {
 } from "../_helpers";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const READ = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
 
 const HOOK_FIELDS = {
   visual_prompt: z.string().max(700).optional(),
@@ -25,13 +26,21 @@ const HOOK_FIELDS = {
     .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
     .optional(),
   music_prompt: z.string().max(220).nullable().optional(),
+  clip_slug: z
+    .string()
+    .max(80)
+    .nullable()
+    .optional()
+    .describe(
+      "Przypięty klip z banku klipów hooka (slug z `list_hook_clips`) — pomija dopasowanie do treści i idzie pierwszy niezależnie od `source`. Musi istnieć w banku. `null` = odpięcie (znów dopasowanie do treści).",
+    ),
 };
 
 export const previewStudioHook = defineTool({
   name: "preview_studio_hook",
   title: "Preview the visual hook of a studio reel",
   description:
-    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (w przygotowaniu) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
+    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s DOBRANY DO TREŚCI rolki: AI porównuje scenariusz i tekst hooka z opisami i tagami konceptów klipów i bierze koncept tylko przy wyraźnym dopasowaniu, bez AI — słowa kluczowe; gdy nic nie pasuje, klipu nie ma i hook schodzi na kolejne źródło — nigdy losowo; `clip_slug` przypina konkretny klip; klip gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich — twarde cięcie) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid().optional(),
     script: z.string().max(5000).optional(),
@@ -99,6 +108,14 @@ export const previewStudioHook = defineTool({
         if (!hook) return fail("Hook: pole `text` (1–4 słowa) jest wymagane.");
       }
       if (!hook) return fail("Nie udało się zaplanować hooka.");
+      if (hook.clip_slug) {
+        const bank = await import("@/lib/studio-hook-clips.server");
+        if (!(await bank.getHookClipBySlug(hook.clip_slug))) {
+          return fail(`Nie ma klipu „${hook.clip_slug}” w banku klipów hooka (list_hook_clips).`);
+        }
+      } else if (typeof a.clip_slug === "string" && a.clip_slug.trim()) {
+        return fail("Nieprawidłowy `clip_slug` (małe litery, cyfry, _ i -).");
+      }
       const key = hookLib.chooseHookVariant(
         hook,
         job?.id ?? "podglad",
@@ -108,9 +125,10 @@ export const previewStudioHook = defineTool({
       if (a.generate_assets && hook.assets?.status !== "ready") {
         try {
           const name = job?.publish_title || topic || "hook";
+          const ctxClip = { track, script, topic };
           const started = hook.assets
-            ? (await srv.advanceHookAssets(hook, name)).assets
-            : await srv.startHookAssets(hook, name);
+            ? (await srv.advanceHookAssets(hook, name, new Date(), ctxClip)).assets
+            : await srv.startHookAssets(hook, name, ctxClip);
           hook = { ...hook, assets: started };
         } catch (e) {
           note = [note, `Zasoby hooka nieudane: ${errMsg(e)}`].filter(Boolean).join(" ");
@@ -137,7 +155,7 @@ export const previewStudioHook = defineTool({
           font_px_720x1280: layout.fontSize,
           text_height_share:
             Math.round(((layout.fontSize * layout.lines.length) / 1280) * 100) / 100,
-          seconds: hookLib.HOOK_SECONDS,
+          seconds: hookLib.buildReelHook(hook)?.end ?? hookLib.HOOK_SECONDS,
         },
         pro_plan_required: hook.assets?.pro_plan_required === true,
         note,
@@ -207,4 +225,109 @@ export const setStudioAvatarFraming = defineTool({
     }),
 });
 
-export const studioHookTools = [previewStudioHook, setStudioAvatarFraming];
+// ── Bank klipów hooka (`clip_bank`) ─────────────────────────────────────────
+
+const CLIP_TRACK = z.enum(["pozyczkobiorca", "inwestor", "both"]);
+
+const publicClip = <T extends { storage_path?: unknown }>({ storage_path: _p, ...rest }: T) => rest;
+
+export const importHookClips = defineTool({
+  name: "import_hook_clips",
+  title: "Import clips into the studio hook clip bank",
+  description:
+    "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Klip trafia do rolki tylko wtedy, gdy pasuje do jej TREŚCI — dlatego podawaj `description` (po polsku: co klip znaczy, jaki problem widza ilustruje) i `tags` (frazy, którymi mówi o tym lektor); klipy jednego `concept` (ta sama metafora z różnych modeli) dobieramy razem, w koncepcie wygrywa najwyższy `rating`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
+  inputSchema: {
+    items: z
+      .array(
+        z.object({
+          slug: z.string().min(1).max(80),
+          concept: z.string().max(80).optional(),
+          title: z.string().max(160).optional(),
+          track: CLIP_TRACK,
+          model: z.string().max(40).optional(),
+          rating: z.number().int().min(1).max(5).optional(),
+          description: z.string().max(500).optional(),
+          tags: z.array(z.string().max(60)).max(24).optional(),
+          source_url: z.string().url(),
+        }),
+      )
+      .min(1)
+      .max(80),
+    force: z.boolean().default(false),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireTeamAdmin(ctx);
+      const bank = await import("@/lib/studio-hook-clips.server");
+      const results: Array<Record<string, unknown>> = [];
+      const counts = { imported: 0, updated: 0, skipped: 0, failed: 0 };
+      for (const item of a.items) {
+        try {
+          const r = await bank.importHookClip(item, { force: a.force });
+          counts[r.status]++;
+          results.push({
+            slug: r.slug,
+            ok: true,
+            status: r.status,
+            id: r.clip.id,
+            media_url: r.clip.media_url,
+            duration_s: r.clip.duration_s,
+          });
+        } catch (e) {
+          counts.failed++;
+          results.push({ slug: item.slug, ok: false, error: errMsg(e).slice(0, 300) });
+        }
+      }
+      return ok({ ok: counts.failed === 0, counts, results, actor: actorId(ctx) });
+    }),
+});
+
+export const listHookClips = defineTool({
+  name: "list_hook_clips",
+  title: "List studio hook clip bank",
+  description:
+    "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, opis, tagi, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Klip do rolki dobiera się po treści (opis + tagi konceptu); slug przypniesz polem hooka `clip_slug`. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
+  inputSchema: {
+    track: CLIP_TRACK.optional(),
+    active: z.boolean().optional(),
+    limit: z.number().int().min(1).max(500).default(100),
+  },
+  annotations: READ,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireTeamAdmin(ctx);
+      const bank = await import("@/lib/studio-hook-clips.server");
+      const items = await bank.listHookClips({
+        track: a.track ?? null,
+        active: a.active ?? null,
+        limit: a.limit,
+      });
+      return ok({ total: items.length, items: items.map(publicClip) });
+    }),
+});
+
+export const setHookClipActive = defineTool({
+  name: "set_hook_clip_active",
+  title: "Enable or disable a hook clip",
+  description:
+    "Włącza albo wyłącza klip w banku klipów hooka — wyłączony nie wchodzi do doboru (np. nietrafione ujęcie). Tylko administrator/operator.",
+  inputSchema: { id: z.string().uuid(), active: z.boolean() },
+  annotations: WRITE_IDEMPOTENT,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireTeamAdmin(ctx);
+      const bank = await import("@/lib/studio-hook-clips.server");
+      const clip = await bank.setHookClipActive(a.id, a.active);
+      if (!clip) return fail("Nie znaleziono klipu.");
+      return ok({ ok: true, clip: publicClip(clip), actor: actorId(ctx) });
+    }),
+});
+
+export const studioHookTools = [
+  previewStudioHook,
+  setStudioAvatarFraming,
+  importHookClips,
+  listHookClips,
+  setHookClipActive,
+];

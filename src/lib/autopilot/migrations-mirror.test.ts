@@ -13,6 +13,8 @@ const PAIRS: Array<[string, string]> = [
   ["20261019181000_autopilot_tick_cron.sql", "0035_autopilot_tick_cron.sql"],
   ["20261019182000_autopilot_sekwencje_email.sql", "0036_autopilot_sekwencje_email.sql"],
   ["20261021090000_studio_hook_wizualny.sql", "0038_studio_hook_wizualny.sql"],
+  ["20261022090000_studio_hook_clips.sql", "0040_studio_hook_clips.sql"],
+  ["20261022120000_studio_hook_clips_opis.sql", "0041_studio_hook_clips_opis.sql"],
 ];
 
 describe("migracje autopilota", () => {

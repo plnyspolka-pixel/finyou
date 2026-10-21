@@ -13927,6 +13927,66 @@ export type Database = {
         }
         Relationships: []
       }
+      studio_hook_clips: {
+        Row: {
+          active: boolean | null
+          concept: string | null
+          created_at: string | null
+          description: string | null
+          duration_s: number | null
+          id: string
+          last_used_at: string | null
+          media_url: string
+          model: string | null
+          rating: number | null
+          slug: string
+          source_url: string | null
+          storage_path: string | null
+          tags: string[] | null
+          title: string | null
+          track: string
+          use_count: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          concept?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_s?: number | null
+          id?: string
+          last_used_at?: string | null
+          media_url: string
+          model?: string | null
+          rating?: number | null
+          slug: string
+          source_url?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          title?: string | null
+          track: string
+          use_count?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          concept?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_s?: number | null
+          id?: string
+          last_used_at?: string | null
+          media_url?: string
+          model?: string | null
+          rating?: number | null
+          slug?: string
+          source_url?: string | null
+          storage_path?: string | null
+          tags?: string[] | null
+          title?: string | null
+          track?: string
+          use_count?: number | null
+        }
+        Relationships: []
+      }
       studio_images: {
         Row: {
           created_at: string
