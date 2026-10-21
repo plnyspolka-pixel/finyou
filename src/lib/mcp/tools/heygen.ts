@@ -1089,6 +1089,9 @@ export const updateStudioJob = defineTool({
         "reel_structure",
       ]);
       if (a.tts_model !== undefined) renderPatch.tts_model_id = a.tts_model;
+      // Nowy tekst = stare kotwice elementów dynamicznych (dosłowne fragmenty
+      // lektora) mogą nie paść — przy wykończeniu zaprojektuje je AI od nowa.
+      if (a.script !== undefined) renderPatch.motion_design = null;
       if (Object.keys(renderPatch).length && !["queued", "failed"].includes(job.status)) {
         return fail(
           `Scenariusz / awatar / głos można zmieniać tylko w statusie queued albo failed (teraz: ${job.status}).`,

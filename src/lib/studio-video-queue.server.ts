@@ -181,16 +181,58 @@ export async function loadJobCues(job: JobRow): Promise<SrtCue[]> {
 export async function designAndSaveMotion(
   job: JobRow,
   topic?: string | null,
+  opts: {
+    /**
+     * Wykończenie (render / ponowienie): zapis TYLKO gdy przy zadaniu nadal
+     * nie ma projektu. Projekt wgrany w międzyczasie (`set_studio_motion`)
+     * wygrywa z projektem AI — bez tego AI nadpisywało ręczny projekt.
+     */
+    onlyIfUnset?: boolean;
+  } = {},
 ): Promise<MotionDesignElement[]> {
   const script = job.script?.trim();
   if (!script) throw new Error("Zadanie nie ma scenariusza.");
   const { designMotion } = await import("./motion-designer.server");
   const cues = await loadJobCues(job);
   const elements = await designMotion({ script, cues, topic: topic ?? job.prompt });
-  await saveMotionDesign(job.id, elements);
+  if (opts.onlyIfUnset) {
+    const { data, error } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .update({ motion_design: elements as never })
+      .eq("id", job.id)
+      .is("motion_design", null)
+      .select("id");
+    if (error) throw new Error(`studio_video_jobs: ${error.message}`);
+    if (!data?.length) {
+      // Ktoś zapisał projekt, gdy model myślał — bierzemy zapis, nie wynik AI.
+      const saved = await loadSavedMotionDesign(job.id);
+      const { sanitizeMotionDesign } = await import("./motion-catalog");
+      const design = sanitizeMotionDesign(saved ?? []);
+      job.motion_design = saved ?? null;
+      return design;
+    }
+  } else {
+    await saveMotionDesign(job.id, elements);
+  }
   // Kolejne overlaysForJob na tym samym obiekcie (ten sam przebieg) biorą zapis, nie pytają modelu.
   job.motion_design = elements;
   return elements;
+}
+
+/**
+ * Projekt zapisany przy zadaniu — czytany ZAWSZE świeżo z bazy przed
+ * wykończeniem. Obiekt joba w przebiegu bywa starszy niż zapis robota
+ * (`set_studio_motion` tuż po utworzeniu zadania). `undefined` = nie udało
+ * się odczytać (wtedy zostaje to, co ma obiekt).
+ */
+export async function loadSavedMotionDesign(jobId: string): Promise<unknown> {
+  const { data, error } = await supabaseAdmin
+    .from("studio_video_jobs")
+    .select("motion_design")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (error || !data) return undefined;
+  return (data as { motion_design?: unknown }).motion_design ?? null;
 }
 
 export async function saveMotionDesign(
@@ -209,12 +251,14 @@ export async function saveMotionDesign(
  * (od AI albo wgrany przez robota `set_studio_motion`), a bez niego nowy
  * projekt Claude. null = brak — wtedy zwykłe karty.
  */
-async function designMotionForJob(
+export async function designMotionForJob(
   job: JobRow,
   topic: string | null,
 ): Promise<MotionDesignElement[] | null> {
   const { resolveRenderEngine } = await import("./studio-render-engine");
   if (resolveRenderEngine(job.render_engine) !== "remotion") return null;
+  const fresh = await loadSavedMotionDesign(job.id);
+  if (fresh !== undefined) job.motion_design = fresh;
   if (job.motion_design != null) {
     const { sanitizeMotionDesign } = await import("./motion-catalog");
     const saved = sanitizeMotionDesign(job.motion_design);
@@ -233,7 +277,7 @@ async function designMotionForJob(
     return null;
   }
   try {
-    const elements = await designAndSaveMotion(job, topic);
+    const elements = await designAndSaveMotion(job, topic, { onlyIfUnset: true });
     return elements.length ? elements : null;
   } catch (e) {
     console.warn(`[Studio] projekt elementów dynamicznych nieudany (${job.id}): ${errMsg(e)}`);
@@ -879,8 +923,11 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
       caption_burn_started_at: null,
       caption_burn_attempts: 0,
       scene_plan: null,
-      // Nowy render = nowy SRT; stary projekt elementów miałby złe kotwice.
-      motion_design: null,
+      // `motion_design` ZOSTAJE: kotwice elementów to dosłowne fragmenty
+      // scenariusza (nie sekundy), więc nowy render tego samego tekstu ma je
+      // w nowym SRT. Czyszczenie tu kasowało projekt z `set_studio_motion`
+      // i pierwsze wykończenie szło z projektem AI. Zmiana scenariusza czyści
+      // projekt w `update_studio_job` / panelu.
     })
     .eq("id", job.id)
     .eq("status", "failed");
