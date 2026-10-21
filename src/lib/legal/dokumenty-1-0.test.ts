@@ -98,9 +98,16 @@ describe("dokumenty prawne", () => {
 
   it("opublikujDokumenty: ta sama wersja z inną treścią w bazie → błąd bez zapisów", async () => {
     const db = fakeDb();
-    db.tables.consent_documents.push({ kind: "terms", version: 2, is_active: false, content: "inna" });
+    db.tables.consent_documents.push({
+      kind: "terms",
+      version: 2,
+      is_active: false,
+      content: "inna",
+    });
     await expect(opublikujDokumenty(db, DANE_DOKUMENTOW_1_0)).rejects.toThrow(/inną treść/);
-    expect(db.tables.consent_documents.find((r) => r.kind === "terms" && r.version === 1)?.is_active).toBe(true);
+    expect(
+      db.tables.consent_documents.find((r) => r.kind === "terms" && r.version === 1)?.is_active,
+    ).toBe(true);
     expect(db.tables.legal_documents.every((r) => r.version === "1.0")).toBe(true);
   });
 

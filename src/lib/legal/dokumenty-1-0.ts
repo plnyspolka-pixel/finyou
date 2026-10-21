@@ -113,7 +113,9 @@ export async function opublikujDokumenty(db: any, dane: DaneDokumentow): Promise
     const r = (umowy ?? []).find((x: any) => x.code === code);
     if (!r) throw new Error(`legal_documents: brak dokumentu ${code}`);
     if (r.version === PAKIET_WERSJA && r.sha256 !== sha256Hex(dane.pakiet[code].content_text)) {
-      throw new Error(`legal_documents ${code} ${PAKIET_WERSJA} ma w bazie inną treść — podnieś PAKIET_WERSJA.`);
+      throw new Error(
+        `legal_documents ${code} ${PAKIET_WERSJA} ma w bazie inną treść — podnieś PAKIET_WERSJA.`,
+      );
     }
   }
 
