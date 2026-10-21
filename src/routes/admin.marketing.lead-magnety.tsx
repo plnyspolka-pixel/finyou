@@ -16,7 +16,10 @@ import {
   getLeadMagnetFileUrl,
   generateLeadMagnetCopy,
   runLeadMagnetYoutubeCheck,
+  getLeadMagnetCatalogInfo,
+  provisionLeadMagnetCatalog,
 } from "@/lib/lead-magnets/lead-magnets.functions";
+import { isCatalogSlug } from "@/lib/lead-magnets/catalog-slugs";
 import {
   AUDIENCE_LABELS,
   DEFAULT_TEMPLATES,
@@ -57,6 +60,7 @@ import {
   MessageSquare,
   Plus,
   RefreshCw,
+  Library,
   Sparkles,
   Trash2,
   Users,
@@ -358,6 +362,29 @@ function LeadMagnetsAdmin() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Katalog startowy PDF (src/lib/lead-magnets/catalog.ts): metryczka + provisioning.
+  const catInfoFn = useServerFn(getLeadMagnetCatalogInfo);
+  const catFn = useServerFn(provisionLeadMagnetCatalog);
+  const { data: catalog } = useQuery({
+    queryKey: ["lead-magnet-catalog"],
+    queryFn: () => catInfoFn(),
+    staleTime: 5 * 60_000,
+  });
+  const catMut = useMutation({
+    mutationFn: (publish: boolean) => catFn({ data: { publish, overwrite: false } }),
+    onSuccess: (r) => {
+      toast.success(`Katalog: ${r.results.map((x) => `${x.keyword} – ${x.action}`).join(", ")}`);
+      const problems = r.results.filter((x) => x.problems.length);
+      if (problems.length) {
+        toast.warning(
+          `Problemy: ${problems.map((p) => `${p.slug}: ${p.problems.join("; ")}`).join(" | ")}`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["lead-magnets"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -414,6 +441,61 @@ function LeadMagnetsAdmin() {
         </CardContent>
       </Card>
 
+      {catalog && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 font-medium">
+                  <Library className="h-4 w-4 text-primary" />
+                  Katalog startowy PDF (wersja {catalog.version})
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sześć materiałów z kodu, po trzy na tor — PDF generowany w locie przy pobraniu,
+                  hasła zgodne z seriami rolek autopilota. Szkice może założyć zespół, publikacja
+                  wymaga roli administratora. Istniejących rekordów nie nadpisuje.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => catMut.mutate(false)}
+                  disabled={catMut.isPending}
+                >
+                  Załóż szkice
+                </Button>
+                <Button size="sm" onClick={() => catMut.mutate(true)} disabled={catMut.isPending}>
+                  {catMut.isPending ? "Pracuję…" : "Załóż i opublikuj"}
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-1.5 text-sm md:grid-cols-2">
+              {catalog.items.map((c) => {
+                const row = magnets.find((m) => m.slug === c.slug);
+                return (
+                  <div key={c.slug} className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="font-mono">
+                      {c.keyword}
+                    </Badge>
+                    <span className="truncate">{c.title}</span>
+                    {row ? (
+                      row.published ? (
+                        <Badge variant="default">opublikowany</Badge>
+                      ) : (
+                        <Badge variant="secondary">szkic</Badge>
+                      )
+                    ) : (
+                      <Badge variant="outline">brak rekordu</Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {isLoading ? (
         <div className="text-muted-foreground">Ładowanie…</div>
       ) : magnets.length === 0 ? (
@@ -442,9 +524,13 @@ function LeadMagnetsAdmin() {
                       ) : (
                         <Badge variant="secondary">szkic</Badge>
                       )}
-                      {!m.file_path && !m.file_url && (
-                        <Badge variant="destructive">brak pliku</Badge>
-                      )}
+                      {!m.file_path &&
+                        !m.file_url &&
+                        (isCatalogSlug(m.slug) ? (
+                          <Badge variant="outline">PDF z katalogu</Badge>
+                        ) : (
+                          <Badge variant="destructive">brak pliku</Badge>
+                        ))}
                     </div>
                     <div className="text-sm text-muted-foreground">/pobierz/{m.slug}</div>
                     <div className="mt-1 flex flex-wrap gap-4 text-xs text-muted-foreground">
@@ -580,21 +666,27 @@ function EditorDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const catalogPdf = !form.file_path && !form.file_url && isCatalogSlug(form.slug);
+
   const previewMut = useMutation({
     mutationFn: async () => {
-      if (form.id && form.file_path) return fileUrlFn({ data: { id: form.id } });
+      if (form.id && (form.file_path || catalogPdf)) return fileUrlFn({ data: { id: form.id } });
       if (form.file_path) {
         const { data, error } = await supabase.storage
           .from(BUCKET)
           .createSignedUrl(form.file_path, 600);
         if (error) throw new Error(error.message);
-        return { url: data?.signedUrl ?? null };
+        return { url: data?.signedUrl ?? null, pdf_base64: null as string | null };
       }
-      return { url: form.file_url || null };
+      return { url: form.file_url || null, pdf_base64: null as string | null };
     },
     onSuccess: (r) => {
       if (r.url) window.open(r.url, "_blank", "noopener");
-      else toast.error("Brak pliku do podglądu");
+      else if (r.pdf_base64) {
+        const bytes = Uint8Array.from(atob(r.pdf_base64), (c) => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+        window.open(url, "_blank", "noopener");
+      } else toast.error("Brak pliku do podglądu");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -834,14 +926,15 @@ function EditorDialog({
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {(form.file_path || form.file_url) && (
+                  {(form.file_path || form.file_url || (catalogPdf && form.id)) && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => previewMut.mutate()}
                       disabled={previewMut.isPending}
                     >
-                      <ExternalLink className="mr-1 h-3 w-3" /> Podgląd
+                      <ExternalLink className="mr-1 h-3 w-3" />{" "}
+                      {previewMut.isPending ? "Generuję…" : "Podgląd"}
                     </Button>
                   )}
                   <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -860,6 +953,13 @@ function EditorDialog({
                 Plik leży w prywatnym buckecie — pobranie działa wyłącznie przez osobisty link z
                 tokenem (/pobierz-plik/…), więc nikt nie udostępni go dalej bez zapisu.
               </p>
+              {isCatalogSlug(form.slug) && (
+                <p className="mt-2 rounded-md bg-muted p-2 text-xs">
+                  Ten slug należy do katalogu startowego: PDF jest generowany w locie z treści w
+                  kodzie (src/lib/lead-magnets/catalog.ts), więc plik nie jest wymagany do
+                  publikacji. Wgrany plik albo adres mają pierwszeństwo przed generowanym PDF-em.
+                </p>
+              )}
             </div>
             <div>
               <Label>Albo zewnętrzny adres materiału (zamiast pliku)</Label>

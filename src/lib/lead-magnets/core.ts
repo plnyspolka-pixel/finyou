@@ -351,4 +351,6 @@ export type PublicLeadMagnet = {
   published: boolean;
   consent_text: string;
   url: string;
+  /** Następny krok lejka po zapisie (materiały z katalogu: kalkulator, wniosek, program). */
+  next?: { label: string; url: string } | null;
 };

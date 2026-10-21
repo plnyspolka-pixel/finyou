@@ -3,11 +3,29 @@
 // serwisowa, tylko opublikowane).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { leadMagnetSchema, leadMagnetRowFromInput } from "./schema";
 import { LEAD_MAGNET_AUDIENCES, LEAD_MAGNET_PLATFORMS } from "./core";
+import { isCatalogSlug } from "./catalog-slugs";
 
 const BUCKET = "lead-magnets";
+
+type TeamContext = { supabase: SupabaseClient<Database>; userId: string };
+
+/** Role zespołu zalogowanego użytkownika (ticki i provisioning działają rolą serwisową — RLS nie pomoże). */
+async function teamRoles(context: TeamContext): Promise<{ admin: boolean; operator: boolean }> {
+  const { data: isAdmin } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "administrator",
+  });
+  const { data: isOperator } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "operator",
+  });
+  return { admin: Boolean(isAdmin), operator: Boolean(isOperator) };
+}
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 
@@ -165,7 +183,7 @@ export const getLeadMagnetFileUrl = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("lead_magnets")
-      .select("file_path, file_url")
+      .select("slug, file_path, file_url")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -175,9 +193,63 @@ export const getLeadMagnetFileUrl = createServerFn({ method: "GET" })
         .from(BUCKET)
         .createSignedUrl(row.file_path, 3600);
       if (sErr) throw new Error(sErr.message);
-      return { url: s?.signedUrl ?? null };
+      return { url: s?.signedUrl ?? null, pdf_base64: null as string | null };
     }
-    return { url: row.file_url ?? null };
+    if (!row.file_url && isCatalogSlug(row.slug)) {
+      // Materiał z katalogu: PDF generowany w locie — podgląd jako base64 (panel otwiera Blob).
+      const { renderCatalogPdf, bytesToBase64 } = await import("./catalog.server");
+      const pdf = await renderCatalogPdf(row.slug);
+      return { url: null, pdf_base64: pdf ? bytesToBase64(pdf.bytes) : null };
+    }
+    return { url: row.file_url ?? null, pdf_base64: null as string | null };
+  });
+
+/** Metryczka katalogu startowego (bez treści) — panel pokazuje, które materiały mają już rekord. */
+export const getLeadMagnetCatalogInfo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { LEAD_MAGNET_CATALOG, CATALOG_VERSION } = await import("./catalog");
+    return {
+      version: CATALOG_VERSION,
+      items: LEAD_MAGNET_CATALOG.map((m) => ({
+        slug: m.slug,
+        title: m.title,
+        track: m.track,
+        audience: m.audience,
+        keyword: m.keyword,
+        stage: m.stage,
+        series: m.series,
+        next: m.next,
+      })),
+    };
+  });
+
+/**
+ * Zakłada rekordy materiałów z katalogu (szkice — zespół) i publikuje je
+ * (`publish` — tylko administrator). Kontrola jakości i reguły compliance
+ * w ensureCatalogMagnets.
+ */
+export const provisionLeadMagnetCatalog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({ publish: z.boolean().default(false), overwrite: z.boolean().default(false) })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const roles = await teamRoles(context);
+    if (!roles.admin && !roles.operator)
+      throw new Error("Wymagane uprawnienia administrator/operator");
+    if ((data.publish || data.overwrite) && !roles.admin) {
+      throw new Error("Publikacja i nadpisanie treści katalogu wymagają roli administratora");
+    }
+    const { ensureCatalogMagnets } = await import("./catalog.server");
+    const results = await ensureCatalogMagnets({
+      publish: data.publish,
+      overwrite: data.overwrite,
+      actor: context.userId,
+    });
+    return { ok: true as const, results };
   });
 
 export const generateLeadMagnetCopy = createServerFn({ method: "POST" })
@@ -197,15 +269,9 @@ export const runLeadMagnetYoutubeCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     // Tick działa rolą serwisową, więc rolę sprawdzamy sami (RLS tu nie pomoże).
-    const { data: isAdmin } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "administrator",
-    });
-    const { data: isOperator } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "operator",
-    });
-    if (!isAdmin && !isOperator) throw new Error("Wymagane uprawnienia administrator/operator");
+    const roles = await teamRoles(context);
+    if (!roles.admin && !roles.operator)
+      throw new Error("Wymagane uprawnienia administrator/operator");
     const { runLeadMagnetYoutubeTick } = await import("./lead-magnets.server");
     return await runLeadMagnetYoutubeTick();
   });

@@ -7,6 +7,10 @@ import {
   LEAD_MAGNET_AUDIENCES,
   LEAD_MAGNET_PLATFORMS,
 } from "./core";
+import { isCatalogSlug } from "./catalog-slugs";
+
+const NO_FILE_MESSAGE =
+  "Opublikowany lead magnet musi mieć plik, adres URL materiału albo PDF z katalogu (slug z katalogu startowego).";
 
 const optionalUrl = z.string().url().max(1000).optional().or(z.literal(""));
 
@@ -68,6 +72,7 @@ export const leadMagnetBaseSchema = z.object({
 
 /** Reguły krzyżowe wspólne dla panelu i MCP (po scaleniu zmian z wierszem). */
 export function leadMagnetCrossChecks(v: {
+  slug?: string | null;
   match_any_post: boolean;
   trigger_keywords: string[];
   published: boolean;
@@ -80,8 +85,8 @@ export function leadMagnetCrossChecks(v: {
   if (v.match_any_post && v.trigger_keywords.length === 0) {
     return "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.";
   }
-  if (v.published && !v.file_path && !v.file_url) {
-    return "Opublikowany lead magnet musi mieć plik albo adres URL materiału.";
+  if (v.published && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
+    return NO_FILE_MESSAGE;
   }
   for (const t of [v.reply_private_template, v.reply_fallback_template, v.email_body]) {
     if (!t.includes("{link}")) {
@@ -99,11 +104,11 @@ export const leadMagnetSchema = leadMagnetBaseSchema.superRefine((v, ctx) => {
       message: "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.",
     });
   }
-  if (v.published && !v.file_path && !v.file_url) {
+  if (v.published && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["file_url"],
-      message: "Opublikowany lead magnet musi mieć plik albo adres URL materiału.",
+      message: NO_FILE_MESSAGE,
     });
   }
   for (const t of [v.reply_private_template, v.reply_fallback_template, v.email_body]) {

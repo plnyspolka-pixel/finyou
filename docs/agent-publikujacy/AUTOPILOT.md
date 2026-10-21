@@ -152,6 +152,12 @@ Pełny raport daje `autopilot_report` (MCP).
 - `calculator-engine.ts` + `calculators.ts` – narzędzia z konfiguracji (ILE, RATA, LTV) na funkcjach
   `fees.ts` / `loan-math.ts`. Część wyniku jest dostępna dopiero po zapisie na listę; przypadki
   testowe są sprawdzane przed publikacją.
+- `src/lib/lead-magnets/catalog.ts` – katalog startowy lead magnetów (brief 5.4): sześć branded PDF-ów
+  generowanych w locie przy pobraniu, po trzy na tor (inwestor: START → KSIĘGA → BŁĘDY; pożyczkobiorca:
+  ODMOWA → DOKUMENTY → PROCES), hasła zgodne z `defaultKeyword` serii. `resolveKeywordTarget(hasło)`
+  zwraca materiał albo kalkulator dla opisu-lejka. Provisioning: MCP `provision_lead_magnet_catalog`,
+  panel, tick (6:00 w `full_autopilot`). Każdy materiał przechodzi reguły twarde compliance w testach
+  (`catalog.test.ts`). Szczegóły: `docs/lead-magnety.md`.
 - `/start` – link-hub do bio z wyborem „Potrzebuję finansowania” / „Chcę inwestować”. Treść pochodzi
   z profili i opublikowanych lead magnetów.
 - `src/lib/brand/brand.json` – tokeny marki (kolory ze `styles.css`, Montserrat, logo, stopka).

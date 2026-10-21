@@ -39,6 +39,12 @@ async function runTick(force?: string | null): Promise<Response> {
     if (cfg.state.mode === "full_autopilot" && !cfg.state.paused && hour === 6) {
       const { ensureToolMagnets } = await import("@/lib/autopilot/tools.server");
       reports.tools = await ensureToolMagnets({ publish: true });
+      // Katalog startowy PDF (START, KSIĘGA, BŁĘDY, ODMOWA, DOKUMENTY, PROCES):
+      // brakujące rekordy + publikacja po kontroli jakości; bez nadpisywania copy.
+      const { ensureCatalogMagnets } = await import("@/lib/lead-magnets/catalog.server");
+      reports.catalog = await ensureCatalogMagnets({ publish: true }).catch((e) => ({
+        error: e instanceof Error ? e.message : String(e),
+      }));
     }
     // Gotowe rolki Studia → bramka compliance → sloty torów (tylko
     // full_autopilot bez wyłącznika; funkcja sama sprawdza tryb).

@@ -25,6 +25,8 @@ import {
   type MatchableMagnet,
   type PublicLeadMagnet,
 } from "./core";
+import { catalogBySlug } from "./catalog";
+import { isCatalogSlug } from "./catalog-slugs";
 
 export type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
 export type LeadMagnetPostRow = Database["public"]["Tables"]["lead_magnet_posts"]["Row"];
@@ -60,6 +62,7 @@ export async function getPublicLeadMagnet(slug: string): Promise<PublicLeadMagne
     ...data,
     consent_text: consentTextFor(data.audience as LeadMagnetAudience),
     url: leadMagnetUrl(data.slug),
+    next: catalogBySlug(data.slug)?.next ?? null,
   };
 }
 
@@ -330,7 +333,10 @@ async function sendLeadMagnetEmail(opts: {
 // ── Pobranie pliku ───────────────────────────────────────────────────────────
 
 export type DownloadResolution =
-  | { ok: true; url: string; slug: string }
+  /** Plik w Storage (podpisany link) albo zewnętrzny adres — przekierowanie. */
+  | { ok: true; kind: "redirect"; url: string; slug: string }
+  /** Materiał z katalogu bez pliku — PDF generowany w locie (renderCatalogPdf). */
+  | { ok: true; kind: "generated"; slug: string; file_name: string }
   | { ok: false; reason: "invalid_token" | "not_found" | "no_file" | "error"; slug?: string };
 
 /** Token z maila → krótki podpisany link do pliku (albo zewnętrzny adres) + licznik. */
@@ -355,6 +361,7 @@ export async function resolveLeadMagnetDownload(rawToken: string): Promise<Downl
   if (!magnet) return { ok: false, reason: "not_found" };
 
   let url: string | null = null;
+  let generated = false;
   if (magnet.file_path) {
     const { data, error } = await supabaseAdmin.storage
       .from(LEAD_MAGNETS_BUCKET)
@@ -368,8 +375,10 @@ export async function resolveLeadMagnetDownload(rawToken: string): Promise<Downl
     url = data.signedUrl;
   } else if (magnet.file_url) {
     url = magnet.file_url;
+  } else if (isCatalogSlug(magnet.slug)) {
+    generated = true;
   }
-  if (!url) return { ok: false, reason: "no_file", slug: magnet.slug };
+  if (!url && !generated) return { ok: false, reason: "no_file", slug: magnet.slug };
 
   const now = new Date().toISOString();
   await supabaseAdmin
@@ -381,7 +390,15 @@ export async function resolveLeadMagnetDownload(rawToken: string): Promise<Downl
     })
     .eq("id", signup.id);
 
-  return { ok: true, url, slug: magnet.slug };
+  if (generated || !url) {
+    return {
+      ok: true,
+      kind: "generated",
+      slug: magnet.slug,
+      file_name: magnet.file_name ?? `${magnet.slug}.pdf`,
+    };
+  }
+  return { ok: true, kind: "redirect", url, slug: magnet.slug };
 }
 
 // ── Automat social: komentarz → link ─────────────────────────────────────────
@@ -399,7 +416,12 @@ export type SocialCommentEvent = {
 };
 
 export type ReplyStatus =
-  "sent_private" | "sent_public" | "sent_both" | "failed" | "skipped" | "not_possible";
+  | "sent_private"
+  | "sent_public"
+  | "sent_both"
+  | "failed"
+  | "skipped"
+  | "not_possible";
 
 export type SocialCommentOutcome = {
   /** true = komentarz obsłużony przez lead magnet (webhook pomija zwykłego agenta). */

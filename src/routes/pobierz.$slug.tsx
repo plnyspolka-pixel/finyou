@@ -365,6 +365,23 @@ function SignupCard({ magnet }: { magnet: PublicLeadMagnet }) {
             </MktButton>
           </div>
         )}
+        {magnet.next && (
+          <div style={{ marginTop: "0.9rem" }}>
+            <p
+              style={{
+                margin: "0 0 0.5rem",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                color: "var(--muted-foreground)",
+              }}
+            >
+              Następny krok
+            </p>
+            <MktButton href={magnet.next.url} variant="cta" size="lg">
+              {magnet.next.label}
+            </MktButton>
+          </div>
+        )}
         <p
           style={{
             marginTop: "1.1rem",

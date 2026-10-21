@@ -281,6 +281,135 @@ export class ReportWriter {
     this.paragraph(text, { size: 9.5, bold: true, color: INK, after: 2 });
   }
 
+  /** Nowa strona (pomijane, gdy bieżąca jest pusta). */
+  pageBreak(): void {
+    if (!this.atPageTop()) this.newPage();
+  }
+
+  /**
+   * Okładka materiału (lead magnety, przewodniki): etykieta, duży tytuł,
+   * podtytuł, lista „w środku” i metryczka u dołu strony. Kończy stronę.
+   */
+  cover(opts: {
+    eyebrow?: string | null;
+    title: string;
+    subtitle?: string | null;
+    items?: string[];
+    itemsLabel?: string;
+    meta?: string[];
+  }): void {
+    this.pageBreak();
+    this.y -= 90;
+    if (opts.eyebrow) {
+      this.paragraph(opts.eyebrow.toUpperCase(), { size: 9, bold: true, color: GRAY, after: 10 });
+    }
+    this.paragraph(opts.title, { size: 26, bold: true, color: NAVY, after: 8 });
+    if (opts.subtitle) this.paragraph(opts.subtitle, { size: 11.5, color: INK, after: 12 });
+    this.page.drawLine({
+      start: { x: MARGIN.left, y: this.y },
+      end: { x: MARGIN.left + 84, y: this.y },
+      thickness: 2.5,
+      color: AMBER,
+    });
+    this.y -= 22;
+    if (opts.items?.length) {
+      this.paragraph(opts.itemsLabel ?? "W środku", {
+        size: 9.5,
+        bold: true,
+        color: NAVY,
+        after: 4,
+      });
+      this.bullets(opts.items, { size: 9.5 });
+    }
+    if (opts.meta?.length) {
+      const size = 8;
+      const lh = size * 1.4;
+      let y = MARGIN.bottom + 36 + opts.meta.length * lh;
+      for (const m of opts.meta) {
+        y -= lh;
+        this.page.drawText(truncate(this.clean(m), this.regular, size, CONTENT_W), {
+          x: MARGIN.left,
+          y,
+          size,
+          font: this.regular,
+          color: GRAY,
+        });
+      }
+    }
+    this.newPage();
+  }
+
+  /** Lista kontrolna — pusty kwadracik do odhaczenia zamiast kropki. */
+  checklist(items: string[], opts: { size?: number; indent?: number } = {}): void {
+    const size = opts.size ?? 8.6;
+    const lh = size * 1.32;
+    const x = MARGIN.left + (opts.indent ?? 4);
+    const textX = x + 14;
+    const maxW = A4.w - MARGIN.right - textX;
+    for (const item of items) {
+      const lines = wrap(this.clean(item), this.regular, size, maxW);
+      this.ensure(Math.min(lines.length, 2) * lh);
+      lines.forEach((ln, i) => {
+        this.ensure(lh);
+        this.y -= lh;
+        if (i === 0) {
+          this.page.drawRectangle({
+            x,
+            y: this.y - 0.5,
+            width: 7.5,
+            height: 7.5,
+            borderColor: NAVY,
+            borderWidth: 0.8,
+          });
+        }
+        if (ln) {
+          this.page.drawText(ln, { x: textX, y: this.y, size, font: this.regular, color: INK });
+        }
+      });
+      this.y -= 2.5;
+    }
+    this.y -= 2;
+  }
+
+  /** Kroki numerowane: numer w kółku, tytuł pogrubiony, opis pod spodem. */
+  steps(items: Array<{ title: string; text?: string | null }>, opts: { size?: number } = {}): void {
+    const size = opts.size ?? 8.6;
+    const lh = size * 1.32;
+    const x = MARGIN.left + 4;
+    const textX = x + 20;
+    const maxW = A4.w - MARGIN.right - textX;
+    items.forEach((item, idx) => {
+      const titleLines = wrap(this.clean(item.title), this.bold, size, maxW);
+      const bodyLines = item.text ? wrap(this.clean(item.text), this.regular, size, maxW) : [];
+      this.ensure(Math.min(titleLines.length + bodyLines.length, 3) * lh);
+      titleLines.forEach((ln, i) => {
+        this.ensure(lh);
+        this.y -= lh;
+        if (i === 0) {
+          this.page.drawCircle({ x: x + 6, y: this.y + size * 0.35, size: 6.2, color: NAVY });
+          const n = String(idx + 1);
+          const nw = this.bold.widthOfTextAtSize(n, 6.6);
+          this.page.drawText(n, {
+            x: x + 6 - nw / 2,
+            y: this.y + size * 0.35 - 2.3,
+            size: 6.6,
+            font: this.bold,
+            color: rgb(1, 1, 1),
+          });
+        }
+        if (ln) this.page.drawText(ln, { x: textX, y: this.y, size, font: this.bold, color: INK });
+      });
+      for (const ln of bodyLines) {
+        this.ensure(lh);
+        this.y -= lh;
+        if (ln)
+          this.page.drawText(ln, { x: textX, y: this.y, size, font: this.regular, color: INK });
+      }
+      this.y -= 4;
+    });
+    this.y -= 2;
+  }
+
   paragraph(
     text: string,
     opts: {

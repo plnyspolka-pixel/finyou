@@ -14,6 +14,7 @@ import {
   insertOne,
   ok,
   oneOf,
+  requireRolesAdmin,
   requireTeamAdmin,
   rowsOf,
   updateOne,
@@ -32,12 +33,16 @@ import {
   leadMagnetUrl,
   suggestedCaption,
 } from "@/lib/lead-magnets/core";
+import { CATALOG_SLUGS, isCatalogSlug } from "@/lib/lead-magnets/catalog-slugs";
 
 const READ = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const;
+const ADMIN = ["administrator"] as const;
 
 const withUrl = (r: Record<string, any>) => ({
   ...r,
   url: r.published ? leadMagnetUrl(r.slug) : null,
+  /** Materiał z katalogu startowego: PDF generowany z kodu — nie wymaga pliku w Storage. */
+  catalog_pdf: isCatalogSlug(r.slug),
   conversion_rate:
     r.view_count > 0 ? Math.round(((r.signup_count ?? 0) / r.view_count) * 1000) / 10 : null,
 });
@@ -160,6 +165,7 @@ export const updateLeadMagnet = defineTool({
       }
       const merged = { ...current, ...patch } as Record<string, any>;
       const problem = leadMagnetCrossChecks({
+        slug: String(merged.slug ?? ""),
         match_any_post: Boolean(merged.match_any_post),
         trigger_keywords: (merged.trigger_keywords ?? []) as string[],
         published: Boolean(merged.published),
@@ -344,6 +350,35 @@ export const generateLeadMagnetCopy = defineTool({
     }),
 });
 
+export const provisionLeadMagnetCatalog = defineTool({
+  name: "provision_lead_magnet_catalog",
+  title: "Provision lead magnet catalog (PDF from code)",
+  description:
+    "Katalog startowy lead magnetów z kodu (src/lib/lead-magnets/catalog.ts) — sześć branded PDF-ów generowanych w locie przy pobraniu, po trzy na tor: inwestor START (przewodnik startowy), KSIĘGA (checklista księgi wieczystej), BŁĘDY (7 błędów inwestora); pożyczkobiorca ODMOWA (bank odmówił – 5 dróg), DOKUMENTY (checklista dokumentów), PROCES (mapa od wniosku do wypłaty). Hasła są zgodne z seriami rolek autopilota; kalkulatory ILE / RATA / LTV zakłada `autopilot_provision_tools`. Narzędzie zakłada brakujące rekordy (szkice) i — przy `publish` — publikuje te, które przeszły kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny render). Istniejących rekordów nie nadpisuje (chyba że `overwrite`), nigdy nie cofa publikacji. `dry_run` tylko raportuje stan i problemy. `slugs` ogranicza do wybranych materiałów. Publikacja i nadpisanie: tylko administrator; szkice: administrator/operator. W trybie full_autopilot tick robi to sam.",
+  inputSchema: {
+    publish: z.boolean().default(false),
+    overwrite: z.boolean().default(false),
+    dry_run: z.boolean().default(false),
+    slugs: z.array(z.enum(CATALOG_SLUGS)).max(CATALOG_SLUGS.length).optional(),
+  },
+  annotations: WRITE_IDEMPOTENT,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      if ((a.publish || a.overwrite) && !a.dry_run) await requireRolesAdmin(ctx, ADMIN);
+      else await requireTeamAdmin(ctx);
+      const { ensureCatalogMagnets } = await import("@/lib/lead-magnets/catalog.server");
+      const { CATALOG_VERSION } = await import("@/lib/lead-magnets/catalog");
+      const results = await ensureCatalogMagnets({
+        publish: a.publish,
+        overwrite: a.overwrite,
+        slugs: a.slugs ?? null,
+        dryRun: a.dry_run,
+        actor: actorId(ctx),
+      });
+      return ok({ ok: true, version: CATALOG_VERSION, dry_run: a.dry_run, results });
+    }),
+});
+
 export const leadMagnetTools = [
   listLeadMagnets,
   getLeadMagnet,
@@ -356,4 +391,5 @@ export const leadMagnetTools = [
   listLeadMagnetTriggers,
   checkLeadMagnetYoutubeComments,
   generateLeadMagnetCopy,
+  provisionLeadMagnetCatalog,
 ];

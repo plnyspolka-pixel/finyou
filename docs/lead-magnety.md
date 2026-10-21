@@ -83,6 +83,56 @@ Każdy komentarz obsługujemy raz (unikalny indeks `platform + id komentarza`).
 Ochrona przed pętlami bot-bot na Facebooku działa jak dla agenta
 (`bot-loop-guard.server.ts`) — sprawdzana przed lead magnetem.
 
+## Katalog startowy — PDF generowane z kodu
+
+Sześć gotowych lead magnetów (brief agenta publikującego, p. 5.4) żyje w kodzie:
+`src/lib/lead-magnets/catalog.ts` (treść PDF, copy strony, mail, hasło, następny
+krok) + `pdf.ts` (render przez `ReportWriter`: okładka, sekcje, checklisty z
+kwadracikami, kroki, ramki „Ważne” / „Ryzyko”, tabele, strona końcowa z CTA,
+kontaktem i stopką compliance). PDF powstaje **w locie** przy każdym pobraniu
+(`/pobierz-plik/<token>` → `resolveLeadMagnetDownload` zwraca `kind: "generated"`
+→ `renderCatalogPdf`), więc rekord z katalogu **nie potrzebuje pliku w Storage**
+(schemat i `leadMagnetCrossChecks` dopuszczają publikację bez pliku dla slugów
+z `catalog-slugs.ts`). Wgrany plik albo adres mają pierwszeństwo przed PDF-em.
+
+Hasła są tymi samymi, które serie rolek mają jako `defaultKeyword`
+(`autopilot/series.ts`), a materiały tworzą drabinkę per tor:
+
+| Tor            | Hasło       | Slug                                                                             | Etap          | Następny krok          |
+| -------------- | ----------- | -------------------------------------------------------------------------------- | ------------- | ---------------------- |
+| inwestor       | `START`     | `start-inwestora` — przewodnik startowy („jak zarabiać jak bank”)                | świadomość    | kalkulator LTV         |
+| inwestor       | `KSIĘGA`    | `checklista-ksiegi-wieczystej` — checklista działów I–IV, sygnały ostrzegawcze   | przygotowanie | kalkulator LTV         |
+| inwestor       | `BŁĘDY`     | `bledy-inwestora` — 7 błędów inwestora + lista „przed decyzją”                   | decyzja       | program dla inwestorów |
+| pożyczkobiorca | `ODMOWA`    | `bank-odmowil-co-dalej` — 5 dróg finansowania, LTV, koszty, czerwone flagi       | świadomość    | kalkulator ILE         |
+| pożyczkobiorca | `DOKUMENTY` | `checklista-dokumentow` — dokumenty firmy, nieruchomości, celu, osób             | przygotowanie | wniosek                |
+| pożyczkobiorca | `PROCES`    | `od-wniosku-do-wyplaty` — 10 kroków, notariusz, rozliczenie wypłaty, mit vs fakt | decyzja       | wniosek                |
+
+Kalkulatory `ILE` / `RATA` / `LTV` zakłada `autopilot_provision_tools`; wzór
+umowy (`UMOWA`) pochodzi z szablonów właściciela (rekord `wzor-umowy-pozyczki`),
+nie z kodu. `resolveKeywordTarget(hasło)` zwraca materiał z katalogu albo
+kalkulator — do opisu-lejka („Skomentuj HASŁO, a wyślę Ci …”).
+
+Każdy materiał niesie oznaczenie AI, nadawcę z KRS i linię ryzyka (PDF i mail)
+oraz tagi subskrybenta `katalog`, `katalog:<slug>`, `etap:<swiadomosc|przygotowanie|decyzja>`.
+Strona `/pobierz/<slug>` po zapisie pokazuje przycisk „Następny krok” (`next`).
+
+**Provisioning** (`catalog.server.ts` → `ensureCatalogMagnets`): zakłada
+brakujące rekordy `lead_magnets`, przy `publish` publikuje te, które przeszły
+kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny
+render), istniejących rekordów nie nadpisuje (chyba że `overwrite`), nigdy nie
+cofa publikacji. Trzy wejścia:
+
+- MCP `provision_lead_magnet_catalog` (`publish`, `overwrite`, `dry_run`, `slugs`;
+  publikacja i nadpisanie — administrator),
+- panel: karta „Katalog startowy PDF” z przyciskami „Załóż szkice” / „Załóż i opublikuj”
+  oraz podgląd PDF w edytorze (badge „PDF z katalogu” zamiast „brak pliku”),
+- tick autopilota (`full_autopilot`, 6:00) — razem z narzędziami-kalkulatorami.
+
+Zmiana treści = commit (`CATALOG_VERSION` na okładce) + testy `catalog.test.ts`
+(unikalność haseł, spójność z seriami, compliance, schemat, render, znaki w foncie).
+Podgląd lokalny: `bun scripts/lead-magnets-catalog.ts render tmp/lead-magnets`
+(JSON wierszy: `… dump`).
+
 ## Segmenty mailingu
 
 Subskrybenci z lead magnetów mają tagi, po których filtrują segmenty
@@ -92,21 +142,22 @@ lead_magnet`, `source_id = id lead magnetu`, UTM-y z linku.
 
 ## Co jest w repo
 
-| Element                                          | Plik                                                                                    |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| Czysta logika (hasła, dopasowanie, szablony)     | `src/lib/lead-magnets/core.ts` (+ testy `core.test.ts`)                                 |
-| Schemat zod (panel + MCP)                        | `src/lib/lead-magnets/schema.ts`                                                        |
-| Zapis, mail, pobranie, komentarze, tick YouTube  | `src/lib/lead-magnets/lead-magnets.server.ts`                                           |
-| Server functions panelu i strony                 | `src/lib/lead-magnets/lead-magnets.functions.ts`                                        |
-| Panel                                            | `src/routes/admin.marketing.lead-magnety.tsx`                                           |
-| Strona publiczna                                 | `src/routes/pobierz.$slug.tsx`                                                          |
-| Pobranie pliku z tokenem                         | `src/routes/pobierz-plik.$token.ts`                                                     |
-| Tick YouTube (pg_cron co 10 min)                 | `src/routes/api/public/hooks/lead-magnet-tick.ts`                                       |
-| Webhook Meta (FB `feed`, IG `comments`, reakcje) | `src/lib/meta-messaging.server.ts` (`handleFeedChange`, `handleInstagramCommentChange`) |
-| Private Reply Instagram                          | `src/lib/meta-comments.server.ts` (`sendIgPrivateReplyToComment`)                       |
-| Narzędzia MCP                                    | `src/lib/mcp/tools/lead-magnets.ts`                                                     |
-| Migracja (tabele, RLS, bucket, liczniki, cron)   | `supabase/migrations/20261006150000_lead_magnety.sql`                                   |
-| Migracja: tryb „e-mail w wiadomości”             | `supabase/migrations/20261006170000_lead_magnety_email_w_wiadomosci.sql`                |
+| Element                                            | Plik                                                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Czysta logika (hasła, dopasowanie, szablony)       | `src/lib/lead-magnets/core.ts` (+ testy `core.test.ts`)                                 |
+| Schemat zod (panel + MCP)                          | `src/lib/lead-magnets/schema.ts`                                                        |
+| Zapis, mail, pobranie, komentarze, tick YouTube    | `src/lib/lead-magnets/lead-magnets.server.ts`                                           |
+| Server functions panelu i strony                   | `src/lib/lead-magnets/lead-magnets.functions.ts`                                        |
+| Panel                                              | `src/routes/admin.marketing.lead-magnety.tsx`                                           |
+| Strona publiczna                                   | `src/routes/pobierz.$slug.tsx`                                                          |
+| Pobranie pliku z tokenem                           | `src/routes/pobierz-plik.$token.ts`                                                     |
+| Tick YouTube (pg_cron co 10 min)                   | `src/routes/api/public/hooks/lead-magnet-tick.ts`                                       |
+| Webhook Meta (FB `feed`, IG `comments`, reakcje)   | `src/lib/meta-messaging.server.ts` (`handleFeedChange`, `handleInstagramCommentChange`) |
+| Private Reply Instagram                            | `src/lib/meta-comments.server.ts` (`sendIgPrivateReplyToComment`)                       |
+| Narzędzia MCP                                      | `src/lib/mcp/tools/lead-magnets.ts`                                                     |
+| Katalog startowy (treść, render PDF, provisioning) | `src/lib/lead-magnets/catalog.ts`, `catalog-slugs.ts`, `pdf.ts`, `catalog.server.ts`    |
+| Migracja (tabele, RLS, bucket, liczniki, cron)     | `supabase/migrations/20261006150000_lead_magnety.sql`                                   |
+| Migracja: tryb „e-mail w wiadomości”               | `supabase/migrations/20261006170000_lead_magnety_email_w_wiadomosci.sql`                |
 
 Tabele: `lead_magnets` (treść, plik, mail, hasła, szablony, liczniki),
 `lead_magnet_posts` (powiązane posty; jeden post → jeden lead magnet),
@@ -136,7 +187,8 @@ pobrań i dopasowanych komentarzy utrzymują triggery w bazie; odsłony — RPC
 `update_lead_magnet`, `delete_lead_magnet`, `link_lead_magnet_post`,
 `unlink_lead_magnet_post`, `list_lead_magnet_signups`,
 `list_lead_magnet_triggers`, `check_lead_magnet_youtube_comments` (realna
-publikacja odpowiedzi), `generate_lead_magnet_copy`. Plik wgrywa się w panelu
+publikacja odpowiedzi), `generate_lead_magnet_copy`,
+`provision_lead_magnet_catalog` (katalog startowy PDF z kodu — wyżej). Plik wgrywa się w panelu
 (albo `supabase_storage` do bucketa `lead-magnets` i `file_path` w
 `update_lead_magnet`).
 

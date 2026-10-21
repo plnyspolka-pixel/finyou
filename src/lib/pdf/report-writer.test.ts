@@ -69,3 +69,35 @@ describe("ReportWriter", () => {
     expect(formatWarsawDateTime(null)).toBe("—");
   });
 });
+
+describe("ReportWriter — bloki lead magnetów", () => {
+  it("okładka kończy stronę, checklista i kroki rysują się bez błędów", async () => {
+    const w = await ReportWriter.create({
+      title: "Materiał testowy",
+      preparedFor: "czytelników",
+      generatedAt: DATE,
+      brand: "Finance You · Materiał edukacyjny",
+    });
+    w.cover({
+      eyebrow: "Checklista · test",
+      title: "Tytuł okładki z polskimi znakami: zażółć gęślą jaźń",
+      subtitle: "Podtytuł",
+      items: ["Punkt pierwszy", "Punkt drugi"],
+      meta: ["Wersja 1", "Finance You"],
+    });
+    w.heading("Sekcja");
+    w.checklist(Array.from({ length: 40 }, (_, i) => `Pozycja ${i + 1} ${"tekst ".repeat(8)}`));
+    w.steps([
+      { title: "Krok pierwszy", text: "Opis kroku pierwszego." },
+      { title: "Krok drugi bez opisu" },
+    ]);
+    w.pageBreak();
+    w.pageBreak(); // pusta strona nie dubluje się
+    w.paragraph("Koniec");
+    const bytes = await w.save();
+    const doc = await PDFDocument.load(bytes);
+    // okładka + sekcja (checklista przechodzi na 2. stronę) + strona po łamaniu
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(3);
+    expect(doc.getCreator()).toBe("Finance You · Materiał edukacyjny");
+  });
+});
