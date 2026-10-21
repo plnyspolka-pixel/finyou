@@ -31,10 +31,17 @@ export async function storageManifest(request: Request, getAdmin: () => Promise<
     if (error || !objects) return reply({ error: "Export unavailable" }, 503);
     if (objects.length === 0) return reply({ items: [], next_offset: null });
     const { data: signed, error: signError } = await admin.storage.from(bucket).createSignedUrls(objects.map((item) => item.name), 10800);
-    if (signError || !signed || signed.some((item) => item.error || !item.signedUrl)) return reply({ error: "Export unavailable" }, 503);
-    const urls = new Map(signed.map((item) => [item.path, item.signedUrl]));
-    if (objects.some((item) => !urls.get(item.name))) return reply({ error: "Export unavailable" }, 503);
-    return reply({ items: objects.map((item) => ({ bucket, ...item, url: urls.get(item.name) })), next_offset: objects.length < limit ? null : offset + objects.length });
+    if (signError || !signed) return reply({ error: "Export unavailable" }, 503);
+    const urls = new Map<string, string>();
+    for (const item of signed) if (item.path && !item.error && item.signedUrl) urls.set(item.path, item.signedUrl);
+    const items = [];
+    const missing = [];
+    for (const item of objects) {
+      const url = urls.get(item.name);
+      if (url) items.push({ bucket, ...item, url });
+      else missing.push({ bucket, name: item.name, size: item.size, etag: item.etag });
+    }
+    return reply({ items, missing, next_offset: objects.length < limit ? null : offset + objects.length });
   } catch {
     // Never log tokens, object names, signed URLs, or downstream errors.
     return reply({ error: "Export unavailable" }, 503);

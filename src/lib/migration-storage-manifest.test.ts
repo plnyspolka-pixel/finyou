@@ -65,4 +65,21 @@ describe("temporary Storage manifest", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ error: "Export unavailable" });
   });
+  it("lists per-item signing failures as missing without failing the page", async () => {
+    const s = setup(true, 3);
+    s.sign.mockResolvedValue({ data: [
+      { path: "file-0.pdf", signedUrl: "https://example.test/file-0.pdf", error: null },
+      { path: "file-1.pdf", signedUrl: null, error: "Object not found" },
+      { path: "file-2.pdf", signedUrl: "", error: null },
+    ], error: null } as never);
+    const response = await storageManifest(request("bucket=documents&limit=3"), s.getAdmin);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.items.map((i: { name: string }) => i.name)).toEqual(["file-0.pdf"]);
+    expect(body.missing).toEqual([
+      { bucket: "documents", name: "file-1.pdf", size: 123, etag: "etag" },
+      { bucket: "documents", name: "file-2.pdf", size: 123, etag: "etag" },
+    ]);
+    expect(body.next_offset).toBe(3);
+  });
 });
