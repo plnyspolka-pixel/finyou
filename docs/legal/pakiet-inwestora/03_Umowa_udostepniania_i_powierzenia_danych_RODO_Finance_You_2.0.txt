@@ -2,7 +2,7 @@ PAKIET UMOWNY
 Umowa udostępniania i ochrony danych osobowych oraz warunkowego powierzenia przetwarzania
 Moduł A: odrębni administratorzy • Moduł B: procesor wyłącznie na udokumentowane polecenie
 Wersja
-FY-LEGAL-1.0 • 19 października 2026 r.
+FY-LEGAL-2.0 • 21 października 2026 r.
 Zakres
 Finansowanie zabezpieczone hipoteką wyłącznie na cel związany z działalnością gospodarczą
 Forma

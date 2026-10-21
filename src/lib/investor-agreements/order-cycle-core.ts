@@ -1,4 +1,4 @@
-// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-1.0).
+// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-2.0).
 // Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa (§ 5–7,
 // Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA (§ 5, § 7), plik 00 paczki.
 

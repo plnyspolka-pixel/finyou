@@ -21966,13 +21966,13 @@
         "outputSchema": null
       },
       {
-        "name": "apply_legal_documents_1_0",
-        "title": "Wgraj dokumenty prawne 1.0",
-        "description": "Wgrywa do bazy dokumenty prawne w wersji 1.0 (regulamin klienta, polityka prywatności, pakiet inwestora FY-LEGAL-1.0) z treści w kodzie. USUWA wcześniejsze wersje regulaminu i polityki oraz WSZYSTKIE akceptacje regulaminu, polityki i pakietu inwestora — użytkownicy akceptują 1.0 od nowa. Idempotentne: gdy baza ma już te dokumenty, nic nie zmienia. Wymaga confirm = \"WGRAJ DOKUMENTY 1.0\". Tylko administrator.",
+        "name": "publish_legal_documents",
+        "title": "Opublikuj aktualne dokumenty prawne",
+        "description": "Publikuje w bazie aktualne wersje dokumentów prawnych z treści w kodzie: regulamin klienta 2.0 (Prowizja od Pożyczkobiorcy 7%), politykę prywatności 1.0 i pakiet inwestora FY-LEGAL-2.0. Niczego nie usuwa: poprzednie wersje regulaminu i polityki zostają jako nieaktywne, akceptacje poprzednich wersji zostają, a użytkownicy akceptują nową wersję przy następnym wejściu do panelu. Idempotentne. Przerywa, gdy baza ma wersję o tym samym numerze z inną treścią. Wymaga confirm = \"OPUBLIKUJ DOKUMENTY\". Tylko administrator.",
         "annotations": {
           "readOnlyHint": false,
-          "destructiveHint": true,
-          "idempotentHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
           "openWorldHint": false
         },
         "inputSchema": {
@@ -21980,7 +21980,7 @@
           "properties": {
             "confirm": {
               "type": "string",
-              "const": "WGRAJ DOKUMENTY 1.0"
+              "const": "OPUBLIKUJ DOKUMENTY"
             }
           },
           "required": [
