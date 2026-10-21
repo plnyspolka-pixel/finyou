@@ -1,0 +1,2 @@
+# Architecture
+- The temporary Storage manifest is isolated in its own server-only module and route; only a stored unexpired SHA-256 token hash authorizes service-role listing and signing, preventing ordinary app users from accessing export credentials.
