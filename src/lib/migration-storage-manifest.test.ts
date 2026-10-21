@@ -46,7 +46,7 @@ describe("temporary Storage manifest", () => {
     const response = await storageManifest(request(), s.getAdmin);
     expect(s.admin.rpc).toHaveBeenCalledWith("migration_list_storage_objects", { p_bucket: "documents", p_offset: 0, p_limit: 100 });
     expect(s.sign).toHaveBeenCalledExactlyOnceWith(["file-0.pdf"], 10800);
-    expect(await response.json()).toEqual({ items: [{ bucket: "documents", name: "file-0.pdf", size: 123, mimetype: "application/pdf", etag: "etag", url: "https://example.test/file-0.pdf" }], next_offset: null });
+    expect(await response.json()).toEqual({ items: [{ bucket: "documents", name: "file-0.pdf", size: 123, mimetype: "application/pdf", etag: "etag", url: "https://example.test/file-0.pdf" }], missing: [], next_offset: null });
   });
   it("returns the next offset on a full page", async () => {
     const s = setup(true, 2);
