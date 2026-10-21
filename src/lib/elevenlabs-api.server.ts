@@ -462,19 +462,19 @@ export async function getDubbedFile(dubbingId: string, languageCode: string) {
 
 // ── Generowanie wideo (endpoint konfigurowalny) ─────────────────────────────
 //
-// API wideo ElevenLabs zmienia się (modele partnerskie, nowe ścieżki), a ta
-// wersja kodu powstała bez dostępu do dokumentacji. Dlatego ścieżki są
-// konfigurowalne bez zmiany kodu:
-//   ELEVENLABS_VIDEO_CREATE_PATH  — np. /v1/…/generate (POST, body przekazywane 1:1)
-//   ELEVENLABS_VIDEO_STATUS_PATH  — np. /v1/…/{id} (GET; {id} = identyfikator zadania)
+// Domyślnie ElevenLabs Flows (elevenlabs-flows.ts): POST /v1/flows/video,
+// GET /v1/flows/video/{id} — model veo-3.1-fast-generate-001. Ścieżki można
+// nadpisać bez zmiany kodu (nowe API, inne modele):
+//   ELEVENLABS_VIDEO_CREATE_PATH  — domyślnie /v1/flows/video (POST)
+//   ELEVENLABS_VIDEO_STATUS_PATH  — domyślnie /v1/flows/video/{id} (GET; {id} = generacja)
 //   ELEVENLABS_VIDEO_ID_FIELD     — pole z identyfikatorem w odpowiedzi (domyślnie: id,
 //                                   video_id, generation_id, job_id, request_id)
 // Narzędzia MCP przyjmują też `endpoint_path` jako nadpisanie na jedno wywołanie.
 
 export function videoEndpoints() {
   return {
-    createPath: process.env.ELEVENLABS_VIDEO_CREATE_PATH || null,
-    statusPath: process.env.ELEVENLABS_VIDEO_STATUS_PATH || null,
+    createPath: process.env.ELEVENLABS_VIDEO_CREATE_PATH || "/v1/flows/video",
+    statusPath: process.env.ELEVENLABS_VIDEO_STATUS_PATH || "/v1/flows/video/{id}",
     idField: process.env.ELEVENLABS_VIDEO_ID_FIELD || null,
   };
 }
