@@ -1,34 +1,35 @@
 /**
- * Dokumenty prawne Finance You — wersja 1.0 (decyzja właściciela 2026-10-19).
+ * Dokumenty prawne Finance You (plik nazwany od wersji startowej 1.0 z 2026-10-19).
  *
- * Wszystkie dokumenty startują od wersji 1.0, bez wersji historycznych:
- *  - Regulamin klienta i Polityka prywatności (consent_documents, version = 1)
+ * Aktualne wersje (decyzja właściciela 2026-10-21: Prowizja od Pożyczkobiorcy 7%):
+ *  - Regulamin klienta 2.0 (consent_documents, kind = terms, version = 2),
+ *  - Polityka prywatności 1.0 (consent_documents, kind = privacy, version = 1),
  *    — docs/legal/klient/regulamin-klienta.md, polityka-prywatnosci.md,
- *  - pakiet inwestora FY-LEGAL-1.0 (legal_documents, version = "1.0"):
+ *  - pakiet inwestora FY-LEGAL-2.0 (legal_documents, version = "2.0"):
  *    NDA, Ramowa umowa pośrednictwa, umowa RODO — docs/legal/pakiet-inwestora/,
  *  - Regulamin Abonamentu Inwestora (lib/legal/regulamin-abonamentu.ts).
  *
  * Pliki w docs/legal są źródłem treści: zmiana dokumentu = edycja pliku
- * (a dla pakietu także .docx) i ponowne `npx tsx scripts/legal/build-dokumenty.ts`,
- * które przepisuje skróty SHA-256 i moduł danych `dokumenty-1-0.dane.ts`.
+ * (a dla pakietu także .docx), podniesienie wersji niżej i ponowne
+ * `npx tsx scripts/legal/build-dokumenty.ts`, które przepisuje skróty
+ * SHA-256 i moduł danych `dokumenty-1-0.dane.ts`.
  *
- * Do bazy wgrywa je narzędzie administratora `apply_legal_documents_1_0`
- * (zastosujDokumenty niżej), a nie migracja SQL: z plikami .docx migracja
- * miałaby ~410 KB, czego nie przyjmuje proces wdrożenia Lovable. Narzędzie
- * jest idempotentne — gdy baza ma już te same dokumenty, nic nie zmienia,
- * więc nie skasuje akceptacji złożonych po wdrożeniu.
+ * Do bazy wgrywa je narzędzie administratora `publish_legal_documents`
+ * (opublikujDokumenty niżej), a nie migracja SQL: z plikami .docx migracja
+ * miałaby ~410 KB, czego nie przyjmuje proces wdrożenia Lovable. Publikacja
+ * niczego nie usuwa — akceptacje poprzednich wersji zostają jako ślad, a
+ * użytkownik akceptuje nową wersję przy następnym wejściu do panelu.
  */
 import { createHash } from "node:crypto";
+import { wersjaDokumentu } from "./wersja";
 
-export const DOKUMENTY_DATA_PL = "19 października 2026 r.";
-/** Wersja w treści dokumentów i w interfejsie. */
-export const WERSJA_DOKUMENTOW = "1.0";
+export const DOKUMENTY_DATA_PL = "21 października 2026 r.";
 
-/** consent_documents.version — liczba całkowita; w interfejsie „1.0”. */
-export const KLIENT_DOCS_VERSION = 1;
+/** consent_documents.version — liczba całkowita; w interfejsie „2.0”. */
+export const WERSJE_ZGOD = { terms: 2, privacy: 1 } as const;
 
-export const PAKIET_ID = "FY-LEGAL-1.0";
-export const PAKIET_WERSJA = "1.0";
+export const PAKIET_ID = "FY-LEGAL-2.0";
+export const PAKIET_WERSJA = "2.0";
 
 /** Kwoty Abonamentu w treści umowy — muszą zgadzać się z lib/investor-plan/plans.ts. */
 export const ABONAMENT_UMOWA = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
@@ -37,9 +38,9 @@ export const SPRZEDAWCA_ABONAMENTU =
   "Fundacja Krzewienia Edukacji Finansowej im. Pieczaka z siedzibą w Lublinie (KRS 0001140846, NIP 9462747637)";
 
 export const PAKIET_PLIKI = {
-  nda: "01_NDA_i_zakaz_obchodzenia_Finance_You_1.0",
-  umowa_ramowa: "02_Ramowa_umowa_posrednictwa_na_odleglosc_Finance_You_1.0",
-  rodo: "03_Umowa_udostepniania_i_powierzenia_danych_RODO_Finance_You_1.0",
+  nda: "01_NDA_i_zakaz_obchodzenia_Finance_You_2.0",
+  umowa_ramowa: "02_Ramowa_umowa_posrednictwa_na_odleglosc_Finance_You_2.0",
+  rodo: "03_Umowa_udostepniania_i_powierzenia_danych_RODO_Finance_You_2.0",
 } as const;
 
 export type KodPakietu = keyof typeof PAKIET_PLIKI;
@@ -49,7 +50,7 @@ export const sha256Hex = (d: string | Uint8Array) =>
     .update(typeof d === "string" ? Buffer.from(d, "utf8") : d)
     .digest("hex");
 
-export { wersjaDokumentu } from "./wersja";
+export { wersjaDokumentu };
 
 export interface DaneDokumentow {
   regulamin: string;
@@ -57,10 +58,9 @@ export interface DaneDokumentow {
   pakiet: Record<KodPakietu, { content_text: string; docx_base64: string }>;
 }
 
-export interface WynikZastosowania {
+export interface WynikPublikacji {
   zastosowano: boolean;
-  usunieteAkceptacjeZgod: number;
-  usunieteAkceptacjeUmow: number;
+  /** Opublikowane (nowe albo przywrócone) dokumenty. */
   dokumenty: string[];
 }
 
@@ -71,87 +71,86 @@ const ZGODY = [
 
 const KODY = Object.keys(PAKIET_PLIKI) as KodPakietu[];
 
-/** Czy baza ma już dokładnie te dokumenty 1.0 (wtedy nic nie robimy). */
-async function juzZastosowane(db: any, dane: DaneDokumentow): Promise<boolean> {
+/**
+ * Publikuje aktualne wersje dokumentów. `db` — klient z rolą serwisową.
+ *
+ * Regulamin i polityka: poprzednie wersje zostają w consent_documents jako
+ * nieaktywne, nowa wersja jest wstawiana jako aktywna. Pakiet inwestora:
+ * wiersz legal_documents dostaje nową wersję i treść; akceptacje zostają
+ * z poprzednią wersją i skrótem, więc investor_legal_pack_complete wymaga
+ * akceptacji nowej wersji. Akceptacje nie są usuwane.
+ *
+ * Idempotentne. Gdy baza ma już wersję o tym samym numerze, ale z inną
+ * treścią, przerywa — zaakceptowanej treści nie zmieniamy bez podniesienia
+ * wersji.
+ */
+export async function opublikujDokumenty(db: any, dane: DaneDokumentow): Promise<WynikPublikacji> {
+  const must = (what: string, error: { message: string } | null) => {
+    if (error) throw new Error(`${what}: ${error.message}`);
+  };
+  const dokumenty: string[] = [];
+
   const { data: zgody, error: e1 } = await db
     .from("consent_documents")
     .select("kind, version, content, is_active")
     .in("kind", ["terms", "privacy"]);
-  if (e1) throw new Error(`consent_documents: ${e1.message}`);
-  const okZgody = ZGODY.every(([kind, , pole]) => {
-    const rows = (zgody ?? []).filter((r: any) => r.kind === kind);
-    return (
-      rows.length === 1 &&
-      rows[0].version === KLIENT_DOCS_VERSION &&
-      rows[0].is_active &&
-      rows[0].content === dane[pole]
-    );
-  });
+  must("consent_documents", e1);
   const { data: umowy, error: e2 } = await db
     .from("legal_documents")
     .select("code, version, package_id, sha256");
-  if (e2) throw new Error(`legal_documents: ${e2.message}`);
-  const okUmowy = KODY.every((code) => {
-    const r = (umowy ?? []).find((x: any) => x.code === code);
-    return (
-      r &&
-      r.version === PAKIET_WERSJA &&
-      r.package_id === PAKIET_ID &&
-      r.sha256 === sha256Hex(dane.pakiet[code].content_text)
-    );
-  });
-  return okZgody && okUmowy;
-}
+  must("legal_documents", e2);
 
-/**
- * Wgrywa dokumenty 1.0: usuwa wcześniejsze wersje regulaminu i polityki
- * oraz wszystkie ich akceptacje, wstawia wersję 1, usuwa akceptacje pakietu
- * inwestora i przenumerowuje pakiet na FY-LEGAL-1.0. `db` — klient z rolą
- * serwisową. Idempotentne.
- */
-export async function zastosujDokumenty(db: any, dane: DaneDokumentow): Promise<WynikZastosowania> {
-  if (await juzZastosowane(db, dane)) {
-    return {
-      zastosowano: false,
-      usunieteAkceptacjeZgod: 0,
-      usunieteAkceptacjeUmow: 0,
-      dokumenty: [],
-    };
+  // Najpierw sprawdzenie wszystkiego, potem zapisy — błąd nie zostawia połowy zmian.
+  for (const [kind, , pole] of ZGODY) {
+    const r = (zgody ?? []).find((x: any) => x.kind === kind && x.version === WERSJE_ZGOD[kind]);
+    if (r && r.content !== dane[pole]) {
+      throw new Error(
+        `consent_documents ${kind} v${WERSJE_ZGOD[kind]} ma w bazie inną treść — podnieś wersję w WERSJE_ZGOD.`,
+      );
+    }
   }
-  const must = (what: string, error: { message: string } | null) => {
-    if (error) throw new Error(`${what}: ${error.message}`);
-  };
+  for (const code of KODY) {
+    const r = (umowy ?? []).find((x: any) => x.code === code);
+    if (!r) throw new Error(`legal_documents: brak dokumentu ${code}`);
+    if (r.version === PAKIET_WERSJA && r.sha256 !== sha256Hex(dane.pakiet[code].content_text)) {
+      throw new Error(
+        `legal_documents ${code} ${PAKIET_WERSJA} ma w bazie inną treść — podnieś PAKIET_WERSJA.`,
+      );
+    }
+  }
 
-  const { data: delZgody, error: e1 } = await db
-    .from("consent_acceptances")
-    .delete()
-    .in("kind", ["terms", "privacy"])
-    .select("id");
-  must("consent_acceptances", e1);
-  const { error: e2 } = await db
-    .from("consent_documents")
-    .delete()
-    .in("kind", ["terms", "privacy"]);
-  must("consent_documents (usunięcie)", e2);
-  const { error: e3 } = await db.from("consent_documents").insert(
-    ZGODY.map(([kind, title, pole]) => ({
-      kind,
-      title,
-      content: dane[pole],
-      version: KLIENT_DOCS_VERSION,
-      is_active: true,
-    })),
-  );
-  must("consent_documents (wstawienie)", e3);
+  for (const [kind, title, pole] of ZGODY) {
+    const wersja = WERSJE_ZGOD[kind];
+    const rows = (zgody ?? []).filter((x: any) => x.kind === kind);
+    const docelowy = rows.find((x: any) => x.version === wersja);
+    const inneAktywne = rows.some((x: any) => x.version !== wersja && x.is_active);
+    if (docelowy?.is_active && !inneAktywne) continue;
+    const { error: e3 } = await db
+      .from("consent_documents")
+      .update({ is_active: false })
+      .eq("kind", kind)
+      .neq("version", wersja);
+    must(`consent_documents ${kind} (dezaktywacja)`, e3);
+    if (docelowy) {
+      const { error } = await db
+        .from("consent_documents")
+        .update({ is_active: true })
+        .eq("kind", kind)
+        .eq("version", wersja);
+      must(`consent_documents ${kind} (aktywacja)`, error);
+    } else {
+      const { error } = await db
+        .from("consent_documents")
+        .insert([{ kind, title, content: dane[pole], version: wersja, is_active: true }]);
+      must(`consent_documents ${kind} (wstawienie)`, error);
+    }
+    dokumenty.push(`${title.replace(/^Akceptuję /, "")} ${wersjaDokumentu(wersja)}`);
+  }
 
-  const { data: delUmowy, error: e4 } = await db
-    .from("investor_agreement_acceptances")
-    .delete()
-    .not("id", "is", null)
-    .select("id");
-  must("investor_agreement_acceptances", e4);
   for (const code of KODY) {
     const d = dane.pakiet[code];
+    const r = (umowy ?? []).find((x: any) => x.code === code);
+    if (r.version === PAKIET_WERSJA && r.package_id === PAKIET_ID) continue;
     const { error } = await db
       .from("legal_documents")
       .update({
@@ -165,16 +164,8 @@ export async function zastosujDokumenty(db: any, dane: DaneDokumentow): Promise<
       })
       .eq("code", code);
     must(`legal_documents ${code}`, error);
+    dokumenty.push(`${PAKIET_PLIKI[code]} (${PAKIET_ID})`);
   }
 
-  return {
-    zastosowano: true,
-    usunieteAkceptacjeZgod: delZgody?.length ?? 0,
-    usunieteAkceptacjeUmow: delUmowy?.length ?? 0,
-    dokumenty: [
-      `Regulamin klienta ${WERSJA_DOKUMENTOW}`,
-      `Polityka prywatności ${WERSJA_DOKUMENTOW}`,
-      ...KODY.map((c) => `${PAKIET_PLIKI[c]} (${PAKIET_ID})`),
-    ],
-  };
+  return { zastosowano: dokumenty.length > 0, dokumenty };
 }

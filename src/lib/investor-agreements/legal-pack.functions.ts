@@ -1,4 +1,4 @@
-// Pakiet umów inwestora (FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0) — Etap U1.
+// Pakiet umów inwestora (FY-LEGAL-2.0: umowa ramowa, NDA, RODO — wersja 2.0) — Etap U1.
 //
 // Sekwencja z pliku 00 paczki prawnika: (1) konto i identyfikacja →
 // (2) informacje przedumowne dla Konsumenta na trwałym nośniku →

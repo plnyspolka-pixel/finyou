@@ -1,4 +1,4 @@
-// JEDEN pipeline inwestora (pakiet FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0;
+// JEDEN pipeline inwestora (pakiet FY-LEGAL-2.0: umowa ramowa, NDA, RODO — wersja 2.0;
 // Inwestor płaci wyłącznie abonament):
 //   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
 //   2. Rachunek bankowy do spłaty pożyczki (wymuszony)

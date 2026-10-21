@@ -14,8 +14,8 @@ import { decideInFlightUnlockPayment, PENDING_UNLOCK_STALE_MINUTES } from "./pen
 import { TubapayCheckoutFields, validateTubapayCheckout } from "./tubapay-checkout";
 
 // Wersje dokumentów prawnych akceptowanych na formularzu (consent_documents,
-// wersja 2 z 29 września 2026 r. — migracja 20260929156000_etap5_zgody_v2).
-export const TERMS_VERSION = "regulamin-klienta-1.0";
+// regulamin klienta 2.0 z 21 października 2026 r., polityka prywatności 1.0).
+export const TERMS_VERSION = "regulamin-klienta-2.0";
 export const PRIVACY_VERSION = "polityka-prywatnosci-1.0";
 
 const CheckoutSchema = z.object({

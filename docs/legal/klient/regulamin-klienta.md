@@ -2,7 +2,7 @@
 
 ## dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania
 
-**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
+**wersja 2.0 — obowiązuje od dnia 21 października 2026 r.**
 
 ---
 
@@ -947,7 +947,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 5. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne, bezskuteczne albo niewykonalne, nie wpływa to na ważność pozostałych postanowień Regulaminu.
 
-6. Regulamin w wersji 1.0 obowiązuje od dnia 19 października 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
+6. Regulamin w wersji 2.0 obowiązuje od dnia 21 października 2026 r. i zastępuje wersję 1.0 z dnia 19 października 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
 
 ---
 
