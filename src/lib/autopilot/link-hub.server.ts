@@ -62,7 +62,7 @@ export async function getLinkHubData(): Promise<{ tracks: LinkHubTrack[] }> {
             : "https://app.financeyou.pl/embed/wniosek"),
         magnets: rows
           .filter((r) => r.audience === TRACK_TO_AUDIENCE[t])
-          .slice(0, 3)
+          .slice(0, 4)
           .map((r) => ({ slug: r.slug, title: r.title, headline: r.headline })),
         tools: STARTER_CALCULATORS.filter((c) => c.track === t).map((c) => ({
           slug: c.slug,
