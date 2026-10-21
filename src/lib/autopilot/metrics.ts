@@ -166,6 +166,10 @@ export interface ReportInput {
   changes: string[];
   alarms: string[];
   paused: boolean;
+  /** Obejścia w produkcji rolek (np. caption-burner → Remotion, hook z grafiki zapasowej). */
+  production?: string[];
+  /** Czego brakuje od właściciela (np. plan Pro ElevenLabs). */
+  ownerTodo?: string[];
 }
 
 const TRACK_LABEL: Record<Track, string> = {
@@ -190,6 +194,8 @@ export function buildReportText(r: ReportInput): string {
   if (r.outliers) lines.push(`Outliery: ${r.outliers}.`);
   if (r.changes.length) lines.push(`Zmiany agenta: ${r.changes.join("; ")}`);
   if (r.alarms.length) lines.push(`ALARMY: ${r.alarms.join("; ")}`);
+  if (r.production?.length) lines.push(`Produkcja: ${r.production.join("; ")}`);
+  if (r.ownerTodo?.length) lines.push(`Do decyzji właściciela: ${r.ownerTodo.join("; ")}`);
   return lines.join("\n");
 }
 

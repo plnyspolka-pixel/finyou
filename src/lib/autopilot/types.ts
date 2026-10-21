@@ -39,3 +39,7 @@ export type PublishPlatform = (typeof PUBLISH_PLATFORMS)[number];
 
 export const AUTOPILOT_LOG_MODULE = "autopilot";
 export const COMPLIANCE_LOG_MODULE = "compliance_gate";
+
+/** Akcje Studia w dzienniku autopilota — raport pokazuje je w sekcji „Produkcja”. */
+export const STUDIO_FINISHER_FALLBACK_ACTION = "studio_finisher_fallback";
+export const STUDIO_HOOK_PRO_ACTION = "studio_hook_pro_plan_required";
