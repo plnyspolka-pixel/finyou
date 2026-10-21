@@ -28,6 +28,8 @@ import type {
   ReelTag,
 } from "../../../src/lib/studio-reel-plan";
 import { MotionLayer } from "./Motion";
+import { HookAudio, HookLayer, HookMusic } from "./Hook";
+import type { ReelFraming } from "../../../src/lib/studio-avatar-framing";
 
 // Inter z paczki strony (public/fonts, licencja OFL) — bez pobierania z sieci
 // w trakcie renderu; ta sama czcionka co w obrazie caption-burnera.
@@ -292,10 +294,15 @@ const Tag: React.FC<{
   );
   const y = interpolate(prog, [0, 1], [L.tagBigY, L.tagSmallY]) * height;
   const scale = interpolate(prog, [0, 1], [1, L.tagSmallScale / 100]);
-  const opacity = fade(t, 0, Infinity, 0.12);
+  const from = tag.start ?? 0;
+  const opacity = fade(t, from, Infinity, 0.12);
+  if (!opacity) return null;
   // Połysk złota: rozjaśnienie i powrót tuż po pojawieniu się znacznika.
+  const lt = t - from;
   const color =
-    t < 0.7 ? mixHex(B.gold, B.goldLight, t / 0.7) : mixHex(B.goldLight, B.gold, (t - 0.7) / 0.7);
+    lt < 0.7
+      ? mixHex(B.gold, B.goldLight, lt / 0.7)
+      : mixHex(B.goldLight, B.gold, (lt - 0.7) / 0.7);
   return (
     <div
       style={{
@@ -479,6 +486,11 @@ const Card: React.FC<{ ov: Overlays; card: ReelCard; t: number; k: Scale; width:
 
 // ── Kompozycja ──────────────────────────────────────────────────────────────
 
+/** Aktywny odcinek kadrowania (ujęcie poziomego awatara) w chwili `t`. */
+export function activeFraming(framing: ReelFraming[] | undefined, t: number): ReelFraming | null {
+  return framing?.find((f) => t >= f.start && (f.end == null || t < f.end)) ?? null;
+}
+
 export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, plan }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
@@ -486,9 +498,24 @@ export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, plan }) => {
   const base = plan?.base ?? { width: 720, height: 1280 };
   const k: Scale = { x: width / base.width, y: height / base.height };
   const ov = plan?.overlays ?? null;
+  const crop = activeFraming(plan?.framing, t);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#000000" }}>
-      {videoUrl ? <OffthreadVideo src={videoUrl} /> : null}
+    <AbsoluteFill style={{ backgroundColor: "#000000", overflow: "hidden" }}>
+      {videoUrl ? (
+        <AbsoluteFill
+          style={
+            crop
+              ? {
+                  // Poziome zdjęcie awatara (pasy HeyGena) → pełny pion „cover”.
+                  transform: `translate(${crop.tx * k.x}px, ${crop.ty * k.y}px) scale(${crop.scale})`,
+                  transformOrigin: "0 0",
+                }
+              : undefined
+          }
+        >
+          <OffthreadVideo src={videoUrl} />
+        </AbsoluteFill>
+      ) : null}
       {ov?.cards.map((card, i) => (
         <Card key={i} ov={ov} card={card} t={t} k={k} width={width} />
       ))}
@@ -498,6 +525,20 @@ export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, plan }) => {
       {plan?.captions ? <Captions plan={plan.captions} t={t} k={k} /> : null}
       {ov?.tag ? <Tag ov={ov} tag={ov.tag} t={t} k={k} width={width} height={height} /> : null}
       {ov?.headline ? <Headline ov={ov} head={ov.headline} t={t} k={k} height={height} /> : null}
+      {plan?.hook ? (
+        <HookLayer
+          hook={plan.hook}
+          t={t}
+          fps={fps}
+          k={k}
+          width={width}
+          height={height}
+          fontFamily={fontFamily}
+        />
+      ) : null}
+      {plan?.hook ? <HookAudio hook={plan.hook} fps={fps} /> : null}
+      {plan?.hook ? <HookMusic hook={plan.hook} /> : null}
+      {/* Znaczek i etykieta AI zawsze na wierzchu — także nad hookiem (AI Act art. 50). */}
       {plan?.badge ? <Badge spec={plan.badge} k={k} width={width} /> : null}
       {plan?.badge ? <BadgeIntro spec={plan.badge} k={k} width={width} t={t} /> : null}
     </AbsoluteFill>
