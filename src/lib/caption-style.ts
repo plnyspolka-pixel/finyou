@@ -513,9 +513,9 @@ export type AiBadgeSpec = {
   borderWidth: number;
   textColor: string;
   /**
-   * Pełna etykieta w pierwszych sekundach (AI Act art. 50 – oznaczenie
-   * najpóźniej przy pierwszym kontakcie), pod znaczkiem, potem znika;
-   * znaczek „AI” zostaje do końca filmu.
+   * Opcjonalna pełna etykieta w pierwszych sekundach, pod znaczkiem, potem
+   * znika; znaczek „AI” zostaje do końca filmu. Domyślny `AI_BADGE` jej nie
+   * używa.
    */
   intro?: { text: string; seconds: number; fontSize: number };
 };
@@ -534,7 +534,8 @@ export const AI_BADGE: AiBadgeSpec = {
   border: "#FFFFFF",
   borderWidth: 1.5,
   textColor: "#FFFFFF",
-  intro: { text: "Treść wygenerowana przez AI", seconds: 2.5, fontSize: 22 },
+  // Bez pełnej etykiety na starcie: sam znaczek „AI” od pierwszej klatki do
+  // końca filmu (dwa oznaczenia naraz zasłaniały hook).
 };
 
 /** Do końca filmu — libass rysuje zdarzenie tylko w czasie trwania wideo. */
