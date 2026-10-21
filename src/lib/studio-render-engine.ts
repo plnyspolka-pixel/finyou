@@ -34,9 +34,9 @@ export function remotionEnvPresent(
 }
 
 /**
- * `auto` → `STUDIO_RENDER_ENGINE`, gdy ustawione; bez niego Remotion, jeśli
- * jest skonfigurowany (tylko on rysuje hook wizualny i kadruje poziome
- * awatary), a w ostateczności caption-burner.
+ * Remotion zawsze, gdy jest skonfigurowany (tylko on rysuje hook wizualny
+ * i kadruje poziome awatary). Bez sekretów Remotion: jawny silnik zadania,
+ * potem `STUDIO_RENDER_ENGINE`, a w ostateczności caption-burner.
  */
 export function resolveRenderEngine(
   v: unknown,
@@ -45,11 +45,15 @@ export function resolveRenderEngine(
     : undefined,
   remotionConfigured: boolean = remotionEnvPresent(),
 ): ResolvedRenderEngine {
+  // Decyzja właściciela (21.10.2026): wszystkie rolki przez Remotion, bez
+  // FFmpeg — gdy Remotion jest skonfigurowany, wygrywa niezależnie od
+  // `render_engine` zadania i `STUDIO_RENDER_ENGINE`. caption-burner zostaje
+  // wyłącznie jako awaria, gdy sekretów Remotion brak.
+  if (remotionConfigured) return "remotion";
   const engine = parseRenderEngine(v);
   if (engine !== "auto") return engine;
   const fromEnv = envDefault?.trim();
-  if (fromEnv) return parseRenderEngine(fromEnv) === "remotion" ? "remotion" : "caption_burner";
-  return remotionConfigured ? "remotion" : "caption_burner";
+  return parseRenderEngine(fromEnv) === "remotion" ? "remotion" : "caption_burner";
 }
 
 export const RENDER_ENGINE_LABELS: Record<RenderEngine, string> = {
