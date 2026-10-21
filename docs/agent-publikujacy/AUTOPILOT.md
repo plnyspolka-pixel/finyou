@@ -1,4 +1,4 @@
-# Autopilot agenta publikującego – jak działa (stan 19.10.2026)
+# Autopilot agenta publikującego – jak działa (stan 21.10.2026)
 
 Moduł `src/lib/autopilot/` rozbudowuje istniejący agent publikujący (silnik wzrostu,
 Studio publikacji, kolejki, lead magnety). Nie ma równoległych kolejek ani rendererów:
@@ -59,6 +59,44 @@ opublikowanych (`ready-reels.server.ts`):
 4. Wolne sloty toru (`audience_profiles[track].slots`) na IG Reels, FB Reels i YouTube z limitem
    `maxPostsPerDayPerPlatform`; wstawienie przez `enqueuePublication` z `idempotency_key`.
    Brak slotu → rolka wraca w kolejnym ticku.
+
+## Hook wizualny rolek Studia (21.10.2026)
+
+Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/studio-hook.ts`,
+`studio-hook.server.ts`, `services/remotion/src/Hook.tsx`):
+
+- **Obraz:** pełny kadr nad pierwszym zdaniem lektora — obraz-metafora problemu widza (drzwi
+  skarbca, pieczątka na wniosku, klucz w snopie światła). Ruch od 1. klatki, uderzenie z
+  wstrząsem i błyskiem w 0,2 s. Model obrazu/wideo ma zakaz tekstu w kadrze.
+- **Tekst:** 1–4 słowa na całą szerokość (min. 12% wysokości kadru), jedno słowo złote.
+  Napisy lektora, znacznik serii i elementy dynamiczne wchodzą dopiero po hooku; znaczek
+  i etykieta AI zostają na wierzchu.
+- **Dźwięk:** efekt uderzenia z ElevenLabs Sound Effects (działa na obecnym planie),
+  opcjonalnie podkład `music_prompt` ściszony pod lektorem.
+- **Źródło klipu (`source`, domyślnie `auto`):** decyzja właściciela 21.10 — bez grafiki
+  ElevenLabs (planu Pro nie kupujemy). Kolejność: bank gotowych klipów hooka (`clip_bank`,
+  w przygotowaniu — osobny PR po wyborze dostawcy) → grafika z naszego generatora
+  (`generate_studio_image`) → bank przebitek, zawsze z animacją Remotion. ElevenLabs: głos,
+  efekty dźwiękowe i muzyka. Ścieżka ElevenLabs Flows (`flows_video` / `flows_image`) zostaje
+  w kodzie za flagą `STUDIO_HOOK_FLOWS=1` (domyślnie wyłączona).
+- **Planer:** rolka bez hooka dostaje 3 warianty z AI (odsiew compliance + `scoreHook`), bez
+  AI — motyw zapasowy. Dwa najlepsze idą do testu A/B (`hook_variant` A/B, przydział po id).
+- **MCP:** `hook` / `hook_variant` w `create_studio_video_job` i `update_studio_job`,
+  `preview_studio_hook` (podgląd i zasoby bez renderu HeyGena), gotową rolkę wykańcza na nowo
+  `restyle_studio_job_captions` (bez kredytów HeyGen). `STUDIO_VISUAL_HOOK=0` wyłącza hook.
+
+**Silnik wykończenia:** `auto` bez `STUDIO_RENDER_ENGINE` = Remotion, gdy skonfigurowany.
+Gdy caption-burner nie odpowiada na preflight albo nie przyjmie zlecenia, zadanie przechodzi
+samo na Remotion (wpis `studio_finisher_fallback`, sekcja „Produkcja” w raporcie).
+
+**Awatary poziome:** orientację zdjęcia wykrywamy z podglądu (`studio_avatar_orientations`).
+Poziomy awatar nie prowadzi rolki (hook mówi pionowy z zestawu), a jego ujęcia Remotion
+kadruje „cover” do pełnego pionu. Poprawka kadru: `set_studio_avatar_framing`
+(`focus_x`, `focus_y`). Panel oznacza poziome awatary.
+
+**Tor pożyczkobiorcy w rolkach:** bez akcentu „tylko dla firm” (`autopilot/track-voice.ts`):
+„firma / przedsiębiorca / działalność” najwyżej raz. Reguła compliance „konsument” i linia
+o celu gospodarczym w stopce opisu zostają.
 
 ## Zadanie jednorazowe dla właściciela: profil Instagram
 

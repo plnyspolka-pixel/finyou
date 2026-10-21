@@ -76,11 +76,14 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
   return {
     pozyczkobiorca: {
       track: "pozyczkobiorca",
-      label: "Pożyczkobiorca (firma)",
+      label: "Pożyczkobiorca",
+      // Decyzja właściciela 21.10.2026: w rolkach nie akcentujemy, że oferta
+      // jest tylko dla firm — warunki klient poznaje przy wniosku
+      // (autopilot/track-voice.ts). Reguła „konsument” w compliance zostaje.
       targetGroup:
         row.target_audience?.trim() ||
-        "Przedsiębiorcy potrzebujący szybkiego finansowania na cel gospodarczy pod zastaw nieruchomości",
-      tone: "Konkretnie, po ludzku, bez straszenia. Klient (przedsiębiorca) jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie.",
+        "Osoby, które potrzebują szybkiego finansowania pod zastaw nieruchomości, często po odmowie banku. W rolkach NIE akcentujemy, że oferta jest tylko dla firm – mówimy po prostu o pożyczkach pod nieruchomość; warunki (w tym działalność gospodarcza) klient poznaje na etapie wniosku.",
+      tone: "Konkretnie, po ludzku, bez straszenia. Widz jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie. Nie powtarzamy słów „firma”, „przedsiębiorca”, „działalność” – maksymalnie raz i tylko gdy temat tego wymaga.",
       ctaUrl: row.primary_cta_url?.trim() || BORROWER_DEFAULT_CTA_URL,
       ctaLabel: "Złóż bezpłatny wniosek",
       allowedTopics: [
@@ -88,7 +91,7 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
         "LTV i ile można uzyskać pod nieruchomość",
         "dokumenty i proces od wniosku do wypłaty",
         "mity o finansowaniu pozabankowym",
-        "płynność i inwestycje w firmie",
+        "płynność i szybkie finansowanie",
       ],
       forbiddenPhrases: [],
       slots: SLOTS.pozyczkobiorca,

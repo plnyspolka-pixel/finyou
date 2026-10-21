@@ -195,3 +195,25 @@ export function markDefaultAvatars(
     .sort((a, b) => (a.default_position ?? 0) - (b.default_position ?? 0));
   return [...chosen, ...marked.filter((i) => i.default_position == null)];
 }
+
+/**
+ * Prowadzący rolki bez poziomego zdjęcia: gdy wskazany awatar jest poziomy
+ * (HeyGen wkleiłby go do 9:16 z ~70% pasów), prowadzenie przejmuje pierwszy
+ * pionowy z puli (podanej albo zestawu domyślnych). Orientację wykrywa
+ * studio-avatar-orientation.server.ts; brak danych = bez zmiany.
+ */
+export async function portraitLead(
+  lead: string,
+  pool: string[] = [],
+): Promise<{ lead: string; swapped: boolean }> {
+  try {
+    const candidates = pool.filter(Boolean).length ? pool : await getDefaultAvatarIds();
+    const { ensureAvatarOrientations } = await import("./studio-avatar-orientation.server");
+    const { pickLeadAvatar } = await import("./studio-avatar-framing");
+    const infos = await ensureAvatarOrientations([lead, ...candidates]);
+    return pickLeadAvatar(lead, candidates, (id) => infos.get(id)?.orientation ?? null);
+  } catch (e) {
+    console.warn(`[Studio] wybór pionowego prowadzącego: ${e instanceof Error ? e.message : e}`);
+    return { lead, swapped: false };
+  }
+}

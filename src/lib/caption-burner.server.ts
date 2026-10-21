@@ -135,6 +135,9 @@ export async function submitCaptionBurn(input: {
   name?: string;
   /** Silnik wykończenia (`studio_video_jobs.render_engine`); brak = `auto`. */
   engine?: unknown;
+  /** Hook wizualny i kadrowanie awatarów — rysuje je tylko Remotion. */
+  hook?: import("./studio-hook").StudioHook | null;
+  framing?: import("./studio-reel-plan").ReelFramingInput | null;
 }): Promise<string> {
   if (resolveRenderEngine(input.engine) === "remotion") {
     return (await remotion()).submitRemotionReel(input);
@@ -377,6 +380,42 @@ export async function captionBurnerPreflight(input: {
     };
   }
 }
+
+export type FinisherGate =
+  | {
+      ok: true;
+      /** Silnik do zapisania przy zadaniu (bez zmiany = wejściowy). */
+      engine: unknown;
+      /** Ustawione, gdy caption-burner padł i zadanie przechodzi na Remotion. */
+      fallback: { from: "caption_burner"; to: "remotion"; reason: string } | null;
+    }
+  | { ok: false; reason: string };
+
+/**
+ * Bramka z automatycznym zejściem na Remotion: gdy preflight caption-burnera
+ * pada (timeout, błąd HTTP, brak konfiguracji), a Remotion Lambda jest
+ * skonfigurowany, zadanie NIE czeka w kolejce, tylko wykończy je Remotion
+ * (ten sam plan: napisy, znaczek AI, nakładki — i hook wizualny, którego
+ * caption-burner i tak nie umie). Wołający zapisuje `render_engine` i zgłasza
+ * zejście w raporcie autopilota.
+ */
+export async function resolveFinisherForRender(input: {
+  captions: boolean;
+  engine?: unknown;
+}): Promise<FinisherGate> {
+  const gate = await captionBurnerPreflight(input);
+  if (gate.ok) return { ok: true, engine: input.engine ?? "auto", fallback: null };
+  if (resolveRenderEngine(input.engine) === "remotion") return gate;
+  if (!(await remotion()).isRemotionConfigured()) return gate;
+  return {
+    ok: true,
+    engine: "remotion",
+    fallback: { from: "caption_burner", to: "remotion", reason: gate.reason },
+  };
+}
+
+export const finisherFallbackNote = (reason: string) =>
+  `Wykończenie automatycznie w Remotion: ${reason}.`;
 
 export const CAPTION_BURNER_GUARD_NOTE =
   "Render w HeyGen nie został zlecony (kredyty nie zużyte) — zadanie czeka w kolejce i ruszy przy pierwszym ticku Studia, gdy usługa znów odpowie.";

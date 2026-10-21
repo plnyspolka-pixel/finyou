@@ -87,3 +87,18 @@ Nowy komponent = wpis w katalogu (typ, limity, opis w `MOTION_CATALOG_PROMPT`,
 walidacja), schemat w projektancie i rysunek w `Motion.tsx`, potem
 `npm run lambda:deploy`. Podgląd lokalny: `npx remotion still StudioReel …
 --props=props.json --browser-executable=<chrome-headless-shell>`.
+
+### Hook wizualny i kadrowanie awatarów (`src/Hook.tsx`)
+
+Plan może mieć `hook` (0–2,5 s: klip/obraz z najazdem, wstrząsem i błyskiem na uderzeniu,
+efekt dźwiękowy, tekst 1–4 słowa ze słowem w złocie — liczy `src/lib/studio-hook.ts`) i
+`framing` (odcinki z przekształceniem „cover” dla poziomych zdjęć awatarów — liczy
+`src/lib/studio-avatar-framing.ts`). Starsze plany bez tych pól renderują się jak dotąd.
+Po zmianie kompozycji: `npm run lambda:deploy` (aktualizuje stronę `finyou`).
+
+Podgląd lokalny bez Lambdy (Chromium z Playwrighta):
+
+```bash
+npx remotion render StudioReel out.mp4 --props=props.json \
+  --browser-executable=/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell
+```

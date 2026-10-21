@@ -144,7 +144,7 @@ export const SERIES: SeriesDef[] = [
     badge: "BANK ODMÓWIŁ",
     format: "steps",
     beats: [
-      "hook: bank odmówił Twojej firmie?",
+      "hook: bank Ci odmówił?",
       "dlaczego banki odmawiają",
       "co możesz zrobić",
       RISK_BEAT,
@@ -192,13 +192,7 @@ export const SERIES: SeriesDef[] = [
     title: "Mit vs fakt o pożyczkach pozabankowych",
     badge: "MIT vs FAKT",
     format: "myth",
-    beats: [
-      "hook: mit w formie pytania",
-      "fakt",
-      "co to znaczy dla Twojej firmy",
-      RISK_BEAT,
-      LOOP_BEAT,
-    ],
+    beats: ["hook: mit w formie pytania", "fakt", "co to znaczy dla Ciebie", RISK_BEAT, LOOP_BEAT],
     motion: ["mythFact", "alert", "cta"],
     defaultKeyword: "PROCES",
   },
@@ -225,7 +219,7 @@ export const SERIES: SeriesDef[] = [
     badge: "STUDIUM PRZYPADKU",
     format: "case",
     beats: [
-      "hook: sytuacja firmy (bez danych osobowych)",
+      "hook: sytuacja klienta (bez danych osobowych)",
       "problem",
       "rozwiązanie",
       "wynik bez kwot klienta",

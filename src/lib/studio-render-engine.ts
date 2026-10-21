@@ -2,7 +2,8 @@
 // napisy, znaczek „AI" i nakładki dynamiczne. Zapis w
 // `studio_video_jobs.render_engine`:
 //   * `auto` (domyślne z bazy) — ustawienie środowiska `STUDIO_RENDER_ENGINE`,
-//     a bez niego caption-burner;
+//     a bez niego Remotion (gdy skonfigurowany — hook wizualny), inaczej
+//     caption-burner;
 //   * `caption_burner` — usługa FFmpeg (services/caption-burner, plik ASS);
 //   * `remotion` — kompozycja `StudioReel` na AWS Lambda (services/remotion).
 // Inne wartości w starych wierszach (np. `avatar_iv`) traktujemy jak `auto`.
@@ -17,20 +18,46 @@ export function parseRenderEngine(v: unknown): RenderEngine {
   return RENDER_ENGINES.find((e) => e === v) ?? "auto";
 }
 
-/** `auto` → ustawienie środowiska (`STUDIO_RENDER_ENGINE`), domyślnie caption-burner. */
+/** Czy w środowisku są sekrety Remotion Lambda (bez importu klienta). */
+export function remotionEnvPresent(
+  env: Record<string, string | undefined> | undefined = typeof process !== "undefined"
+    ? process.env
+    : undefined,
+): boolean {
+  if (!env) return false;
+  return [
+    "REMOTION_AWS_ACCESS_KEY_ID",
+    "REMOTION_AWS_SECRET_ACCESS_KEY",
+    "REMOTION_FUNCTION_NAME",
+    "REMOTION_SERVE_URL",
+  ].every((k) => Boolean((env[k] ?? "").trim()));
+}
+
+/**
+ * Remotion zawsze, gdy jest skonfigurowany (tylko on rysuje hook wizualny
+ * i kadruje poziome awatary). Bez sekretów Remotion: jawny silnik zadania,
+ * potem `STUDIO_RENDER_ENGINE`, a w ostateczności caption-burner.
+ */
 export function resolveRenderEngine(
   v: unknown,
   envDefault: string | undefined = typeof process !== "undefined"
     ? process.env.STUDIO_RENDER_ENGINE
     : undefined,
+  remotionConfigured: boolean = remotionEnvPresent(),
 ): ResolvedRenderEngine {
+  // Decyzja właściciela (21.10.2026): wszystkie rolki przez Remotion, bez
+  // FFmpeg — gdy Remotion jest skonfigurowany, wygrywa niezależnie od
+  // `render_engine` zadania i `STUDIO_RENDER_ENGINE`. caption-burner zostaje
+  // wyłącznie jako awaria, gdy sekretów Remotion brak.
+  if (remotionConfigured) return "remotion";
   const engine = parseRenderEngine(v);
   if (engine !== "auto") return engine;
-  return parseRenderEngine(envDefault?.trim()) === "remotion" ? "remotion" : "caption_burner";
+  const fromEnv = envDefault?.trim();
+  return parseRenderEngine(fromEnv) === "remotion" ? "remotion" : "caption_burner";
 }
 
 export const RENDER_ENGINE_LABELS: Record<RenderEngine, string> = {
-  auto: "Automatycznie (ustawienie Studia)",
+  auto: "Automatycznie (ustawienie Studia; bez niego Remotion, gdy skonfigurowany)",
   caption_burner: "caption-burner (FFmpeg)",
   remotion: "Remotion (AWS Lambda)",
 };
