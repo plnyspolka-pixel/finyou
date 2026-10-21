@@ -64,6 +64,7 @@ import { metaTools } from "./tools/meta";
 import { youtubeTools } from "./tools/youtube";
 import { heygenTools } from "./tools/heygen";
 import { studioMotionTools } from "./tools/studio-motion";
+import { studioHookTools } from "./tools/studio-hook";
 import { googleTools } from "./tools/google";
 import { supabaseTools } from "./tools/supabase";
 import { storageRepairTools } from "./tools/storage-repair";
@@ -147,6 +148,7 @@ export default defineMcp({
     ...youtubeTools,
     ...heygenTools,
     ...studioMotionTools,
+    ...studioHookTools,
     ...googleTools,
     ...supabaseTools,
     ...storageRepairTools,

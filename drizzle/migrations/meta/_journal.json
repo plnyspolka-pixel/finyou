@@ -267,6 +267,13 @@
       "when": 1792545653028,
       "tag": "0037_migration_storage_manifest",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792632053028,
+      "tag": "0038_studio_hook_wizualny",
+      "breakpoints": true
     }
   ]
 }

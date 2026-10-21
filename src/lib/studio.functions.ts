@@ -427,7 +427,27 @@ export type StudioAvatar = {
   kind: "avatar" | "talking_photo";
   mine: boolean;
   group?: string;
+  /** Orientacja zdjęcia (cache studio_avatar_orientations); poziome nie prowadzą rolki. */
+  orientation?: "portrait" | "landscape" | "square" | null;
 };
+
+/** Orientacje znane z cache — tabela jest mała (awatary użyte w Studiu). */
+async function withOrientations(items: StudioAvatar[]): Promise<StudioAvatar[]> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("studio_avatar_orientations")
+      .select("avatar_id, orientation")
+      .limit(2000);
+    const map = new Map((data ?? []).map((r) => [r.avatar_id, r.orientation]));
+    return items.map((i) => ({
+      ...i,
+      orientation: (map.get(i.id) as StudioAvatar["orientation"]) ?? null,
+    }));
+  } catch {
+    return items;
+  }
+}
 
 export const listStudioAvatars = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -448,7 +468,7 @@ export const listStudioAvatars = createServerFn({ method: "GET" })
       if (!items.length) return fallback;
       // Digital twin Filipa oznaczamy jako "mój" nawet gdy API nie zwróci grup.
       const filipId = HEYGEN_AVATARS[0].id;
-      return items.map((i) => (i.id === filipId ? { ...i, mine: true } : i));
+      return withOrientations(items.map((i) => (i.id === filipId ? { ...i, mine: true } : i)));
     } catch {
       return fallback;
     }
@@ -564,7 +584,10 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const autoPub = await sanitizeAutoPublish(data);
     // Twarze rolki: prowadzący + partner z puli panelu (a gdy pusta — ze stałego
     // zestawu domyślnych), dobrany rotacyjnie po ostatnich rolkach.
-    const { reelRotations } = await import("./studio-avatars.server");
+    const { reelRotations, portraitLead } = await import("./studio-avatars.server");
+    // Poziome zdjęcie nie prowadzi rolki (pasy ~70%) — pionowy z puli przejmuje hook.
+    const lead = await portraitLead(data.avatar_id, data.avatar_ids ?? []);
+    data.avatar_id = lead.lead;
     const [avatarIds] = await reelRotations({
       lead: data.avatar_id,
       pool: data.avatar_ids,
@@ -573,15 +596,28 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     const reelStructure = data.reel_structure === true;
 
     // Bramka: bez działającego caption-burnera render HeyGena zużyłby kredyty,
-    // a rolka nie dostałaby napisów ani znaczka „AI" — zadanie idzie wtedy do
-    // kolejki i ruszy w ticku, gdy usługa wróci.
-    const { captionBurnerPreflight, CAPTION_BURNER_GUARD_NOTE } =
+    // a rolka nie dostałaby napisów ani znaczka „AI" — gdy jest Remotion,
+    // wykończy on; inaczej zadanie idzie do kolejki i ruszy w ticku.
+    const { resolveFinisherForRender, CAPTION_BURNER_GUARD_NOTE, finisherFallbackNote } =
       await import("./caption-burner.server");
-    const renderEngine = parseRenderEngine(data.render_engine);
-    const gate = await captionBurnerPreflight({
+    const gate = await resolveFinisherForRender({
       captions: data.captions !== false,
-      engine: renderEngine,
+      engine: parseRenderEngine(data.render_engine),
     });
+    const renderEngine =
+      gate.ok && gate.fallback ? "remotion" : parseRenderEngine(data.render_engine);
+    if (gate.ok && gate.fallback) {
+      const { reportFinisherFallback } = await import("./studio-video-queue.server");
+      await reportFinisherFallback(gate.fallback.reason);
+    }
+    const createNote = [
+      gate.ok && gate.fallback ? finisherFallbackNote(gate.fallback.reason) : null,
+      lead.swapped
+        ? "Prowadzący zmieniony na pionowego awatara (wskazany ma poziome zdjęcie)."
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     const { data: job, error: insErr } = await supabaseAdmin
       .from("studio_video_jobs")
@@ -592,7 +628,7 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         voice_id: voiceId,
         tts_model_id: ttsModelId,
         status: gate.ok ? "generating_audio" : "queued",
-        last_error: gate.ok ? null : `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}`,
+        last_error: gate.ok ? createNote || null : `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}`,
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
         render_engine: renderEngine,
@@ -640,9 +676,11 @@ export const startStudioVideo = createServerFn({ method: "POST" })
           subtitle_url: rendered.subtitleUrl,
           tts_model_id: rendered.ttsModelId,
           scene_plan: rendered.scenePlan,
-          last_error: rendered.note,
+          last_error: [createNote, rendered.note].filter(Boolean).join(" ") || null,
         })
         .eq("id", job.id);
+      const { startHookIfRemotion } = await import("./studio-video-queue.server");
+      await startHookIfRemotion(job.id as string, renderEngine);
       return { ok: true, id: job.id as string, deferred: null as string | null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -1067,7 +1105,16 @@ export const saveStudioDefaultAvatars = createServerFn({ method: "POST" })
     });
     const { error } = await supabaseAdmin.from("studio_default_avatars").insert(rows);
     if (error) throw new Error(error.message);
-    return { ok: true, saved: rows.length };
+    // Orientacja zdjęć zestawu (poziome nie prowadzą rolki, Remotion je kadruje).
+    let landscape: string[] = [];
+    try {
+      const { ensureAvatarOrientations } = await import("./studio-avatar-orientation.server");
+      const infos = await ensureAvatarOrientations(ids);
+      landscape = ids.filter((id) => infos.get(id)?.orientation === "landscape");
+    } catch {
+      // wykryje się przy pierwszej rolce
+    }
+    return { ok: true, saved: rows.length, landscape };
   });
 
 // ── Bank b-rolli ─────────────────────────────────────────────────────────────

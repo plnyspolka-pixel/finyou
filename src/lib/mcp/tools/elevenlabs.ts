@@ -1288,7 +1288,7 @@ export const generateVideoTool = defineTool({
   name: "generate_video",
   title: "Generate video (ElevenLabs)",
   description:
-    "Zleca wygenerowanie wideo z opisu przez API ElevenLabs (opcjonalnie model, długość, proporcje, rozdzielczość, obraz startowy, dodatkowe pola 1:1). Ścieżka endpointu pochodzi z ELEVENLABS_VIDEO_CREATE_PATH albo z `endpoint_path`; bez konfiguracji narzędzie zwraca instrukcję. Zwraca odpowiedź API i `job_id` do `get_video_status`. Zużywa kredyty. Tylko administrator/operator.",
+    "Zleca wygenerowanie wideo z opisu przez API ElevenLabs (opcjonalnie model, długość, proporcje, rozdzielczość, obraz startowy, dodatkowe pola 1:1). Domyślnie ElevenLabs Flows (`POST /v1/flows/video`, model `veo-3.1-fast-generate-001`, 9:16, 4/6/8 s; wymaga planu Pro — bez niego 402); ścieżkę nadpisuje ELEVENLABS_VIDEO_CREATE_PATH albo `endpoint_path`. Zwraca odpowiedź API i `job_id` do `get_video_status`. Zużywa kredyty. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(4000),
     model: z.string().max(80).optional(),
@@ -1307,14 +1307,39 @@ export const generateVideoTool = defineTool({
     handle(async () => {
       await requireTeam(ctx);
       const el = await import("@/lib/elevenlabs-api.server");
-      const body: Record<string, unknown> = { prompt: a.prompt };
-      if (a.model) body.model = a.model;
-      if (a.duration_seconds) body.duration_seconds = a.duration_seconds;
-      if (a.aspect_ratio) body.aspect_ratio = a.aspect_ratio;
-      if (a.resolution) body.resolution = a.resolution;
-      if (a.image_url) body.image_url = a.image_url;
+      const flows = await import("@/lib/elevenlabs-flows");
+      const path = a.endpoint_path ?? el.videoEndpoints().createPath;
+      let body: Record<string, unknown>;
+      if (path === flows.FLOWS_VIDEO_PATH) {
+        // ElevenLabs Flows: model_id, duration_secs (4/6/8), aspect_ratio, resolution.
+        body = flows.flowsVideoBody({
+          prompt: a.prompt,
+          model: a.model,
+          durationSeconds: a.duration_seconds,
+          aspectRatio: a.aspect_ratio,
+          resolution: a.resolution,
+          startFrameUrl: a.image_url,
+        });
+      } else {
+        body = { prompt: a.prompt };
+        if (a.model) body.model = a.model;
+        if (a.duration_seconds) body.duration_seconds = a.duration_seconds;
+        if (a.aspect_ratio) body.aspect_ratio = a.aspect_ratio;
+        if (a.resolution) body.resolution = a.resolution;
+        if (a.image_url) body.image_url = a.image_url;
+      }
       Object.assign(body, a.extra ?? {});
-      const json = await el.videoGenerate(body, a.endpoint_path);
+      let json;
+      try {
+        json = await el.videoGenerate(body, path);
+      } catch (e) {
+        if (flows.isFlowsPlanError(e)) {
+          return fail(
+            `${e instanceof Error ? e.message : String(e)} — ElevenLabs Flows (wideo i obraz) wymaga planu Pro. Hook wizualny Studia schodzi wtedy automatycznie na grafikę (generate_studio_image) albo bank przebitek.`,
+          );
+        }
+        throw e;
+      }
       const jobId = el.pickJobId(json, el.videoEndpoints().idField);
       return ok({
         ok: true,
@@ -1331,7 +1356,7 @@ export const getVideoStatusTool = defineTool({
   name: "get_video_status",
   title: "Get video generation status",
   description:
-    "Status zadania wideo (ELEVENLABS_VIDEO_STATUS_PATH z {id} albo `endpoint_path`). Gdy API zwraca gotowy plik, zapisuje go w Storage i zwraca publiczny link; gdy JSON — zwraca go z wykrytym adresem wideo. Tylko administrator/operator.",
+    "Status zadania wideo (domyślnie `GET /v1/flows/video/{id}`; nadpisuje ELEVENLABS_VIDEO_STATUS_PATH albo `endpoint_path`). Gotowa generacja (`content_url`, wygasa po ~1 h) albo plik trafia do Storage jako trwały publiczny link; inaczej zwraca JSON ze statusem. Tylko administrator/operator.",
   inputSchema: {
     job_id: z.string().min(1),
     endpoint_path: z.string().max(200).optional(),
@@ -1353,6 +1378,14 @@ export const getVideoStatusTool = defineTool({
         return ok({ job_id, status: "done", ...stored });
       }
       const j = r.json ?? {};
+      const flows = await import("@/lib/elevenlabs-flows");
+      const gen = flows.parseFlowsGeneration(j);
+      if (gen.status === "completed" && gen.contentUrl) {
+        // content_url Flows wygasa po ~1 h — kopia w Storage od razu.
+        const { storeFlowsResult } = await import("@/lib/elevenlabs-flows.server");
+        const stored = await storeFlowsResult(gen, job_id);
+        return ok({ job_id, status: "completed", video_url: stored.url, response: j });
+      }
       const videoUrl =
         j.video_url ?? j.url ?? j.output?.url ?? j.result?.url ?? j.output_url ?? null;
       return ok({ job_id, status: j.status ?? null, video_url: videoUrl, response: j });

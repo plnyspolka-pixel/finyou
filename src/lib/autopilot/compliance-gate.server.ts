@@ -16,7 +16,8 @@ import type { RuleContext } from "./compliance-rules";
 import { COMPLIANCE_LOG_MODULE } from "./types";
 
 const TRACK_PL = {
-  pozyczkobiorca: "pożyczkobiorcy (wyłącznie firmy, cel gospodarczy)",
+  pozyczkobiorca:
+    "pożyczkobiorcy (pożyczki pod zastaw nieruchomości; cel gospodarczy weryfikowany przy wniosku — w rolkach go nie akcentujemy)",
   inwestor: "inwestorzy prywatni",
 };
 
@@ -25,7 +26,7 @@ Oceń ryzyko (0–100) i zwróć konkretne poprawki. Sprawdź:
 - wprowadzanie w błąd, obietnice zysku/zwrotu/finansowania, bagatelizowanie ryzyka, superlatywy bez pokrycia,
 - sygnały ostrzegawcze KNF/ESMA wobec finfluencerów (zamknięte grupy, „sam inwestuję”, inwestowanie jako zabawa, presja czasu),
 - ton wobec osób w trudnej sytuacji finansowej (bez straszenia i bez presji),
-- zgodność z torem: pożyczkobiorca = przedsiębiorca i cel gospodarczy (nigdy konsument); inwestor = szanse z uczciwą linią o ryzyku,
+- zgodność z torem: pożyczkobiorca = pożyczka pod zastaw nieruchomości bez kierowania do konsumentów (nigdy „na dowolny cel”, „na wakacje”, „dla osób prywatnych”, kredyt konsumencki); w scenariuszach, tytułach i hookach rolek NIE wymagaj dopisywania „firma/przedsiębiorca/działalność” — decyzja właściciela: oferty nie akcentujemy jako „tylko dla firm” (te słowa najwyżej raz), warunki klient poznaje przy wniosku, a linię o celu gospodarczym ma stopka opisu; inwestor = szanse z uczciwą linią o ryzyku,
 - awatar AI może edukować i odpowiadać na FAQ, nie składa ofert, nie podaje stóp zwrotu i nie wywiera presji.
 verdict: "ok" gdy treść można opublikować bez zmian; "fix" gdy wystarczą poprawki; "reject" gdy temat jest nie do uratowania.`;
 

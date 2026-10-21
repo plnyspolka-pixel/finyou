@@ -16,7 +16,8 @@
 import type { DynamicOverlays, CustomCaptionStyleId } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
 import { parseRemotionJobId, remotionJobId } from "./studio-render-engine";
-import { buildReelPlan } from "./studio-reel-plan";
+import { buildReelPlan, type ReelFramingInput } from "./studio-reel-plan";
+import type { StudioHook } from "./studio-hook";
 import { AwsClient } from "aws4fetch";
 
 export const REMOTION_COMPOSITION = "StudioReel";
@@ -205,10 +206,12 @@ export async function submitRemotionReel(input: {
   aiBadge?: boolean;
   overlays?: DynamicOverlays | null;
   name?: string;
+  hook?: StudioHook | null;
+  framing?: ReelFramingInput | null;
 }): Promise<string> {
   const env = requireEnv();
   let srt: string | null = null;
-  if (input.srtUrl && (input.styleId || input.overlays)) {
+  if (input.srtUrl && (input.styleId || input.overlays || input.hook || input.framing)) {
     try {
       srt = new TextDecoder().decode((await fetchBytes(input.srtUrl, MAX_SRT_BYTES)).bytes);
     } catch (e) {
@@ -221,6 +224,8 @@ export async function submitRemotionReel(input: {
     styleId: input.styleId ?? null,
     aiBadge: input.aiBadge === true,
     overlays: input.overlays ?? null,
+    hook: input.hook ?? null,
+    framing: input.framing ?? null,
   });
   const { renderId, bucketName } = await invokeRemotion<{
     renderId?: string;

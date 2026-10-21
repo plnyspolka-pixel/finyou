@@ -2023,6 +2023,18 @@ function StudioPage() {
                                 {a.kind === "talking_photo" ? " • foto" : ""}
                                 {a.group ? ` • ${a.group}` : ""}
                               </p>
+                              {a.orientation === "landscape" ? (
+                                <p
+                                  className="truncate text-[11px] font-medium text-amber-600"
+                                  title="Poziome zdjęcie — HeyGen wkleja je do pionu z pasami. Nie prowadzi rolki (hook mówi pionowy awatar z zestawu), a jego ujęcia Remotion kadruje do pełnego pionu."
+                                >
+                                  ⇆ poziome — nie prowadzi rolki
+                                </p>
+                              ) : a.orientation ? (
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  {a.orientation === "portrait" ? "↕ pionowe" : "□ kwadrat"}
+                                </p>
+                              ) : null}
                             </button>
                             {/* Gwiazdka = kandydat na domyślnego; numer pokazuje
                                 miejsce w rotacji a-rolli. Zapisuje dopiero

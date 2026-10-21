@@ -238,7 +238,7 @@ describe("pętla bramki compliance", () => {
   it("czysty tekst przechodzi bez przepisywania", async () => {
     const r = await runGateLoop(
       {
-        text: "Czy bank odmówił Twojej firmie? Zobacz, co możesz zrobić.",
+        text: "Czy bank Ci odmówił? Zobacz, co możesz zrobić.",
         ctx: { kind: "script", track: "pozyczkobiorca" },
       },
       { review: okReview, rewrite: async (t) => t },
@@ -394,7 +394,7 @@ describe("scoring pomysłów i hooków", () => {
       [
         { text: "Mam dla Ciebie coś ciekawego…" },
         { text: "Gwarantowany zysk dla każdego?" },
-        { text: "Bank odmówił Twojej firmie 500 tys. zł? Masz jeszcze 3 opcje." },
+        { text: "Bank odmówił Ci 500 tys. zł? Masz jeszcze 3 opcje." },
       ],
       "pozyczkobiorca",
     );

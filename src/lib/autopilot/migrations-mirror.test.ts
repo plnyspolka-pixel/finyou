@@ -12,6 +12,7 @@ const PAIRS: Array<[string, string]> = [
   ["20261019180000_autopilot_fundament.sql", "0034_autopilot_fundament.sql"],
   ["20261019181000_autopilot_tick_cron.sql", "0035_autopilot_tick_cron.sql"],
   ["20261019182000_autopilot_sekwencje_email.sql", "0036_autopilot_sekwencje_email.sql"],
+  ["20261021090000_studio_hook_wizualny.sql", "0038_studio_hook_wizualny.sql"],
 ];
 
 describe("migracje autopilota", () => {

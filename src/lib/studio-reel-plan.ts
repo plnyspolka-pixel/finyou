@@ -9,6 +9,13 @@
 
 import { fixBrandInCues } from "./caption-brand";
 import { motionWithCueTiming, type ReelMotion } from "./motion-catalog";
+import { buildReelHook, type ReelHook, type StudioHook } from "./studio-hook";
+import {
+  framingSegments,
+  type AvatarFrameInfo,
+  type FramingScene,
+  type ReelFraming,
+} from "./studio-avatar-framing";
 import {
   AI_BADGE,
   CUSTOM_CAPTION_STYLES,
@@ -54,6 +61,8 @@ export type ReelCaptionStyle = Pick<
 
 export type ReelTag = {
   lines: string[];
+  /** Od tej sekundy znacznik się pojawia (po hooku); brak = od 0. */
+  start?: number;
   /** Od tej sekundy znacznik maleje i jedzie do góry… */
   shrinkFrom: number;
   /** …a od tej jest mały u góry do końca filmu. */
@@ -98,6 +107,17 @@ export type ReelPlan = {
     /** Elementy z katalogu motion-catalog.ts (czasy z SRT); brak w starszych planach. */
     motion?: ReelMotion[];
   } | null;
+  /** Hook wizualny 0–2,5 s (pełny kadr nad masterem); brak w starszych planach. */
+  hook?: ReelHook | null;
+  /** Kadrowanie ujęć poziomych awatarów do pełnego pionu; brak w starszych planach. */
+  framing?: ReelFraming[];
+};
+
+/** Wejście kadrowania: plan scen zadania + wymiary zdjęć awatarów. */
+export type ReelFramingInput = {
+  scenes: FramingScene[] | null;
+  leadAvatarId: string;
+  infos: Record<string, AvatarFrameInfo | undefined>;
 };
 
 /**
@@ -240,6 +260,8 @@ export function buildReelPlan(input: {
   styleId: CustomCaptionStyleId | null;
   aiBadge: boolean;
   overlays: DynamicOverlays | null;
+  hook?: StudioHook | null;
+  framing?: ReelFramingInput | null;
 }): ReelPlan {
   const parsed = input.srt ? fixBrandInCues(parseSubtitles(input.srt)) : [];
   let captions: ReelPlan["captions"] = null;
@@ -279,14 +301,76 @@ export function buildReelPlan(input: {
       )
     : null;
   const badge = input.aiBadge ? AI_BADGE : null;
-  if (!captions && !badge && !overlays) {
+  const lastCue = parsed.length ? parsed[parsed.length - 1].end : undefined;
+  const hook = buildReelHook(input.hook ?? null, lastCue != null ? lastCue + 0.6 : undefined);
+  const framing = input.framing ? framingSegments({ ...input.framing, cues: parsed }) : [];
+  if (!captions && !badge && !overlays && !hook && !framing.length) {
     throw new Error("Nie ma czego wypalić: brak napisów, znaczka AI i nakładek.");
   }
-  return {
+  const plan: ReelPlan = {
     version: REEL_PLAN_VERSION,
     base: { ...DEFAULT_ASS_DIMENSIONS },
     captions,
     badge,
     overlays,
+    hook,
+    framing,
   };
+  return hook ? clearHookWindow(plan, hook.end) : plan;
+}
+
+/**
+ * Hook ma kadr dla siebie: napisy lektora, znacznik, pytanie, karty
+ * i elementy dynamiczne zaczynają się dopiero po nim. Element, któremu po
+ * przesunięciu zostałoby za mało czasu, wypada. Znaczek AI zostaje (etykieta
+ * w 1. sekundzie — AI Act art. 50).
+ */
+export function clearHookWindow(plan: ReelPlan, hookEnd: number): ReelPlan {
+  const MIN_LEFT = 1.2;
+  const captions = plan.captions
+    ? {
+        ...plan.captions,
+        events: plan.captions.events
+          .filter((e) => e.end > hookEnd + 0.05)
+          .map((e) => (e.start < hookEnd ? { ...e, start: hookEnd } : e)),
+      }
+    : null;
+  const ov = plan.overlays;
+  if (!ov) return { ...plan, captions };
+  // Znacznik serii wchodzi tuż po hooku i ma tyle samo czasu co bez hooka.
+  const tag = ov.tag
+    ? {
+        ...ov.tag,
+        start: hookEnd,
+        shrinkFrom: ov.tag.shrinkFrom + hookEnd,
+        holdUntil: ov.tag.holdUntil + hookEnd,
+      }
+    : null;
+  const headline =
+    ov.headline && ov.headline.end - hookEnd >= MIN_LEFT
+      ? { ...ov.headline, start: Math.max(ov.headline.start, hookEnd) }
+      : null;
+  const cards = ov.cards.flatMap((c) => {
+    if (c.start >= hookEnd) return [c];
+    if (c.end != null && c.end - hookEnd < MIN_LEFT) return [];
+    return [
+      {
+        ...c,
+        start: hookEnd,
+        rows: c.rows.map((r) => ({ ...r, start: Math.max(r.start, hookEnd + 0.15) })),
+      },
+    ];
+  });
+  const motion = (ov.motion ?? []).flatMap((m) => {
+    if (m.start >= hookEnd) return [m];
+    if (m.end - hookEnd < MIN_LEFT) return [];
+    return [
+      {
+        ...m,
+        start: hookEnd,
+        itemStarts: m.itemStarts ? m.itemStarts.map((x) => Math.max(x, hookEnd + 0.2)) : null,
+      } as ReelMotion,
+    ];
+  });
+  return { ...plan, captions, overlays: { ...ov, tag, headline, cards, motion } };
 }
