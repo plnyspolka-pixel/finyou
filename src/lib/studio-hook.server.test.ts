@@ -90,6 +90,80 @@ describe("źródła hooka (decyzja właściciela 21.10: bez grafiki ElevenLabs)"
   });
 });
 
+describe("bank klipów hooka (clip_bank)", () => {
+  const row = (over: Record<string, unknown>) => ({
+    slug: "x",
+    track: "both",
+    rating: 3,
+    media_url: "https://storage/clip.mp4",
+    duration_s: 5.04,
+    active: true,
+    use_count: 0,
+    last_used_at: null,
+    ...over,
+  });
+
+  it("klip toru rolki: gotowy film z banku, długość i id w zasobach, użycie odnotowane", async () => {
+    db.tables.studio_hook_clips = [
+      row({ id: "c-poz", slug: "poz", track: "pozyczkobiorca", rating: 4 }),
+      row({
+        id: "c-inw",
+        slug: "inw",
+        track: "inwestor",
+        rating: 4,
+        media_url: "https://storage/inw.mp4",
+      }),
+      row({ id: "c-off", slug: "off", track: "inwestor", rating: 4, active: false }),
+    ];
+    const a = await startHookAssets(HOOK, "test", "inwestor");
+    expect(a).toMatchObject({
+      status: "ready",
+      kind: "video",
+      url: "https://storage/inw.mp4",
+      source_used: "clip_bank",
+      clip_id: "c-inw",
+      clip_duration: 5.04,
+      sfx_url: "https://storage/sfx.mp3",
+    });
+    expect(studioImage).not.toHaveBeenCalled();
+    const used = db.tables.studio_hook_clips.find((r) => r.id === "c-inw")!;
+    expect(used.use_count).toBe(1);
+    expect(used.last_used_at).toBeTruthy();
+  });
+
+  it("brak klipu dla toru → grafika Studia (z notatką)", async () => {
+    db.tables.studio_hook_clips = [row({ id: "c-poz", track: "pozyczkobiorca" })];
+    const a = await startHookAssets(HOOK, "test", "inwestor");
+    expect(a).toMatchObject({ status: "ready", source_used: "studio_image", clip_id: null });
+    expect(a.notes.join(" ")).toMatch(/clip_bank/);
+  });
+
+  it("przy wykończeniu tor bierze się z zadania", async () => {
+    db.tables.studio_hook_clips = [
+      row({ id: "c-inw", track: "inwestor" }),
+      row({ id: "c-poz", track: "pozyczkobiorca", media_url: "https://storage/poz.mp4" }),
+    ];
+    db.tables.studio_video_jobs = [
+      {
+        id: "job-2",
+        prompt: "Bank odmówił",
+        script: "Bank powiedział nie? Twoja nieruchomość może powiedzieć tak.",
+        hook: null,
+        hook_variant: null,
+        track: "pozyczkobiorca",
+        material_audience: "klient",
+        publish_title: "",
+      },
+    ];
+    const r = await hookForFinish("job-2");
+    expect(r.hook?.assets).toMatchObject({
+      source_used: "clip_bank",
+      url: "https://storage/poz.mp4",
+      clip_id: "c-poz",
+    });
+  });
+});
+
 describe("zasoby hooka przy włączonej fladze STUDIO_HOOK_FLOWS", () => {
   it("402 bez planu Pro: zejście na grafikę Studia (bez wpisu do raportu)", async () => {
     flowsOn();

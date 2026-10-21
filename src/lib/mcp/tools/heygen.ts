@@ -902,7 +902,7 @@ const HOOK_INPUT = z
       .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
       .optional()
       .describe(
-        "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane.",
+        "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane.",
       ),
     music_prompt: z
       .string()

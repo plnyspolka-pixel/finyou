@@ -18932,7 +18932,7 @@
                     "flows_video",
                     "flows_image"
                   ],
-                  "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
+                  "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                 },
                 "music_prompt": {
                   "anyOf": [
@@ -19115,7 +19115,7 @@
                         "flows_video",
                         "flows_image"
                       ],
-                      "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
+                      "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości bez efektów i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e — przy tym hooku prowadź rolkę jednym z nich) → grafika z naszego generatora (`studio_image`) → bank przebitek (te dwa z animacją Remotion). `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                     },
                     "music_prompt": {
                       "anyOf": [
@@ -19930,7 +19930,7 @@
       {
         "name": "preview_studio_hook",
         "title": "Preview the visual hook of a studio reel",
-        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (w przygotowaniu) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
+        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (`clip_bank` — gotowy klip ~5 s dobrany po torze, gra w całości i kończy się na ścianie z logo za pionowymi awatarami e0db8779828f484a8311fd427e815abe / 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich; twarde cięcie, bez efektów) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -20068,6 +20068,155 @@
           },
           "required": [
             "avatar_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "import_hook_clips",
+        "title": "Import clips into the studio hook clip bank",
+        "description": "Import gotowych klipów hooka (mp4 9:16, ~5 s) do banku `clip_bank`. Każdy klip zaczyna się mocnym ujęciem i KOŃCZY nieruchomą klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary HeyGen e0db8779828f484a8311fd427e815abe i 65ef986081bc48ed890c742cfa73d42e, więc rolka z takim hookiem powinna zaczynać się od jednego z nich (klip gra w całości i tnie się na twardo do awatara). Plik jest pobierany spod `source_url` (do 60 MB, tylko wideo) i kopiowany do naszego Storage (linki fal.media wygasają). Import po kolei, upsert po `slug`; slug już zaimportowany (z plikiem) aktualizuje tylko metadane bez pobierania, chyba że `force=true`. Zwraca wynik dla każdej pozycji i liczniki. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "concept": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "track": {
+                    "type": "string",
+                    "enum": [
+                      "pozyczkobiorca",
+                      "inwestor",
+                      "both"
+                    ]
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 40
+                    },
+                    "maxItems": 24
+                  },
+                  "source_url": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "slug",
+                  "track",
+                  "source_url"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 80
+            },
+            "force": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "items"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_hook_clips",
+        "title": "List studio hook clip bank",
+        "description": "Lista banku klipów hooka (`clip_bank`): slug, koncept, tytuł, tor, model, ocena, długość, aktywność, liczba użyć i ostatnie użycie. Filtry: `track` (pozyczkobiorca | inwestor | both — dokładnie ten tor), `active`. Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "track": {
+              "type": "string",
+              "enum": [
+                "pozyczkobiorca",
+                "inwestor",
+                "both"
+              ]
+            },
+            "active": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "set_hook_clip_active",
+        "title": "Enable or disable a hook clip",
+        "description": "Włącza albo wyłącza klip w banku klipów hooka — wyłączony nie wchodzi do doboru (np. nietrafione ujęcie). Tylko administrator/operator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "active": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "active"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"

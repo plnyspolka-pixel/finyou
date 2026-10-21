@@ -5,7 +5,11 @@
 //
 // Decyzja właściciela 21.10.2026: obrazu hooka NIE generujemy w ElevenLabs
 // (bez planu Pro). Źródło klipu (pole `source`, domyślnie `auto`):
-//   (1) `clip_bank` — bank gotowych klipów hooka (w przygotowaniu, osobny PR),
+//   (1) `clip_bank` — bank gotowych klipów hooka (`studio_hook_clips`,
+//       studio-hook-clips.server.ts): klip ~5 s dobrany po torze rolki
+//       (wyżej oceniane, rotacja „najdawniej użyte”), gra w całości i kończy
+//       się na ścianie z logo za pionowymi awatarami e0db…/65ef… — rolka
+//       z klipem powinna zaczynać się od jednego z nich (twarde cięcie),
 //   (2) grafika Studia (`generate_studio_image`) + animacja w Remotion,
 //   (3) bank przebitek + ta sama animacja.
 // ElevenLabs: tylko głos, efekty dźwiękowe i muzyka. Ścieżka ElevenLabs
@@ -178,6 +182,7 @@ async function acquireClip(
   assets: HookAssets,
   sources: Array<Exclude<HookSource, "auto">>,
   name: string,
+  track: Track | null = null,
 ): Promise<HookAssets> {
   const prompt = hookVisualPrompt(hook);
   for (const source of sources) {
@@ -215,9 +220,20 @@ async function acquireClip(
         return ready(assets, "image", stored.url, "flows_image");
       }
       if (source === "clip_bank") {
-        // Bank gotowych klipów hooka (wybór po tagach tematu, rotacja) —
-        // w przygotowaniu (osobny PR po decyzji o dostawcy); na razie dalej.
-        continue;
+        // Bank gotowych klipów hooka: tor rolki (albo `both`), wyżej oceniane
+        // z rotacją. Pusty bank → kolejne źródło z łańcucha.
+        const bank = await import("./studio-hook-clips.server");
+        const clip = await bank.pickHookClip(track);
+        if (!clip) {
+          addNote(assets, "clip_bank: brak aktywnego klipu dla toru");
+          continue;
+        }
+        await bank.markHookClipUsed(clip.id).catch(() => {});
+        return {
+          ...ready(assets, "video", clip.media_url, "clip_bank"),
+          clip_id: clip.id,
+          clip_duration: clip.duration_s ?? null,
+        };
       }
       if (source === "studio_image") {
         const { generateStudioImage } = await import("./studio-ai.server");
@@ -262,6 +278,8 @@ function ready(
     source_used: source,
     video_generation_id: null,
     image_generation_id: null,
+    clip_id: null,
+    clip_duration: null,
   };
 }
 
@@ -310,9 +328,13 @@ async function acquireAudio(
 }
 
 /** Zlecenie zasobów hooka (start: przy renderze HeyGena albo podgląd z MCP). */
-export async function startHookAssets(hook: StudioHook, name: string): Promise<HookAssets> {
+export async function startHookAssets(
+  hook: StudioHook,
+  name: string,
+  track: Track | null = null,
+): Promise<HookAssets> {
   const base: HookAssets = { ...emptyAssets(), notes: hook.assets?.notes ?? [] };
-  const clip = await acquireClip(hook, base, hookSourceChain(hook.source), name);
+  const clip = await acquireClip(hook, base, hookSourceChain(hook.source), name, track);
   return acquireAudio(hook, clip, name);
 }
 
@@ -325,8 +347,9 @@ export async function advanceHookAssets(
   hook: StudioHook,
   name: string,
   now = new Date(),
+  track: Track | null = null,
 ): Promise<{ assets: HookAssets; waiting: boolean }> {
-  let assets = hook.assets ?? (await startHookAssets(hook, name));
+  let assets = hook.assets ?? (await startHookAssets(hook, name, track));
   if (assets.status !== "pending") return { assets, waiting: false };
   const kind = assets.video_generation_id ? "video" : assets.image_generation_id ? "image" : null;
   const id = assets.video_generation_id ?? assets.image_generation_id;
@@ -335,7 +358,7 @@ export async function advanceHookAssets(
     return chain.slice(chain.indexOf(from) + 1);
   };
   if (!kind || !id) {
-    assets = await acquireClip(hook, assets, hookSourceChain(hook.source), name);
+    assets = await acquireClip(hook, assets, hookSourceChain(hook.source), name, track);
     return { assets, waiting: assets.status === "pending" };
   }
   const flows = await import("./elevenlabs-flows.server");
@@ -362,6 +385,7 @@ export async function advanceHookAssets(
     { ...assets, video_generation_id: null, image_generation_id: null },
     nextSources(kind === "video" ? "flows_video" : "flows_image"),
     name,
+    track,
   );
   return { assets, waiting: assets.status === "pending" };
 }
@@ -388,7 +412,7 @@ export async function prepareHookForJob(jobId: string): Promise<void> {
     const hook = await planHookForJob(job);
     if (!hook) return;
     if (hook.assets?.status === "ready" || hook.assets?.video_generation_id) return;
-    const assets = await startHookAssets(hook, job.publish_title || job.prompt);
+    const assets = await startHookAssets(hook, job.publish_title || job.prompt, trackOfJob(job));
     await saveHook(jobId, { ...hook, assets });
   } catch (e) {
     console.warn(`[Studio] hook wizualny (${jobId}) nieudany: ${errMsg(e)}`);
@@ -410,7 +434,12 @@ export async function hookForFinish(
     const hook = await planHookForJob(job);
     if (!hook) return { hook: null, waiting: false };
     if (hook.assets?.status === "ready") return { hook, waiting: false };
-    const { assets, waiting } = await advanceHookAssets(hook, job.publish_title || job.prompt, now);
+    const { assets, waiting } = await advanceHookAssets(
+      hook,
+      job.publish_title || job.prompt,
+      now,
+      trackOfJob(job),
+    );
     const withAudio = assets.status === "ready" ? await acquireAudio(hook, assets, jobId) : assets;
     const next = { ...hook, assets: withAudio };
     await saveHook(jobId, next);

@@ -3,6 +3,10 @@
 // tu rysujemy: klip z modelu wideo albo obraz z ruchem (najazd od pierwszej
 // klatki, wstrząs i błysk na uderzeniu), duży tekst na całą szerokość
 // (słowo akcentowane złotem) i efekt dźwiękowy zgrany z uderzeniem.
+// Styl `clip` (klip z banku klipów hooka): klip gra od zera w normalnym tempie
+// bez najazdu, wstrząsu, błysku i wygaszenia — kończy się na ścianie z logo za
+// awatarem, więc na końcu jest twarde cięcie. Tekst (z winietą) znika między
+// 2,2 a 2,6 s, żeby dojazd klipu do logo był czysty.
 // Kadr bazowy 720×1280, `k` skaluje do mastera.
 
 import type React from "react";
@@ -33,6 +37,9 @@ export function hookZoom(t: number, impactAt: number, end: number): number {
   return interpolate(t, [impactAt, end], [1.08, 1.18], clamp);
 }
 
+/** Styl `clip`: tekst i winieta znikają w tym oknie (s). */
+export const CLIP_TEXT_FADE: readonly [number, number] = [2.2, 2.6];
+
 export const HookLayer: React.FC<{
   hook: ReelHook;
   t: number;
@@ -43,15 +50,21 @@ export const HookLayer: React.FC<{
   fontFamily: string;
 }> = ({ hook, t, fps, k, width, height, fontFamily }) => {
   if (t >= hook.end) return null;
-  const fadeOut = interpolate(t, [hook.end - 0.22, hook.end], [1, 0], clamp);
-  const zoom = hookZoom(t, hook.impactAt, hook.end);
-  const shake = hookShake(t, hook.impactAt);
-  const flash = interpolate(
-    t,
-    [hook.impactAt, hook.impactAt + 0.04, hook.impactAt + 0.22],
-    [0, 0.6, 0],
-    clamp,
-  );
+  const clip = hook.style === "clip";
+  // Klip z banku: bez efektów i bez wygaszenia — twarde cięcie na końcu.
+  const fadeOut = clip ? 1 : interpolate(t, [hook.end - 0.22, hook.end], [1, 0], clamp);
+  const zoom = clip ? 1 : hookZoom(t, hook.impactAt, hook.end);
+  const shake = clip ? { x: 0, y: 0 } : hookShake(t, hook.impactAt);
+  const flash = clip
+    ? 0
+    : interpolate(
+        t,
+        [hook.impactAt, hook.impactAt + 0.04, hook.impactAt + 0.22],
+        [0, 0.6, 0],
+        clamp,
+      );
+  // Tekst i winieta: przy klipie znikają przed dojazdem do ściany z logo.
+  const textOpacity = clip ? interpolate(t, [...CLIP_TEXT_FADE], [1, 0], clamp) : 1;
   const media = hook.media;
   const mediaStyle: React.CSSProperties = {
     position: "absolute",
@@ -59,8 +72,12 @@ export const HookLayer: React.FC<{
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    transform: `translate(${shake.x * k.x}px, ${shake.y * k.y}px) scale(${zoom})`,
-    transformOrigin: "50% 45%",
+    ...(clip
+      ? {}
+      : {
+          transform: `translate(${shake.x * k.x}px, ${shake.y * k.y}px) scale(${zoom})`,
+          transformOrigin: "50% 45%",
+        }),
   };
   const fontSize = hook.fontSize * k.x;
   let wordIndex = 0;
@@ -72,13 +89,16 @@ export const HookLayer: React.FC<{
         <Img src={media.url} style={mediaStyle} />
       ) : null}
       {/* Przyciemnienie pod tekst: winieta + środek kadru. */}
-      <AbsoluteFill
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 50%, rgba(7,11,34,0.15) 0%, rgba(7,11,34,0.55) 60%, rgba(7,11,34,0.85) 100%)",
-        }}
-      />
-      <AbsoluteFill style={{ backgroundColor: "#FFFFFF", opacity: flash }} />
+      {textOpacity > 0 ? (
+        <AbsoluteFill
+          style={{
+            opacity: textOpacity,
+            background:
+              "radial-gradient(ellipse at 50% 50%, rgba(7,11,34,0.15) 0%, rgba(7,11,34,0.55) 60%, rgba(7,11,34,0.85) 100%)",
+          }}
+        />
+      ) : null}
+      {flash > 0 ? <AbsoluteFill style={{ backgroundColor: "#FFFFFF", opacity: flash }} /> : null}
       <div
         style={{
           position: "absolute",
@@ -92,6 +112,7 @@ export const HookLayer: React.FC<{
           fontSize,
           lineHeight: 1.0,
           letterSpacing: -0.01 * fontSize,
+          opacity: textOpacity,
         }}
       >
         {hook.lines.map((line, li) => (
