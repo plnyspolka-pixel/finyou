@@ -125,6 +125,41 @@ describe("plan hooka dla Remotion", () => {
     expect(r?.sfx?.url).toBe("https://cdn.test/sfx.mp3");
   });
 
+  const clipHook = (over: Partial<NonNullable<StudioHook["assets"]>> = {}) =>
+    ready({
+      assets: {
+        ...ready().assets!,
+        kind: "video",
+        url: "https://cdn.test/clip.mp4",
+        source_used: "clip_bank",
+        clip_id: "c1",
+        clip_duration: 5.04,
+        ...over,
+      },
+    });
+
+  it("klip z banku: styl `clip`, hook trwa cały klip (ucięty 0,5 s przed końcem filmu)", () => {
+    expect(buildReelHook(ready())?.style).toBe("still");
+    const r = buildReelHook(clipHook(), 30);
+    expect(r).toMatchObject({ style: "clip", end: 5.04 });
+    expect(r?.media).toEqual({ type: "video", url: "https://cdn.test/clip.mp4" });
+    expect(r?.lines.flat().length).toBeGreaterThan(0);
+    expect(r?.sfx?.url).toBe("https://cdn.test/sfx.mp3");
+    // Bez znanej długości — 5 s; krótki film ucina hook, ale nie poniżej 1,2 s.
+    expect(buildReelHook(clipHook({ clip_duration: null }), 30)?.end).toBe(5);
+    expect(buildReelHook(clipHook(), 4)?.end).toBe(3.5);
+    expect(buildReelHook(clipHook(), 1)?.end).toBe(1.2);
+  });
+
+  it("zasoby klipu przechodzą przez sanitizeHook (zapis w jsonb)", () => {
+    const h = sanitizeHook(JSON.parse(JSON.stringify(clipHook())));
+    expect(h?.assets).toMatchObject({
+      clip_id: "c1",
+      clip_duration: 5.04,
+      source_used: "clip_bank",
+    });
+  });
+
   const SRT = `1
 00:00:00,100 --> 00:00:02,000
 Bank powiedział nie?
@@ -170,6 +205,19 @@ Złóż bezpłatny wniosek, link w bio.
     for (const e of plan.captions!.events) expect(e.start).toBeGreaterThanOrEqual(HOOK_SECONDS);
     for (const m of plan.overlays!.motion!) expect(m.start).toBeGreaterThanOrEqual(HOOK_SECONDS);
     expect(plan.overlays!.motion!.map((m) => m.component)).toContain("cta");
+  });
+
+  it("klip z banku: napisy i elementy dynamiczne czekają do końca klipu (hook.end)", () => {
+    const plan = buildReelPlan({
+      srt: SRT,
+      styleId: "reels",
+      aiBadge: true,
+      overlays: null,
+      hook: clipHook(),
+    });
+    expect(plan.hook).toMatchObject({ style: "clip", end: 5.04 });
+    expect(plan.badge).not.toBeNull();
+    for (const e of plan.captions!.events) expect(e.start).toBeGreaterThanOrEqual(5.04);
   });
 
   it("bez hooka plan jak dotąd (napisy od początku)", () => {

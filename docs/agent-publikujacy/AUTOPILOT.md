@@ -75,10 +75,18 @@ Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/stu
   opcjonalnie podkład `music_prompt` ściszony pod lektorem.
 - **Źródło klipu (`source`, domyślnie `auto`):** decyzja właściciela 21.10 — bez grafiki
   ElevenLabs (planu Pro nie kupujemy). Kolejność: bank gotowych klipów hooka (`clip_bank`,
-  w przygotowaniu — osobny PR po wyborze dostawcy) → grafika z naszego generatora
-  (`generate_studio_image`) → bank przebitek, zawsze z animacją Remotion. ElevenLabs: głos,
+  tabela `studio_hook_clips`) → grafika z naszego generatora (`generate_studio_image`) →
+  bank przebitek (te dwa z animacją Remotion). ElevenLabs: głos,
   efekty dźwiękowe i muzyka. Ścieżka ElevenLabs Flows (`flows_video` / `flows_image`) zostaje
   w kodzie za flagą `STUDIO_HOOK_FLOWS=1` (domyślnie wyłączona).
+- **Bank klipów hooka (`clip_bank`):** gotowe klipy 9:16 ~5 s; każdy kończy się nieruchomą
+  klatką białej ściany biura z logo 3D financeyou.pl — tym samym tłem co pionowe awatary
+  `e0db8779828f484a8311fd427e815abe` i `65ef986081bc48ed890c742cfa73d42e`, więc rolka z takim
+  hookiem powinna zaczynać się od jednego z nich. Klip gra w całości (hook trwa długość klipu,
+  bez najazdu, wstrząsu, błysku i wygaszenia — styl `clip`), tekst z winietą znika między
+  2,2 a 2,6 s, na końcu twarde cięcie do awatara. Dobór: tor rolki albo `both`, wyżej
+  oceniane z rotacją „najdawniej użyte”. MCP: `import_hook_clips` (kopia z URL-a do Storage,
+  upsert po `slug`), `list_hook_clips`, `set_hook_clip_active`.
 - **Planer:** rolka bez hooka dostaje 3 warianty z AI (odsiew compliance + `scoreHook`), bez
   AI — motyw zapasowy. Dwa najlepsze idą do testu A/B (`hook_variant` A/B, przydział po id).
 - **MCP:** `hook` / `hook_variant` w `create_studio_video_job` i `update_studio_job`,
