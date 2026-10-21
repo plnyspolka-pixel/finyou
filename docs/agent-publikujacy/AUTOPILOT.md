@@ -73,10 +73,12 @@ Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/stu
   i etykieta AI zostają na wierzchu.
 - **Dźwięk:** efekt uderzenia z ElevenLabs Sound Effects (działa na obecnym planie),
   opcjonalnie podkład `music_prompt` ściszony pod lektorem.
-- **Źródło klipu (`source`, domyślnie `auto`):** ElevenLabs Flows wideo (Veo 3.1 Fast, 9:16)
-  → Flows obraz → grafika Studia (`generate_studio_image`) → bank przebitek. Konto bez planu
-  Pro dostaje 402 na `/v1/flows/*`; hook schodzi wtedy niżej sam, a raport ma wpis
-  „Do decyzji właściciela: plan Pro ElevenLabs”.
+- **Źródło klipu (`source`, domyślnie `auto`):** decyzja właściciela 21.10 — bez grafiki
+  ElevenLabs (planu Pro nie kupujemy). Kolejność: bank gotowych klipów hooka (`clip_bank`,
+  w przygotowaniu — osobny PR po wyborze dostawcy) → grafika z naszego generatora
+  (`generate_studio_image`) → bank przebitek, zawsze z animacją Remotion. ElevenLabs: głos,
+  efekty dźwiękowe i muzyka. Ścieżka ElevenLabs Flows (`flows_video` / `flows_image`) zostaje
+  w kodzie za flagą `STUDIO_HOOK_FLOWS=1` (domyślnie wyłączona).
 - **Planer:** rolka bez hooka dostaje 3 warianty z AI (odsiew compliance + `scoreHook`), bez
   AI — motyw zapasowy. Dwa najlepsze idą do testu A/B (`hook_variant` A/B, przydział po id).
 - **MCP:** `hook` / `hook_variant` w `create_studio_video_job` i `update_studio_job`,

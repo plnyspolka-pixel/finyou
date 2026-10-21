@@ -1,16 +1,17 @@
 // Hook wizualny rolki Studia — planowanie (AI + zapas bez AI), zasoby
-// (ElevenLabs Flows → grafika Studia → bank przebitek, efekt dźwiękowy,
-// opcjonalna muzyka) i wejście dla Remotion. Czyste reguły: studio-hook.ts.
+// (obraz z naszego generatora / bank przebitek + animacja Remotion, efekt
+// dźwiękowy, opcjonalna muzyka) i wejście dla Remotion. Czyste reguły:
+// studio-hook.ts.
 //
-// Kolejność źródeł klipu (pole `source`, domyślnie `auto`):
-//   (a) ElevenLabs Flows wideo (Veo 3.1 Fast, 9:16) — zlecane przy renderze
-//       HeyGena, odbierane przy wykończeniu (czekamy do HOOK_VIDEO_WAIT_MS),
-//   (b) ElevenLabs Flows obraz + animacja w Remotion,
-//   (c) grafika Studia (`generate_studio_image`) albo bank przebitek + ta sama
-//       animacja.
-// Konto bez planu Pro dostaje 402 na /v1/flows/* — schodzimy do (c) bez
-// zatrzymywania rolki, a raport autopilota zgłasza brak planu.
-// `STUDIO_VISUAL_HOOK=0` wyłącza hook.
+// Decyzja właściciela 21.10.2026: obrazu hooka NIE generujemy w ElevenLabs
+// (bez planu Pro). Źródło klipu (pole `source`, domyślnie `auto`):
+//   (1) `clip_bank` — bank gotowych klipów hooka (w przygotowaniu, osobny PR),
+//   (2) grafika Studia (`generate_studio_image`) + animacja w Remotion,
+//   (3) bank przebitek + ta sama animacja.
+// ElevenLabs: tylko głos, efekty dźwiękowe i muzyka. Ścieżka ElevenLabs
+// Flows (`flows_video` / `flows_image`) zostaje w kodzie za flagą
+// `STUDIO_HOOK_FLOWS=1` (domyślnie wyłączona) — bez flagi te źródła są
+// pomijane. `STUDIO_VISUAL_HOOK=0` wyłącza hook.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { FLOWS_PRO_NOTE, isFlowsPlanError } from "./elevenlabs-flows";
 import {
@@ -26,7 +27,7 @@ import {
   type StudioHook,
 } from "./studio-hook";
 import type { ReelFramingInput } from "./studio-reel-plan";
-import { STUDIO_HOOK_PRO_ACTION, type Track } from "./autopilot/types";
+import type { Track } from "./autopilot/types";
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -34,6 +35,14 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 export const HOOK_VIDEO_WAIT_MS = 15 * 60_000;
 /** Ile czekać na obraz Flows w jednym wywołaniu (potem odbiór przy wykończeniu). */
 const FLOWS_IMAGE_INLINE_WAIT_MS = 40_000;
+
+const isOn = (v: string | undefined) =>
+  ["1", "true", "on", "yes", "tak"].includes((v ?? "").trim().toLowerCase());
+
+/** ElevenLabs Flows (wideo/obraz) jako źródło hooka — domyślnie wyłączone. */
+export function isFlowsHookEnabled(): boolean {
+  return isOn(process.env.STUDIO_HOOK_FLOWS);
+}
 
 export function isVisualHookEnabled(): boolean {
   const v = (process.env.STUDIO_VISUAL_HOOK ?? "").trim().toLowerCase();
@@ -140,13 +149,21 @@ const emptyAssets = (): HookAssets => ({
   notes: [],
 });
 
-const CHAIN: Record<HookSource, Array<Exclude<HookSource, "auto">>> = {
-  auto: ["flows_video", "flows_image", "studio_image", "broll"],
+type ClipSource = Exclude<HookSource, "auto">;
+
+const CHAIN: Record<HookSource, ClipSource[]> = {
+  auto: ["clip_bank", "flows_video", "flows_image", "studio_image", "broll"],
+  clip_bank: ["clip_bank", "studio_image", "broll"],
   flows_video: ["flows_video", "flows_image", "studio_image", "broll"],
   flows_image: ["flows_image", "studio_image", "broll"],
   studio_image: ["studio_image", "broll"],
   broll: ["broll"],
 };
+
+/** Łańcuch źródeł dla hooka — bez flagi Flows źródła ElevenLabs odpadają. */
+export function hookSourceChain(source: HookSource, flows = isFlowsHookEnabled()): ClipSource[] {
+  return CHAIN[source].filter((s) => flows || (s !== "flows_video" && s !== "flows_image"));
+}
 
 const addNote = (a: HookAssets, n: string) => {
   if (!a.notes.includes(n)) a.notes = [...a.notes, n].slice(-12);
@@ -196,6 +213,11 @@ async function acquireClip(
         if (gen.status !== "completed") throw new Error(gen.failure ?? `status ${gen.status}`);
         const stored = await flows.storeFlowsResult(gen, `${name}-hook`);
         return ready(assets, "image", stored.url, "flows_image");
+      }
+      if (source === "clip_bank") {
+        // Bank gotowych klipów hooka (wybór po tagach tematu, rotacja) —
+        // w przygotowaniu (osobny PR po decyzji o dostawcy); na razie dalej.
+        continue;
       }
       if (source === "studio_image") {
         const { generateStudioImage } = await import("./studio-ai.server");
@@ -290,7 +312,7 @@ async function acquireAudio(
 /** Zlecenie zasobów hooka (start: przy renderze HeyGena albo podgląd z MCP). */
 export async function startHookAssets(hook: StudioHook, name: string): Promise<HookAssets> {
   const base: HookAssets = { ...emptyAssets(), notes: hook.assets?.notes ?? [] };
-  const clip = await acquireClip(hook, base, CHAIN[hook.source], name);
+  const clip = await acquireClip(hook, base, hookSourceChain(hook.source), name);
   return acquireAudio(hook, clip, name);
 }
 
@@ -309,11 +331,11 @@ export async function advanceHookAssets(
   const kind = assets.video_generation_id ? "video" : assets.image_generation_id ? "image" : null;
   const id = assets.video_generation_id ?? assets.image_generation_id;
   const nextSources = (from: "flows_video" | "flows_image") => {
-    const chain = CHAIN[hook.source];
+    const chain = hookSourceChain(hook.source);
     return chain.slice(chain.indexOf(from) + 1);
   };
   if (!kind || !id) {
-    assets = await acquireClip(hook, assets, CHAIN[hook.source], name);
+    assets = await acquireClip(hook, assets, hookSourceChain(hook.source), name);
     return { assets, waiting: assets.status === "pending" };
   }
   const flows = await import("./elevenlabs-flows.server");
@@ -344,30 +366,6 @@ export async function advanceHookAssets(
   return { assets, waiting: assets.status === "pending" };
 }
 
-/** Raz na dobę: wpis do dziennika autopilota o braku planu Pro ElevenLabs. */
-async function reportProPlanRequired(jobId: string): Promise<void> {
-  try {
-    const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
-    const { data } = await supabaseAdmin
-      .from("ai_growth_action_log")
-      .select("id")
-      .eq("action", STUDIO_HOOK_PRO_ACTION)
-      .gte("created_at", since)
-      .limit(1);
-    if (data?.length) return;
-    const { logAutopilot } = await import("./autopilot/state.server");
-    await logAutopilot({
-      action: STUDIO_HOOK_PRO_ACTION,
-      status: "warning",
-      summary:
-        "ElevenLabs Flows (wideo/obraz) wymaga planu Pro (402) — hooki rolek idą z grafiki Studia / banku przebitek. Do decyzji właściciela: plan Pro ElevenLabs.",
-      payload: { studio_job_id: jobId },
-    });
-  } catch (e) {
-    console.warn(`[Studio] wpis o planie Pro nieudany: ${errMsg(e)}`);
-  }
-}
-
 async function freshHookJob(jobId: string): Promise<HookJob | null> {
   const { data } = await supabaseAdmin
     .from("studio_video_jobs")
@@ -392,7 +390,6 @@ export async function prepareHookForJob(jobId: string): Promise<void> {
     if (hook.assets?.status === "ready" || hook.assets?.video_generation_id) return;
     const assets = await startHookAssets(hook, job.publish_title || job.prompt);
     await saveHook(jobId, { ...hook, assets });
-    if (assets.pro_plan_required) await reportProPlanRequired(jobId);
   } catch (e) {
     console.warn(`[Studio] hook wizualny (${jobId}) nieudany: ${errMsg(e)}`);
   }
@@ -417,7 +414,6 @@ export async function hookForFinish(
     const withAudio = assets.status === "ready" ? await acquireAudio(hook, assets, jobId) : assets;
     const next = { ...hook, assets: withAudio };
     await saveHook(jobId, next);
-    if (withAudio.pro_plan_required) await reportProPlanRequired(jobId);
     return { hook: next, waiting };
   } catch (e) {
     console.warn(`[Studio] hook przy wykończeniu (${jobId}) nieudany: ${errMsg(e)}`);

@@ -1,8 +1,9 @@
 // Hook wizualny rolki Studia (0–2,5 s) — czyste dane i reguły, bez I/O.
 //
 // Hook to pełnoekranowy obraz w ruchu nałożony na pierwsze zdanie lektora:
-// klip z modelu wideo (ElevenLabs Flows, Veo) albo obraz animowany w
-// Remotion (push-in, wstrząs na uderzeniu, błysk), efekt dźwiękowy zgrany
+// klip z banku klipów hooka albo obraz z naszego generatora / banku
+// przebitek animowany w Remotion (push-in, wstrząs na uderzeniu, błysk),
+// efekt dźwiękowy ElevenLabs zgrany
 // z uderzeniem i duży kinetyczny tekst na całą szerokość kadru (3–4 słowa,
 // jedno słowo złote). Napisy lektora i elementy dynamiczne czekają, aż hook
 // się skończy. Tekst rysuje WYŁĄCZNIE Remotion — model obrazu/wideo dostaje
@@ -17,10 +18,11 @@ import type { Track } from "./autopilot/types";
 
 export const HOOK_SOURCES = [
   "auto",
-  "flows_video",
-  "flows_image",
+  "clip_bank",
   "studio_image",
   "broll",
+  "flows_video",
+  "flows_image",
 ] as const;
 export type HookSource = (typeof HOOK_SOURCES)[number];
 
@@ -47,7 +49,10 @@ export type HookSpec = {
   highlight: string | null;
   /** Opis efektu dźwiękowego uderzenia (ElevenLabs Sound Effects). */
   sfx_prompt: string;
-  /** Skąd klip: auto = Flows wideo → Flows obraz → grafika Studia → bank b-rolli. */
+  /**
+   * Skąd klip: auto = bank klipów hooka (w przygotowaniu) → grafika Studia →
+   * bank przebitek. `flows_*` (ElevenLabs) tylko przy fladze STUDIO_HOOK_FLOWS=1.
+   */
   source: HookSource;
   /** Opcjonalny podkład muzyczny (`compose_music`), ściszony pod lektorem. */
   music_prompt?: string | null;
@@ -69,7 +74,7 @@ export type HookAssets = {
   video_generation_id?: string | null;
   image_generation_id?: string | null;
   started_at?: string | null;
-  /** Konto ElevenLabs bez planu Pro (402) — zgłaszane w raporcie autopilota. */
+  /** Flows (gdy włączone flagą) zwróciło 402 — konto bez planu Pro. */
   pro_plan_required?: boolean;
   notes: string[];
 };

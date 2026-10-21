@@ -899,10 +899,10 @@ const HOOK_INPUT = z
       .optional()
       .describe("Efekt dźwiękowy uderzenia po ANGIELSKU (ElevenLabs Sound Effects)."),
     source: z
-      .enum(["auto", "flows_video", "flows_image", "studio_image", "broll"])
+      .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
       .optional()
       .describe(
-        "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam.",
+        "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane.",
       ),
     music_prompt: z
       .string()

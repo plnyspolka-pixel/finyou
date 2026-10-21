@@ -1,5 +1,5 @@
 // Zasoby hooka: kolejność źródeł i zejście bez planu Pro ElevenLabs (402).
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeSupabase, type FakeDb } from "./test-support/fake-supabase";
 
 let db: FakeDb;
@@ -40,7 +40,12 @@ vi.mock("./autopilot/state.server", () => ({
   logAutopilot: (...a: unknown[]) => logAutopilot(...(a as [])),
 }));
 
-import { advanceHookAssets, hookForFinish, startHookAssets } from "./studio-hook.server";
+import {
+  advanceHookAssets,
+  hookForFinish,
+  hookSourceChain,
+  startHookAssets,
+} from "./studio-hook.server";
 import type { StudioHook } from "./studio-hook";
 
 const HOOK: StudioHook = {
@@ -57,11 +62,18 @@ beforeEach(() => {
   studioImage.mockClear();
   logAutopilot.mockClear();
 });
+afterEach(() => vi.unstubAllEnvs());
 
-describe("zasoby hooka", () => {
-  it("bez planu Pro: Flows wideo i obraz → 402, hook z grafiki Studia + efekt dźwiękowy", async () => {
-    flows.startFlowsVideo.mockRejectedValue(PRO);
-    flows.startFlowsImage.mockRejectedValue(PRO);
+const flowsOn = () => vi.stubEnv("STUDIO_HOOK_FLOWS", "1");
+
+describe("źródła hooka (decyzja właściciela 21.10: bez grafiki ElevenLabs)", () => {
+  it("domyślnie bez ElevenLabs Flows: bank klipów → grafika Studia → bank przebitek", () => {
+    expect(hookSourceChain("auto")).toEqual(["clip_bank", "studio_image", "broll"]);
+    expect(hookSourceChain("flows_video")).toEqual(["studio_image", "broll"]);
+    expect(hookSourceChain("auto", true)).toContain("flows_video");
+  });
+
+  it("domyślnie: obraz z naszego generatora + efekt dźwiękowy, Flows nie jest wołane", async () => {
     const a = await startHookAssets(HOOK, "test");
     expect(a).toMatchObject({
       status: "ready",
@@ -69,14 +81,28 @@ describe("zasoby hooka", () => {
       url: "https://storage/hook.png",
       source_used: "studio_image",
       sfx_url: "https://storage/sfx.mp3",
-      pro_plan_required: true,
     });
-    expect(a.notes.join(" ")).toMatch(/planu Pro/);
+    expect(flows.startFlowsVideo).not.toHaveBeenCalled();
+    expect(flows.startFlowsImage).not.toHaveBeenCalled();
+    expect(a.pro_plan_required).toBeFalsy();
     // Obraz Studia dostaje zakaz tekstu w kadrze.
     expect(String((studioImage.mock.calls[0] as unknown[])[0])).toMatch(/no text, letters/i);
   });
+});
+
+describe("zasoby hooka przy włączonej fladze STUDIO_HOOK_FLOWS", () => {
+  it("402 bez planu Pro: zejście na grafikę Studia (bez wpisu do raportu)", async () => {
+    flowsOn();
+    flows.startFlowsVideo.mockRejectedValue(PRO);
+    flows.startFlowsImage.mockRejectedValue(PRO);
+    const a = await startHookAssets(HOOK, "test");
+    expect(a).toMatchObject({ status: "ready", source_used: "studio_image" });
+    expect(a.notes.join(" ")).toMatch(/planu Pro/);
+    expect(logAutopilot).not.toHaveBeenCalled();
+  });
 
   it("Flows wideo przyjęte → pending; gotowe przy wykończeniu → kopia w Storage", async () => {
+    flowsOn();
     flows.startFlowsVideo.mockResolvedValue({ id: "g1", status: "pending" });
     const started = await startHookAssets(HOOK, "test");
     expect(started).toMatchObject({ status: "pending", video_generation_id: "g1" });
@@ -104,6 +130,7 @@ describe("zasoby hooka", () => {
   });
 
   it("klip Flows nieudany → zejście na obraz (bez czekania)", async () => {
+    flowsOn();
     flows.getFlowsGeneration.mockResolvedValue({
       id: "g1",
       status: "failed",
@@ -130,10 +157,10 @@ describe("zasoby hooka", () => {
     expect(out.waiting).toBe(false);
     expect(out.assets).toMatchObject({ status: "ready", source_used: "studio_image" });
   });
+});
 
-  it("wykończenie: brak hooka → plan z motywu zapasowego, zapis przy zadaniu i wpis o planie Pro", async () => {
-    flows.startFlowsVideo.mockRejectedValue(PRO);
-    flows.startFlowsImage.mockRejectedValue(PRO);
+describe("hook przy wykończeniu", () => {
+  it("brak hooka → plan z motywu zapasowego, zasoby z naszego generatora, zapis przy zadaniu", async () => {
     db.tables.studio_video_jobs = [
       {
         id: "job-1",
@@ -150,8 +177,12 @@ describe("zasoby hooka", () => {
     expect(r.waiting).toBe(false);
     expect(r.hook?.text).toBe("BANK MÓWI NIE?");
     const row = db.tables.studio_video_jobs[0];
-    expect((row.hook as StudioHook).assets?.status).toBe("ready");
+    expect((row.hook as StudioHook).assets).toMatchObject({
+      status: "ready",
+      source_used: "studio_image",
+    });
     expect(row.hook_variant).toBe("A");
-    expect(logAutopilot).toHaveBeenCalledTimes(1);
+    expect(flows.startFlowsVideo).not.toHaveBeenCalled();
+    expect(logAutopilot).not.toHaveBeenCalled();
   });
 });

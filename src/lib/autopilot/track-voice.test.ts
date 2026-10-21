@@ -59,7 +59,7 @@ describe("tor pożyczkobiorcy — bez akcentu „tylko dla firm” w rolkach", (
 });
 
 describe("raport autopilota — produkcja rolek", () => {
-  it("zejście na Remotion i brak planu Pro ElevenLabs trafiają do raportu", async () => {
+  it("zejście na Remotion trafia do raportu; bez sekcji o planie Pro ElevenLabs", async () => {
     const { buildReportText } = await import("./metrics");
     const text = buildReportText({
       periodLabel: "21.10",
@@ -69,9 +69,8 @@ describe("raport autopilota — produkcja rolek", () => {
       alarms: [],
       paused: false,
       production: ["caption-burner nie odpowiada — rolki wykańcza automatycznie Remotion"],
-      ownerTodo: ["plan Pro ElevenLabs (Flows: wideo Veo i obrazy do hooków)"],
     });
     expect(text).toMatch(/Produkcja: caption-burner nie odpowiada/);
-    expect(text).toMatch(/Do decyzji właściciela: plan Pro ElevenLabs/);
+    expect(text).not.toMatch(/plan Pro/);
   });
 });

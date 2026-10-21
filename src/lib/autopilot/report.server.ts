@@ -15,7 +15,6 @@ import { loadAutopilotConfig, logAutopilot, reportPeriodLabel, smsOwner } from "
 import {
   AUTOPILOT_LOG_MODULE,
   STUDIO_FINISHER_FALLBACK_ACTION,
-  STUDIO_HOOK_PRO_ACTION,
   TRACKS,
   TRACK_TO_AUDIENCE,
   type Track,
@@ -128,7 +127,7 @@ export async function buildAutopilotReport(opts: { now?: Date; days: number }): 
     .slice(0, 3)
     .map((a) => String(a.summary));
 
-  const { production, ownerTodo } = productionNotes(actionRows);
+  const { production } = productionNotes(actionRows);
   const input: ReportInput = {
     periodLabel:
       opts.days <= 1 ? reportPeriodLabel(now) : `${opts.days} dni do ${reportPeriodLabel(now)}`,
@@ -138,7 +137,6 @@ export async function buildAutopilotReport(opts: { now?: Date; days: number }): 
     alarms,
     paused: cfg.state.paused,
     production,
-    ownerTodo,
   };
   return { input, text: buildReportText(input), sms: buildReportSms(input) };
 }
@@ -162,20 +160,13 @@ export async function runScheduledReport(kind: "daily" | "weekly", now: Date = n
   return { ...r, sms };
 }
 
-/** Wpisy Studia z dziennika → sekcje „Produkcja” i „Do decyzji właściciela”. */
+/** Wpisy Studia z dziennika → sekcja „Produkcja” raportu. */
 export function productionNotes(actions: Array<{ action?: string; summary?: string }>): {
   production: string[];
-  ownerTodo: string[];
 } {
-  const has = (a: string) => actions.some((x) => x.action === a);
   const production: string[] = [];
-  const ownerTodo: string[] = [];
-  if (has(STUDIO_FINISHER_FALLBACK_ACTION)) {
+  if (actions.some((x) => x.action === STUDIO_FINISHER_FALLBACK_ACTION)) {
     production.push("caption-burner nie odpowiada — rolki wykańcza automatycznie Remotion");
   }
-  if (has(STUDIO_HOOK_PRO_ACTION)) {
-    production.push("hooki wizualne z grafiki zapasowej (ElevenLabs Flows zwraca 402)");
-    ownerTodo.push("plan Pro ElevenLabs (Flows: wideo Veo i obrazy do hooków)");
-  }
-  return { production, ownerTodo };
+  return { production };
 }

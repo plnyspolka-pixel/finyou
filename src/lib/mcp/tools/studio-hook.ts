@@ -21,7 +21,9 @@ const HOOK_FIELDS = {
   text: z.string().max(60).optional(),
   highlight: z.string().max(40).nullable().optional(),
   sfx_prompt: z.string().max(220).optional(),
-  source: z.enum(["auto", "flows_video", "flows_image", "studio_image", "broll"]).optional(),
+  source: z
+    .enum(["auto", "clip_bank", "studio_image", "broll", "flows_video", "flows_image"])
+    .optional(),
   music_prompt: z.string().max(220).nullable().optional(),
 };
 
@@ -29,7 +31,7 @@ export const previewStudioHook = defineTool({
   name: "preview_studio_hook",
   title: "Preview the visual hook of a studio reel",
   description:
-    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi klip i dźwięk: ElevenLabs Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek; brak planu Pro (402) zgłasza i schodzi niżej sam. Klip Flows wideo generuje się kilka minut — wynik `pending` odbierze kolejka przy wykończeniu. `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty ElevenLabs / AI. Tylko administrator/operator.",
+    "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (w przygotowaniu) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid().optional(),
     script: z.string().max(5000).optional(),
@@ -141,7 +143,7 @@ export const previewStudioHook = defineTool({
         note,
         hint:
           hook.assets?.status === "pending"
-            ? "Klip Flows w toku — kolejka odbierze go przy wykończeniu (albo wywołaj ponownie)."
+            ? "Klip w toku — kolejka odbierze go przy wykończeniu (albo wywołaj ponownie)."
             : "Hook rysuje silnik Remotion. Gotową rolkę wykończ `restyle_studio_job_captions` — bez kredytów HeyGen.",
         actor: actorId(ctx),
       };

@@ -18926,12 +18926,13 @@
                   "type": "string",
                   "enum": [
                     "auto",
-                    "flows_video",
-                    "flows_image",
+                    "clip_bank",
                     "studio_image",
-                    "broll"
+                    "broll",
+                    "flows_video",
+                    "flows_image"
                   ],
-                  "description": "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam."
+                  "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                 },
                 "music_prompt": {
                   "anyOf": [
@@ -19108,12 +19109,13 @@
                       "type": "string",
                       "enum": [
                         "auto",
-                        "flows_video",
-                        "flows_image",
+                        "clip_bank",
                         "studio_image",
-                        "broll"
+                        "broll",
+                        "flows_video",
+                        "flows_image"
                       ],
-                      "description": "Źródło klipu: auto = Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek. Bez planu Pro ElevenLabs Flows zwraca 402 i hook schodzi niżej sam."
+                      "description": "Źródło klipu: auto = bank klipów hooka (`clip_bank`, w przygotowaniu) → grafika z naszego generatora (`studio_image`) → bank przebitek, zawsze z animacją Remotion. `flows_video` / `flows_image` (ElevenLabs) działają tylko przy fladze STUDIO_HOOK_FLOWS=1 — domyślnie pomijane."
                     },
                     "music_prompt": {
                       "anyOf": [
@@ -19928,7 +19930,7 @@
       {
         "name": "preview_studio_hook",
         "title": "Preview the visual hook of a studio reel",
-        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi klip i dźwięk: ElevenLabs Flows wideo (Veo) → Flows obraz → grafika Studia → bank przebitek; brak planu Pro (402) zgłasza i schodzi niżej sam. Klip Flows wideo generuje się kilka minut — wynik `pending` odbierze kolejka przy wykończeniu. `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty ElevenLabs / AI. Tylko administrator/operator.",
+        "description": "Podgląd hooka wizualnego rolki Studia (0–2,5 s: pełny kadr w ruchu nad pierwszym zdaniem lektora, efekt dźwiękowy, duży tekst 1–4 słowa ze słowem w złocie). Z `id` bierze zadanie (jego hook albo planuje nowy z generatora — warianty A/B), bez `id` — ze `script` / `topic` / `track`. Pola hooka nadpisują plan. `generate_assets=true` (domyślnie) robi obraz i dźwięk: bank klipów hooka (w przygotowaniu) → grafika z naszego generatora → bank przebitek (animacja w Remotion) + efekt dźwiękowy ElevenLabs. ElevenLabs Flows tylko przy fladze STUDIO_HOOK_FLOWS=1 (wynik `pending` odbierze wtedy kolejka przy wykończeniu). `save=true` (z `id`) zapisuje hook przy zadaniu; gotową rolkę wykończ potem `restyle_studio_job_captions` (bez kredytów HeyGen). Zużywa kredyty AI i ElevenLabs (dźwięk). Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -19984,10 +19986,11 @@
               "type": "string",
               "enum": [
                 "auto",
-                "flows_video",
-                "flows_image",
+                "clip_bank",
                 "studio_image",
-                "broll"
+                "broll",
+                "flows_video",
+                "flows_image"
               ]
             },
             "music_prompt": {
