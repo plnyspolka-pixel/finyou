@@ -35,12 +35,17 @@ export async function getLinkHubData(): Promise<{ tracks: LinkHubTrack[] }> {
     .eq("published", true)
     .order("signup_count", { ascending: false })
     .limit(30);
-  const rows = (data ?? []) as Array<{
-    slug: string;
-    title: string;
-    headline: string | null;
-    audience: string | null;
-  }>;
+  // Narzędzia-kalkulatory też mają wiersze w lead_magnets (ten sam slug) —
+  // w hubie pokazujemy je osobno jako narzędzia, nie jako materiały do pobrania.
+  const toolSlugs = new Set(STARTER_CALCULATORS.map((c) => c.slug));
+  const rows = (
+    (data ?? []) as Array<{
+      slug: string;
+      title: string;
+      headline: string | null;
+      audience: string | null;
+    }>
+  ).filter((r) => !toolSlugs.has(r.slug));
   return {
     tracks: TRACKS.map((t) => {
       const profile = cfg?.profiles[t];
