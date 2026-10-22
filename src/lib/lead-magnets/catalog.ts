@@ -30,7 +30,7 @@ import type { LeadMagnetAudience } from "./core";
 export { CATALOG_SLUGS, isCatalogSlug, type CatalogSlug };
 
 /** Wersja katalogu — na okładce PDF i w dzienniku provisioningu. Podbij przy zmianie treści. */
-export const CATALOG_VERSION = "2026-10-22.1";
+export const CATALOG_VERSION = "2026-10-22.2";
 
 /** Prefiks ścieżek plików katalogu w buckecie `lead-magnets` (plik zespołu ma `<grupa>/<uuid>.<ext>`). */
 export const CATALOG_FILE_PREFIX = "katalog/";
@@ -975,24 +975,20 @@ const wzorUmowyPozyczki = defineMagnet({
   series: ["nie-mow-powiedz-inwestor"],
   custom_pdf: "wzor-umowy",
   title: "Wzór umowy pożyczki pod hipotekę dla inwestora",
-  headline:
-    "Wzór umowy pożyczki pod hipotekę, w której pożyczkodawcą jesteś Ty – złożony z biblioteki klauzul, z której Finance You składa prawdziwe umowy",
+  // Strona zapisu: jeden komunikat, bez wykładu — szczegóły są w samym PDF-ie.
+  headline: "Pobierz wzór umowy pożyczki. Oszczędź 5–10 tys. zł na kosztach kancelarii prawnej.",
   subheadline:
-    "Pełny tekst umowy na przykładzie 100 000 zł udzielonych przez osobę prywatną przedsiębiorcy: hipoteka do 260 000 zł, poddanie się egzekucji z art. 777 k.p.c., oświadczenia wyłączające charakter konsumencki, windykacja i wypowiedzenie. Bez załączników – komplet z Zał. 1–4 daje pakiet dokumentów.",
+    "Tyle kosztuje napisanie takiej umowy od zera w kancelarii. Tu dostajesz gotowy tekst z biblioteki klauzul, z której Finance You składa prawdziwe umowy dla inwestorów.",
   benefits: [
-    "Tekst umowy z zatwierdzonej biblioteki klauzul silnika umów Finance You, nie „z internetu” – 7 paragrafów, od przedmiotu po wypowiedzenie",
-    "Pożyczkodawcą jest osoba fizyczna – dokładnie Twoja rola jako inwestora prywatnego",
-    "Hipoteka do 260 000 zł przy 100 000 zł kapitału, art. 777 § 1 pkt 5 k.p.c., zakaz dalszego obciążania, warunki wejścia w życie i wypłaty",
-    "Oświadczenia B2B wyłączające ustawę o kredycie konsumenckim i hipotecznym, o stanie nieruchomości i braku zaległości wobec US i ZUS",
-    "Windykacja i wypowiedzenie: kolejność zaliczania wpłat, odsetki za opóźnienie, wypowiedzenie po 14 dniach, spłata całości w 7 dni",
-    "Przykładowe strony (Anna Inwestorska i Jan Przykładowy), PESEL, NIP, numer księgi i rachunki zastąpione symbolami – czyta się jak prawdziwy dokument, bez cudzych danych",
-    "Spis załączników 1–4 (harmonogram, protokół negocjacji, tabela opłat, dyspozycja wypłaty) – komplet składa generator umowy w pakiecie dokumentów",
+    "7 paragrafów: hipoteka, art. 777 k.p.c., oświadczenia B2B, windykacja, wypowiedzenie",
+    "Przykład: 100 000 zł, 12 rat, zabezpieczenie do 260 000 zł",
+    "Załączniki 1–4 i wniosek – w pakiecie dokumentów dla inwestorów",
   ],
-  cta_text: "Wyślij mi wzór umowy",
+  cta_text: "Pobierz wzór umowy",
   meta_description:
-    "Wzór umowy pożyczki pod hipotekę dla inwestora prywatnego z biblioteki klauzul Finance You: hipoteka, art. 777 k.p.c., oświadczenia B2B, windykacja. Bez załączników – komplet w pakiecie dokumentów.",
+    "Wzór umowy pożyczki pod hipotekę dla inwestora prywatnego z biblioteki klauzul Finance You. Pobierz i oszczędź 5–10 tys. zł na kosztach kancelarii prawnej.",
   thank_you_message:
-    "Dziękujemy! Wzór wysłaliśmy też na Twój e-mail. Komplet z załącznikami 1–4 (harmonogram, protokół negocjacji, tabela opłat, dyspozycja wypłaty) składa generator umowy w programie dla inwestorów.",
+    "Dziękujemy! Wzór jest już w Twojej skrzynce. Komplet z załącznikami 1–4 i wnioskiem składa generator umowy w programie dla inwestorów.",
   email_subject: "Twój wzór umowy pożyczki pod hipotekę: {tytul}",
   email_intro:
     "oto „{tytul}”: {link}\n\nTo sama umowa – bez załączników. Zwróć uwagę na § 2 (warunki wejścia w życie i wypłaty), § 3 (hipoteka i art. 777 k.p.c.) oraz § 7 (wypowiedzenie). Załączniki 1–4, które umowa wymienia, składa dla konkretnej transakcji generator umowy w pakiecie dokumentów programu dla inwestorów – razem z wnioskiem i wersją do e-podpisu.",
