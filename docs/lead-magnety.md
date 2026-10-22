@@ -83,17 +83,24 @@ Każdy komentarz obsługujemy raz (unikalny indeks `platform + id komentarza`).
 Ochrona przed pętlami bot-bot na Facebooku działa jak dla agenta
 (`bot-loop-guard.server.ts`) — sprawdzana przed lead magnetem.
 
-## Katalog startowy — PDF generowane z kodu
+## Katalog startowy — PDF składane z kodu, pliki w Storage
 
-Sześć gotowych lead magnetów (brief agenta publikującego, p. 5.4) żyje w kodzie:
+Siedem gotowych lead magnetów (brief agenta publikującego, p. 5.4) żyje w kodzie:
 `src/lib/lead-magnets/catalog.ts` (treść PDF, copy strony, mail, hasło, następny
 krok) + `pdf.ts` (render przez `ReportWriter`: okładka, sekcje, checklisty z
 kwadracikami, kroki, ramki „Ważne” / „Ryzyko”, tabele, strona końcowa z CTA,
-kontaktem i stopką compliance). PDF powstaje **w locie** przy każdym pobraniu
-(`/pobierz-plik/<token>` → `resolveLeadMagnetDownload` zwraca `kind: "generated"`
-→ `renderCatalogPdf`), więc rekord z katalogu **nie potrzebuje pliku w Storage**
-(schemat i `leadMagnetCrossChecks` dopuszczają publikację bez pliku dla slugów
-z `catalog-slugs.ts`). Wgrany plik albo adres mają pierwszeństwo przed PDF-em.
+kontaktem i stopką compliance). Provisioning składa PDF i wgrywa go jako **zwykły
+plik** do prywatnego bucketa `lead-magnets` pod `katalog/<slug>/<CATALOG_VERSION>/<plik>`
+(`catalogFilePath`), ustawiając `file_path` / `file_name` / `file_size` rekordu —
+pobranie to ten sam podpisany link, co dla pliku wgranego ręcznie. Wersja w
+ścieżce sprawia, że po zmianie treści (commit + podbicie `CATALOG_VERSION`)
+następny provisioning widzi plik „nieaktualny”, składa nowy i usuwa stary;
+`refresh_files` wymusza ponowny skład bez zmiany wersji. Rekord, który pliku
+jeszcze nie ma, dostaje PDF składany **w locie** (`resolveLeadMagnetDownload`
+→ `kind: "generated"` → `renderCatalogPdf`) — dlatego schemat i
+`leadMagnetCrossChecks` dopuszczają publikację bez pliku dla slugów z
+`catalog-slugs.ts`. Własny plik albo adres wgrany w panelu mają pierwszeństwo i
+nie są nadpisywane.
 
 Hasła są tymi samymi, które serie rolek mają jako `defaultKeyword`
 (`autopilot/series.ts`), a materiały tworzą drabinkę per tor:
@@ -125,19 +132,27 @@ oraz tagi subskrybenta `katalog`, `katalog:<slug>`, `etap:<swiadomosc|przygotowa
 Strona `/pobierz/<slug>` po zapisie pokazuje przycisk „Następny krok” (`next`).
 
 **Provisioning** (`catalog.server.ts` → `ensureCatalogMagnets`): zakłada
-brakujące rekordy `lead_magnets`, przy `publish` publikuje te, które przeszły
-kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny
-render), istniejących rekordów nie nadpisuje (chyba że `overwrite`), nigdy nie
-cofa publikacji. Trzy wejścia:
+brakujące rekordy `lead_magnets`, wgrywa brakujące albo nieaktualne pliki PDF
+(skład z kontroli jakości idzie prosto do Storage), przy `publish` publikuje te,
+które przeszły kontrolę jakości (reguły twarde compliance dla strony, PDF i maila
 
-- MCP `provision_lead_magnet_catalog` (`publish`, `overwrite`, `dry_run`, `slugs`;
-  publikacja i nadpisanie — administrator),
-- panel: karta „Katalog startowy PDF” z przyciskami „Załóż szkice” / „Załóż i opublikuj”
-  oraz podgląd PDF w edytorze (badge „PDF z katalogu” zamiast „brak pliku”),
-- tick autopilota (`full_autopilot`, 6:00) — razem z narzędziami-kalkulatorami.
+- próbny render), istniejących rekordów nie nadpisuje (chyba że `overwrite`),
+  własnego pliku zespołu nie rusza, nigdy nie cofa publikacji. Materiał z
+  problemami nie dostaje nowego pliku. Wynik per materiał niesie `file`:
+  `aktualny` / `wgrany` / `odświeżony` / `własny` / `nieaktualny` / `brak` / `błąd`.
+  Trzy wejścia:
 
-Zmiana treści = commit (`CATALOG_VERSION` na okładce) + testy `catalog.test.ts`
-(unikalność haseł, spójność z seriami, compliance, schemat, render, znaki w foncie).
+* MCP `provision_lead_magnet_catalog` (`publish`, `overwrite`, `refresh_files`,
+  `dry_run`, `slugs`; publikacja, nadpisanie i odświeżenie plików — administrator),
+* panel: karta „Katalog startowy PDF” z przyciskami „Załóż szkice” / „Odśwież PDF-y” /
+  „Załóż i opublikuj” oraz podgląd PDF w edytorze (badge „PDF z katalogu (bez pliku)”
+  zamiast „brak pliku”, dopóki plik nie zostanie wgrany),
+* tick autopilota (`full_autopilot`, 6:00) — razem z narzędziami-kalkulatorami;
+  po podbiciu wersji sam odświeża pliki.
+
+Zmiana treści = commit + podbicie `CATALOG_VERSION` (okładka, ścieżka pliku) +
+testy `catalog.test.ts` (unikalność haseł, spójność z seriami, compliance, schemat,
+render, znaki w foncie) i `catalog.server.test.ts` (decyzje o plikach w Storage).
 Podgląd lokalny: `bun scripts/lead-magnets-catalog.ts render tmp/lead-magnets`
 (JSON wierszy: `… dump`).
 

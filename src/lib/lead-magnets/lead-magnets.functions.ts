@@ -196,7 +196,7 @@ export const getLeadMagnetFileUrl = createServerFn({ method: "GET" })
       return { url: s?.signedUrl ?? null, pdf_base64: null as string | null };
     }
     if (!row.file_url && isCatalogSlug(row.slug)) {
-      // Materiał z katalogu: PDF generowany w locie — podgląd jako base64 (panel otwiera Blob).
+      // Materiał z katalogu bez pliku w Storage: PDF składany w locie — podgląd jako base64 (panel otwiera Blob).
       const { renderCatalogPdf, bytesToBase64 } = await import("./catalog.server");
       const pdf = await renderCatalogPdf(row.slug);
       return { url: null, pdf_base64: pdf ? bytesToBase64(pdf.bytes) : null };
@@ -225,28 +225,36 @@ export const getLeadMagnetCatalogInfo = createServerFn({ method: "GET" })
   });
 
 /**
- * Zakłada rekordy materiałów z katalogu (szkice — zespół) i publikuje je
- * (`publish` — tylko administrator). Kontrola jakości i reguły compliance
- * w ensureCatalogMagnets.
+ * Zakłada rekordy materiałów z katalogu (szkice — zespół), wgrywa brakujące /
+ * nieaktualne PDF-y do Storage i publikuje je (`publish` — tylko
+ * administrator). `refresh_files` składa i wgrywa wszystkie PDF-y ponownie.
+ * Kontrola jakości i reguły compliance w ensureCatalogMagnets.
  */
 export const provisionLeadMagnetCatalog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
-      .object({ publish: z.boolean().default(false), overwrite: z.boolean().default(false) })
+      .object({
+        publish: z.boolean().default(false),
+        overwrite: z.boolean().default(false),
+        refresh_files: z.boolean().default(false),
+      })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const roles = await teamRoles(context);
     if (!roles.admin && !roles.operator)
       throw new Error("Wymagane uprawnienia administrator/operator");
-    if ((data.publish || data.overwrite) && !roles.admin) {
-      throw new Error("Publikacja i nadpisanie treści katalogu wymagają roli administratora");
+    if ((data.publish || data.overwrite || data.refresh_files) && !roles.admin) {
+      throw new Error(
+        "Publikacja, nadpisanie treści i odświeżenie plików katalogu wymagają roli administratora",
+      );
     }
     const { ensureCatalogMagnets } = await import("./catalog.server");
     const results = await ensureCatalogMagnets({
       publish: data.publish,
       overwrite: data.overwrite,
+      refreshFiles: data.refresh_files,
       actor: context.userId,
     });
     return { ok: true as const, results };

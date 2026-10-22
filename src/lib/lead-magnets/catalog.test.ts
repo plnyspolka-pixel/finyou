@@ -5,14 +5,17 @@ import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
 import {
   AI_MATERIAL_LINE,
+  CATALOG_FILE_PREFIX,
   CATALOG_SLUGS,
   CATALOG_VERSION,
   LEAD_MAGNET_CATALOG,
   catalogBySlug,
+  catalogFilePath,
   catalogForTrack,
   catalogMagnetRow,
   catalogPageText,
   catalogPdfText,
+  isCatalogFilePath,
   isCatalogSlug,
   resolveKeywordTarget,
 } from "./catalog";
@@ -151,6 +154,38 @@ describe("katalog — zgodność z mechanizmem lead magnetów", () => {
         email_body: "{link}",
       }),
     ).toMatch(/plik/i);
+  });
+
+  it("plik w Storage: ścieżka katalogu ze slugiem i wersją, odróżnialna od pliku zespołu", () => {
+    const paths = new Set<string>();
+    for (const m of LEAD_MAGNET_CATALOG) {
+      const p = catalogFilePath(m);
+      expect(p).toBe(`${CATALOG_FILE_PREFIX}${m.slug}/${CATALOG_VERSION}/${m.file_name}`);
+      expect(p.endsWith(".pdf")).toBe(true);
+      expect(isCatalogFilePath(p)).toBe(true);
+      paths.add(p);
+    }
+    expect(paths.size).toBe(LEAD_MAGNET_CATALOG.length);
+    // Plik wgrany w panelu: `<grupa>/<uuid>.<ext>` — nigdy nie jest „plikiem katalogu”.
+    expect(isCatalogFilePath("inwestor/3f1c…b2.pdf")).toBe(false);
+    expect(isCatalogFilePath(null)).toBe(false);
+    expect(isCatalogFilePath("")).toBe(false);
+    // Wiersz z plikiem niesie ścieżkę i rozmiar; bez pliku — null (PDF w locie, awaryjnie).
+    const m = LEAD_MAGNET_CATALOG[0];
+    const withFile = catalogMagnetRow(m, true, { path: catalogFilePath(m), size: 12345 });
+    expect(withFile.file_path).toBe(catalogFilePath(m));
+    expect(withFile.file_size).toBe(12345);
+    expect(withFile.file_url).toBeNull();
+    expect(withFile.mime_type).toBe("application/pdf");
+    expect(withFile.file_name).toBe(m.file_name);
+    const parsed = leadMagnetSchema.parse({
+      ...withFile,
+      cover_image_url: "",
+      og_image_url: "",
+      file_url: "",
+    });
+    expect(parsed.file_path).toBe(catalogFilePath(m));
+    expect(catalogMagnetRow(m, false).file_path).toBeNull();
   });
 
   it("mail ma {link} i {tytul}, renderuje się bez imienia i z imieniem", () => {

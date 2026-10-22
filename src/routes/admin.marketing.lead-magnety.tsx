@@ -371,9 +371,12 @@ function LeadMagnetsAdmin() {
     staleTime: 5 * 60_000,
   });
   const catMut = useMutation({
-    mutationFn: (publish: boolean) => catFn({ data: { publish, overwrite: false } }),
+    mutationFn: (v: { publish: boolean; refresh_files?: boolean }) =>
+      catFn({ data: { publish: v.publish, overwrite: false, refresh_files: v.refresh_files } }),
     onSuccess: (r) => {
-      toast.success(`Katalog: ${r.results.map((x) => `${x.keyword} – ${x.action}`).join(", ")}`);
+      toast.success(
+        `Katalog: ${r.results.map((x) => `${x.keyword} – ${x.action} (plik: ${x.file})`).join(", ")}`,
+      );
       const problems = r.results.filter((x) => x.problems.length);
       if (problems.length) {
         toast.warning(
@@ -451,21 +454,35 @@ function LeadMagnetsAdmin() {
                   Katalog startowy PDF (wersja {catalog.version})
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Sześć materiałów z kodu, po trzy na tor — PDF generowany w locie przy pobraniu,
-                  hasła zgodne z seriami rolek autopilota. Szkice może założyć zespół, publikacja
-                  wymaga roli administratora. Istniejących rekordów nie nadpisuje.
+                  Materiały z kodu (po trzy na tor plus wzór umowy) — PDF składany z kodu i wgrywany
+                  jako plik do Storage, hasła zgodne z seriami rolek autopilota. Szkice może założyć
+                  zespół; publikacja i odświeżenie plików wymagają roli administratora. Istniejących
+                  rekordów ani własnych plików nie nadpisuje.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => catMut.mutate(false)}
+                  onClick={() => catMut.mutate({ publish: false })}
                   disabled={catMut.isPending}
                 >
                   Załóż szkice
                 </Button>
-                <Button size="sm" onClick={() => catMut.mutate(true)} disabled={catMut.isPending}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => catMut.mutate({ publish: false, refresh_files: true })}
+                  disabled={catMut.isPending}
+                  title="Składa wszystkie PDF-y katalogu ponownie i nadpisuje pliki w Storage"
+                >
+                  Odśwież PDF-y
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => catMut.mutate({ publish: true })}
+                  disabled={catMut.isPending}
+                >
                   {catMut.isPending ? "Pracuję…" : "Załóż i opublikuj"}
                 </Button>
               </div>
@@ -527,7 +544,7 @@ function LeadMagnetsAdmin() {
                       {!m.file_path &&
                         !m.file_url &&
                         (isCatalogSlug(m.slug) ? (
-                          <Badge variant="outline">PDF z katalogu</Badge>
+                          <Badge variant="outline">PDF z katalogu (bez pliku)</Badge>
                         ) : (
                           <Badge variant="destructive">brak pliku</Badge>
                         ))}
@@ -955,9 +972,10 @@ function EditorDialog({
               </p>
               {isCatalogSlug(form.slug) && (
                 <p className="mt-2 rounded-md bg-muted p-2 text-xs">
-                  Ten slug należy do katalogu startowego: PDF jest generowany w locie z treści w
-                  kodzie (src/lib/lead-magnets/catalog.ts), więc plik nie jest wymagany do
-                  publikacji. Wgrany plik albo adres mają pierwszeństwo przed generowanym PDF-em.
+                  Ten slug należy do katalogu startowego: PDF jest składany z treści w kodzie
+                  (src/lib/lead-magnets/catalog.ts) i wgrywany do Storage przez „Załóż” / „Odśwież
+                  PDF-y”. Dopóki pliku nie ma, pobranie składa go w locie. Własny wgrany plik albo
+                  adres mają pierwszeństwo i nie są nadpisywane.
                 </p>
               )}
             </div>

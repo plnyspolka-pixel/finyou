@@ -1,7 +1,8 @@
 // Osobisty link do pliku lead magnetu z maila: /pobierz-plik/<token> → 302 na
 // krótki podpisany adres w Storage (albo zewnętrzny URL materiału) + licznik
-// pobrań. Materiał z katalogu (src/lib/lead-magnets/catalog.ts) bez pliku
-// dostaje PDF wygenerowany w locie. Publiczny, bez autoryzacji — token jest
+// pobrań. Materiał z katalogu (src/lib/lead-magnets/catalog.ts) ma plik w
+// Storage wgrany przez provisioning; gdyby go jeszcze nie było, PDF jest
+// składany w locie (awaryjnie). Publiczny, bez autoryzacji — token jest
 // sekretem adresata.
 import { createFileRoute } from "@tanstack/react-router";
 import { SITE_URL } from "@/lib/seo/company";

@@ -7,12 +7,12 @@ korzysta z `ai_growth_settings`, `ai_growth_action_log`, `social_publish_queue`,
 
 ## Tryb i wyłącznik
 
-| Ustawienie | Gdzie | Domyślnie |
-|---|---|---|
-| Tryb modułu | `ai_growth_settings.autopilot_mode` (MCP `autopilot_set_mode`, tylko administrator) | `manual_review` |
-| Wyłącznik awaryjny | `autopilot_paused` (MCP `autopilot_kill_switch`) | wyłączony |
-| Profile torów | `audience_profiles` (MCP `autopilot_update_profiles`) | z kodu (`profiles.ts`) |
-| Limity | `autopilot_limits` (MCP `autopilot_update_limits`, tylko administrator) | AI 50 zł/dzień, reklamy 0 zł |
+| Ustawienie         | Gdzie                                                                               | Domyślnie                    |
+| ------------------ | ----------------------------------------------------------------------------------- | ---------------------------- |
+| Tryb modułu        | `ai_growth_settings.autopilot_mode` (MCP `autopilot_set_mode`, tylko administrator) | `manual_review`              |
+| Wyłącznik awaryjny | `autopilot_paused` (MCP `autopilot_kill_switch`)                                    | wyłączony                    |
+| Profile torów      | `audience_profiles` (MCP `autopilot_update_profiles`)                               | z kodu (`profiles.ts`)       |
+| Limity             | `autopilot_limits` (MCP `autopilot_update_limits`, tylko administrator)             | AI 50 zł/dzień, reklamy 0 zł |
 
 Znaczenie trybów (`safety.ts` → `evaluateGuards`):
 
@@ -152,10 +152,10 @@ ponawiane automatycznie, bo przy Reels groziłby duplikat.
 
 Pełny raport daje `autopilot_report` (MCP).
 
-| Raport | Kiedy | Gdzie trafia |
-|---|---|---|
-| Dzienny | 20:xx | do dziennika; SMS tylko w trybach `semi_auto` i `full_autopilot` |
-| Tygodniowy | pon. 8:xx | do dziennika; SMS jak wyżej |
+| Raport     | Kiedy     | Gdzie trafia                                                     |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| Dzienny    | 20:xx     | do dziennika; SMS tylko w trybach `semi_auto` i `full_autopilot` |
+| Tygodniowy | pon. 8:xx | do dziennika; SMS jak wyżej                                      |
 
 ## Lejek
 
@@ -165,12 +165,14 @@ Pełny raport daje `autopilot_report` (MCP).
   3. kim jesteśmy, potem ryzyko, AI i hashtagi.
 
   Na X opis mieści się w 280 znakach.
+
 - `calculator-engine.ts` + `calculators.ts` – narzędzia z konfiguracji (ILE, RATA, LTV) na funkcjach
   `fees.ts` / `loan-math.ts`. Część wyniku jest dostępna dopiero po zapisie na listę; przypadki
   testowe są sprawdzane przed publikacją.
-- `src/lib/lead-magnets/catalog.ts` – katalog startowy lead magnetów (brief 5.4): sześć branded PDF-ów
-  generowanych w locie przy pobraniu, po trzy na tor (inwestor: START → KSIĘGA → BŁĘDY; pożyczkobiorca:
-  ODMOWA → DOKUMENTY → PROCES), hasła zgodne z `defaultKeyword` serii. `resolveKeywordTarget(hasło)`
+- `src/lib/lead-magnets/catalog.ts` – katalog startowy lead magnetów (brief 5.4): siedem branded PDF-ów
+  składanych z kodu i wgrywanych jako pliki do bucketa `lead-magnets` przy provisioningu (inwestor:
+  START → KSIĘGA → BŁĘDY, UMOWA; pożyczkobiorca: ODMOWA → DOKUMENTY → PROCES), hasła zgodne z
+  `defaultKeyword` serii. `resolveKeywordTarget(hasło)`
   zwraca materiał albo kalkulator dla opisu-lejka. Provisioning: MCP `provision_lead_magnet_catalog`,
   panel, tick (6:00 w `full_autopilot`). Każdy materiał przechodzi reguły twarde compliance w testach
   (`catalog.test.ts`). Szczegóły: `docs/lead-magnety.md`.

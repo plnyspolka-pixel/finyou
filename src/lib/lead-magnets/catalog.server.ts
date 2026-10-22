@@ -1,9 +1,17 @@
-// Katalog lead magnetów — warstwa serwerowa: render PDF w locie (trasa
-// /pobierz-plik/<token>, podgląd w panelu) i provisioning rekordów
-// `lead_magnets` z katalogu (MCP `provision_lead_magnet_catalog`, przycisk
-// w panelu, tick autopilota w full_autopilot). Każdy materiał przechodzi
-// kontrolę jakości: reguły twarde compliance (strona, PDF, mail) i próbny
-// render PDF — z problemem nie jest publikowany.
+// Katalog lead magnetów — warstwa serwerowa: provisioning rekordów
+// `lead_magnets` z katalogu razem z plikami PDF w Storage (MCP
+// `provision_lead_magnet_catalog`, przycisk w panelu, tick autopilota w
+// full_autopilot) oraz render PDF w locie — awaryjnie, gdy rekord nie ma
+// jeszcze pliku (trasa /pobierz-plik/<token>, podgląd w panelu). Każdy
+// materiał przechodzi kontrolę jakości: reguły twarde compliance (strona, PDF,
+// mail) i próbny render — z problemem nie jest publikowany ani wgrywany.
+//
+// Plik w Storage: bucket `lead-magnets`, ścieżka `catalogFilePath` (slug +
+// CATALOG_VERSION + nazwa). Wersja w ścieżce sprawia, że po zmianie treści
+// (commit + podbicie wersji) następny provisioning widzi „nieaktualny” plik,
+// składa nowy i usuwa stary. `refreshFiles` wymusza ponowny skład bez zmiany
+// wersji (np. po zmianie biblioteki klauzul we wzorze umowy). Własny plik albo
+// adres wgrany przez zespół w panelu nigdy nie jest ruszany.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { checkHardRules, evaluateCompliance } from "@/lib/autopilot/compliance-rules";
 import { logAutopilot } from "@/lib/autopilot/state.server";
@@ -12,12 +20,14 @@ import {
   CATALOG_VERSION,
   LEAD_MAGNET_CATALOG,
   catalogBySlug,
+  catalogFilePath,
   catalogMagnetRow,
   catalogPageText,
   catalogPdfText,
+  isCatalogFilePath,
   type LeadMagnetBlueprint,
 } from "./catalog";
-import { leadMagnetUrl } from "./core";
+import { LEAD_MAGNETS_BUCKET, leadMagnetUrl } from "./core";
 
 export async function renderCatalogPdf(
   slug: string,
@@ -38,8 +48,14 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-/** Kontrola jakości materiału: compliance (strona, PDF, mail) + próbny render PDF. */
-export async function checkCatalogMagnet(m: LeadMagnetBlueprint): Promise<string[]> {
+/**
+ * Kontrola jakości materiału: compliance (strona, PDF, mail) + próbny render
+ * PDF. Zwraca też bajty PDF (gdy render się udał), żeby provisioning nie
+ * składał pliku drugi raz przed wgraniem do Storage.
+ */
+export async function checkCatalogMagnet(
+  m: LeadMagnetBlueprint,
+): Promise<{ problems: string[]; pdf: Uint8Array | null }> {
   const problems: string[] = [];
   const checks = [
     ["strona", evaluateCompliance(catalogPageText(m), { kind: "lead_magnet", track: m.track })],
@@ -67,15 +83,36 @@ export async function checkCatalogMagnet(m: LeadMagnetBlueprint): Promise<string
       problems.push(`umowa: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
+  let pdf: Uint8Array | null = null;
   try {
     const { renderLeadMagnetPdf } = await import("./pdf");
-    const bytes = await renderLeadMagnetPdf(m);
-    if (bytes.byteLength < 2000) problems.push("pdf: plik jest podejrzanie mały");
+    pdf = await renderLeadMagnetPdf(m);
+    if (pdf.byteLength < 2000) {
+      problems.push("pdf: plik jest podejrzanie mały");
+      pdf = null;
+    }
   } catch (e) {
     problems.push(`pdf: ${e instanceof Error ? e.message : String(e)}`);
   }
-  return problems;
+  return { problems, pdf };
 }
+
+/** Stan pliku materiału w Storage po provisioningu (albo w `dry_run`). */
+export type CatalogFileState =
+  /** Plik pod bieżącą ścieżką (wersją) — nic do zrobienia. */
+  | "aktualny"
+  /** Właśnie wgrany: rekord nie miał pliku albo miał plik ze starej wersji. */
+  | "wgrany"
+  /** `refreshFiles`: złożony ponownie i nadpisany pod tą samą ścieżką. */
+  | "odświeżony"
+  /** Zespół wgrał własny plik albo podał adres — provisioning go nie rusza. */
+  | "własny"
+  /** Plik ze starej wersji katalogu (dry run albo materiał z problemami — nie podmieniamy). */
+  | "nieaktualny"
+  /** Bez pliku — pobranie składa PDF w locie, do czasu wgrania. */
+  | "brak"
+  /** Wgranie nie wyszło — szczegóły w `problems` (pobranie działa w locie). */
+  | "błąd";
 
 export interface CatalogProvisionResult {
   slug: string;
@@ -86,18 +123,29 @@ export interface CatalogProvisionResult {
   published: boolean;
   problems: string[];
   url: string | null;
+  file: CatalogFileState;
+  file_path: string | null;
+}
+
+async function uploadCatalogPdf(path: string, bytes: Uint8Array): Promise<string | null> {
+  const { error } = await supabaseAdmin.storage
+    .from(LEAD_MAGNETS_BUCKET)
+    .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+  return error ? error.message : null;
 }
 
 /**
- * Zakłada rekordy `lead_magnets` dla materiałów z katalogu (brakujące) i —
- * przy `publish` — publikuje te, które przeszły kontrolę jakości. Istniejący
- * rekord nie jest nadpisywany (zespół mógł poprawić copy w panelu), chyba że
- * `overwrite`. Nigdy nie cofa publikacji. PDF nie jest wgrywany do Storage:
- * powstaje w locie przy pobraniu (resolveLeadMagnetDownload).
+ * Zakłada rekordy `lead_magnets` dla materiałów z katalogu (brakujące), wgrywa
+ * ich PDF-y do Storage (brakujące albo z poprzedniej wersji; `refreshFiles` —
+ * wszystkie) i — przy `publish` — publikuje te, które przeszły kontrolę
+ * jakości. Istniejący rekord nie jest nadpisywany (zespół mógł poprawić copy
+ * w panelu), chyba że `overwrite`; własny plik / adres zespołu zostaje zawsze.
+ * Nigdy nie cofa publikacji. Materiał z problemami nie dostaje nowego pliku.
  */
 export async function ensureCatalogMagnets(opts: {
   publish: boolean;
   overwrite?: boolean;
+  refreshFiles?: boolean;
   slugs?: string[] | null;
   actor?: string | null;
   dryRun?: boolean;
@@ -118,14 +166,28 @@ export async function ensureCatalogMagnets(opts: {
   }
 
   for (const m of list) {
-    const problems = await checkCatalogMagnet(m);
+    const { problems, pdf } = await checkCatalogMagnet(m);
     const publish = opts.publish && problems.length === 0;
+    const expectedPath = catalogFilePath(m);
     const base = { slug: m.slug, title: m.title, track: m.track, keyword: m.keyword, problems };
     const { data: existing } = await supabaseAdmin
       .from("lead_magnets")
-      .select("id, published, file_path, file_url")
+      .select("id, published, file_path, file_url, file_name")
       .eq("slug", m.slug)
       .maybeSingle();
+
+    const previousPath = existing?.file_path ?? null;
+    const ownFile = Boolean(
+      existing && (existing.file_url || (previousPath && !isCatalogFilePath(previousPath))),
+    );
+    const current = previousPath === expectedPath;
+    let file: CatalogFileState = ownFile
+      ? "własny"
+      : current
+        ? "aktualny"
+        : previousPath
+          ? "nieaktualny"
+          : "brak";
 
     if (opts.dryRun) {
       out.push({
@@ -137,35 +199,61 @@ export async function ensureCatalogMagnets(opts: {
           : "brak",
         published: Boolean(existing?.published),
         url: existing?.published ? leadMagnetUrl(m.slug) : null,
+        file,
+        file_path: previousPath,
       });
       continue;
     }
 
+    // Plik: brak / stara wersja / wymuszone odświeżenie → skład z kontroli
+    // jakości idzie do Storage. Materiał z problemami zostaje przy starym pliku.
+    let uploaded: { path: string; size: number } | null = null;
+    if (!ownFile && pdf && problems.length === 0 && (!current || opts.refreshFiles)) {
+      const err = await uploadCatalogPdf(expectedPath, pdf);
+      if (err) {
+        problems.push(`storage: ${err}`);
+        file = "błąd";
+      } else {
+        uploaded = { path: expectedPath, size: pdf.byteLength };
+        file = current ? "odświeżony" : "wgrany";
+      }
+    }
+
     if (existing) {
       const published = publish || Boolean(existing.published);
-      const row = catalogMagnetRow(m, published);
-      const hasOwnFile = Boolean(existing.file_path || existing.file_url);
+      const {
+        file_path: rowPath,
+        file_url: _url,
+        file_name: rowName,
+        file_size: rowSize,
+        mime_type: rowMime,
+        ...copy
+      } = catalogMagnetRow(m, published, uploaded);
       const patch: Record<string, unknown> = opts.overwrite
-        ? hasOwnFile
-          ? {
-              ...row,
-              file_path: undefined,
-              file_url: undefined,
-              file_name: undefined,
-              mime_type: undefined,
-            }
-          : row
-        : {
-            ...(published !== Boolean(existing.published) ? { published } : {}),
-            ...(hasOwnFile ? {} : { file_name: m.file_name, mime_type: "application/pdf" }),
-          };
-      for (const k of Object.keys(patch)) if (patch[k] === undefined) delete patch[k];
+        ? { ...copy }
+        : published !== Boolean(existing.published)
+          ? { published }
+          : {};
+      if (uploaded) {
+        Object.assign(patch, {
+          file_path: rowPath,
+          file_url: null,
+          file_name: rowName,
+          file_size: rowSize,
+          mime_type: rowMime,
+        });
+      } else if (!ownFile && !previousPath && existing.file_name !== rowName) {
+        // Bez pliku pobranie składa PDF w locie — nazwa pliku z katalogu.
+        Object.assign(patch, { file_name: rowName, mime_type: rowMime });
+      }
       if (Object.keys(patch).length === 0) {
         out.push({
           ...base,
           action: "bez zmian",
           published,
           url: published ? leadMagnetUrl(m.slug) : null,
+          file,
+          file_path: previousPath,
         });
         continue;
       }
@@ -173,6 +261,13 @@ export async function ensureCatalogMagnets(opts: {
         .from("lead_magnets")
         .update(patch as never)
         .eq("id", existing.id);
+      if (!error && uploaded && previousPath && previousPath !== uploaded.path) {
+        // Stary plik katalogu nie jest już nikomu potrzebny — linki idą przez token.
+        await supabaseAdmin.storage
+          .from(LEAD_MAGNETS_BUCKET)
+          .remove([previousPath])
+          .catch(() => null);
+      }
       out.push({
         ...base,
         action: error
@@ -181,14 +276,20 @@ export async function ensureCatalogMagnets(opts: {
             ? "zaktualizowano (treść z katalogu)"
             : published && !existing.published
               ? "opublikowano"
-              : "uzupełniono",
+              : uploaded
+                ? file === "odświeżony"
+                  ? "odświeżono PDF"
+                  : "wgrano PDF"
+                : "uzupełniono",
         published: error ? Boolean(existing.published) : published,
         url: !error && published ? leadMagnetUrl(m.slug) : null,
+        file: error ? (current ? "aktualny" : "nieaktualny") : file,
+        file_path: error ? previousPath : (uploaded?.path ?? previousPath),
       });
     } else {
       const { error } = await supabaseAdmin
         .from("lead_magnets")
-        .insert({ ...catalogMagnetRow(m, publish), created_by: createdBy } as never);
+        .insert({ ...catalogMagnetRow(m, publish, uploaded), created_by: createdBy } as never);
       out.push({
         ...base,
         action: error
@@ -198,6 +299,8 @@ export async function ensureCatalogMagnets(opts: {
             : "utworzono (szkic)",
         published: !error && publish,
         url: !error && publish ? leadMagnetUrl(m.slug) : null,
+        file: error ? "brak" : file,
+        file_path: error ? null : (uploaded?.path ?? null),
       });
     }
   }
@@ -209,13 +312,14 @@ export async function ensureCatalogMagnets(opts: {
       summary: `Katalog lead magnetów ${CATALOG_VERSION}: ${out
         .map(
           (o) =>
-            `${o.slug} (${o.action}${o.problems.length ? `, problemy: ${o.problems.length}` : ""})`,
+            `${o.slug} (${o.action}, plik: ${o.file}${o.problems.length ? `, problemy: ${o.problems.length}` : ""})`,
         )
         .join("; ")}`,
       payload: {
         version: CATALOG_VERSION,
         publish: opts.publish,
         overwrite: Boolean(opts.overwrite),
+        refreshFiles: Boolean(opts.refreshFiles),
         results: out,
       },
       actor: opts.actor ?? null,

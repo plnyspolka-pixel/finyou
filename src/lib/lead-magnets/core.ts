@@ -26,6 +26,9 @@ export const AUDIENCE_LABELS: Record<LeadMagnetAudience, string> = {
 /** Tag subskrybenta nadawany każdemu zapisowi (poza tagiem grupy i slugu). */
 export const LEAD_MAGNET_TAG = "lead-magnet";
 
+/** Prywatny bucket Storage z plikami lead magnetów (pliki zespołu z panelu i PDF-y katalogu). */
+export const LEAD_MAGNETS_BUCKET = "lead-magnets";
+
 export const DEFAULT_TEMPLATES = {
   reply_public: "Cześć {imie}! Napisaliśmy do Ciebie w wiadomości prywatnej 👋",
   reply_private:

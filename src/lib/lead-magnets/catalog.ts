@@ -12,9 +12,12 @@
 // materiału. Kalkulatory (ILE, RATA, LTV) są w autopilot/calculators.ts, wzór
 // umowy (UMOWA) pochodzi z zatwierdzonych szablonów właściciela — nie z kodu.
 //
-// PDF powstaje z tego pliku w locie (pdf.ts) przy każdym pobraniu, więc
-// poprawka treści = commit. Każda zmiana musi przejść testy compliance
-// (catalog.test.ts) — reguły twarde z autopilot/compliance-rules.ts.
+// PDF powstaje z tego pliku (pdf.ts) przy provisioningu i trafia jako zwykły
+// plik do bucketa `lead-magnets` (ścieżka z `catalogFilePath`: slug + wersja),
+// więc pobranie to podpisany link do pliku jak dla każdego innego materiału.
+// Poprawka treści = commit + podbicie CATALOG_VERSION (nowa ścieżka → plik
+// odświeża się przy następnym provisioningu). Każda zmiana musi przejść testy
+// compliance (catalog.test.ts) — reguły twarde z autopilot/compliance-rules.ts.
 import { COMPANY_DATA } from "@/lib/company";
 import { SITE_URL } from "@/lib/seo/company";
 import { RISK_LINES, SENDER_LINE } from "@/lib/autopilot/compliance-rules";
@@ -27,7 +30,20 @@ import type { LeadMagnetAudience } from "./core";
 export { CATALOG_SLUGS, isCatalogSlug, type CatalogSlug };
 
 /** Wersja katalogu — na okładce PDF i w dzienniku provisioningu. Podbij przy zmianie treści. */
-export const CATALOG_VERSION = "2026-10-21.1";
+export const CATALOG_VERSION = "2026-10-22.1";
+
+/** Prefiks ścieżek plików katalogu w buckecie `lead-magnets` (plik zespołu ma `<grupa>/<uuid>.<ext>`). */
+export const CATALOG_FILE_PREFIX = "katalog/";
+
+/** Ścieżka pliku PDF materiału w Storage: wersja w ścieżce = stary plik jest „nieaktualny” po zmianie treści. */
+export function catalogFilePath(m: Pick<LeadMagnetBlueprint, "slug" | "file_name">): string {
+  return `${CATALOG_FILE_PREFIX}${m.slug}/${CATALOG_VERSION}/${m.file_name}`;
+}
+
+/** Czy ścieżka w Storage należy do katalogu (plik wgrany przez provisioning, nie przez zespół). */
+export function isCatalogFilePath(path: string | null | undefined): boolean {
+  return typeof path === "string" && path.startsWith(CATALOG_FILE_PREFIX);
+}
 
 /** Oznaczenie treści AI wymagane przez bramkę compliance (kind lead_magnet / email). */
 export const AI_MATERIAL_LINE =
@@ -1805,7 +1821,12 @@ function keywordName(m: LeadMagnetBlueprint): string {
 // ── Wiersz lead_magnets i tekst do kontroli ──────────────────────────────────
 
 /** Wiersz `lead_magnets` dla materiału z katalogu (bez id / created_by). */
-export function catalogMagnetRow(m: LeadMagnetBlueprint, publish: boolean) {
+export function catalogMagnetRow(
+  m: LeadMagnetBlueprint,
+  publish: boolean,
+  /** Plik wgrany do Storage przez provisioning; bez niego PDF powstaje w locie (awaryjnie). */
+  file: { path: string; size: number } | null = null,
+) {
   return {
     slug: m.slug,
     title: m.title,
@@ -1817,11 +1838,12 @@ export function catalogMagnetRow(m: LeadMagnetBlueprint, publish: boolean) {
     cover_image_url: null,
     og_image_url: null,
     meta_description: m.meta_description,
-    // PDF generowany w locie z katalogu — bez pliku w Storage i bez adresu.
-    file_path: null,
+    // Plik PDF w buckecie `lead-magnets` (catalogFilePath). Bez pliku trasa
+    // pobierania składa PDF w locie — tylko awaryjnie, do czasu wgrania.
+    file_path: file?.path ?? null,
     file_url: null,
     file_name: m.file_name,
-    file_size: null,
+    file_size: file?.size ?? null,
     mime_type: "application/pdf",
     thank_you_message: m.thank_you_message,
     instant_download: true,

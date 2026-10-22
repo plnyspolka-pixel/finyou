@@ -352,25 +352,28 @@ export const generateLeadMagnetCopy = defineTool({
 
 export const provisionLeadMagnetCatalog = defineTool({
   name: "provision_lead_magnet_catalog",
-  title: "Provision lead magnet catalog (PDF from code)",
+  title: "Provision lead magnet catalog (PDF files from code)",
   description:
-    "Katalog startowy lead magnetów z kodu (src/lib/lead-magnets/catalog.ts) — sześć branded PDF-ów generowanych w locie przy pobraniu, po trzy na tor: inwestor START (przewodnik startowy), KSIĘGA (checklista księgi wieczystej), BŁĘDY (7 błędów inwestora); pożyczkobiorca ODMOWA (bank odmówił – 5 dróg), DOKUMENTY (checklista dokumentów), PROCES (mapa od wniosku do wypłaty). Hasła są zgodne z seriami rolek autopilota; kalkulatory ILE / RATA / LTV zakłada `autopilot_provision_tools`. Narzędzie zakłada brakujące rekordy (szkice) i — przy `publish` — publikuje te, które przeszły kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny render). Istniejących rekordów nie nadpisuje (chyba że `overwrite`), nigdy nie cofa publikacji. `dry_run` tylko raportuje stan i problemy. `slugs` ogranicza do wybranych materiałów. Publikacja i nadpisanie: tylko administrator; szkice: administrator/operator. W trybie full_autopilot tick robi to sam.",
+    "Katalog startowy lead magnetów z kodu (src/lib/lead-magnets/catalog.ts) — siedem branded PDF-ów składanych z kodu i wgrywanych jako zwykłe pliki do bucketa `lead-magnets` (ścieżka katalog/<slug>/<wersja>/<plik>): inwestor START (przewodnik startowy), KSIĘGA (checklista księgi wieczystej), BŁĘDY (7 błędów inwestora), UMOWA (wzór umowy pożyczki z silnika klauzul); pożyczkobiorca ODMOWA (bank odmówił – 5 dróg), DOKUMENTY (checklista dokumentów), PROCES (mapa od wniosku do wypłaty). Hasła są zgodne z seriami rolek autopilota; kalkulatory ILE / RATA / LTV zakłada `autopilot_provision_tools`. Narzędzie zakłada brakujące rekordy (szkice), wgrywa brakujące albo nieaktualne (stara wersja katalogu) pliki PDF i — przy `publish` — publikuje te, które przeszły kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny render). `refresh_files` składa i wgrywa wszystkie PDF-y ponownie (po zmianie treści bez podbicia wersji). Istniejących rekordów nie nadpisuje (chyba że `overwrite`), własnego pliku / adresu zespołu nie rusza nigdy, nigdy nie cofa publikacji. Pobranie to podpisany link do pliku; rekord bez pliku dostaje PDF składany w locie (awaryjnie). `dry_run` tylko raportuje stan, pliki (`file`: aktualny / nieaktualny / brak / własny) i problemy. `slugs` ogranicza do wybranych materiałów. Publikacja, nadpisanie i odświeżenie plików: tylko administrator; szkice: administrator/operator. W trybie full_autopilot tick robi to sam (6:00).",
   inputSchema: {
     publish: z.boolean().default(false),
     overwrite: z.boolean().default(false),
+    refresh_files: z.boolean().default(false),
     dry_run: z.boolean().default(false),
     slugs: z.array(z.enum(CATALOG_SLUGS)).max(CATALOG_SLUGS.length).optional(),
   },
   annotations: WRITE_IDEMPOTENT,
   handler: (a, ctx: ToolContext) =>
     handle(async () => {
-      if ((a.publish || a.overwrite) && !a.dry_run) await requireRolesAdmin(ctx, ADMIN);
+      if ((a.publish || a.overwrite || a.refresh_files) && !a.dry_run)
+        await requireRolesAdmin(ctx, ADMIN);
       else await requireTeamAdmin(ctx);
       const { ensureCatalogMagnets } = await import("@/lib/lead-magnets/catalog.server");
       const { CATALOG_VERSION } = await import("@/lib/lead-magnets/catalog");
       const results = await ensureCatalogMagnets({
         publish: a.publish,
         overwrite: a.overwrite,
+        refreshFiles: a.refresh_files,
         slugs: a.slugs ?? null,
         dryRun: a.dry_run,
         actor: actorId(ctx),

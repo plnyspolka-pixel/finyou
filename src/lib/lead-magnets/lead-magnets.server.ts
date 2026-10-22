@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { sendResendEmail } from "@/lib/resend-send.server";
 import {
   DEFAULT_TEMPLATES,
+  LEAD_MAGNETS_BUCKET,
   consentTextFor,
   dmConsentTextFor,
   downloadUrl,
@@ -33,7 +34,7 @@ export type LeadMagnetPostRow = Database["public"]["Tables"]["lead_magnet_posts"
 export type LeadMagnetSignupRow = Database["public"]["Tables"]["lead_magnet_signups"]["Row"];
 export type LeadMagnetTriggerRow = Database["public"]["Tables"]["lead_magnet_triggers"]["Row"];
 
-export const LEAD_MAGNETS_BUCKET = "lead-magnets";
+export { LEAD_MAGNETS_BUCKET };
 /** Podpisany link do pliku żyje krótko — każde kliknięcie w /pobierz-plik generuje nowy. */
 const SIGNED_URL_TTL_SECONDS = 15 * 60;
 /** Tick YouTube: limity na przebieg (kwota API: comments.insert = 50 jednostek). */
@@ -335,7 +336,7 @@ async function sendLeadMagnetEmail(opts: {
 export type DownloadResolution =
   /** Plik w Storage (podpisany link) albo zewnętrzny adres — przekierowanie. */
   | { ok: true; kind: "redirect"; url: string; slug: string }
-  /** Materiał z katalogu bez pliku — PDF generowany w locie (renderCatalogPdf). */
+  /** Materiał z katalogu, który nie ma jeszcze pliku w Storage — PDF składany w locie (awaryjnie, renderCatalogPdf). */
   | { ok: true; kind: "generated"; slug: string; file_name: string }
   | { ok: false; reason: "invalid_token" | "not_found" | "no_file" | "error"; slug?: string };
 
