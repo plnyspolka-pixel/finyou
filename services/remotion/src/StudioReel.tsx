@@ -235,7 +235,7 @@ const Badge: React.FC<{ spec: NonNullable<ReelPlan["badge"]>; k: Scale; width: n
   </div>
 );
 
-/** Etykieta „Treść wygenerowana przez AI” w pierwszych sekundach (AI Act art. 50). */
+/** Opcjonalna pełna etykieta AI w pierwszych sekundach (gdy spec ma `intro`). */
 const BadgeIntro: React.FC<{
   spec: NonNullable<ReelPlan["badge"]>;
   k: Scale;

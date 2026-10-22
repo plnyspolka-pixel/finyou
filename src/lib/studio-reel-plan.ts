@@ -322,8 +322,8 @@ export function buildReelPlan(input: {
 /**
  * Hook ma kadr dla siebie: napisy lektora, znacznik, pytanie, karty
  * i elementy dynamiczne zaczynają się dopiero po nim. Element, któremu po
- * przesunięciu zostałoby za mało czasu, wypada. Znaczek AI zostaje (etykieta
- * w 1. sekundzie — AI Act art. 50).
+ * przesunięciu zostałoby za mało czasu, wypada. Znaczek AI zostaje — od
+ * pierwszej klatki, także nad hookiem.
  */
 export function clearHookWindow(plan: ReelPlan, hookEnd: number): ReelPlan {
   const MIN_LEFT = 1.2;
