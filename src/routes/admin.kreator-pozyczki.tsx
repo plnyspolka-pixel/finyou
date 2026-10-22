@@ -1097,7 +1097,7 @@ function Editor({ profileId, onBack }: { profileId: string | null; onBack: () =>
                 label={
                   bezProwizjiFY
                     ? "Prowizja Finance You — brak (Pożyczkodawcą jest Finance You)"
-                    : "Prowizja Finance You (5%, min 5 000 zł, bez VAT) — potrącana"
+                    : "Prowizja Finance You (7%, min 5 000 zł, bez VAT) — potrącana"
                 }
                 value={formatPLN(prowizjaFYPln)}
               />

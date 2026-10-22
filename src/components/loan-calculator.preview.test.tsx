@@ -95,22 +95,22 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(indicatorsMock).not.toHaveBeenCalled();
   });
 
-  it("liczby przy domyślnych parametrach (100 000 zł, 12 mies., 14,5%, prowizja 15%)", () => {
+  it("liczby przy domyślnych parametrach (100 000 zł, 12 mies., 14,5%, prowizja 13% przy prowizji FY 7%)", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
     const text = pageText();
     expect(text).toContain("maks. 14,5% — odsetki maksymalne");
-    expect(text).toContain("15,0% (15 000 zł) · klient spłaca ją w ratach");
+    expect(text).toContain("13,0% (13 000 zł) · klient spłaca ją w ratach");
     expect(text).toContain("100 000 zł");
     expect(text).toContain(
-      "95 000 zł trafia do klienta, a 5 000 zł to prowizja Finance You, którą klient płaci z kwoty pożyczki.",
+      "93 000 zł trafia do klienta, a 7 000 zł to prowizja Finance You, którą klient płaci z kwoty pożyczki.",
     );
-    expect(text).toContain("123 027 zł");
+    expect(text).toContain("121 027 zł");
     expect(text).toContain(
-      "10 252 zł miesięcznie przez 12 mies. — kapitał, odsetki i Twoja prowizja.",
+      "10 086 zł miesięcznie przez 12 mies. — kapitał, odsetki i Twoja prowizja.",
     );
-    expect(text).toContain("23 027 zł");
+    expect(text).toContain("21 027 zł");
     expect(text).toContain(
-      "8 027 zł odsetek i 15 000 zł Twojej prowizji — 23,0% wyłożonej kwoty w 12 mies.",
+      "8 027 zł odsetek i 13 000 zł Twojej prowizji — 21,0% wyłożonej kwoty w 12 mies.",
     );
     expect(text).not.toContain("w skali roku");
   });
@@ -166,9 +166,9 @@ describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie"
   it("krotność: orientacyjny próg 2,0×, nie granica z ustawy", async () => {
     renderCalc(<LoanCalculator investorGuidance />);
     const text = pageText();
-    expect(text).toMatch(/Krotność 1,34× — poniżej orientacyjnego progu 2,0×/);
+    expect(text).toMatch(/Krotność 1,35× — poniżej orientacyjnego progu 2,0×/);
     expect(text).toContain(
-      "Pożyczkobiorca spłaca 1,34× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
+      "Pożyczkobiorca spłaca 1,35× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
     );
     expect(text).not.toContain("brak ryzyka lichwy");
     await waitFor(() => expect(pageText()).toContain("AML — wypłata powyżej 15 000 EUR"));

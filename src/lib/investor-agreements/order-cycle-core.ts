@@ -1,4 +1,4 @@
-// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-1.0).
+// Czyste reguły cyklu Zlecenie–Projekt (Etap U2, pakiet FY-LEGAL-2.0).
 // Bez I/O — wszystko testowalne jednostkowo. Źródła: Umowa ramowa (§ 5–7,
 // Zał. 1 Karta Leada, Zał. 6, Zał. 7), NDA (§ 5, § 7), plik 00 paczki.
 
@@ -215,7 +215,7 @@ export function extendedReservationDeadline(
   return new Date(current.getTime() + hours * 3600_000);
 }
 
-/** Prowizja od Pożyczkobiorcy: 5% kwoty Finansowania, nie mniej niż 5000 zł
+/** Prowizja od Pożyczkobiorcy: 7% kwoty Finansowania, nie mniej niż 5000 zł
  *  (Zał. 6 — dyspozycja Klienta i klauzula prowizyjna przy wypłacie). */
 export const PROVISION_RATE = FY_COMMISSION_PCT / 100;
 export const PROVISION_MIN_PLN = FY_COMMISSION_MIN_PLN;

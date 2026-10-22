@@ -2,7 +2,7 @@
 
 ## dla użytkowników składających wniosek o pożyczkę lub poszukujących finansowania
 
-**wersja 1.0 — obowiązuje od dnia 19 października 2026 r.**
+**wersja 2.0 — obowiązuje od dnia 21 października 2026 r.**
 
 ---
 
@@ -85,7 +85,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 14. **Usługa elektroniczna** – usługa świadczona drogą elektroniczną przez Finance You, polegająca w szczególności na umożliwieniu złożenia wniosku, utworzenia konta, przesłania dokumentów, publikacji ogłoszenia, komunikacji z Finance You lub korzystania z panelu klienta.
 
-15. **Prowizja Finance You** (prowizja od pożyczkobiorcy) – jedyne wynagrodzenie Finance You należne od Klienta, wyłącznie w przypadku skutecznego zorganizowania finansowania: 5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, potrącane z wypłaty finansowania, określone w § 12 Regulaminu.
+15. **Prowizja Finance You** (prowizja od pożyczkobiorcy) – jedyne wynagrodzenie Finance You należne od Klienta, wyłącznie w przypadku skutecznego zorganizowania finansowania: 7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT, potrącane z wypłaty finansowania, określone w § 12 Regulaminu.
 
 16. **Dokumenty** – wszelkie pliki, zdjęcia, skany, formularze, oświadczenia, zaświadczenia, dokumenty dotyczące nieruchomości, dokumenty dochodowe, dokumenty firmowe, dokumenty tożsamości oraz inne materiały przekazane przez użytkownika.
 
@@ -474,9 +474,9 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 2. W przypadku skutecznego zorganizowania finansowania Finance You przysługuje wynagrodzenie za zorganizowanie finansowania.
 
-3. Wynagrodzenie Finance You (Prowizja Finance You) wynosi **5% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**, chyba że strony wyraźnie ustalą inaczej w formie dokumentowej, elektronicznej albo pisemnej. Jest to jedyne wynagrodzenie Finance You należne od Klienta.
+3. Wynagrodzenie Finance You (Prowizja Finance You) wynosi **7% Kwoty Udzielonej, nie mniej niż 5 000,00 zł, bez VAT**, chyba że strony wyraźnie ustalą inaczej w formie dokumentowej, elektronicznej albo pisemnej. Jest to jedyne wynagrodzenie Finance You należne od Klienta.
 
-4. Prowizja Finance You nie jest powiększana o podatek VAT. Przykład: przy Kwocie Udzielonej 100 000,00 zł Prowizja Finance You wynosi 5 000,00 zł, a Klient otrzymuje 95 000,00 zł; przy Kwocie Udzielonej 50 000,00 zł Prowizja Finance You wynosi 5 000,00 zł (kwota minimalna), a Klient otrzymuje 45 000,00 zł. Wysokość Prowizji i kwota do wypłaty są podawane Klientowi przed podpisaniem umowy finansowania.
+4. Prowizja Finance You nie jest powiększana o podatek VAT. Przykład: przy Kwocie Udzielonej 100 000,00 zł Prowizja Finance You wynosi 7 000,00 zł, a Klient otrzymuje 93 000,00 zł; przy Kwocie Udzielonej 50 000,00 zł Prowizja Finance You wynosi 5 000,00 zł (kwota minimalna), a Klient otrzymuje 45 000,00 zł. Wysokość Prowizji i kwota do wypłaty są podawane Klientowi przed podpisaniem umowy finansowania.
 
 5. Wynagrodzenie staje się należne w przypadku zawarcia przez użytkownika umowy pożyczki albo innej umowy finansowania z finansującym pozyskanym, wskazanym, skojarzonym albo przedstawionym przez Finance You lub przy udziale Finance You.
 
@@ -947,7 +947,7 @@ Na potrzeby Regulaminu poniższe pojęcia oznaczają:
 
 5. Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne, bezskuteczne albo niewykonalne, nie wpływa to na ważność pozostałych postanowień Regulaminu.
 
-6. Regulamin w wersji 1.0 obowiązuje od dnia 19 października 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
+6. Regulamin w wersji 2.0 obowiązuje od dnia 21 października 2026 r. i zastępuje wersję 1.0 z dnia 19 października 2026 r. Do spraw rozpoczętych przed tym dniem stosuje się § 28 ust. 4.
 
 ---
 

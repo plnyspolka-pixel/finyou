@@ -1,4 +1,4 @@
-// Panel administratora — pakiet umów inwestora (FY-LEGAL-1.0).
+// Panel administratora — pakiet umów inwestora (FY-LEGAL-2.0).
 // Rejestr dokumentów z hashami i aktywacją po przeglądzie kancelarii,
 // dziennik akceptacji (Zał. 5) oraz decyzje o Zleceniach (Zał. 7, SLA 2 dni).
 import { useState } from "react";
@@ -51,7 +51,7 @@ function AdminUmowyPage() {
       <FancyPageHeader
         eyebrow="Dokumenty"
         title="Umowy inwestorów"
-        subtitle="Pakiet FY-LEGAL-1.0 (umowa ramowa, NDA, RODO — wersja 1.0) — dokumenty kanoniczne, dziennik akceptacji i decyzje o Zleceniach. Aktywacja całego pakietu naraz."
+        subtitle="Pakiet FY-LEGAL-2.0 (umowa ramowa, NDA, RODO — wersja 2.0) — dokumenty kanoniczne, dziennik akceptacji i decyzje o Zleceniach. Aktywacja całego pakietu naraz."
       />
       <DocumentsCard state={state} onDone={refresh} />
       <OrdersCard state={state} onDone={refresh} />

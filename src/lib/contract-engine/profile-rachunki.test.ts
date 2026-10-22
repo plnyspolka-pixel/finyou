@@ -50,7 +50,7 @@ describe("rachunki z profilu klienta", () => {
     expect(umowa.warunki.rachunki.finance_you).toBeUndefined();
   });
 
-  it("Pożyczkodawcą jest inwestor → prowizja FY 5 % (min 5 000 zł) i rachunek FY", () => {
+  it("Pożyczkodawcą jest inwestor → prowizja FY 7 % (min 5 000 zł) i rachunek FY", () => {
     const p = profil();
     p.investorData = {
       entityVariant: "osoba_fizyczna",
