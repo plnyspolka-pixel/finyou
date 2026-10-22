@@ -15,7 +15,15 @@
  * spacje → spacja, ✓ → „tak”, ✗ → „nie”, ⚠ → „!”, ★ → „*”), a resztę na „?”
  * — jak w esign-pdf.ts i pdf-z-tekstu.ts.
  */
-import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
+import {
+  PDFDocument,
+  degrees,
+  rgb,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  type RGB,
+} from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { LIBERATION_SANS } from "@/lib/legal/legal-fonts";
 import { FY_ROUND_LOGO_PNG_BASE64 } from "@/lib/esign/esign-logo";
@@ -56,6 +64,10 @@ export interface ReportWriterOptions {
   fonts?: ReportFonts;
   /** Napis przy znaku w pasku górnym; domyślnie „Finance You · Analityk AI”. */
   brand?: string;
+  /** Lewa część stopki; domyślnie „Przygotowano dla … · data”. */
+  footerLeft?: string;
+  /** Znak wodny (np. „WZÓR”) — ukośnie, jasnoszary, na każdej stronie. */
+  watermark?: string;
 }
 
 export interface TableColumn {
@@ -419,22 +431,219 @@ export class ReportWriter {
       color?: RGB;
       indent?: number;
       after?: number;
+      /** Wyśrodkowanie wierszy (tytuły umów). */
+      align?: "left" | "center";
+      /** Etykieta wysunięta przed tekst („1.”, „a)”, „–”) — tekst zaczyna się za nią. */
+      label?: string;
+      /** Szerokość miejsca na etykietę (pt); domyślnie 16. */
+      labelWidth?: number;
+      /** Interlinia jako mnożnik rozmiaru; domyślnie 1,32. */
+      lineHeight?: number;
     } = {},
   ): void {
     const size = opts.size ?? 8.8;
     const font = opts.bold ? this.bold : this.regular;
-    const x = MARGIN.left + (opts.indent ?? 0);
-    const lh = size * 1.32;
-    const lines = wrap(this.clean(text), font, size, A4.w - MARGIN.right - x);
+    const labelW = opts.label ? (opts.labelWidth ?? 16) : 0;
+    const x = MARGIN.left + (opts.indent ?? 0) + labelW;
+    const lh = size * (opts.lineHeight ?? 1.32);
+    const maxW = A4.w - MARGIN.right - x;
+    const lines = wrap(this.clean(text), font, size, maxW);
     const color = opts.color ?? (opts.muted ? GRAY : INK);
     // Dwa pierwsze wiersze akapitu razem (bez „wdowy” na dole strony).
     this.ensure(Math.min(lines.length, 2) * lh);
-    for (const ln of lines) {
+    lines.forEach((ln, i) => {
       this.ensure(lh);
       this.y -= lh;
-      if (ln) this.page.drawText(ln, { x, y: this.y, size, font, color });
-    }
+      if (i === 0 && opts.label) {
+        this.page.drawText(this.clean(opts.label), { x: x - labelW, y: this.y, size, font, color });
+      }
+      if (!ln) return;
+      const dx = opts.align === "center" ? (maxW - font.widthOfTextAtSize(ln, size)) / 2 : 0;
+      this.page.drawText(ln, { x: x + dx, y: this.y, size, font, color });
+    });
     this.y -= opts.after ?? 3;
+  }
+
+  /** Blok podpisów: kropkowane linie obok siebie, pod nimi rola i (opcjonalnie) nazwa. */
+  signatures(
+    osoby: Array<{ rola: string; nazwa?: string | null }>,
+    opts: { size?: number } = {},
+  ): void {
+    if (!osoby.length) return;
+    const size = opts.size ?? 8.6;
+    const lh = size * 1.32;
+    const kol = Math.min(3, osoby.length);
+    const colW = CONTENT_W / kol;
+    for (let i = 0; i < osoby.length; i += kol) {
+      const grupa = osoby.slice(i, i + kol);
+      this.space(26);
+      this.ensure(lh * 3 + 8);
+      const top = this.y;
+      grupa.forEach((o, j) => {
+        const cx = MARGIN.left + j * colW + colW / 2;
+        const lineW = Math.min(150, colW - 24);
+        this.page.drawLine({
+          start: { x: cx - lineW / 2, y: top },
+          end: { x: cx + lineW / 2, y: top },
+          thickness: 0.6,
+          color: GRAY,
+          dashArray: [1.2, 1.8],
+        });
+        const rola = this.clean(o.rola);
+        const rw = this.regular.widthOfTextAtSize(rola, size);
+        this.page.drawText(rola, {
+          x: cx - rw / 2,
+          y: top - lh,
+          size,
+          font: this.regular,
+          color: GRAY,
+        });
+        if (o.nazwa) {
+          const n = truncate(this.clean(o.nazwa), this.regular, size, colW - 8);
+          const nw = this.regular.widthOfTextAtSize(n, size);
+          this.page.drawText(n, {
+            x: cx - nw / 2,
+            y: top - 2 * lh,
+            size,
+            font: this.regular,
+            color: INK,
+          });
+        }
+      });
+      this.y = top - 2 * lh - 6;
+    }
+  }
+
+  /**
+   * Strona-zajawka: układ prawdziwej treści narysowany jako nieczytelne
+   * paski (słowa → prostokąty o szerokości słów), a na środku plakietka
+   * „Dostępny w pełnym komplecie dokumentów”. Zajmuje całą stronę.
+   */
+  teaser(opts: {
+    badgeTitle: string;
+    badgeSubtitle: string;
+    items: Array<{
+      type: "title" | "subtitle" | "paragraph" | "row";
+      text?: string;
+      cells?: string[];
+      indent?: number;
+    }>;
+  }): void {
+    this.pageBreak();
+    const BAR = rgb(0.84, 0.86, 0.9);
+    const BAR_DARK = rgb(0.72, 0.75, 0.8);
+    const stop = MARGIN.bottom + 24;
+    const drawWords = (
+      text: string,
+      size: number,
+      font: PDFFont,
+      x0: number,
+      maxW: number,
+      center: boolean,
+      fill: RGB,
+    ) => {
+      const lh = size * 1.45;
+      for (const ln of wrap(this.clean(text), font, size, maxW)) {
+        if (this.y - lh < stop) return false;
+        this.y -= lh;
+        const lineW = font.widthOfTextAtSize(ln, size);
+        let x = center ? x0 + (maxW - lineW) / 2 : x0;
+        for (const word of ln.split(" ")) {
+          const w = font.widthOfTextAtSize(word, size);
+          if (w > 0)
+            this.page.drawRectangle({
+              x,
+              y: this.y - size * 0.1,
+              width: w,
+              height: size * 0.68,
+              color: fill,
+            });
+          x += w + font.widthOfTextAtSize(" ", size);
+        }
+      }
+      return true;
+    };
+    for (const it of opts.items) {
+      if (this.y < stop + 20) break;
+      if (it.type === "title") {
+        this.y -= 6;
+        if (!drawWords(it.text ?? "", 13, this.bold, MARGIN.left, CONTENT_W, true, BAR_DARK)) break;
+        this.y -= 4;
+      } else if (it.type === "subtitle") {
+        if (!drawWords(it.text ?? "", 10.5, this.bold, MARGIN.left, CONTENT_W, true, BAR_DARK))
+          break;
+        this.y -= 6;
+      } else if (it.type === "row") {
+        const cells = it.cells ?? [];
+        if (!cells.length) continue;
+        const cw = CONTENT_W / cells.length;
+        const rowH = 13;
+        if (this.y - rowH < stop) break;
+        this.page.drawRectangle({
+          x: MARGIN.left,
+          y: this.y - rowH,
+          width: CONTENT_W,
+          height: rowH,
+          color: rgb(0.955, 0.96, 0.975),
+        });
+        cells.forEach((c, i) => {
+          const w = Math.min(cw - 10, this.regular.widthOfTextAtSize(this.clean(c), 8.5));
+          if (w > 0)
+            this.page.drawRectangle({
+              x: MARGIN.left + i * cw + 5,
+              y: this.y - rowH + 3.5,
+              width: w,
+              height: 6,
+              color: BAR,
+            });
+        });
+        this.y -= rowH + 1;
+      } else {
+        const x0 = MARGIN.left + (it.indent ?? 0);
+        if (!drawWords(it.text ?? "", 9, this.regular, x0, A4.w - MARGIN.right - x0, false, BAR))
+          break;
+        this.y -= 4;
+      }
+    }
+    // Plakietka na środku strony.
+    const bw = 380;
+    const bh = 66;
+    const bx = (A4.w - bw) / 2;
+    const by = A4.h * 0.5 - bh / 2;
+    this.page.drawRectangle({
+      x: bx + 3,
+      y: by - 3,
+      width: bw,
+      height: bh,
+      color: rgb(0.8, 0.82, 0.88),
+      opacity: 0.6,
+    });
+    this.page.drawRectangle({ x: bx, y: by, width: bw, height: bh, color: NAVY });
+    const t1 = truncate(this.clean(opts.badgeTitle), this.bold, 13, bw - 24);
+    const t2 = truncate(this.clean(opts.badgeSubtitle), this.regular, 8.8, bw - 24);
+    this.page.drawText(t1, {
+      x: bx + (bw - this.bold.widthOfTextAtSize(t1, 13)) / 2,
+      y: by + bh - 27,
+      size: 13,
+      font: this.bold,
+      color: rgb(1, 1, 1),
+    });
+    this.page.drawText(t2, {
+      x: bx + (bw - this.regular.widthOfTextAtSize(t2, 8.8)) / 2,
+      y: by + 17,
+      size: 8.8,
+      font: this.regular,
+      color: rgb(0.86, 0.9, 0.98),
+    });
+    this.page.drawRectangle({
+      x: bx + 24,
+      y: by + 8,
+      width: bw - 48,
+      height: 2.2,
+      color: rgb(0.22, 0.55, 0.9),
+    });
+    this.y = MARGIN.bottom;
+    this.newPage();
   }
 
   /** Pary etykieta–wartość; obie kolumny łamane, wiersz może przejść na kolejną stronę. */
@@ -814,8 +1023,10 @@ export class ReportWriter {
     const date = this.date;
     const BRAND = this.opts.brand ?? DEFAULT_BRAND;
     const footerLeft = this.clean(
-      `Przygotowano dla ${this.opts.preparedFor} · ${formatWarsawDateTime(date)}`,
+      this.opts.footerLeft ??
+        `Przygotowano dla ${this.opts.preparedFor} · ${formatWarsawDateTime(date)}`,
     );
+    const watermark = this.opts.watermark ? this.clean(this.opts.watermark) : null;
     const docTitle = this.clean(this.opts.title);
     pages.forEach((page, i) => {
       const { width: w, height: h } = page.getSize();
@@ -852,6 +1063,21 @@ export class ReportWriter {
         thickness: 0.5,
         color: LIGHT,
       });
+      if (watermark) {
+        // Ukośny znak wodny przez środek strony — jasny, pod treścią nie da się go
+        // położyć w pdf-lib bez przebudowy, więc rysujemy z dużą przezroczystością.
+        const wmSize = 150;
+        const wmW = this.bold.widthOfTextAtSize(watermark, wmSize);
+        page.drawText(watermark, {
+          x: w / 2 - (wmW / 2) * Math.cos(Math.PI / 4) + 30,
+          y: h / 2 - (wmW / 2) * Math.sin(Math.PI / 4) - 20,
+          size: wmSize,
+          font: this.bold,
+          color: rgb(0.55, 0.58, 0.66),
+          opacity: 0.12,
+          rotate: degrees(45),
+        });
+      }
       const right = `Strona ${i + 1} z ${pages.length}`;
       const rw = this.regular.widthOfTextAtSize(right, 7.6);
       page.drawText(right, {

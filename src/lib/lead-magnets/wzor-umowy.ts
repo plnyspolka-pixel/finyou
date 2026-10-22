@@ -9,7 +9,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { przetworzSzkic } from "@/lib/contract-engine/umowa-agent-core";
 import { renderuj, type Dokument } from "@/lib/contract-engine/renderer";
-import { umowaBloki, type Blok, type Komorka, type Run } from "@/lib/contract-engine/umowa-docx";
+import {
+  umowaBloki,
+  zbudujBloki,
+  type Blok,
+  type Komorka,
+  type Run,
+} from "@/lib/contract-engine/umowa-docx";
 import { CZESCI_KOMPLETU, WERSJA_BIBLIOTEKI } from "@/lib/contract-engine/komplet";
 import type { Problem } from "@/lib/contract-engine/validator";
 import { kwCheckDigit } from "@/lib/kw";
@@ -25,6 +31,12 @@ const SENTINEL = {
   kwSad: "WZ9R",
   kwNumer: "00000000",
 } as const;
+
+/** Rachunki bankowe we wzorze — symbole zamiast cyfr (jak we wzorcu właściciela). */
+export const MASKA_RACHUNKU = "XX XXXX XXXX XXXX XXXX XXXX XXXX";
+export const MASKA_PESEL = "XXXXXXXXXXX";
+export const MASKA_NIP = "XXXXXXXXXX";
+export const MASKA_KW = "XX1X/XXXXXXXX/X";
 
 export function wzorNumerKw(): string {
   return `${SENTINEL.kwSad}/${SENTINEL.kwNumer}/${kwCheckDigit(SENTINEL.kwSad, SENTINEL.kwNumer)}`;
@@ -48,24 +60,27 @@ export function wzorUmowySzkic(): any {
   return {
     meta: {
       data_umowy: WZOR_PRZYKLAD.dataUmowy,
-      miejscowosc: "[miejscowość]",
-      numer_umowy: "[numer umowy]",
+      miejscowosc: "Warszawie",
+      numer_umowy: "WZÓR/2027",
     },
+    // Strony przykładowe — jak we wzorcu właściciela (inwestorka i przedsiębiorca
+    // na JDG); PESEL / NIP / KW / rachunki po renderze zastępują symbole X.
     pozyczkodawca: {
       typ: "osoba_fizyczna",
-      imie_nazwisko: "Imię Nazwisko Pożyczkodawcy",
+      imie_nazwisko: "Anna Inwestorska",
       pesel: SENTINEL.peselPozyczkodawcy,
-      adres: "[adres zamieszkania Pożyczkodawcy]",
-      dokument_tozsamosci: "[rodzaj, seria i numer dokumentu tożsamości]",
-      plec: "M",
+      adres: "ul. Inwestorska 2, 00-002 Warszawa",
+      dokument_tozsamosci: "dowód osobisty XYZ 000000",
+      plec: "K",
     },
     pozyczkobiorca: {
       typ: "osoba_fizyczna",
-      imie_nazwisko: "Imię Nazwisko Pożyczkobiorcy",
-      firma: "[firma Pożyczkobiorcy – nazwa działalności z CEIDG]",
+      imie_nazwisko: "Jan Przykładowy",
+      firma: "Jan Przykładowy – Usługi Przykładowe",
       pesel: SENTINEL.peselPozyczkobiorcy,
       nip: SENTINEL.nipPozyczkobiorcy,
-      adres: "[adres siedziby / zamieszkania Pożyczkobiorcy]",
+      dokument_tozsamosci: "dowód osobisty ABC 000000",
+      adres: "ul. Przykładowa 1, 00-001 Warszawa",
       plec: "M",
     },
     porecziciel: null,
@@ -76,7 +91,7 @@ export function wzorUmowySzkic(): any {
         model: "nie_potracana_raty",
       },
       oprocentowanie: WZOR_PRZYKLAD.oprocentowanie,
-      cel: "[cel gospodarczy – np. zakup maszyny na potrzeby prowadzonej działalności gospodarczej]",
+      cel: "finansowanie bieżącej działalności gospodarczej (zakup materiałów i wyposażenia)",
       harmonogram: {
         liczba_rat: WZOR_PRZYKLAD.liczbaRat,
         typ: "balonowy",
@@ -85,15 +100,15 @@ export function wzorUmowySzkic(): any {
         kwota_raty: { cyframi: WZOR_PRZYKLAD.pulapRaty },
       },
       rachunki: {
-        wyplata: "[numer rachunku bankowego Pożyczkobiorcy]",
-        splata: "[numer rachunku bankowego Pożyczkodawcy]",
+        wyplata: MASKA_RACHUNKU,
+        splata: MASKA_RACHUNKU,
       },
     },
     nieruchomosci: [
       {
         nr_kw: wzorNumerKw(),
-        sad: "Sąd Rejonowy w [miejscowość], [numer] Wydział Ksiąg Wieczystych",
-        opis: "[opis nieruchomości – np. lokal mieszkalny nr … przy ul. … w …]",
+        sad: "Sąd Rejonowy dla Warszawy-Mokotowa w Warszawie, VII Wydział Ksiąg Wieczystych",
+        opis: "lokal mieszkalny przy ul. Przykładowej 1 w Warszawie",
         rodzaj: "lokal",
         wlasciciel_ref: "pozyczkobiorca",
         obciazenia: [],
@@ -117,25 +132,19 @@ export function wzorMaski(umowa: any): Array<[string, string]> {
   const kw = String(umowa?.nieruchomosci?.[0]?.nr_kw ?? wzorNumerKw());
   const rFy = String(umowa?.warunki?.rachunki?.finance_you ?? "");
   const out: Array<[string, string]> = [
-    ["IMIĘ NAZWISKO POŻYCZKODAWCY", "[IMIĘ I NAZWISKO POŻYCZKODAWCY]"],
-    ["IMIĘ NAZWISKO POŻYCZKOBIORCY", "[IMIĘ I NAZWISKO POŻYCZKOBIORCY]"],
-    ["Imię Nazwisko Pożyczkodawcy", "[imię i nazwisko Pożyczkodawcy]"],
-    ["Imię Nazwisko Pożyczkobiorcy", "[imię i nazwisko Pożyczkobiorcy]"],
-    [`PESEL ${SENTINEL.peselPozyczkodawcy}`, "PESEL [numer PESEL]"],
-    [`PESEL ${SENTINEL.peselPozyczkobiorcy}`, "PESEL [numer PESEL]"],
-    [`NIP ${SENTINEL.nipPozyczkobiorcy}`, "NIP [numer NIP]"],
-    [SENTINEL.peselPozyczkodawcy, "[numer PESEL]"],
-    [SENTINEL.peselPozyczkobiorcy, "[numer PESEL]"],
-    [SENTINEL.nipPozyczkobiorcy, "[numer NIP]"],
-    [kw, "[numer księgi wieczystej]"],
-    [kw.replace(/\//g, ""), "[numer księgi wieczystej]"],
+    [SENTINEL.peselPozyczkodawcy, MASKA_PESEL],
+    [SENTINEL.peselPozyczkobiorcy, MASKA_PESEL],
+    [SENTINEL.nipPozyczkobiorcy, MASKA_NIP],
+    [kw, MASKA_KW],
+    [kw.replace(/\//g, ""), MASKA_KW.replace(/\//g, "")],
   ];
-  if (rFy) out.push([rFy, "[numer rachunku Finance You – w pakiecie dokumentów]"]);
+  if (rFy) out.push([rFy, MASKA_RACHUNKU]);
   return out;
 }
 
 function zamien(tekst: string, maski: Array<[string, string]>): string {
-  let t = tekst;
+  // W blokach kompletu (wniosek, załączniki) zdarzają się komórki liczbowe.
+  let t = typeof tekst === "string" ? tekst : tekst == null ? "" : String(tekst);
   for (const [od, na] of maski) if (od) t = t.split(od).join(na);
   return t;
 }
@@ -228,6 +237,41 @@ export function wzorUmowy(): WzorUmowy {
     wersjaBiblioteki: WERSJA_BIBLIOTEKI,
   };
   return cache;
+}
+
+export interface CzescPakietu {
+  /** Np. „Załącznik nr 1 — Harmonogram spłat” albo „Wniosek o udzielenie pożyczki pieniężnej”. */
+  tytul: string;
+  /** Bloki części po zamaskowaniu — do stron-zajawek (rysowane jako paski). */
+  bloki: Blok[];
+}
+
+/**
+ * Części kompletu poza umową — załączniki 1–n (w kolejności) i wniosek na
+ * końcu — do stron-zajawek „dostępne w pełnym komplecie dokumentów”.
+ */
+export function wzorCzesciPakietu(): CzescPakietu[] {
+  const w = wzorUmowy();
+  const maski = wzorMaski(w.umowa);
+  const wszystkie = maskujBloki(zbudujBloki(w.umowa, w.doc), maski);
+  const czesci: Blok[][] = [];
+  let biezaca: Blok[] = [];
+  for (const b of wszystkie) {
+    if (b.t === "tytul" && b.nowaStrona && biezaca.length) {
+      czesci.push(biezaca);
+      biezaca = [];
+    }
+    biezaca.push(b);
+  }
+  if (biezaca.length) czesci.push(biezaca);
+  // [0] wniosek, [1] umowa, [2..] załączniki.
+  const [wniosek, , ...zalaczniki] = czesci;
+  const out: CzescPakietu[] = zalaczniki.map((bloki, i) => {
+    const z = w.zalaczniki[i];
+    return { tytul: z ? `Załącznik nr ${z.nr} — ${z.tytul}` : `Załącznik nr ${i + 1}`, bloki };
+  });
+  if (wniosek) out.push({ tytul: "Wniosek o udzielenie pożyczki pieniężnej", bloki: wniosek });
+  return out;
 }
 
 /** Tekst bloków (do testów: brak wartowników, danych osobowych, znaków spoza fontu). */

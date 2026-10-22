@@ -21,7 +21,8 @@ export async function renderLeadMagnetPdf(
   opts: { generatedAt?: Date; fonts?: ReportFonts; serifFonts?: FontyPdf } = {},
 ): Promise<Uint8Array> {
   if (m.custom_pdf === "wzor-umowy") {
-    // Wzór umowy: treść z silnika klauzul, skład pdfZBlokow (serif, jak .docx umowy).
+    // Wzór umowy: treść z silnika klauzul, skład ReportWriter w serifie (jak .docx umowy),
+    // znak wodny WZÓR i strony-zajawki załączników.
     const { renderWzorUmowyPdf } = await import("./wzor-umowy-pdf");
     return renderWzorUmowyPdf(m, { generatedAt: opts.generatedAt, fonts: opts.serifFonts });
   }
@@ -80,7 +81,7 @@ export async function renderLeadMagnetPdf(
   return w.save();
 }
 
-function renderBlock(w: ReportWriter, b: PdfBlock): void {
+export function renderBlock(w: ReportWriter, b: PdfBlock): void {
   switch (b.type) {
     case "lead":
       w.paragraph(b.text, { size: 9.8, after: 6 });

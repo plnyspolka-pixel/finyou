@@ -1,213 +1,218 @@
-// PDF lead magnetu „wzór umowy pożyczki”: okładka i wprowadzenie z katalogu,
-// treść umowy z silnika klauzul (wzor-umowy.ts), strona „Załączniki — w
-// pakiecie dokumentów” i zakończenie ze stopką compliance. Skład przez
-// pdfZBlokow (Liberation Serif, układ jak w .docx umowy) — jeden dokument,
-// jedna numeracja stron. Czysty JS, działa na serwerze i w testach.
+// PDF lead magnetu „wzór umowy pożyczki” — prezentacja jak we wzorcu
+// właściciela: nagłówek z marką, znak wodny WZÓR, umowa z silnika klauzul
+// na przykładowych stronach, a załączniki 1–4 i wniosek jako strony-zajawki
+// (układ prawdziwej treści narysowany paskami + plakietka „Dostępny w pełnym
+// komplecie dokumentów”). Skład: ReportWriter w serifie (jak .docx umowy),
+// jedna numeracja stron. Czysty JS — serwer i testy.
 import { COMPANY_DATA } from "@/lib/company";
-import { INVESTOR_PAGE_URL } from "@/lib/autopilot/profiles";
-import type { Blok, Komorka, Run } from "@/lib/contract-engine/umowa-docx";
-import { pdfZBlokow, type FontyPdf } from "@/lib/legal/pdf-z-tekstu";
-import {
-  CATALOG_VERSION,
-  catalogFooterLines,
-  type LeadMagnetBlueprint,
-  type PdfBlock,
-  type PdfSection,
-} from "./catalog";
-import { ZALACZNIKI_OPIS, czesciPakietu, wzorUmowy } from "./wzor-umowy";
+import type { Blok } from "@/lib/contract-engine/umowa-docx";
+import { LIBERATION_SERIF } from "@/lib/legal/legal-fonts";
+import { ReportWriter, type ReportFonts } from "@/lib/pdf/report-writer";
+import { CATALOG_VERSION, catalogFooterLines, type LeadMagnetBlueprint } from "./catalog";
+import { renderBlock } from "./pdf";
+import { ZALACZNIKI_OPIS, wzorCzesciPakietu, wzorUmowy, type CzescPakietu } from "./wzor-umowy";
 
-const r = (tekst: string, o: Omit<Run, "tekst"> = {}): Run => ({ tekst, ...o });
-const akapit = (tekst: string | Run[], o: Partial<Extract<Blok, { t: "akapit" }>> = {}): Blok => ({
-  t: "akapit",
-  runs: typeof tekst === "string" ? [r(tekst)] : tekst,
-  ...o,
-});
-const lista = (tekst: string | Run[]): Blok => akapit(tekst, { wciecie: "lista", etykieta: "–" });
-const kom = (tekst: string | Run[], o: Partial<Komorka> = {}): Komorka => ({ tekst, ...o });
+export const WZOR_BADGE_SUBTITLE = "Dostępny w pełnym komplecie dokumentów · financeyou.pl";
+export const WZOR_BRAND = "Finance You · Wzór umowy pożyczki";
 
-/** Szerokości kolumn w dxa (A4 minus marginesy = 9638). */
-const SZER = 9638;
-const kolumny = (wagi: number[]): number[] => {
-  const suma = wagi.reduce((a, b) => a + b, 0);
-  return wagi.map((w) => Math.round((w / suma) * SZER));
-};
+const tekstRunow = (b: Extract<Blok, { t: "akapit" }>) => b.runs.map((r) => r.tekst).join("");
+const tekstKomorki = (k: { tekst: string | Array<{ tekst: string }> }) =>
+  typeof k.tekst === "string" ? k.tekst : k.tekst.map((r) => r.tekst).join("");
 
-/** Bloki katalogu (sekcje treści) → bloki dokumentu pdfZBlokow. */
-export function blokiZSekcji(sections: PdfSection[]): Blok[] {
-  const out: Blok[] = [];
-  for (const s of sections) {
-    out.push({ t: "naglowek", tekst: s.heading });
-    for (const b of s.blocks) out.push(...blokiZBloku(b));
+/** Blok umowy (silnik) → ReportWriter: tytuły na środku, ustępy z wysuniętą numeracją. */
+function rysujBlokUmowy(w: ReportWriter, b: Blok): void {
+  switch (b.t) {
+    case "tytul":
+      if (b.nowaStrona) w.pageBreak();
+      w.space(8);
+      w.paragraph(b.tekst, { size: 14, bold: true, align: "center", after: 2 });
+      return;
+    case "podtytul":
+      w.paragraph(b.tekst, { size: 11, bold: true, align: "center", after: 4 });
+      return;
+    case "naglowek":
+      w.space(6);
+      w.paragraph(b.tekst, { size: 10, bold: true, after: 3 });
+      return;
+    case "akapit": {
+      const text = tekstRunow(b);
+      const common = { size: 9.4, lineHeight: 1.36, after: 2.5 } as const;
+      if (b.wciecie === "ustep") {
+        w.paragraph(text, { ...common, label: b.etykieta ?? "", labelWidth: 18 });
+      } else if (b.wciecie === "podpunkt") {
+        w.paragraph(text, { ...common, indent: 18, label: b.etykieta ?? "–", labelWidth: 16 });
+      } else if (b.wciecie === "lista") {
+        w.paragraph(text, { ...common, indent: 8, label: b.etykieta ?? "–", labelWidth: 12 });
+      } else {
+        w.paragraph(text, { ...common, align: b.align === "center" ? "center" : "left" });
+      }
+      return;
+    }
+    case "tabela": {
+      const [pierwszy, ...reszta] = b.wiersze;
+      const naglowek = pierwszy?.naglowek ? pierwszy : null;
+      const wiersze = naglowek ? reszta : b.wiersze;
+      const columns = b.szerokosci.map((width, i) => ({
+        label: naglowek ? tekstKomorki(naglowek.komorki[i] ?? { tekst: "" }) : "",
+        width,
+        align: wiersze[0]?.komorki[i]?.align === "right" ? ("right" as const) : ("left" as const),
+      }));
+      w.table(
+        columns,
+        wiersze.map((wi) => wi.komorki.map((k) => tekstKomorki(k))),
+        { size: 8.4 },
+      );
+      return;
+    }
+    case "podpisy":
+      w.signatures(
+        b.osoby.map((o) => ({ rola: o.rola, nazwa: o.nazwa ?? o.wImieniu?.join(", ") ?? null })),
+        { size: 8.8 },
+      );
+      return;
+  }
+}
+
+/** Bloki części pakietu → elementy strony-zajawki (paski zamiast tekstu). */
+function elementyZajawki(bloki: Blok[]) {
+  const out: Array<{
+    type: "title" | "subtitle" | "paragraph" | "row";
+    text?: string;
+    cells?: string[];
+    indent?: number;
+  }> = [];
+  for (const b of bloki) {
+    if (out.length >= 80) break;
+    switch (b.t) {
+      case "tytul":
+        out.push({ type: "title", text: b.tekst });
+        break;
+      case "podtytul":
+      case "naglowek":
+        out.push({ type: "subtitle", text: b.tekst });
+        break;
+      case "akapit":
+        out.push({ type: "paragraph", text: tekstRunow(b), indent: b.wciecie ? 14 : 0 });
+        break;
+      case "tabela":
+        for (const wi of b.wiersze) out.push({ type: "row", cells: wi.komorki.map(tekstKomorki) });
+        break;
+      case "podpisy":
+        break;
+    }
   }
   return out;
 }
 
-function blokiZBloku(b: PdfBlock): Blok[] {
-  switch (b.type) {
-    case "lead":
-      return [akapit([r(b.text, { bold: true })])];
-    case "p":
-      return [akapit(b.text)];
-    case "subheading":
-      return [akapit([r(b.text, { bold: true })])];
-    case "bullets":
-    case "checklist":
-      return b.items.map((i) => lista(b.type === "checklist" ? `☐ ${i}` : i));
-    case "steps":
-      return b.items.map((s, i) =>
-        akapit([r(`${i + 1}. ${s.title}`, { bold: true }), ...(s.text ? [r(` ${s.text}`)] : [])], {
-          wciecie: "ustep",
-        }),
-      );
-    case "important":
-      return [akapit([r("Ważne: ", { bold: true }), r(b.text)])];
-    case "risk":
-      return [akapit([r("Ryzyko: ", { bold: true }), r(b.text)])];
-    case "table":
-      return [
-        {
-          t: "tabela",
-          szerokosci: kolumny(b.columns.map((c) => c.width)),
-          wiersze: [
-            { komorki: b.columns.map((c) => kom(c.label, { bold: true })), naglowek: true },
-            ...b.rows.map((row) => ({
-              komorki: row.map((cell, i) => kom(cell, { align: b.columns[i]?.align ?? "left" })),
-            })),
-          ],
-        },
-      ];
-    case "keyValues":
-      return b.rows.map(([k, v]) => akapit([r(`${k}: `, { bold: true }), r(v)]));
-    case "highlights":
-      return [akapit(b.items.map((h) => `${h.label}: ${h.value}`).join(" · "))];
-  }
-}
-
-function okladka(m: LeadMagnetBlueprint, wersjaBiblioteki: string): Blok[] {
-  return [
-    { t: "tytul", tekst: m.title.toUpperCase() },
-    { t: "podtytul", tekst: m.pdf.eyebrow },
-    akapit(m.pdf.subtitle, { align: "center" }),
-    akapit(
-      `${COMPANY_DATA.legalName} · KRS ${COMPANY_DATA.krs} · wersja materiału ${CATALOG_VERSION} · biblioteka klauzul ${wersjaBiblioteki}`,
-      { align: "center" },
-    ),
-  ];
-}
-
-function stronaZalacznikow(zalaczniki: Array<{ nr: number; tytul: string }>): Blok[] {
-  const wniosek = czesciPakietu().find((c) => c.startsWith("Wniosek")) ?? null;
-  const wiersze = [
-    {
-      komorki: [
-        kom("Część", { bold: true }),
-        kom("Co zawiera", { bold: true }),
-        kom("Gdzie", { bold: true }),
-      ],
-      naglowek: true,
-    },
-    ...(wniosek
-      ? [
-          {
-            komorki: [
-              kom(wniosek),
-              kom(
-                "Dane firmy i nieruchomości, cel, oświadczenia (aktywna działalność, PEP) — składany razem z umową.",
-              ),
-              kom("pakiet dokumentów"),
-            ],
-          },
-        ]
-      : []),
-    ...zalaczniki.map((z) => ({
-      komorki: [
-        kom(`Załącznik nr ${z.nr} — ${z.tytul}`),
-        kom(ZALACZNIKI_OPIS[z.nr] ?? ""),
-        kom("pakiet dokumentów"),
-      ],
-    })),
-  ];
-  return [
-    { t: "tytul", tekst: "ZAŁĄCZNIKI DO UMOWY", nowaStrona: true },
-    { t: "podtytul", tekst: "czego nie ma w tym wzorze i gdzie to jest" },
-    akapit(
-      "Umowa wymienia cztery załączniki, a komplet do podpisu zaczyna się od wniosku o udzielenie pożyczki. Tych części celowo nie ma w bezpłatnym wzorze: harmonogram jest liczony do grosza dla konkretnej kwoty, oprocentowania i terminów, protokół z negocjacji dokumentuje ustalenia konkretnych stron, a tabela opłat i dyspozycja wypłaty wynikają z aktualnych parametrów systemu. Wszystkie składa generator umowy w pakiecie dokumentów programu dla inwestorów — razem z umową, w jednym pliku .docx i w wersji PDF do e-podpisu.",
-    ),
-    { t: "tabela", szerokosci: kolumny([3, 5, 1.6]), wiersze },
-    { t: "naglowek", tekst: "Jak otrzymać komplet" },
-    lista(
+function stronaPakietu(w: ReportWriter, m: LeadMagnetBlueprint, czesci: CzescPakietu[]): void {
+  w.pageBreak();
+  w.heading("Załączniki i wniosek – w pakiecie dokumentów");
+  w.paragraph(
+    "Strony oznaczone plakietką to zajawki: układ prawdziwych dokumentów bez treści. Harmonogram jest liczony do grosza dla konkretnej kwoty, oprocentowania i terminów, protokół z negocjacji dokumentuje ustalenia konkretnych stron, a tabela opłat, dyspozycja wypłaty i wniosek wynikają z aktualnych parametrów systemu. Wszystkie składa generator umowy w pakiecie dokumentów programu dla inwestorów – razem z umową, w jednym pliku .docx i w wersji PDF do e-podpisu.",
+    { size: 9.2, after: 6 },
+  );
+  w.keyValues(
+    czesci.map((c, i) => {
+      const nr = i + 1;
+      const opis = c.tytul.startsWith("Wniosek")
+        ? "Dane firmy i nieruchomości, cel, oświadczenia (aktywna działalność, PEP) – składany razem z umową."
+        : (ZALACZNIKI_OPIS[nr] ?? "");
+      return [c.tytul, opis] as [string, string];
+    }),
+    { labelWidth: 170, size: 8.8 },
+  );
+  w.subheading("Jak otrzymać komplet");
+  w.bullets(
+    [
       "Program dla inwestorów Finance You: generator umowy składa wniosek, umowę i załączniki 1–4 z tej samej biblioteki klauzul, z harmonogramem liczonym silnikiem (autonaprawa zaokrągleń w racie końcowej) i audytem każdej generacji (SHA-256 treści, wersja biblioteki).",
-    ),
-    lista(
       "Do tego: raport o inwestycji z analizą księgi wieczystej, harmonogram zaakceptowany przez klienta, obsługa spłat i windykacji, e-podpis dokumentów.",
-    ),
-    lista(`Szczegóły i warunki dostępu: ${INVESTOR_PAGE_URL}`),
-  ];
-}
-
-function zakonczenie(m: LeadMagnetBlueprint): Blok[] {
+    ],
+    { size: 9 },
+  );
+  w.heading(m.pdf.closing.heading);
+  w.paragraph(m.pdf.closing.text, { size: 9.4, after: 6 });
+  w.bullets(
+    m.pdf.closing.actions.map((a) => `${a.label}: ${a.url}`),
+    { size: 9 },
+  );
+  w.subheading("Ważne informacje");
   const [risk, ...rest] = catalogFooterLines(m);
-  return [
-    { t: "naglowek", tekst: m.pdf.closing.heading },
-    akapit(m.pdf.closing.text),
-    ...m.pdf.closing.actions.map((a) => lista(`${a.label}: ${a.url}`)),
-    { t: "naglowek", tekst: "Ważne informacje" },
-    akapit([r("Ryzyko: ", { bold: true }), r(risk)]),
-    akapit(
-      "Treść umowy pochodzi z biblioteki klauzul silnika umów Finance You, z której składane są prawdziwe umowy — nie została napisana przez AI. Okładkę, wprowadzenie i opis załączników przygotowano z użyciem AI i zweryfikowano w zespole Finance You. Wzór ma charakter edukacyjny: przed użyciem we własnej transakcji skonsultuj treść z własną kancelarią; każda umowa wymaga dopasowania do stron, nieruchomości i warunków.",
-    ),
-    ...rest.map((line) => akapit(line)),
-  ];
+  w.note(risk, { tone: "warning" });
+  w.paragraph(
+    "Treść umowy pochodzi z biblioteki klauzul silnika umów Finance You, z której składane są prawdziwe umowy – nie została napisana przez AI. Okładkę, wprowadzenie i strony-zajawki przygotowano z użyciem AI i zweryfikowano w zespole Finance You. Wzór ma charakter edukacyjny: przed użyciem we własnej transakcji skonsultuj treść z własną kancelarią; każda umowa wymaga dopasowania do stron, nieruchomości i warunków.",
+    { size: 7.8, muted: true, after: 2 },
+  );
+  for (const line of rest) w.paragraph(line, { size: 7.8, muted: true, after: 2 });
 }
 
-/** Cały PDF wzoru umowy (okładka → wprowadzenie → umowa → załączniki → zakończenie). */
+/** Cały PDF wzoru umowy: okładka → wprowadzenie → umowa → zajawki → pakiet i stopka. */
 export async function renderWzorUmowyPdf(
   m: LeadMagnetBlueprint,
-  opts: { generatedAt?: Date; fonts?: FontyPdf } = {},
+  opts: { generatedAt?: Date; fonts?: ReportFonts } = {},
 ): Promise<Uint8Array> {
-  const w = wzorUmowy();
-  const umowa = w.bloki.map((b, i) =>
-    i === 0 && b.t === "tytul" ? { ...b, nowaStrona: true } : b,
-  );
-  const bloki: Blok[] = [
-    ...okladka(m, w.wersjaBiblioteki),
-    ...blokiZSekcji(m.pdf.sections),
-    ...umowa,
-    ...stronaZalacznikow(w.zalaczniki),
-    ...zakonczenie(m),
-  ];
-  return pdfZBlokow({
-    bloki,
+  const wz = wzorUmowy();
+  const czesci = wzorCzesciPakietu();
+  const w = await ReportWriter.create({
     title: m.title,
-    version: `${CATALOG_VERSION} · klauzule ${w.wersjaBiblioteki}`,
-    date: opts.generatedAt,
-    fonts: opts.fonts,
-    creator: "Finance You — wzór umowy (materiał edukacyjny)",
+    subject: `${m.slug} · wersja ${CATALOG_VERSION} · klauzule ${wz.wersjaBiblioteki}`,
+    preparedFor: "inwestorów prywatnych",
+    brand: WZOR_BRAND,
+    footerLeft: `${COMPANY_DATA.legalName} · ${COMPANY_DATA.addressFull} · financeyou.pl · wersja ${CATALOG_VERSION}`,
+    watermark: "WZÓR",
+    generatedAt: opts.generatedAt,
+    fonts: opts.fonts ?? LIBERATION_SERIF,
   });
+
+  w.cover({
+    eyebrow: m.pdf.eyebrow,
+    title: m.title,
+    subtitle: m.pdf.subtitle,
+    items: m.benefits,
+    itemsLabel: "W środku",
+    meta: [
+      `${COMPANY_DATA.legalName} · KRS ${COMPANY_DATA.krs} · ${COMPANY_DATA.website}`,
+      `Wersja ${CATALOG_VERSION} · biblioteka klauzul ${wz.wersjaBiblioteki} · materiał bezpłatny, do użytku własnego`,
+      "Treść umowy z silnika umów Finance You; okładka i opisy przygotowane z użyciem AI i zweryfikowane przez zespół.",
+    ],
+  });
+  for (const s of m.pdf.sections) {
+    w.heading(s.heading);
+    for (const b of s.blocks) renderBlock(w, b);
+  }
+
+  w.pageBreak();
+  for (const b of wz.bloki) rysujBlokUmowy(w, b);
+
+  for (const c of czesci) {
+    w.teaser({
+      badgeTitle: c.tytul,
+      badgeSubtitle: WZOR_BADGE_SUBTITLE,
+      items: elementyZajawki(c.bloki),
+    });
+  }
+
+  stronaPakietu(w, m, czesci);
+  return w.save();
 }
 
-/** Tekst okładki, wprowadzenia, strony załączników i zakończenia (bez treści umowy) — do testów fontu. */
+/** Tekst okładki, wprowadzenia i strony pakietu (bez umowy) — do testów fontu. */
 export function tekstOpakowania(m: LeadMagnetBlueprint): string {
-  const w = wzorUmowy();
-  const bloki = [
-    ...okladka(m, w.wersjaBiblioteki),
-    ...blokiZSekcji(m.pdf.sections),
-    ...stronaZalacznikow(w.zalaczniki),
-    ...zakonczenie(m),
-  ];
-  const out: string[] = [];
-  for (const b of bloki) {
-    if (b.t === "akapit") out.push(b.runs.map((x) => x.tekst).join(""));
-    else if (b.t === "tabela")
-      for (const wi of b.wiersze)
-        out.push(
-          wi.komorki
-            .map((k) =>
-              typeof k.tekst === "string" ? k.tekst : k.tekst.map((x) => x.tekst).join(""),
-            )
-            .join(" | "),
-        );
-    else if (b.t !== "podpisy") out.push(b.tekst);
+  const czesci = wzorCzesciPakietu();
+  const out: string[] = [m.pdf.eyebrow, m.title, m.pdf.subtitle, ...m.benefits];
+  for (const s of m.pdf.sections) {
+    out.push(s.heading);
+    for (const b of s.blocks) {
+      if ("text" in b && typeof b.text === "string") out.push(b.text);
+      if ("items" in b && Array.isArray(b.items))
+        out.push(...b.items.map((i) => (typeof i === "string" ? i : JSON.stringify(i))));
+      if (b.type === "keyValues") out.push(...b.rows.map(([k, v]) => `${k}: ${v}`));
+    }
   }
+  out.push(
+    WZOR_BADGE_SUBTITLE,
+    ...czesci.map((c) => c.tytul),
+    "Załączniki i wniosek – w pakiecie dokumentów",
+  );
+  out.push(m.pdf.closing.heading, m.pdf.closing.text, ...catalogFooterLines(m));
   return out.join("\n");
 }

@@ -969,7 +969,7 @@ const wzorUmowyPozyczki = defineMagnet({
     "Hipoteka do 260 000 zł przy 100 000 zł kapitału, art. 777 § 1 pkt 5 k.p.c., zakaz dalszego obciążania, warunki wejścia w życie i wypłaty",
     "Oświadczenia B2B wyłączające ustawę o kredycie konsumenckim i hipotecznym, o stanie nieruchomości i braku zaległości wobec US i ZUS",
     "Windykacja i wypowiedzenie: kolejność zaliczania wpłat, odsetki za opóźnienie, wypowiedzenie po 14 dniach, spłata całości w 7 dni",
-    "Pola do wypełnienia w nawiasach kwadratowych – widać, jakie dane zebrać przed notariuszem",
+    "Przykładowe strony (Anna Inwestorska i Jan Przykładowy), PESEL, NIP, numer księgi i rachunki zastąpione symbolami – czyta się jak prawdziwy dokument, bez cudzych danych",
     "Spis załączników 1–4 (harmonogram, protokół negocjacji, tabela opłat, dyspozycja wypłaty) – komplet składa generator umowy w pakiecie dokumentów",
   ],
   cta_text: "Wyślij mi wzór umowy",
@@ -984,7 +984,7 @@ const wzorUmowyPozyczki = defineMagnet({
   pdf: {
     eyebrow: "Wzór umowy · dla inwestora prywatnego",
     subtitle:
-      "Sama umowa pożyczki zabezpieczonej hipoteką – z biblioteki klauzul silnika umów Finance You, na przykładowych warunkach, z polami do wypełnienia. Załączniki 1–4 i wniosek: w pakiecie dokumentów.",
+      "Sama umowa pożyczki zabezpieczonej hipoteką – z biblioteki klauzul silnika umów Finance You, na przykładowych stronach i warunkach. Załączniki 1–4 i wniosek: zajawki w tym pliku, komplet w pakiecie dokumentów.",
     sections: [
       {
         heading: "Jak czytać ten wzór",
@@ -996,10 +996,10 @@ const wzorUmowyPozyczki = defineMagnet({
           {
             type: "bullets",
             items: [
-              "Pola w nawiasach kwadratowych, np. [numer księgi wieczystej], to dane konkretnej transakcji – uzupełnia je generator.",
+              "Strony są przykładowe: Anna Inwestorska (inwestorka) i Jan Przykładowy (przedsiębiorca na jednoosobowej działalności). PESEL, NIP, numer księgi wieczystej i rachunki zastąpiono symbolami X – generator wstawia dane konkretnej transakcji.",
               "Kwoty, terminy i oprocentowanie są przykładowe: 100 000 zł kapitału, 12 rat, hipoteka i poddanie się egzekucji do 260 000 zł. Oprocentowanie przykładu jest równe odsetkom maksymalnym na dzień wydania materiału.",
               "Pożyczkodawcą jest osoba fizyczna (inwestor), pożyczkobiorcą – przedsiębiorca prowadzący jednoosobową działalność. Dla spółek, poręczycieli, współwłasności i wcześniejszych hipotek biblioteka ma osobne klauzule, które generator włącza automatycznie.",
-              "Umowa wymienia cztery załączniki (1–4). Nie ma ich w tym wzorze – opis i miejsce, gdzie są, znajdziesz na stronie po umowie.",
+              "Umowa wymienia cztery załączniki (1–4) i składa się ją razem z wnioskiem. W tym wzorze są tylko ich zajawki – komplet dla konkretnej transakcji daje pakiet dokumentów (opis na końcu).",
             ],
           },
           {

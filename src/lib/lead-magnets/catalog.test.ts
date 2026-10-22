@@ -200,7 +200,7 @@ describe("katalog — render PDF", () => {
       expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
       const doc = await PDFDocument.load(bytes);
       expect(doc.getPageCount()).toBeGreaterThanOrEqual(4);
-      expect(doc.getPageCount()).toBeLessThanOrEqual(16);
+      expect(doc.getPageCount()).toBeLessThanOrEqual(22);
       expect(doc.getTitle()).toBe(m.title);
       expect(doc.getSubject()).toContain(CATALOG_VERSION);
       expect(doc.getAuthor()).toBe("Finance You");
