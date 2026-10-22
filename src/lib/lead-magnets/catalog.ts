@@ -976,7 +976,9 @@ const wzorUmowyPozyczki = defineMagnet({
   custom_pdf: "wzor-umowy",
   title: "Wzór umowy pożyczki pod hipotekę dla inwestora",
   // Strona zapisu: jeden komunikat, bez wykładu — szczegóły są w samym PDF-ie.
-  headline: "Pobierz wzór umowy pożyczki. Oszczędź 5–10 tys. zł na kosztach kancelarii prawnej.",
+  // „5–10” z łącznikiem słów (U+2060) po półpauzie, żeby nagłówek nie łamał się w środku kwoty.
+  headline:
+    "Pobierz wzór umowy pożyczki. Oszczędź 5–\u206010 tys. zł na kosztach kancelarii prawnej.",
   subheadline:
     "Tyle kosztuje napisanie takiej umowy od zera w kancelarii. Tu dostajesz gotowy tekst z biblioteki klauzul, z której Finance You składa prawdziwe umowy dla inwestorów.",
   benefits: [
