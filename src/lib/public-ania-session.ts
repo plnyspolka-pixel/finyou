@@ -31,6 +31,7 @@ export function createAniaSession(options: {
     if (active) return Promise.resolve(active);
     if (connecting) return connecting;
     let firstResponse = true;
+    userTurnStarted = false;
     const reconnecting = hasGreeting;
     connecting = startVoiceConversation(
       { surface: "reception", dynamicVariables: options.dynamicVariables, mode: "text" },
