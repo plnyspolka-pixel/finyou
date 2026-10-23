@@ -40,6 +40,7 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Do 1 mln zł. Decyzja w 24 h. Złóż wniosek online." },
       { property: "og:url", content: "https://financeyou.pl/" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/" }],
     scripts: [

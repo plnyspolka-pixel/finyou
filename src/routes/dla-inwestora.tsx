@@ -187,6 +187,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       { property: "og:url", content: "https://financeyou.pl/dla-inwestora" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/dla-inwestora" }],
     scripts: [
