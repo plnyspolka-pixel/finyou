@@ -387,6 +387,24 @@ export async function processQueueItem(
         attempt_count: item.attempt_count + 1,
       })
       .eq("id", id);
+    // Wpis z lead magnetem (autopilot): film pod automat komentarzy YouTube.
+    const leadMagnetId = (claimed as { lead_magnet_id?: string | null }).lead_magnet_id;
+    if (leadMagnetId) {
+      try {
+        const { linkPublishedPost } = await import("./lead-magnets/lead-magnets.server");
+        await linkPublishedPost({
+          leadMagnetId,
+          queuePlatform: "youtube",
+          externalPostId: videoId,
+          label: item.title || null,
+          postUrl: `https://www.youtube.com/watch?v=${videoId}`,
+        });
+      } catch (e) {
+        console.warn(
+          `[lead-magnet] powiązanie filmu ${videoId}: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    }
     return { ok: true, videoId };
   } catch (err) {
     const { VideoPreparingError } = await import("./video-rendition.server");

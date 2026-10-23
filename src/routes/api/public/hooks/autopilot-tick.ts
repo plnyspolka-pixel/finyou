@@ -1,9 +1,10 @@
 // Tick autopilota (co godzinę, pg_cron – migracja 20261019181000):
 //   • strażnik anomalii → automatyczna pauza + SMS alarmowy,
 //   • raport dzienny o 20:xx (Warszawa), tygodniowy w poniedziałek o 8:xx.
-// W full_autopilot tick planuje gotowe rolki Studia w slotach torów (po
-// bramce compliance); samą wysyłkę robią istniejące ticki kolejek, które
-// respektują wyłącznik (withOriginFilter) i mają kontrolę końcową compliance.
+// W full_autopilot tick produkuje rolki z lead magnetów (gdy zapas toru jest
+// poniżej bufora) i planuje gotowe rolki Studia w slotach torów (po bramce
+// compliance); samą wysyłkę robią istniejące ticki kolejek, które respektują
+// wyłącznik (withOriginFilter) i mają kontrolę końcową compliance.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
@@ -43,6 +44,15 @@ async function runTick(force?: string | null): Promise<Response> {
       // brakujące rekordy + publikacja po kontroli jakości; bez nadpisywania copy.
       const { ensureCatalogMagnets } = await import("@/lib/lead-magnets/catalog.server");
       reports.catalog = await ensureCatalogMagnets({ publish: true }).catch((e) => ({
+        error: e instanceof Error ? e.message : String(e),
+      }));
+    }
+    // Produkcja rolek z lead magnetów (Etap 1): gdy zapas toru spada poniżej
+    // bufora, autopilot pisze scenariusz (seria + hasło), przepuszcza go przez
+    // bramkę i zakłada job w Studiu; render robi tick Studia.
+    if (cfg.state.mode === "full_autopilot" && !cfg.state.paused) {
+      const { produceReels } = await import("@/lib/autopilot/production.server");
+      reports.production = await produceReels({ now }).catch((e) => ({
         error: e instanceof Error ? e.message : String(e),
       }));
     }

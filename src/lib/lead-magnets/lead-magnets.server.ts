@@ -331,6 +331,46 @@ async function sendLeadMagnetEmail(opts: {
   }
 }
 
+// ── Powiązanie opublikowanego posta z lead magnetem ─────────────────────────
+
+/** Platforma kolejki publikacji → platforma automatu komentarzy. */
+export function leadMagnetPlatformOf(queuePlatform: string): LeadMagnetPlatform | null {
+  if (queuePlatform === "facebook_post" || queuePlatform === "facebook_reels") return "facebook";
+  if (queuePlatform === "instagram_reels") return "instagram";
+  if (queuePlatform === "youtube") return "youtube";
+  return null;
+}
+
+/**
+ * Po publikacji wpisu z `lead_magnet_id` (autopilot, Studio) post dostaje
+ * powiązanie w `lead_magnet_posts`, żeby komentarz z hasłem od razu dostawał
+ * link. Idempotentne: drugi wpis dla tego samego posta jest pomijany.
+ */
+export async function linkPublishedPost(opts: {
+  leadMagnetId: string;
+  queuePlatform: string;
+  externalPostId: string;
+  label?: string | null;
+  postUrl?: string | null;
+}): Promise<{ linked: boolean; reason: string | null }> {
+  const platform = leadMagnetPlatformOf(opts.queuePlatform);
+  const externalPostId = opts.externalPostId.trim();
+  if (!platform || !externalPostId) return { linked: false, reason: "platforma bez automatu" };
+  const { error } = await supabaseAdmin.from("lead_magnet_posts").insert({
+    lead_magnet_id: opts.leadMagnetId,
+    platform,
+    external_post_id: externalPostId,
+    label: opts.label?.slice(0, 200) ?? null,
+    post_url: opts.postUrl ?? null,
+  });
+  if (error) {
+    if (error.code === "23505") return { linked: false, reason: "już powiązany" };
+    console.error("[lead-magnet] link post failed", error.message);
+    return { linked: false, reason: error.message };
+  }
+  return { linked: true, reason: null };
+}
+
 // ── Pobranie pliku ───────────────────────────────────────────────────────────
 
 export type DownloadResolution =

@@ -18,7 +18,8 @@ export type ClaimedRow = {
 };
 
 export type ClaimedGateResult =
-  { proceed: true; message: string } | { proceed: false; error: string };
+  | { proceed: true; message: string }
+  | { proceed: false; error: string };
 
 const db = supabaseAdmin as unknown as { from: (t: string) => any };
 

@@ -10,8 +10,12 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enqueuePublication } from "@/lib/studio-enqueue.server";
 import type { StudioPlatform } from "@/lib/studio-platforms";
+import { TOOL_URLS } from "@/lib/lead-magnets/catalog";
+import { leadMagnetUrl } from "@/lib/lead-magnets/core";
 import { llmGateDeps, runComplianceGate } from "./compliance-gate.server";
-import { COMPLIANCE_RULES_VERSION } from "./compliance-rules";
+import { COMPLIANCE_RULES_VERSION, checkHardRules } from "./compliance-rules";
+import { buildFunnelDescription, withUtm } from "./funnel-description";
+import { magnetOfReel, splitThesisAndTags } from "./production";
 import { evaluateGuards } from "./safety";
 import { nextFreeSlot } from "./slots";
 import { loadAutopilotConfig, loadUsage, logAutopilot } from "./state.server";
@@ -53,6 +57,54 @@ const NO_REWRITE = {
     throw new Error("Wideo jest już wyrenderowane — scenariusza nie da się przepisać.");
   },
 };
+
+type ReelFunnel = {
+  keyword: string;
+  name: string;
+  url: string;
+  leadMagnetId: string | null;
+  thesis: string;
+  hashtags: string[];
+  toolLabel: string | null;
+  toolUrl: string | null;
+};
+
+/**
+ * Lead magnet rolki: hasło serii (albo z CTA w opisie) → materiał z katalogu /
+ * kalkulator → opublikowany wiersz `lead_magnets` (id do powiązania posta po
+ * publikacji). Bez opublikowanego materiału opis zostaje zwykły — hasło bez
+ * pokrycia wprowadzałoby widza w błąd.
+ */
+async function funnelFor(
+  job: Pick<ReadyJob, "series" | "publish_description" | "script" | "prompt">,
+  track: Track,
+): Promise<ReelFunnel | null> {
+  const m = magnetOfReel(job);
+  if (!m || m.target.track !== track) return null;
+  const { data: row } = await db
+    .from("lead_magnets")
+    .select("id, published")
+    .eq("slug", m.target.slug)
+    .maybeSingle();
+  if (!row?.published) return null;
+  const { thesis, hashtags } = splitThesisAndTags(job.publish_description || "");
+  const tool =
+    m.target.kind === "tool"
+      ? null
+      : track === "inwestor"
+        ? { label: "Kalkulator LTV i bufora bezpieczeństwa", url: TOOL_URLS.ltv }
+        : { label: "Ile możesz uzyskać pod nieruchomość – kalkulator", url: TOOL_URLS.ile };
+  return {
+    keyword: m.keyword,
+    name: m.target.name,
+    url: m.target.kind === "catalog" ? leadMagnetUrl(m.target.slug) : leadMagnetUrl(m.target.slug),
+    leadMagnetId: row.id as string,
+    thesis: thesis || job.publish_description || job.prompt,
+    hashtags,
+    toolLabel: tool?.label ?? null,
+    toolUrl: tool?.url ?? null,
+  };
+}
 
 async function takenSlots(platform: PublishPlatform, since: Date): Promise<Date[]> {
   const q =
@@ -100,6 +152,9 @@ export async function scheduleReadyReels(now = new Date()): Promise<{
     .is("auto_published_at", null)
     // Nowe rolki i te, które przeszły bramkę, ale czekały na wolny slot.
     .or("compliance_status.is.null,compliance_status.in.(passed,rewritten)")
+    // Tylko rolki z torem — bez toru nie ma reguł ani slotów, a stara rolka
+    // bez toru blokowałaby co godzinę te same dwa miejsca w ticku.
+    .or("track.in.(pozyczkobiorca,inwestor),material_audience.in.(klient,inwestor)")
     .order("created_at", { ascending: true })
     .limit(JOBS_PER_TICK);
 
@@ -213,6 +268,9 @@ export async function scheduleReadyReels(now = new Date()): Promise<{
     if (!stamped?.length) continue;
 
     const profile = cfg.profiles[track];
+    // Lead magnet rolki (hasło z serii albo z CTA w opisie) → opis-lejek per
+    // platforma: „Skomentuj HASŁO…”, kalkulator toru, stopka compliance, UTM.
+    const funnel = await funnelFor({ ...job, publish_description: description }, track);
     const placed: { platform: string; at: string }[] = [];
     const errors: string[] = [];
     for (const platform of AUTO_PLATFORMS) {
@@ -225,11 +283,38 @@ export async function scheduleReadyReels(now = new Date()): Promise<{
         maxPerDay: cfg.limits.maxPostsPerDayPerPlatform,
       });
       if (!at) continue;
+      const message = funnel
+        ? buildFunnelDescription({
+            platform,
+            track,
+            thesis: funnel.thesis,
+            keyword: funnel.keyword,
+            leadMagnetName: funnel.name,
+            leadMagnetUrl: withUtm(funnel.url, {
+              platform,
+              campaign: `${track}-${job.series ?? "rolka"}`,
+              content: job.id,
+            }),
+            toolLabel: funnel.toolLabel,
+            toolUrl: funnel.toolUrl,
+            hashtags: funnel.hashtags,
+          })
+        : description;
+      // Reguły twarde raz jeszcze na złożonym opisie (bez recenzenta — tanio).
+      const blocks = checkHardRules(`${title}\n${message}`, {
+        kind: "description",
+        track,
+        platform,
+      }).filter((h) => h.severity === "block");
+      if (blocks.length) {
+        errors.push(`${platform}: opis zablokowany (${blocks.map((b) => b.code).join(", ")})`);
+        continue;
+      }
       try {
         await enqueuePublication({
           platforms: [platform as StudioPlatform],
           title,
-          message: description,
+          message,
           video_url: job.video_url,
           privacy_status: "public",
           scheduled_at: at.toISOString(),
@@ -237,6 +322,8 @@ export async function scheduleReadyReels(now = new Date()): Promise<{
           autopilot: {
             track,
             series: job.series,
+            keyword: funnel?.keyword ?? null,
+            lead_magnet_id: funnel?.leadMagnetId ?? null,
             studio_job_id: job.id,
             idempotency_key: `autopilot:${job.id}`,
           },

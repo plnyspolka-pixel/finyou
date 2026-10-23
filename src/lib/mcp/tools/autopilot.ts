@@ -289,6 +289,30 @@ export const autopilotProvisionTools = defineTool({
     }),
 });
 
+export const autopilotProduceReels = defineTool({
+  name: "autopilot_produce_reels",
+  title: "Produce reels from lead magnets now",
+  description:
+    "Produkcja rolek z lead magnetów (Etap 1) na żądanie — to samo, co robi tick co godzinę w full_autopilot: dla toru z zapasem poniżej bufora (2 rolki gotowe lub w produkcji) wybiera serię rotacyjnie, pisze scenariusz pod hasło lead magnetu (START, KSIĘGA, BŁĘDY, UMOWA / ODMOWA, ILE, DOKUMENTY, PROCES), przepuszcza go przez bramkę compliance i zakłada job w Studiu (render robi tick Studia, publikację w slotach — tick autopilota). `force` pomija bufor (limit dzienny zostaje), `track` ogranicza do jednego toru. Zużywa budżet AI i kredyty HeyGen. Tylko administrator.",
+  inputSchema: {
+    track: z.enum(TRACKS).optional(),
+    force: z.boolean().default(false),
+  },
+  annotations: WRITE,
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await db(ctx, true);
+      const { produceReels } = await import("@/lib/autopilot/production.server");
+      const result = await produceReels({
+        now: new Date(),
+        tracks: a.track ? [a.track] : undefined,
+        force: a.force,
+        actor: actorId(ctx),
+      });
+      return ok(result);
+    }),
+});
+
 export const autopilotTools = [
   autopilotStatus,
   autopilotKillSwitch,
@@ -299,4 +323,5 @@ export const autopilotTools = [
   autopilotReport,
   autopilotCalculators,
   autopilotProvisionTools,
+  autopilotProduceReels,
 ];

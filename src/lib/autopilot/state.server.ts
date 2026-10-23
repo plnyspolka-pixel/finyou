@@ -149,7 +149,7 @@ export async function withOriginFilter<Q extends { in: (column: string, values: 
   return origins ? query.in("origin", origins) : query;
 }
 
-function warsawDayStartIso(now: Date): string {
+export function warsawDayStartIso(now: Date): string {
   const p = warsawDateParts(now);
   // Północ w Warszawie ≈ 22:00/23:00 UTC poprzedniego dnia – liczymy przez offset.
   const local = new Date(Date.UTC(p.year, p.month - 1, p.day));

@@ -306,6 +306,29 @@ async function markPublished(id: string, externalId: string, attempts: number) {
       attempt_count: attempts,
     })
     .eq("id", id);
+  // Wpis z lead magnetem (autopilot): post od razu pod automat „komentarz z
+  // hasłem → link”. Błąd powiązania nie cofa publikacji.
+  try {
+    const { data: row } = await supabaseAdmin
+      .from("social_publish_queue")
+      .select("platform, title, lead_magnet_id")
+      .eq("id", id)
+      .maybeSingle();
+    const leadMagnetId = (row as { lead_magnet_id?: string | null } | null)?.lead_magnet_id;
+    if (row && leadMagnetId) {
+      const { linkPublishedPost } = await import("./lead-magnets/lead-magnets.server");
+      await linkPublishedPost({
+        leadMagnetId,
+        queuePlatform: row.platform,
+        externalPostId: externalId,
+        label: row.title || null,
+      });
+    }
+  } catch (e) {
+    console.warn(
+      `[lead-magnet] powiązanie posta ${externalId}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
 }
 
 async function markFailed(item: QueueRow, msg: string, opts?: { noRetry?: boolean }) {

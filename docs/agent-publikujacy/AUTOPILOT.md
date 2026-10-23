@@ -46,19 +46,51 @@ Pauza (ręczna albo automatyczna przy anomalii) wstrzymuje **wyłącznie wpisy a
    w `last_error` + wpis `gate_publish_final` w dzienniku. Brakująca stopka (AI, KRS, ryzyko) jest
    doklejana także do wpisów ręcznych (poza X – limit znaków).
 
+## Produkcja rolek z lead magnetów (Etap 1)
+
+W `full_autopilot` (i w `semi_auto`) tick co godzinę dba o zapas rolek per tor
+(`production.server.ts`, logika w `production.ts`; na żądanie: MCP `autopilot_produce_reels`):
+
+1. Strażnik: tryb, wyłącznik, dzienny budżet AI, kredyty HeyGen (odczyt `remaining_quota`,
+   próg `heygenMinRemainingCredits`).
+2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`). Poniżej
+   bufora `REEL_BUFFER_PER_TRACK` (2) powstaje jedna rolka; maks. `MAX_PRODUCED_PER_TRACK_PER_DAY`
+   (2) na dobę.
+3. Seria rotacyjnie (najdawniej użyta w ostatnich rolkach toru; bez odcinków tygodniowych), hasło
+   serii → **opublikowany** lead magnet z katalogu albo kalkulator (`resolveKeywordTarget`); bez
+   opublikowanego materiału rolka kończy się zachętą do obserwowania, bez hasła. Temat z
+   `allowedTopics` profilu, też rotacyjnie.
+4. Brief (`buildReelBrief`: szkielet serii, ton toru, lead magnet, CTA „Skomentuj HASŁO”, zdanie o
+   ryzyku, ostatnie tytuły do uniknięcia) → scenariusz (`generateVideoScript` z zasadami toru) →
+   bramka compliance z poprawkami → tytuł z hasłem (`… Napisz HASŁO`).
+5. Job `queued` w Studiu z `track`, `series`, `compliance_status`, promptem z prefiksem
+   `[autopilot]`; render i napisy robi tick Studia, a gotową rolkę planuje Etap 0 w slotach toru.
+
+Dziennik: `reel_produced`, `reel_production_rejected`, `reel_production_error` (koszt ≈ 0,6 zł
+na scenariusz + bramkę; HeyGen rozlicza się przy renderze).
+
 ## Gotowe rolki Studia (Etap 0)
 
 W `full_autopilot` bez wyłącznika tick co godzinę bierze do 2 rolek `ready`, jeszcze nie
 opublikowanych (`ready-reels.server.ts`):
 
-1. Tor z `track` albo `material_audience` (bez toru rolka czeka – wpis `ready_reel_no_track`).
+1. Tor z `track` albo `material_audience` — zapytanie bierze tylko rolki z torem (rolka bez toru
+   nie blokuje kolejki; przypisz odbiorcę w panelu, żeby weszła do obiegu).
 2. Scenariusz przez pełną bramkę **bez autora poprawek** (wideo już wyrenderowane): naruszenie =
    `compliance_status = 'rejected'` i powód w `last_error`.
 3. Tytuł i opis przez pełną bramkę (mogą być przepisane); wynik zapisany na zadaniu, żeby ponowna
    próba nie płaciła za recenzenta.
-4. Wolne sloty toru (`audience_profiles[track].slots`) na IG Reels, FB Reels i YouTube z limitem
+4. Lead magnet rolki: hasło serii (`series.defaultKeyword`) albo z CTA w opisie („Skomentuj START”)
+   → opublikowany wiersz `lead_magnets`. Opis składa `buildFunnelDescription` osobno per
+   platforma (hasło + materiał, kalkulator toru, stopka compliance, link `/pobierz/<slug>` z UTM
+   tam, gdzie link jest klikalny), a reguły twarde sprawdzają go raz jeszcze bez recenzenta.
+   Wpis kolejki dostaje `keyword` i `lead_magnet_id`.
+5. Wolne sloty toru (`audience_profiles[track].slots`) na IG Reels, FB Reels i YouTube z limitem
    `maxPostsPerDayPerPlatform`; wstawienie przez `enqueuePublication` z `idempotency_key`.
    Brak slotu → rolka wraca w kolejnym ticku.
+6. Po publikacji (tick Meta / YouTube) wpis z `lead_magnet_id` jest automatycznie wiązany z postem
+   w `lead_magnet_posts` (`linkPublishedPost`), więc komentarz z hasłem od razu dostaje link.
+   Rolki z zapasu sprzed Etapu 1, oznaczone `compliance_status = 'archived'`, autopilot pomija.
 
 ## Hook wizualny rolek Studia (21.10.2026)
 
