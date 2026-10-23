@@ -7413,6 +7413,75 @@ export type Database = {
         }
         Relationships: []
       }
+      investor_source_of_funds_declarations: {
+        Row: {
+          channel: string
+          declaration_text: string
+          declaration_text_version: string
+          description: string | null
+          funds_country: string
+          id: string
+          investor_id: string
+          ip: string | null
+          other_description: string | null
+          planned_scale: string
+          review_note: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_flags: string[]
+          signed_at: string
+          sources: string[]
+          statements: Json
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          declaration_text: string
+          declaration_text_version: string
+          description?: string | null
+          funds_country?: string
+          id?: string
+          investor_id: string
+          ip?: string | null
+          other_description?: string | null
+          planned_scale: string
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_flags?: string[]
+          signed_at?: string
+          sources: string[]
+          statements: Json
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          declaration_text?: string
+          declaration_text_version?: string
+          description?: string | null
+          funds_country?: string
+          id?: string
+          investor_id?: string
+          ip?: string | null
+          other_description?: string | null
+          planned_scale?: string
+          review_note?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_flags?: string[]
+          signed_at?: string
+          sources?: string[]
+          statements?: Json
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       investor_success_fees: {
         Row: {
           created_at: string
@@ -7508,6 +7577,10 @@ export type Database = {
           screening_id: string | null
           screening_result: string | null
           screening_updated_at: string | null
+          sof_declaration_id: string | null
+          sof_declared_at: string | null
+          sof_reviewed_at: string | null
+          sof_status: string | null
           street: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -7558,6 +7631,10 @@ export type Database = {
           screening_id?: string | null
           screening_result?: string | null
           screening_updated_at?: string | null
+          sof_declaration_id?: string | null
+          sof_declared_at?: string | null
+          sof_reviewed_at?: string | null
+          sof_status?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -7608,6 +7685,10 @@ export type Database = {
           screening_id?: string | null
           screening_result?: string | null
           screening_updated_at?: string | null
+          sof_declaration_id?: string | null
+          sof_declared_at?: string | null
+          sof_reviewed_at?: string | null
+          sof_status?: string | null
           street?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -7630,6 +7711,13 @@ export type Database = {
             columns: ["screening_id"]
             isOneToOne: false
             referencedRelation: "investor_screenings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investors_sof_declaration_id_fkey"
+            columns: ["sof_declaration_id"]
+            isOneToOne: false
+            referencedRelation: "investor_source_of_funds_declarations"
             referencedColumns: ["id"]
           },
         ]
@@ -15158,6 +15246,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          first_comment_error: string | null
+          first_comment_id: string | null
+          first_comment_started_at: string | null
           id: string
           idempotency_key: string | null
           keyword: string | null
@@ -15184,6 +15275,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          first_comment_error?: string | null
+          first_comment_id?: string | null
+          first_comment_started_at?: string | null
           id?: string
           idempotency_key?: string | null
           keyword?: string | null
@@ -15210,6 +15304,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          first_comment_error?: string | null
+          first_comment_id?: string | null
+          first_comment_started_at?: string | null
           id?: string
           idempotency_key?: string | null
           keyword?: string | null

@@ -1,3 +1,8 @@
+# YouTube first comments
+- [x] Add per-track configuration, persistent idempotency and post-publication comments.
+- [x] Test success, failures, fallback and unchanged historical publications: 45 tests pass.
+- [ ] Confirm live YouTube comment after deployment and next authorized upload; no existing films may be touched. Current channel OAuth grant not verified.
+
 # Storage migration export
 - [x] Apply isolated token table and restricted listing function.
 - [x] Add token-protected server route without changing existing routes or data.

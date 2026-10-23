@@ -302,6 +302,13 @@
       "when": 1792746000000,
       "tag": "0042_oswiadczenie_zrodlo_srodkow_inwestora",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792796091875,
+      "tag": "0043_youtube_first_comment",
+      "breakpoints": true
     }
   ]
 }
