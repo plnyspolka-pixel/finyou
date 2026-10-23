@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 /** Powierzchnie głosowe dostępne publicznie. */
-type VoiceSurface = "intake" | "missing_info";
+type VoiceSurface = "intake" | "investor_info" | "missing_info";
 
 /** Agent „Ania — uzupełnia braki" w panelu klienta (ten sam co widget braków). */
 const MISSING_INFO_AGENT_ID =
@@ -56,7 +56,7 @@ function clientIp(request: Request): string {
 async function resolveAgentId(surface: VoiceSurface): Promise<string | null> {
   if (surface === "missing_info") return MISSING_INFO_AGENT_ID || null;
   const { getAgentIdForSurface } = await import("@/lib/elevenlabs-agents.server");
-  return getAgentIdForSurface("intake");
+  return getAgentIdForSurface(surface);
 }
 
 export const Route = createFileRoute("/api/public/voice-session")({
@@ -68,7 +68,8 @@ export const Route = createFileRoute("/api/public/voice-session")({
         try {
           const body = (await request.json().catch(() => ({}))) as { surface?: string };
           const surface: VoiceSurface =
-            body?.surface === "missing_info" ? "missing_info" : "intake";
+            body?.surface === "missing_info" ? "missing_info" :
+              body?.surface === "investor_info" ? "investor_info" : "intake";
 
           if (rateLimited(clientIp(request))) {
             return new Response(

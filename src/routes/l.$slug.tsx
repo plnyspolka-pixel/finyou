@@ -74,12 +74,11 @@ export const Route = createFileRoute("/l/$slug")({
       { property: "og:title", content: page.title },
       { property: "og:description", content: desc },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ];
-    if (page.og_image_url) {
-      meta.push({ property: "og:image", content: page.og_image_url });
-      meta.push({ name: "twitter:image", content: page.og_image_url });
-    } else if (page.hero_image_url) {
+    if (page.hero_image_url?.startsWith("https://")) {
       meta.push({ property: "og:image", content: page.hero_image_url });
+      meta.push({ name: "twitter:image", content: page.hero_image_url });
     }
     return { meta };
   },

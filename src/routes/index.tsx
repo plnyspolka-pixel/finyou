@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth, defaultPathForRoles, postLoginPathForRoles } from "@/hooks/use-auth";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
-import { ChatWidget } from "@/components/landing/chat-widget";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -41,6 +40,7 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "Do 1 mln zł. Decyzja w 24 h. Złóż wniosek online." },
       { property: "og:url", content: "https://financeyou.pl/" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/" }],
     scripts: [
@@ -310,7 +310,6 @@ function Landing() {
       />
 
       {/* Czat z asystentem — kanał komunikacji przychodzącej "chat" */}
-      <ChatWidget source="landing" />
     </MarketingShell>
   );
 }
