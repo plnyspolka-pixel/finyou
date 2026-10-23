@@ -1,6 +1,6 @@
 # Public Ania conversations
-- [ ] Keep one live session for text and voice; preserve agent mappings and reconnect visibly.
-- [ ] Replace duplicate public launchers with one Ania window; verify real answers and mobile layout.
+- [x] Keep one live session for text and voice; preserve agent mappings and reconnect visibly. Nine session tests passed.
+- [x] Replace duplicate public launchers with one Ania window; desktop/mobile checked, two real A2 answers received in the same conversation ID. Existing preview-only hydration warning remains unrelated; live spoken interaction not verified with a real microphone.
 
 # YouTube first comments
 - [x] Add per-track configuration, persistent idempotency and post-publication comments.
