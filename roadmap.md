@@ -1,4 +1,5 @@
 # Public Ania conversations
+- [ ] Route every public Ania entry through A0, preserve contextual panel agents, and verify same-session investor transfer on home/investor pages without publishing.
 - [x] Keep one live session for text and voice; preserve agent mappings and reconnect visibly. Nine session tests passed.
 - [x] Replace duplicate public launchers with one Ania window; desktop/mobile checked, two real A2 answers received in the same conversation ID. Existing preview-only hydration warning remains unrelated; live spoken interaction not verified with a real microphone.
 

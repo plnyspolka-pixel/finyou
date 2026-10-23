@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Mic, Send, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import mark from "@/assets/financeyou-mark.png.asset.json";
-import { createAniaSession, publicAniaSurface, type AniaMode } from "@/lib/public-ania-session";
+import { createAniaSession, type AniaMode } from "@/lib/public-ania-session";
 import type { VoiceState } from "@/lib/voice-conversation";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 /** Compatibility props preserve existing public-page callers. Only one Ania
  * window owns the live socket; old per-message HTTP chat is not used here. */
-export function ChatWidget({ source = "landing", endpoint, subtitle = "asystentka Finance You" }: {
+export function ChatWidget({ source = "landing", subtitle = "asystentka Finance You" }: {
   source?: string; endpoint?: string; greeting?: string; storageKey?: string;
   title?: string; subtitle?: string;
 }) {
@@ -30,11 +30,10 @@ export function ChatWidget({ source = "landing", endpoint, subtitle = "asystentk
 
   function ensureSession() {
     if (session.current) return session.current;
-    const surface = endpoint?.includes("investor-chat-widget") ? "investor_info" : publicAniaSurface(window.location.pathname);
     session.current = createAniaSession({
-      surface,
+      surface: "reception",
       dynamicVariables: {
-        channel: surface === "investor_info" ? "chat_inwestor" : "voice_web",
+        channel: "voice_web",
         channel_label: "rozmowa głosowa i tekstowa na stronie", source,
         session_id: crypto.randomUUID(), lead_id: "", first_name: "", last_name: "", email: "", phone: "",
       },
@@ -118,7 +117,7 @@ export function ChatWidget({ source = "landing", endpoint, subtitle = "asystentk
               <textarea aria-label="Wiadomość do Ani" placeholder="Napisz wiadomość…" value={input} maxLength={4000} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} rows={2} className="min-w-0 flex-1 resize-none rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-ring" />
               <Button type="submit" size="icon" disabled={!input.trim() || sending} aria-label="Wyślij"><Send className="h-4 w-4" /></Button>
             </form> : <><p className="mb-2 text-xs text-muted-foreground">Mikrofon pozwoli Ani usłyszeć Twoje pytanie.</p><Button className="w-full" onClick={() => void startVoice()} disabled={state === "connecting"}><Mic className="mr-2 h-4 w-4" />{state === "listening" || state === "speaking" ? "Włącz głos" : "Porozmawiaj z Anią"}</Button></>}
-            <p className="mt-2 text-[10px] text-muted-foreground">Rozmowa z AI · <a href="/polityka-prywatnosci" className="underline">Polityka prywatności</a></p>
+            <p className="mt-2 whitespace-nowrap text-[6px] text-muted-foreground sm:text-[7px]">Rozmawiasz z Anią — asystentką AI Finance You. Rozmowy są nagrywane. <a href="/polityka-prywatnosci" className="underline">Polityka prywatności</a></p>
           </div>
         </section>
       )}

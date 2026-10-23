@@ -6,10 +6,7 @@
 import { startVoiceConversation, type VoiceConversation, type VoiceState } from "./voice-conversation";
 
 export type AniaMode = "voice" | "text";
-export type AniaSurface = "intake" | "investor_info";
-export function publicAniaSurface(path: string): AniaSurface {
-  return /^\/dla-inwestor(?:a|ow|ów)(?:\/|$)/.test(path) ? "investor_info" : "intake";
-}
+export type AniaSurface = "reception";
 
 export function createAniaSession(options: {
   surface: AniaSurface;
@@ -35,7 +32,7 @@ export function createAniaSession(options: {
     let firstResponse = true;
     const reconnecting = hasGreeting;
     connecting = startVoiceConversation(
-      { surface: options.surface, dynamicVariables: options.dynamicVariables, mode: "text" },
+      { surface: "reception", dynamicVariables: options.dynamicVariables, mode: "text" },
       {
         onConversationId: options.onConversationId,
         onState: (state) => {

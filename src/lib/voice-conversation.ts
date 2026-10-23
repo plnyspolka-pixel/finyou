@@ -34,7 +34,7 @@ export interface VoiceConversationHandlers {
 
 export interface VoiceConversationOptions {
   /** Powierzchnia rozpoznawana przez /api/public/voice-session. */
-  surface?: "intake" | "investor_info" | "missing_info";
+  surface?: "reception" | "intake" | "investor_info" | "missing_info";
   mode?: "text" | "voice";
   /** Zmienne dynamiczne agenta (kanał, lead, brief braków…). */
   dynamicVariables?: Record<string, string | number | boolean>;
@@ -118,7 +118,7 @@ interface ServerMessage {
   ping_event?: { event_id?: number };
 }
 
-async function fetchSignedUrl(surface: "intake" | "investor_info" | "missing_info"): Promise<string> {
+async function fetchSignedUrl(surface: "reception" | "intake" | "investor_info" | "missing_info"): Promise<string> {
   const res = await fetch("/api/public/voice-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

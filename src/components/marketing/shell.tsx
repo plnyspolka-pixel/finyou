@@ -568,7 +568,7 @@ export function MarketingShell({
       <SiteHeader page={page} />
       {children}
       <SiteFooter />
-      <ChatWidget source={`public:${page}`} endpoint={page === "inwestor" || page === "inwestorModul" ? "/api/public/investor-chat-widget" : undefined} />
+      <ChatWidget source={`public:${page}`} />
       {sticky ? <StickyCTA label={sticky.label} href={sticky.href} /> : null}
     </div>
   );
