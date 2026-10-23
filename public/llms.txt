@@ -1,20 +1,42 @@
 # Finance You
 
-> Prywatne pożyczki pod zastaw nieruchomości w Polsce — do 1 000 000 zł, decyzja w 24 godziny, bez procedur bankowych.
+> Pożyczki pod zastaw nieruchomości dla firm w Polsce — do 1 000 000 zł, decyzja w 24 godziny, bez procedur bankowych. Finansowanie organizują prywatni inwestorzy.
 
-Finance You łączy klientów potrzebujących finansowania pod zastaw nieruchomości (mieszkanie, dom, lokal, działka) z prywatnymi inwestorami. Kluczem do decyzji jest wartość zabezpieczenia, a nie scoring bankowy — pomagamy także osobom ze złym BIK lub istniejącą hipoteką.
+Finance You sp. z o.o. (Warszawa, KRS 0000635207) łączy firmy potrzebujące finansowania pod zabezpieczenie nieruchomości (mieszkanie, dom, lokal użytkowy, działka, ziemia rolna) z prywatnymi inwestorami. O decyzji przesądza wartość zabezpieczenia, nie scoring bankowy — pomagamy też firmom ze złym BIK, z istniejącą hipoteką albo bez historii. Finansowanie wyłącznie na cel gospodarczy (B2B). Inwestorom oferujemy szkolenie i narzędzia AI do bezpiecznego udzielania pożyczek zabezpieczonych hipoteką.
 
-## Pages
+## Dla klienta (pożyczkobiorcy)
 
-- [Strona główna](/): Pożyczka pod zastaw nieruchomości — kalkulator, FAQ, jak to działa.
-- [Wniosek — start](/wniosek-start): Rozpoczęcie wniosku o pożyczkę pod zastaw nieruchomości.
-- [Warunki pożyczki](/wniosek-warunki): Wybór kwoty, okresu i typu zabezpieczenia.
-- [Zabezpieczenie](/wniosek-zabezpieczenie): Dane o nieruchomości stanowiącej zabezpieczenie.
-- [Formularz wniosku](/wniosek-formularz): Pełny formularz wniosku o pożyczkę.
-- [Blog](/blog): Artykuły o pożyczkach pod zastaw nieruchomości.
-- [Logowanie](/logowanie): Logowanie do panelu klienta.
-- [Rejestracja](/rejestracja): Założenie konta klienta.
+- [Strona główna](https://financeyou.pl/): Pożyczka pod zastaw nieruchomości — kalkulator, jak to działa, FAQ.
+- [Dla klienta](https://financeyou.pl/dla-klienta): Bezpłatny wniosek online; jeden wniosek trafia do wielu inwestorów.
+- [Pożyczka pod zastaw mieszkania](https://financeyou.pl/pozyczka-pod-zastaw-mieszkania): Warunki, procedura, FAQ.
+- [Pożyczka pod zastaw domu](https://financeyou.pl/pozyczka-pod-zastaw-domu): Do 1 mln zł pod zabezpieczenie domu.
+- [Pożyczka pod zastaw lokalu użytkowego](https://financeyou.pl/pozyczka-pod-zastaw-lokalu-uzytkowego): Lokale usługowe i handlowe.
+- [Pożyczka pod zastaw działki budowlanej](https://financeyou.pl/pozyczka-pod-zastaw-dzialki): Grunty budowlane jako zabezpieczenie.
+- [Pożyczka pod zastaw ziemi rolnej](https://financeyou.pl/pozyczka-pod-zastaw-ziemi-rolnej): Grunty rolne jako zabezpieczenie.
+- [Pożyczki dla rolników](https://financeyou.pl/pozyczka-dla-rolnikow): Finansowanie pod zastaw ziemi lub siedliska.
+- [Pożyczki dla nowych firm](https://financeyou.pl/pozyczka-dla-nowych-firm): Firmy bez historii — decyduje nieruchomość.
+- [Pożyczki wg miast](https://financeyou.pl/pozyczki): Podstrony lokalne z danymi o rynku nieruchomości.
+- [Kalkulator LTV](https://financeyou.pl/kalkulator-ltv): Ile pożyczki przy danej wartości nieruchomości.
+- [Raport lokalizacji](https://financeyou.pl/raport-lokalizacje): Ranking miast wg atrakcyjności zabezpieczenia.
+
+## Dla inwestora
+
+- [Dla inwestora](https://financeyou.pl/dla-inwestora): Partnerstwo, szkolenie, cennik, FAQ.
+- [Szkolenie inwestora](https://financeyou.pl/dla-inwestora/szkolenie): Siedem modułów od podstaw do własnej strategii.
+- [Analityk AI](https://financeyou.pl/dla-inwestora/analityk-ai): Ocena zabezpieczenia i stanu prawnego.
+- [Kancelaria AI](https://financeyou.pl/dla-inwestora/kancelaria-ai): Umowa pożyczki i wzory dokumentów.
+- [AML / compliance](https://financeyou.pl/dla-inwestora/aml-compliance): Weryfikacja stron i obowiązki AML.
+- [Windykator AI](https://financeyou.pl/dla-inwestora/windykator-ai): Postępowanie, gdy klient nie płaci.
+- [Sieć sprzedaży](https://financeyou.pl/dla-inwestora/siec-sprzedazy): Projekty z całej Polski.
+- [Oferty](https://financeyou.pl/oferty): Aktualne projekty do sfinansowania.
+
+## Wiedza
+
+- [Blog](https://financeyou.pl/blog): Artykuły o pożyczkach pod zastaw nieruchomości i inwestowaniu w nie.
 
 ## Optional
 
-- [Wybór roli](/wybor-roli): Wybór typu konta po rejestracji.
+- [Regulamin](https://financeyou.pl/regulamin): Zasady korzystania z serwisu.
+- [Polityka prywatności](https://financeyou.pl/polityka-prywatnosci): Przetwarzanie danych osobowych.
+- [Polityka cookies](https://financeyou.pl/polityka-cookies): Pliki cookies.
+- [Rejestracja](https://financeyou.pl/rejestracja): Założenie konta klienta lub inwestora.

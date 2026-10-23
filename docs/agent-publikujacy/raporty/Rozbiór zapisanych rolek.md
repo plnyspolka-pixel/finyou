@@ -94,3 +94,9 @@ Materiały obejrzane 19.10.2026 w przeglądarce na komputerze Filipa. Treść m�
 - Napisy automatyczne YouTube mają błędy rozpoznawania (oczyszczone w notatkach). Pierwszy film TMS przyszedł w automatycznym tłumaczeniu na polski.
 - Przy shortach bez mowy (Camera Bro, Ryan Spenner – książki, Big 3 Media) nazwy hooków odczytano z napisów na ekranie, z kilku klatek; mogły umknąć szczegóły wykonania.
 - Statystyki z Facebooka i Instagrama to wartości widoczne na stronie w dniu odczytu.
+
+## Uzupełnienie 23.10.2026 — rolka o SEO stron „vibe coded”
+
+- `facebook.com/share/r/1DdifHvUh7/` — Josh Hoeg (Vibe Coding & AI), 33 s, ok. 143 tys. wyświetleń. Format: talking head, na ekranie przybywająca lista 20 punktów technicznego SEO (sitemap, robots, noindex, canonical, meta, jeden H1, alt, schema, linki, HTTPS, og:image, Search Console, backlinki), lektor czyta listę jako jeden prompt do Claude'a i kończy „Make no mistakes”. Hook-teza w pierwszym zdaniu („Google isn't showing your vibe coded website because…”) + obietnica konkretnej listy. Do skopiowania 1:1 jako format dla toru pożyczkobiorcy i inwestora: „Bank nie da Ci pożyczki, bo nie masz tych 10 rzeczy” / „Inwestor traci na pożyczce, bo nie sprawdził tych 7 rzeczy” — lista przybywająca na ekranie, jedno zdanie lektora na punkt.
+- Co zrobiliśmy z listą dla financeyou.pl: audyt 130 stron i poprawki w kodzie — `docs/seo/audyt-2026-10-23-checklista-z-rolki.md`.
+

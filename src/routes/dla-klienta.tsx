@@ -15,6 +15,7 @@ import { MktBadge } from "@/components/marketing/primitives";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
+import { breadcrumbLd, faqPageLd, financialServiceLd, SITE_URL } from "@/lib/seo/company";
 
 const APPLY = "/rejestracja?role=klient";
 
@@ -36,6 +37,25 @@ export const Route = createFileRoute("/dla-klienta")({
       { property: "og:type", content: "website" },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/dla-klienta" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(financialServiceLd({ pageUrl: `${SITE_URL}/dla-klienta` })),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(faqPageLd(FAQS.map((f) => ({ question: f.q, answer: f.a })))),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(
+          breadcrumbLd([
+            { name: "Finance You", path: "/" },
+            { name: "Dla klienta", path: "/dla-klienta" },
+          ]),
+        ),
+      },
+    ],
   }),
   component: ClientLanding,
 });

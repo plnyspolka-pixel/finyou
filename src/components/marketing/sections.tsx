@@ -50,12 +50,15 @@ export function SectionHead({
   sub,
   center,
   tone,
+  as: Heading = "h2",
 }: {
   eyebrow?: string;
   title: ReactNode;
   sub?: ReactNode;
   center?: boolean;
   tone?: "accent" | "gold" | "muted" | "white";
+  /** Poziom nagłówka — `h1`, gdy SectionHead jest głównym tytułem strony. */
+  as?: "h1" | "h2" | "h3";
 }) {
   return (
     <div
@@ -66,7 +69,7 @@ export function SectionHead({
       }}
     >
       {eyebrow && <Eyebrow tone={tone}>{eyebrow}</Eyebrow>}
-      <h2
+      <Heading
         style={{
           marginTop: "0.5rem",
           fontSize: "clamp(1.9rem, 3.2vw, 2.6rem)",
@@ -76,7 +79,7 @@ export function SectionHead({
         }}
       >
         {title}
-      </h2>
+      </Heading>
       {sub && (
         <p
           style={{

@@ -60,6 +60,7 @@ function LocationIndexPage() {
     <MarketingShell page="klient">
       <Section>
         <SectionHead
+          as="h1"
           eyebrow="Pożyczki lokalnie"
           title="Pożyczka pod zastaw nieruchomości w Twoim mieście"
           sub="Wybierz miasto, aby zobaczyć dane o lokalnym rynku nieruchomości i możliwościach finansowania."

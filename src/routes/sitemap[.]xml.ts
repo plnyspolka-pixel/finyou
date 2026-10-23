@@ -11,13 +11,16 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const today = new Date().toISOString().slice(0, 10);
+        // Strony statyczne bez <lastmod>: data „dziś” przy każdym pobraniu to
+        // fałszywy sygnał — Google ignoruje lastmod, gdy nie odpowiada realnym
+        // zmianom, i przestaje ufać całej mapie. Lastmod dostają tylko wpisy
+        // z bazy (artykuły, podstrony miast), gdzie znamy datę zmiany.
         const entries: SitemapEntry[] = [
-          { path: "/", lastmod: today, changefreq: "weekly", priority: "1.0" },
+          { path: "/", changefreq: "weekly", priority: "1.0" },
           // Publiczne strony marketingowe (ścieżki ról). /klient /inwestor
           // /posrednik to panele wymagające logowania — nie trafiają do sitemapy.
-          { path: "/dla-klienta", lastmod: today, changefreq: "weekly", priority: "0.9" },
-          { path: "/dla-inwestora", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/dla-klienta", changefreq: "weekly", priority: "0.9" },
+          { path: "/dla-inwestora", changefreq: "weekly", priority: "0.9" },
           // Podstrony szkolenia i modułów partnera (/dla-inwestora/<moduł>).
           ...INVESTOR_MODULES.map(
             (m): SitemapEntry => ({
@@ -26,21 +29,21 @@ export const Route = createFileRoute("/sitemap.xml")({
               priority: "0.8",
             }),
           ),
-          { path: "/dla-posrednika", lastmod: today, changefreq: "weekly", priority: "0.8" },
-          { path: "/oferty", lastmod: today, changefreq: "daily", priority: "0.9" },
-          { path: "/blog", lastmod: today, changefreq: "daily", priority: "0.7" },
-          { path: "/pozyczki", lastmod: today, changefreq: "weekly", priority: "0.8" },
+          // /dla-posrednika jest ukryta (route przekierowuje na stronę główną,
+          // patrz dla-posrednika.tsx) — przywrócić wpis razem z usunięciem redirectu.
+          { path: "/oferty", changefreq: "daily", priority: "0.9" },
+          { path: "/blog", changefreq: "daily", priority: "0.7" },
+          { path: "/pozyczki", changefreq: "weekly", priority: "0.8" },
           // Podstrony produktów (menu „Klient”) — lib/loan-products.ts
           ...LOAN_PRODUCTS.map(
             (p): SitemapEntry => ({
               path: `/${p.slug}`,
-              lastmod: today,
               changefreq: "monthly",
               priority: "0.9",
             }),
           ),
           { path: "/kalkulator-ltv", changefreq: "monthly", priority: "0.7" },
-          { path: "/raport-lokalizacje", lastmod: today, changefreq: "monthly", priority: "0.7" },
+          { path: "/raport-lokalizacje", changefreq: "monthly", priority: "0.7" },
           { path: "/logowanie", changefreq: "yearly", priority: "0.3" },
           { path: "/rejestracja", changefreq: "yearly", priority: "0.4" },
           { path: "/polityka-prywatnosci", changefreq: "yearly", priority: "0.2" },

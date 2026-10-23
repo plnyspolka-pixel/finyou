@@ -27,9 +27,11 @@ const Alert = React.forwardRef<
 ));
 Alert.displayName = "Alert";
 
-const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+// Tytuł alertu nie jest nagłówkiem dokumentu — `div` zamiast `h5`, żeby alerty
+// (np. w kalkulatorze na /dla-inwestora) nie psuły hierarchii h1→h2→h3.
+const AlertTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <h5
+    <div
       ref={ref}
       className={cn("mb-1 font-medium leading-none tracking-tight", className)}
       {...props}

@@ -44,6 +44,7 @@ import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwes
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as WniosekStartRouteImport } from './routes/wniosek-start'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
@@ -493,6 +494,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WniosekStartRoute = WniosekStartRouteImport.update({
+  id: '/wniosek-start',
+  path: '/wniosek-start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WyborPaneluRoute = WyborPaneluRouteImport.update({
@@ -1970,6 +1976,7 @@ export interface FileRoutesByFullPath {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start': typeof StartRoute
+  '/wniosek-start': typeof WniosekStartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2273,6 +2280,7 @@ export interface FileRoutesByTo {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start': typeof StartRoute
+  '/wniosek-start': typeof WniosekStartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2577,6 +2585,7 @@ export interface FileRoutesById {
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start': typeof StartRoute
+  '/wniosek-start': typeof WniosekStartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2887,6 +2896,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/start'
+    | '/wniosek-start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3190,6 +3200,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/start'
+    | '/wniosek-start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3493,6 +3504,7 @@ export interface FileRouteTypes {
     | '/rejestracja'
     | '/sitemap.xml'
     | '/start'
+    | '/wniosek-start'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3802,6 +3814,7 @@ export interface RootRouteChildren {
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StartRoute: typeof StartRoute
+  WniosekStartRoute: typeof WniosekStartRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
@@ -4154,6 +4167,13 @@ declare module '@tanstack/react-router' {
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wniosek-start': {
+      id: '/wniosek-start'
+      path: '/wniosek-start'
+      fullPath: '/wniosek-start'
+      preLoaderRoute: typeof WniosekStartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wybor-panelu': {
@@ -6555,6 +6575,7 @@ const rootRouteChildren: RootRouteChildren = {
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StartRoute: StartRoute,
+  WniosekStartRoute: WniosekStartRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
@@ -6676,6 +6697,7 @@ const rootRouteChildren: RootRouteChildren = {
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'

@@ -1,11 +1,12 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
 import { formatDate } from "@/lib/labels";
 import ReactMarkdown from "react-markdown";
+import { asciiSlug } from "@/lib/seo/slug";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
 import { Facebook, Linkedin, Twitter, Link2, Mail, MessageCircle, Check } from "lucide-react";
 import { useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 import { BlogCover } from "@/components/blog/BlogCover";
 import { MarketingShell } from "@/components/marketing/shell";
 import { ACTIVE_SOCIAL_LINKS } from "@/components/marketing/social-links";
@@ -28,7 +29,8 @@ type RelatedRow = {
  * - absolutne linki do financeyou.pl stają się względne (SPA-friendly),
  * - historyczne CTA `/inwestor` i `/klient` (panele wymagające logowania)
  *   są mapowane na publiczne strony marketingowe `/dla-inwestora` i `/dla-klienta`,
- * - CTA do formularza embed prowadzi na stronę dla klienta.
+ * - CTA do formularza embed i do dawnego kreatora `/wniosek-*` prowadzą na stronę dla klienta,
+ * - slug artykułu jest normalizowany do ASCII (polskie znaki w linku → 404).
  */
 function normalizeHref(raw?: string): { href: string; external: boolean } {
   if (!raw) return { href: "#", external: false };
@@ -37,6 +39,13 @@ function normalizeHref(raw?: string): { href: string; external: boolean } {
   href = href.replace(/^https?:\/\/(www\.)?financeyou\.pl/, "") || "/";
   if (/^\/inwestor(?:[/?#]|$)/.test(href)) href = "/dla-inwestora";
   if (/^\/klient(?:[/?#]|$)/.test(href)) href = "/dla-klienta";
+  // Dawny kreator wniosku (/wniosek-start, /wniosek-formularz, …) już nie istnieje —
+  // CTA prowadzi na stronę dla klienta z formularzem.
+  if (/^\/wniosek-(?:start|warunki|zabezpieczenie|formularz|opis)(?:[/?#]|$)/.test(href)) {
+    href = "/dla-klienta";
+  }
+  // Slug artykułu w linku bywa zapisany z polskimi znakami — w bazie jest ASCII.
+  href = href.replace(/^\/blog\/([^/?#]+)/, (_m, slug: string) => `/blog/${asciiSlug(slug)}`);
   return { href, external: /^https?:\/\//.test(href) };
 }
 
@@ -50,6 +59,17 @@ function MarkdownLink({ href, children }: { href?: string; children?: ReactNode 
     );
   }
   return <a href={normalized}>{children}</a>;
+}
+
+/**
+ * Tytuł artykułu jest jedynym <h1> na stronie — nagłówki „#” z treści markdown
+ * (zwykle powtórzony tytuł) renderujemy jako <h2>, żeby nie dublować H1.
+ */
+function MarkdownH1AsH2({
+  node: _node,
+  ...props
+}: ComponentPropsWithoutRef<"h1"> & { node?: unknown }) {
+  return <h2 {...props} />;
 }
 
 function ShareBar({ url, title }: { url: string; title: string }) {
@@ -139,7 +159,19 @@ export const Route = createFileRoute("/blog/$slug")({
       .eq("slug", params.slug)
       .eq("status", "published")
       .maybeSingle();
-    if (!data) throw notFound();
+    if (!data) {
+      // Link z polskimi znakami albo wielkimi literami w slugu → trwałe
+      // przekierowanie na slug ASCII (zamiast 404).
+      const normalized = asciiSlug(params.slug);
+      if (normalized && normalized !== params.slug) {
+        throw redirect({
+          to: "/blog/$slug",
+          params: { slug: normalized },
+          statusCode: 301,
+        });
+      }
+      throw notFound();
+    }
 
     // Powiązane artykuły do linkowania wewnętrznego: najpierw te, do których
     // artykuł linkuje w treści, potem najnowsze dla tej samej grupy odbiorców.
@@ -475,7 +507,10 @@ function ArticlePage() {
         )}
 
         <article className="fy-article">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: MarkdownLink }}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{ a: MarkdownLink, h1: MarkdownH1AsH2 }}
+          >
             {article.content_md}
           </ReactMarkdown>
         </article>
