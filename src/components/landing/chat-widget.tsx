@@ -30,12 +30,13 @@ export function ChatWidget({ source = "landing", subtitle = "asystentka Finance 
 
   function ensureSession() {
     if (session.current) return session.current;
+    const sessionId = crypto.randomUUID();
     session.current = createAniaSession({
       surface: "reception",
       dynamicVariables: {
         channel: "voice_web",
         channel_label: "rozmowa głosowa i tekstowa na stronie", source,
-        session_id: crypto.randomUUID(), lead_id: "", first_name: "", last_name: "", email: "", phone: "",
+        session_id: sessionId, thread_key: `web:${sessionId}`, lead_id: "", first_name: "", last_name: "", email: "", phone: "",
       },
       onState: setState,
       onConversationId: setConversationId,

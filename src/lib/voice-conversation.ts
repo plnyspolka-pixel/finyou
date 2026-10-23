@@ -107,6 +107,7 @@ function floatToPcm16(input: Float32Array): Int16Array {
 /** Wiadomości agenta, których używamy (reszta protokołu nas nie interesuje). */
 interface ServerMessage {
   type?: string;
+  message?: string;
   conversation_initiation_metadata_event?: {
     conversation_id?: string;
     user_input_audio_format?: string;
@@ -315,6 +316,11 @@ export async function startVoiceConversation(
         } catch {
           /* ignorujemy — zamknięcie obsłuży close */
         }
+        break;
+      }
+      case "error": {
+        handlers.onError?.("Nie udało się rozpocząć rozmowy z Anią.");
+        cleanup("error");
         break;
       }
       default:
