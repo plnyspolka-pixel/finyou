@@ -40,7 +40,6 @@ Podstawa prawna:
    - Powiadomienia e-mail zawierają tylko numer sprawy, typ, wynik i link do panelu. Nie zawierają danych klienta.
 
 > **Ważne — istniejące przepływy:** w platformie działają wcześniejsze screeningi przez zewnętrzne API Dilisense:
->
 > - moduł AML inwestora (`aml_screenings`);
 > - pipeline inwestora (`investor_screenings`, krok 4);
 > - moduł projektów.
@@ -49,17 +48,17 @@ Podstawa prawna:
 
 ## 3. Źródła danych (weryfikacja 9.10.2026)
 
-| Źródło                             | Adres                                                                                            | Format          | Częstotliwość                                         | Warunki użycia                                                                                                                                 | Status                                                                                                                |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------ | --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Wikidata                           | `https://query.wikidata.org/sparql` (POST, nagłówek User-Agent z kontaktem)                      | SPARQL JSON     | co tydzień (import etapowy, partiami po 40 stanowisk) | CC0                                                                                                                                            | działa; przy dużym ruchu zwraca 429/502 — importer ponawia z wycofaniem                                               |
-| API Sejmu                          | `https://api.sejm.gov.pl/sejm/term`, `/sejm/term{N}/MP`                                          | JSON            | co tydzień (3 ostatnie kadencje)                      | informacja publiczna, ponowne wykorzystanie                                                                                                    | działa (499 posłów X kadencji, z datą urodzenia i datą wygaśnięcia mandatu)                                           |
-| KPRM — skład Rady Ministrów        | `https://www.gov.pl/web/premier/sklad-rady-ministrow`                                            | HTML (scraping) | co tydzień                                            | treści gov.pl: CC BY-SA 4.0                                                                                                                    | działa (premier, wicepremierzy, ministrowie; bez dat urodzenia)                                                       |
-| Senat                              | `https://www.senat.gov.pl/sklad/senatorowie/`                                                    | HTML            | co miesiąc                                            | —                                                                                                                                              | **niedostępne**: HTTP 403 dla automatycznego pobierania; senatorowie tylko z Wikidata (częściowo)                     |
-| API KRS                            | `https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/{KRS}?rejestr=P&format=json`                    | JSON            | co miesiąc                                            | informacja publiczna                                                                                                                           | **bez użytecznych danych**: API maskuje imiona, nazwiska i PESEL członków organów (np. „B**\***”)                     |
-| Lista sankcji finansowych UE (FSF) | `https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=…`     | XML             | codziennie                                            | dane Komisji Europejskiej przeznaczone dla instytucji finansowych; **licencję ponownego wykorzystania potwierdzić**                            | działa (6241 wpisów); własny token ustaw w `EU_FSF_TOKEN` (bez niego używany jest publiczny token z dokumentacji FSF) |
-| Lista ONZ (Rada Bezpieczeństwa)    | `https://scsanctions.un.org/resources/xml/en/consolidated.xml` (przekierowanie do pliku)         | XML             | codziennie                                            | **warunki użycia do potwierdzenia** (kontakt: sc-sanctionslists@un.org); lista jest przeznaczona do wdrażania sankcji, nie redystrybuujemy jej | działa (736 osób + 274 podmioty)                                                                                      |
-| Lista MSWiA                        | `https://www.gov.pl/web/mswia/lista-osob-i-podmiotow-objetych-sankcjami`                         | HTML (2 tabele) | codziennie                                            | CC BY-SA 4.0                                                                                                                                   | działa (wersja listy 168.0: 437 osób, 131 podmiotów; wpisy wykreślone mają datę wykreślenia)                          |
-| OFAC SDN (opcjonalnie)             | `https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV` + `ALT.CSV` | CSV             | codziennie (domyślnie **wyłączone**)                  | dane rządu USA, domena publiczna                                                                                                               | działa (19 416 wpisów)                                                                                                |
+| Źródło | Adres | Format | Częstotliwość | Warunki użycia | Status |
+|---|---|---|---|---|---|
+| Wikidata | `https://query.wikidata.org/sparql` (POST, nagłówek User-Agent z kontaktem) | SPARQL JSON | co tydzień (import etapowy, partiami po 40 stanowisk) | CC0 | działa; przy dużym ruchu zwraca 429/502 — importer ponawia z wycofaniem |
+| API Sejmu | `https://api.sejm.gov.pl/sejm/term`, `/sejm/term{N}/MP` | JSON | co tydzień (3 ostatnie kadencje) | informacja publiczna, ponowne wykorzystanie | działa (499 posłów X kadencji, z datą urodzenia i datą wygaśnięcia mandatu) |
+| KPRM — skład Rady Ministrów | `https://www.gov.pl/web/premier/sklad-rady-ministrow` | HTML (scraping) | co tydzień | treści gov.pl: CC BY-SA 4.0 | działa (premier, wicepremierzy, ministrowie; bez dat urodzenia) |
+| Senat | `https://www.senat.gov.pl/sklad/senatorowie/` | HTML | co miesiąc | — | **niedostępne**: HTTP 403 dla automatycznego pobierania; senatorowie tylko z Wikidata (częściowo) |
+| API KRS | `https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/{KRS}?rejestr=P&format=json` | JSON | co miesiąc | informacja publiczna | **bez użytecznych danych**: API maskuje imiona, nazwiska i PESEL członków organów (np. „B*****”) |
+| Lista sankcji finansowych UE (FSF) | `https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=…` | XML | codziennie | dane Komisji Europejskiej przeznaczone dla instytucji finansowych; **licencję ponownego wykorzystania potwierdzić** | działa (6241 wpisów); własny token ustaw w `EU_FSF_TOKEN` (bez niego używany jest publiczny token z dokumentacji FSF) |
+| Lista ONZ (Rada Bezpieczeństwa) | `https://scsanctions.un.org/resources/xml/en/consolidated.xml` (przekierowanie do pliku) | XML | codziennie | **warunki użycia do potwierdzenia** (kontakt: sc-sanctionslists@un.org); lista jest przeznaczona do wdrażania sankcji, nie redystrybuujemy jej | działa (736 osób + 274 podmioty) |
+| Lista MSWiA | `https://www.gov.pl/web/mswia/lista-osob-i-podmiotow-objetych-sankcjami` | HTML (2 tabele) | codziennie | CC BY-SA 4.0 | działa (wersja listy 168.0: 437 osób, 131 podmiotów; wpisy wykreślone mają datę wykreślenia) |
+| OFAC SDN (opcjonalnie) | `https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.CSV` + `ALT.CSV` | CSV | codziennie (domyślnie **wyłączone**) | dane rządu USA, domena publiczna | działa (19 416 wpisów) |
 
 Każdy import zapisuje następujące dane w tabeli `screening_source_imports`:
 
@@ -79,7 +78,7 @@ Zasady importu:
 
 ## 4. Pokrycie krajowego wykazu i luki
 
-Panel → _Screening PEP i sankcji_ → zakładka **Pokrycie wykazu PEP**. Dla każdej pozycji wykazu raport pokazuje:
+Panel → *Screening PEP i sankcji* → zakładka **Pokrycie wykazu PEP**. Dla każdej pozycji wykazu raport pokazuje:
 
 - podpięte źródła;
 - liczbę osób (w tym bieżących);
