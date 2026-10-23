@@ -1,3 +1,7 @@
+# Public Ania conversations
+- [ ] Keep one live session for text and voice; preserve agent mappings and reconnect visibly.
+- [ ] Replace duplicate public launchers with one Ania window; verify real answers and mobile layout.
+
 # YouTube first comments
 - [x] Add per-track configuration, persistent idempotency and post-publication comments.
 - [x] Test success, failures, fallback and unchanged historical publications: 45 tests pass.
