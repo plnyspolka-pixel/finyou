@@ -11,13 +11,17 @@
 //   • stop-klatka   — `voicebot_settings.sms_outbound_paused` zatrzymuje wysyłki
 //                     `automated`. Odpowiedzi na SMS klienta i wysyłki krytyczne
 //                     wymagają osobnych flag (`sms_pause_includes_*`).
-//   • critical      — OTP, wysyłka ręczna z panelu, windykacja, test: bez limitów.
+//   • critical      — OTP, wysyłka ręczna z panelu, windykacja, test, alarmy i
+//                     raporty autopilota do właściciela: bez limitów.
+//   • numer właściciela (OWNER_ALERT_PHONE / company.ts) jest POZA hamulcem:
+//                     stop-klatka ani limity go nie dotyczą — to kanał alarmowy.
 //   • conversational— odpowiedź na SMS klienta / SMS zamówiony przez Anię w trakcie
 //                     rozmowy: limit antypętlowy, bez okna godzinowego.
 //   • automated     — cała reszta (marketing/nurture/przypomnienia): okno godzinowe,
 //                     twardy limit dobowy i tygodniowy, dedup identycznej treści,
 //                     poszanowanie `clients.do_not_sms` (STOP).
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { COMPANY_DATA } from "@/lib/company";
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -58,8 +62,36 @@ export function defaultSmsLimits(): SmsLimits {
   };
 }
 
-/** Źródła, które NIGDY nie podlegają limitom (człowiek albo akcja klienta). */
-const CRITICAL_SOURCES = new Set(["phone_verification", "panel_manual", "windykacja", "test"]);
+/** Źródła, które NIGDY nie podlegają limitom (człowiek, akcja klienta albo alarm do właściciela). */
+const CRITICAL_SOURCES = new Set([
+  "phone_verification",
+  "panel_manual",
+  "windykacja",
+  "test",
+  "owner_alert",
+]);
+
+/** Numer właściciela na alarmy i raporty: `OWNER_ALERT_PHONE`, fallback numer z `company.ts`. */
+export function ownerAlertPhone(): string {
+  return process.env.OWNER_ALERT_PHONE?.trim() || COMPANY_DATA.phoneContracts.e164;
+}
+
+function phoneDigits(phone: string | null | undefined): string {
+  const d = String(phone ?? "").replace(/\D/g, "");
+  return d.length === 9 ? `48${d}` : d;
+}
+
+/**
+ * Czy to numer właściciela? Porównujemy same cyfry (z prefiksem kraju), więc
+ * „889 888 700", „+48889888700" i „48889888700" to ten sam numer.
+ */
+export function isOwnerAlertPhone(
+  phone: string | null | undefined,
+  owner = ownerAlertPhone(),
+): boolean {
+  const a = phoneDigits(phone);
+  return a.length > 0 && a === phoneDigits(owner);
+}
 
 /**
  * Źródła konwersacyjne — odpowiedź na SMS, który klient sam do nas wysłał.
@@ -307,6 +339,10 @@ export async function evaluateSmsGuard(opts: {
   now?: Date;
 }): Promise<SmsDecision> {
   const category = opts.category ?? classifySmsSource(opts.source);
+
+  // Numer właściciela jest poza hamulcem: alarm o awarii autopilota albo raport
+  // dzienny ma dojść także wtedy, gdy wysyłki do klientów są wstrzymane.
+  if (isOwnerAlertPhone(opts.phoneNormalized)) return { allowed: true };
 
   const pause = await smsPauseState();
   if (pauseBlocks(category, pause)) {

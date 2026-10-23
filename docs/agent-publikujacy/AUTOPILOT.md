@@ -178,7 +178,10 @@ Strażnik (`/api/public/hooks/autopilot-tick`, cron co godzinę w 7. minucie) li
 - odrzucenia kontroli jakości.
 
 Przy anomalii włącza pauzę i wysyła SMS do właściciela: `OWNER_ALERT_PHONE`, fallback na numer
-z `company.ts`, maks. 3 SMS na dobę. W trybach `off` i `manual_review` strażnik nic nie robi.
+z `company.ts`, maks. 3 SMS na dobę. Alarmy i raporty idą jako SMS krytyczny (`owner_alert`), a
+numer właściciela jest poza stop-klatką SMS (`docs/limity-sms.md`) — wstrzymanie wysyłek do klientów
+(`voicebot_settings.sms_outbound_paused`) ich nie blokuje. W trybach `off` i `manual_review` strażnik
+nic nie robi.
 
 Kolejki mają `idempotency_key` (unikalny), więc ten sam materiał autopilota nie trafi do kolejki
 drugi raz. Wpisy Meta wiszące w `publishing` ponad 60 min przechodzą w `failed` z opisem. Nie są

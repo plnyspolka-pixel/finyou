@@ -2,7 +2,6 @@
 // awaryjny, zużycie (koszty, publikacje, błędy), strażnik anomalii i SMS
 // alarmowy do właściciela. Każda decyzja → ai_growth_action_log (module=autopilot).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { COMPANY_DATA } from "@/lib/company";
 import { formatDatePl, warsawDateParts } from "./date-context";
 import { parseSplit, resolveProfiles, type AudienceProfile, type CadenceSplit } from "./profiles";
 import {
@@ -253,9 +252,7 @@ export async function loadUsage(now: Date = new Date()): Promise<AutopilotUsage>
 
 export const OWNER_SMS_MAX_PER_DAY = 3;
 
-export function ownerAlertPhone(): string {
-  return process.env.OWNER_ALERT_PHONE?.trim() || COMPANY_DATA.phoneContracts.e164;
-}
+export { ownerAlertPhone } from "@/lib/sms-guard.server";
 
 export async function smsOwner(
   body: string,
@@ -270,12 +267,17 @@ export async function smsOwner(
     .gte("created_at", since);
   if ((count ?? 0) >= OWNER_SMS_MAX_PER_DAY)
     return { sent: false, reason: "Limit SMS do właściciela na dobę." };
-  const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+  // Alarm i raport idą jako `critical` na numer właściciela, który jest poza
+  // stop-klatką SMS (sms-guard): wstrzymanie wysyłek do klientów ich nie blokuje.
+  const [{ sendSmsInternal }, { ownerAlertPhone }] = await Promise.all([
+    import("@/lib/voicebot.functions"),
+    import("@/lib/sms-guard.server"),
+  ]);
   const res = await sendSmsInternal({
     phone: ownerAlertPhone(),
     body: body.slice(0, 300),
     source: "owner_alert",
-    category: kind === "alarm" ? "critical" : undefined,
+    category: "critical",
     metadata: { module: AUTOPILOT_LOG_MODULE, kind },
   });
   await logAutopilot({

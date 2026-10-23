@@ -24,12 +24,21 @@ każda wysyłka SMS w systemie.
 
 | Kategoria        | Źródła                                                                                                                                                                   | Zasady                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `critical`       | `phone_verification` (OTP), `panel_manual`, `windykacja`, `test`                                                                                                         | bez limitów                                                                                       |
+| `critical`       | `phone_verification` (OTP), `panel_manual`, `windykacja`, `test`, `owner_alert` (alarm / raport autopilota do właściciela)                                               | bez limitów                                                                                       |
 | `conversational` | `sms_agent_reply` (odpowiedź na SMS, który klient sam wysłał)                                                                                                            | bez okna godzinowego; limit 8/24 h i blokada powtórki tej samej treści w 24 h (bezpiecznik pętli) |
 | `automated`      | cała reszta: `lead_welcome`, `meta_lead`, `follow_up_sms_*`, `ania_callback_sms`, `saturday_reminder`, `missing_info_follow_up`, `elevenlabs_agent`, zapowiedzi telefonu | pełny zestaw reguł ↓                                                                              |
 
 Kategoria wynika ze źródła (`classifySmsSource`); wywołujące mogą ją podać wprost
 parametrem `category` w `sendSmsInternal`.
+
+### Numer właściciela poza hamulcem
+
+SMS na numer właściciela (`OWNER_ALERT_PHONE`, domyślnie `889 888 700` z
+`company.ts`) **nie podlega** stop-klatce ani żadnym limitom — niezależnie od
+źródła i od flag `sms_pause_includes_*`. To kanał alarmowy: wstrzymanie wysyłek
+do klientów nie może wyciszyć alarmu o awarii autopilota ani raportu dziennego.
+Numer porównujemy po cyfrach (`isOwnerAlertPhone`), więc zapis z spacjami,
+z `+48` czy bez prefiksu to ten sam numer.
 
 ### Reguły dla SMS-ów automatycznych
 

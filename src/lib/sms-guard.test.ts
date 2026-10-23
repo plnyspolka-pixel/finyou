@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   classifySmsSource,
   decideSms,
+  isOwnerAlertPhone,
   normalizeSmsBody,
   type RecentSms,
   type SmsLimits,
@@ -40,6 +41,10 @@ describe("classifySmsSource", () => {
     expect(classifySmsSource("phone_verification")).toBe("critical");
     expect(classifySmsSource("panel_manual")).toBe("critical");
     expect(classifySmsSource("windykacja")).toBe("critical");
+  });
+
+  it("alarm i raport autopilota do właściciela są krytyczne", () => {
+    expect(classifySmsSource("owner_alert")).toBe("critical");
   });
 
   it("odpowiedź na SMS klienta to kanał konwersacyjny", () => {
@@ -221,5 +226,35 @@ describe("stop-klatka SMS", () => {
     expect(pauseBlocks("conversational", zOdpowiedziami)).toBe(true);
     expect(pauseBlocks("critical", zOdpowiedziami)).toBe(false);
     expect(pauseBlocks("automated", zOdpowiedziami)).toBe(true);
+  });
+});
+
+describe("numer właściciela poza hamulcem", () => {
+  const owner = "+48889888700";
+
+  it("rozpoznaje numer właściciela w każdym zapisie", () => {
+    expect(isOwnerAlertPhone("+48889888700", owner)).toBe(true);
+    expect(isOwnerAlertPhone("48889888700", owner)).toBe(true);
+    expect(isOwnerAlertPhone("889888700", owner)).toBe(true);
+    expect(isOwnerAlertPhone("889 888 700", owner)).toBe(true);
+    expect(isOwnerAlertPhone("+48 889-888-700", owner)).toBe(true);
+  });
+
+  it("nie myli klienta z właścicielem", () => {
+    expect(isOwnerAlertPhone("+48732059898", owner)).toBe(false);
+    expect(isOwnerAlertPhone("889888701", owner)).toBe(false);
+    expect(isOwnerAlertPhone("", owner)).toBe(false);
+    expect(isOwnerAlertPhone(null, owner)).toBe(false);
+  });
+
+  it("domyślnie porównuje z numerem z company.ts (OWNER_ALERT_PHONE nieustawione)", () => {
+    const prev = process.env.OWNER_ALERT_PHONE;
+    delete process.env.OWNER_ALERT_PHONE;
+    try {
+      expect(isOwnerAlertPhone("889888700")).toBe(true);
+      expect(isOwnerAlertPhone("+48732059898")).toBe(false);
+    } finally {
+      if (prev !== undefined) process.env.OWNER_ALERT_PHONE = prev;
+    }
   });
 });
