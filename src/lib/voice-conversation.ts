@@ -29,11 +29,13 @@ export interface VoiceConversationHandlers {
   onAgentMessage?: (text: string) => void;
   onUserMessage?: (text: string) => void;
   onError?: (message: string) => void;
+  onConversationId?: (id: string) => void;
 }
 
 export interface VoiceConversationOptions {
   /** Powierzchnia rozpoznawana przez /api/public/voice-session. */
-  surface?: "intake" | "missing_info";
+  surface?: "intake" | "investor_info" | "missing_info";
+  mode?: "text" | "voice";
   /** Zmienne dynamiczne agenta (kanał, lead, brief braków…). */
   dynamicVariables?: Record<string, string | number | boolean>;
 }
@@ -41,6 +43,9 @@ export interface VoiceConversationOptions {
 export interface VoiceConversation {
   /** Kończy rozmowę i zwalnia mikrofon. Wielokrotne wywołanie jest bezpieczne. */
   stop: () => void;
+  sendText: (text: string) => void;
+  sendContext: (text: string) => void;
+  setMode: (mode: "text" | "voice") => Promise<void>;
   /** Wyciszenie mikrofonu (Ania przestaje słyszeć, rozmowa trwa). */
   setMuted: (muted: boolean) => void;
 }
@@ -103,6 +108,7 @@ function floatToPcm16(input: Float32Array): Int16Array {
 interface ServerMessage {
   type?: string;
   conversation_initiation_metadata_event?: {
+    conversation_id?: string;
     user_input_audio_format?: string;
     agent_output_audio_format?: string;
   };
@@ -112,7 +118,7 @@ interface ServerMessage {
   ping_event?: { event_id?: number };
 }
 
-async function fetchSignedUrl(surface: "intake" | "missing_info"): Promise<string> {
+async function fetchSignedUrl(surface: "intake" | "investor_info" | "missing_info"): Promise<string> {
   const res = await fetch("/api/public/voice-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -143,36 +149,21 @@ export async function startVoiceConversation(
   const surface = options.surface ?? "intake";
   const setState = (s: VoiceState) => handlers.onState?.(s);
 
-  if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Ta przeglądarka nie obsługuje rozmów głosowych.");
-  }
-
+  if (typeof window === "undefined") throw new Error("Rozmowa dostępna w przeglądarce.");
   setState("connecting");
-
-  let stream: MediaStream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
-  } catch {
-    throw new Error("Nie mam dostępu do mikrofonu — zezwól na mikrofon w przeglądarce.");
-  }
-
-  let signedUrl: string;
-  try {
-    signedUrl = await fetchSignedUrl(surface);
-  } catch (e) {
-    stream.getTracks().forEach((t) => t.stop());
-    throw e;
-  }
-
-  const AudioCtor: typeof AudioContext =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-  const micCtx = new AudioCtor({ sampleRate: DEFAULT_SAMPLE_RATE });
-  const playCtx = new AudioCtor();
+  const signedUrl = await fetchSignedUrl(surface);
   const ws = new WebSocket(signedUrl);
-
+  let stream: MediaStream | null = null;
+  let micCtx: AudioContext | null = null;
+  let playCtx: AudioContext | null = null;
+  let mode = options.mode ?? "voice";
+  let rejectReady: (error: Error) => void = () => {};
+  let resolveReady: () => void = () => {};
+  const ready = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const readyTimer = setTimeout(() => {
+    rejectReady(new Error("Ania nie odpowiada. Spróbuj ponownie."));
+    cleanup("error");
+  }, 30000);
   let stopped = false;
   let muted = false;
   let inputRate = DEFAULT_SAMPLE_RATE;
@@ -202,40 +193,45 @@ export async function startVoiceConversation(
     } catch {
       /* już zamknięty */
     }
-    stream.getTracks().forEach((t) => t.stop());
-    void micCtx.close().catch(() => {});
-    void playCtx.close().catch(() => {});
+    clearTimeout(readyTimer);
+    rejectReady(new Error("Połączenie przerwane."));
+    stream?.getTracks().forEach((t) => t.stop());
+    void micCtx?.close().catch(() => {});
+    void playCtx?.close().catch(() => {});
     setState(finalState);
   };
 
-  // ── Mikrofon → WebSocket ────────────────────────────────────────────────
-  const source = micCtx.createMediaStreamSource(stream);
-  // ScriptProcessor jest oznaczony jako przestarzały, ale działa we wszystkich
-  // przeglądarkach bez dokładania osobnego pliku AudioWorkletu (a ten wymaga
-  // własnego bundla — przy tej wielkości bufora różnica jest niezauważalna).
-  const processor = micCtx.createScriptProcessor(MIC_BUFFER_SIZE, 1, 1);
-  // Wyciszony węzeł wyjściowy: w części przeglądarek processor nie pracuje,
-  // dopóki nie jest podłączony do wyjścia — gain 0 zapobiega echu.
-  const silence = micCtx.createGain();
-  silence.gain.value = 0;
-
-  processor.onaudioprocess = (event) => {
-    if (stopped || muted || ws.readyState !== WebSocket.OPEN) return;
-    const input = event.inputBuffer.getChannelData(0);
-    const resampled = resample(input, micCtx.sampleRate, inputRate);
-    try {
-      ws.send(JSON.stringify({ user_audio_chunk: base64FromInt16(floatToPcm16(resampled)) }));
-    } catch {
-      /* zamknięte gniazdo — obsłuży zdarzenie close */
-    }
+  const enableMicrophone = async () => {
+    if (stream) return;
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("Ta przeglądarka nie obsługuje mikrofonu.");
+    const acquired = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    if (stopped) { acquired.getTracks().forEach((t) => t.stop()); return; }
+    stream = acquired;
+    micCtx = new AudioContext({ sampleRate: DEFAULT_SAMPLE_RATE });
+    playCtx = new AudioContext();
+    await micCtx.resume();
+    await playCtx.resume();
+    const context = micCtx;
+    const source = context.createMediaStreamSource(stream);
+    const processor = context.createScriptProcessor(MIC_BUFFER_SIZE, 1, 1);
+    const silence = context.createGain();
+    silence.gain.value = 0;
+    processor.onaudioprocess = (event) => {
+      if (stopped || muted || mode !== "voice" || ws.readyState !== WebSocket.OPEN) return;
+      const input = event.inputBuffer.getChannelData(0);
+      const pcm = floatToPcm16(resample(input, context.sampleRate, inputRate));
+      ws.send(JSON.stringify({ user_audio_chunk: base64FromInt16(pcm) }));
+    };
+    source.connect(processor);
+    processor.connect(silence);
+    silence.connect(context.destination);
   };
-  source.connect(processor);
-  processor.connect(silence);
-  silence.connect(micCtx.destination);
 
   // ── WebSocket → głośnik ─────────────────────────────────────────────────
   const playChunk = (pcm: Int16Array) => {
-    if (stopped || pcm.length === 0) return;
+    if (stopped || mode !== "voice" || !playCtx || pcm.length === 0) return;
     const buffer = playCtx.createBuffer(1, pcm.length, outputRate);
     const channel = buffer.getChannelData(0);
     for (let i = 0; i < pcm.length; i++) channel[i] = pcm[i] / 0x8000;
@@ -281,7 +277,8 @@ export async function startVoiceConversation(
         outputRate = parsePcmRate(meta.agent_output_audio_format);
         // Nawet gdy przeglądarka da AudioContext w innej częstotliwości,
         // do agenta zawsze idzie strumień w formacie, którego oczekuje.
-        void playCtx.resume().catch(() => {});
+        if (meta.conversation_id) handlers.onConversationId?.(meta.conversation_id);
+        void playCtx?.resume().catch(() => {});
         setState("listening");
         break;
       }
@@ -292,7 +289,11 @@ export async function startVoiceConversation(
       }
       case "agent_response": {
         const text = msg.agent_response_event?.agent_response;
-        if (typeof text === "string" && text.trim()) handlers.onAgentMessage?.(text.trim());
+        if (typeof text === "string" && text.trim()) {
+          handlers.onAgentMessage?.(text.trim());
+          clearTimeout(readyTimer);
+          resolveReady();
+        }
         break;
       }
       case "user_transcript": {
@@ -325,11 +326,32 @@ export async function startVoiceConversation(
   });
   ws.addEventListener("close", () => cleanup("ended"));
 
+  try {
+    await ready;
+    if (mode === "voice") await enableMicrophone();
+  } catch (error) {
+    cleanup("error");
+    throw error;
+  }
+
   return {
+    sendText: (text) => {
+      if (stopped || ws.readyState !== WebSocket.OPEN) throw new Error("Połączenie przerwane. Spróbuj ponownie.");
+      ws.send(JSON.stringify({ type: "user_message", text }));
+    },
+    sendContext: (text) => {
+      if (!stopped && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "contextual_update", text }));
+    },
+    setMode: async (next) => {
+      if (next === "voice") await enableMicrophone();
+      mode = next;
+      stream?.getAudioTracks().forEach((t) => { t.enabled = next === "voice" && !muted; });
+      if (next === "text") stopPlayback();
+    },
     stop: () => cleanup("ended"),
     setMuted: (value: boolean) => {
       muted = value;
-      stream.getAudioTracks().forEach((t) => (t.enabled = !value));
+      stream?.getAudioTracks().forEach((t) => (t.enabled = !value));
     },
   };
 }
