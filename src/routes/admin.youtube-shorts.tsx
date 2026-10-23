@@ -33,7 +33,6 @@ import {
   Ban,
   ExternalLink,
 } from "lucide-react";
-import { isVideoPreparingNote } from "@/lib/video-rendition";
 
 export const Route = createFileRoute("/admin/youtube-shorts")({
   component: YoutubeShortsPage,
@@ -384,15 +383,7 @@ function YoutubeShortsPage() {
                         {item.attempt_count > 0 && ` • próby: ${item.attempt_count}`}
                       </p>
                       {item.last_error && (
-                        <p
-                          className={`break-all text-xs ${
-                            isVideoPreparingNote(item.last_error)
-                              ? "text-muted-foreground"
-                              : "text-destructive"
-                          }`}
-                        >
-                          {item.last_error}
-                        </p>
+                        <p className="break-all text-xs text-destructive">{item.last_error}</p>
                       )}
                     </div>
                     <div className="flex items-center gap-1">

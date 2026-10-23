@@ -166,7 +166,7 @@ export interface ReportInput {
   changes: string[];
   alarms: string[];
   paused: boolean;
-  /** Obejścia w produkcji rolek (np. caption-burner → Remotion). */
+  /** Uwagi o produkcji rolek — sekcja „Produkcja” raportu (dziś nieużywana). */
   production?: string[];
 }
 

@@ -1,9 +1,9 @@
-// StudioReel — wykończenie rolki Studia silnikiem Remotion (render_engine =
-// "remotion"): czysty master HeyGena + napisy, znaczek „AI" i nakładki
-// dynamiczne. Wszystko, co da się policzyć (porcje napisów, podświetlanie
+// StudioReel — wykończenie rolki Studia (Remotion to jedyny silnik): czysty
+// master HeyGena + napisy, znaczek „AI", nakładki dynamiczne, hook i
+// kadrowanie. Wszystko, co da się policzyć (porcje napisów, podświetlanie
 // słów, czasy nakładek, geometria kart), liczy serwer w
 // src/lib/studio-reel-plan.ts — tu tylko rysujemy według planu, tym samym
-// wyglądem co plik ASS caption-burnera (src/lib/caption-style.ts).
+// wyglądem co referencyjny plik ASS (src/lib/caption-style.ts).
 // Plan ma współrzędne kadru 720×1280; skalujemy je do rozdzielczości mastera.
 
 import { loadFont } from "@remotion/fonts";
@@ -32,7 +32,7 @@ import { HookAudio, HookLayer, HookMusic } from "./Hook";
 import type { ReelFraming } from "../../../src/lib/studio-avatar-framing";
 
 // Inter z paczki strony (public/fonts, licencja OFL) — bez pobierania z sieci
-// w trakcie renderu; ta sama czcionka co w obrazie caption-burnera.
+// w trakcie renderu.
 const fontFamily = "Inter";
 const LATIN =
   "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";

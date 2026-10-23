@@ -1,9 +1,10 @@
-// Plan wykończenia rolki dla silnika Remotion (services/remotion, kompozycja
-// `StudioReel`). To ten sam wygląd co plik ASS z caption-style.ts — napisy,
-// znaczek „AI", nakładki dynamiczne — tylko jako czyste dane: wszystko, co da
-// się policzyć (cięcie kwestii, podświetlanie słów, czasy nakładek, geometria
-// kart), liczymy TU, a kompozycja jedynie rysuje. Dzięki temu jedna logika
-// (z testami) obsługuje oba silniki, a strona Remotion nie zna reguł Studia.
+// Plan wykończenia rolki dla Remotion (services/remotion, kompozycja
+// `StudioReel`) — jedynego silnika wykończenia. Napisy, znaczek „AI", nakładki
+// dynamiczne, hook i kadrowanie jako czyste dane: wszystko, co da się
+// policzyć (cięcie kwestii, podświetlanie słów, czasy nakładek, geometria
+// kart), liczymy TU z funkcji z caption-style.ts, a kompozycja jedynie
+// rysuje. Referencyjny generator ASS w caption-style.ts daje ten sam wygląd
+// (testy porównują porcje), a strona Remotion nie zna reguł Studia.
 // Współrzędne w pikselach kadru 720×1280, czasy w sekundach; kompozycja
 // skaluje je do faktycznej rozdzielczości mastera.
 

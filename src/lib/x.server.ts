@@ -24,14 +24,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { withOriginFilter } from "@/lib/autopilot/state.server";
-import {
-  X_TEXT_LIMIT,
-  pickXMedia,
-  planXChunks,
-  xMediaFromUrl,
-  xPostText,
-  type XMedia,
-} from "./x-post";
+import { X_TEXT_LIMIT, pickXMedia, planXChunks, xPostText, type XMedia } from "./x-post";
 
 const OAUTH_AUTH_URL = "https://x.com/i/oauth2/authorize";
 const OAUTH_TOKEN_URL = "https://api.x.com/2/oauth2/token";
@@ -508,16 +501,7 @@ async function downloadMedia(media: XMedia): Promise<ArrayBuffer> {
  * jeden zestaw błędów do obsłużenia zamiast dwóch.
  */
 async function uploadMedia(source: XMedia, token: string): Promise<string> {
-  let media = source;
-  if (source.kind === "video") {
-    // Kompresja do profilu publikacji (≤ 60 MB, MP4 H.264/AAC — X nie
-    // przyjmuje HEVC ani MOV z telefonu). Rzuca VideoPreparingError, gdy
-    // plik jeszcze się przygotowuje. Wynik jest zawsze MP4, więc typ
-    // materiału liczymy od nowa z jego adresu.
-    const { ensurePublishableVideo } = await import("./video-rendition.server");
-    const url = await ensurePublishableVideo(source.url);
-    if (url !== source.url) media = xMediaFromUrl(url, "video");
-  }
+  const media = source;
   const buffer = await downloadMedia(media);
   const totalBytes = buffer.byteLength;
 
@@ -685,8 +669,6 @@ export async function processXQueueItem(id: string): Promise<{
   ok: boolean;
   postId?: string | null;
   processing?: boolean;
-  /** Wideo w kompresji — wpis odroczony, publikacja ruszy z ticka. */
-  preparing?: boolean;
   error?: string;
 }> {
   const { data: claimed, error: claimErr } = await supabaseAdmin
@@ -749,21 +731,6 @@ export async function processXQueueItem(id: string): Promise<{
     await markComplete(withMedia, postId);
     return { ok: true, postId };
   } catch (err) {
-    const { VideoPreparingError } = await import("./video-rendition.server");
-    if (err instanceof VideoPreparingError) {
-      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut BEZ
-      // zużycia próby; upload się nie zaczął, więc nic nie poszło na profil.
-      await supabaseAdmin
-        .from("social_publish_queue")
-        .update({
-          status: "pending",
-          x_media_status: null,
-          last_error: err.note,
-          scheduled_at: err.nextAt.toISOString(),
-        })
-        .eq("id", item.id);
-      return { ok: true, preparing: true };
-    }
     const msg = err instanceof Error ? err.message : String(err);
     // HTTP 402 = brak kredytów API X – ponawianie nic nie da, a mieli limity.
     if (isXCreditsError(msg)) {
@@ -977,7 +944,7 @@ export async function runXPublishTick(): Promise<{
     processed += 1;
     const result = await processXQueueItem(item.id);
     if (result.ok && result.processing) processing += 1;
-    else if (result.ok && !result.preparing) published += 1;
+    else if (result.ok) published += 1;
     else if (result.error) errors.push(result.error);
   }
 

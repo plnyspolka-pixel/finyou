@@ -1,22 +1,23 @@
 // Napisy rolek Studia — czysta logika decyzyjna (bez I/O, testowalna).
 //
-// ZASADA: napisy ZAWSZE wypalamy u siebie (usługa services/caption-burner,
-// styl z src/lib/caption-style.ts) z NASZEGO pliku SRT — tekst scenariusza
+// ZASADA: napisy ZAWSZE wypalamy u siebie — jedynym silnikiem wykończenia
+// jest Remotion Lambda (services/remotion, plan z studio-reel-plan.ts, styl
+// z src/lib/caption-style.ts) — z NASZEGO pliku SRT: tekst scenariusza
 // z panelu + czasy znaków z syntezy ElevenLabs (src/lib/studio-subtitles.ts).
 // HeyGen dostaje gotowe audio i NIE zamawiamy u niego napisów (`caption`
 // wyłączone): jego rozpoznawanie mowy przekręcało nazwę firmy („fajnasiu",
 // „finansu.pl"), a wyglądu napisów HeyGena nie da się ustawić.
 //
-// Nie ma więc już „wersji z napisami HeyGena", na którą dałoby się zejść.
-// Gdy napisów nie da się wypalić (brak usługi, brak SRT, usługa padła mimo
-// ponowienia, przekroczony czas), zadanie kończy się statusem `failed`
-// z jasnym powodem w `last_error` — z zachowanym czystym masterem
-// (`video_url_clean`) i plikiem SRT (`subtitle_url`), żeby ponowienie wypaliło
-// napisy bez nowego renderu w HeyGen. Rolka bez napisów nie wychodzi do
-// publikacji „po cichu". Wyjątki:
+// Nie ma „wersji z napisami HeyGena", na którą dałoby się zejść, ani
+// zapasowego silnika. Gdy napisów nie da się wypalić (brak sekretów Remotion,
+// brak SRT, render padł mimo ponowienia, przekroczony czas), zadanie kończy
+// się statusem `failed` z jasnym powodem w `last_error` — z zachowanym
+// czystym masterem (`video_url_clean`) i plikiem SRT (`subtitle_url`), żeby
+// ponowienie wypaliło napisy bez nowego renderu w HeyGen. Rolka bez napisów
+// nie wychodzi do publikacji „po cichu". Wyjątki:
 //   * zmiana napisów GOTOWEJ rolki — przy porażce zostaje poprzednia wersja,
-//   * rolka zamówiona bez napisów — dostaje tylko znaczek „AI", a gdy i to
-//     się nie uda, wychodzi bez znaczka (z adnotacją).
+//   * rolka zamówiona bez napisów — dostaje tylko znaczek „AI" i nakładki,
+//     a gdy i to się nie uda, wychodzi bez nich (z adnotacją).
 //
 // KONTRAKT HEYGEN (/v3/videos) nadal zna `caption` — używa go Awatar FAQ i
 // pipeline YouTube (sam plik SRT obok wideo); Studio wysyła `off`.
@@ -62,9 +63,9 @@ export function captionBadgeLabel(job: {
 
 // ── Napisy własne — plan i domknięcie ───────────────────────────────────────
 
-/** Ile czekamy na usługę wypalania, zanim uznamy zadanie za nieudane. */
+/** Ile czekamy na render Remotion, zanim uznamy zadanie za nieudane. */
 export const CAPTION_BURN_TIMEOUT_MS = 45 * 60_000;
-/** Ile razy zlecamy wypalenie, zanim odpuścimy (usługa mogła się zrestartować). */
+/** Ile razy zlecamy wykończenie, zanim odpuścimy (Lambda mogła odrzucić zlecenie). */
 export const CAPTION_BURN_MAX_ATTEMPTS = 2;
 
 export type CaptionBurnPlan =
@@ -83,22 +84,23 @@ export type CaptionBurnPlan =
   /** Napisy zamówione, ale nie da się ich wypalić — zadanie ma paść z tym powodem. */
   | { action: "fail"; reason: string };
 
-export const NO_BURNER_REASON =
-  "Napisy nie zostały wypalone: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET). Skonfiguruj usługę i ponów zadanie.";
+export const NO_REMOTION_REASON =
+  "Napisy nie zostały wypalone: Remotion Lambda nie jest skonfigurowany (sekrety REMOTION_*). Skonfiguruj Remotion i ponów zadanie.";
 export const NO_SRT_REASON =
   "Napisy nie zostały wypalone: brak pliku SRT (tekst scenariusza z czasami ElevenLabs). Ponów zadanie, żeby nagrać lektora od nowa.";
 export const NO_MASTER_REASON =
   "Napisy nie zostały wypalone: HeyGen nie oddał czystego pliku wideo.";
 
 /**
- * Czy i jak wypalamy napisy dla tego joba. Napisy włączone wymagają usługi,
- * czystego mastera i naszego SRT — każdy brak to porażka zadania z powodem,
+ * Czy i jak wypalamy napisy dla tego joba. Napisy włączone wymagają
+ * skonfigurowanego Remotion, czystego mastera i naszego SRT — każdy brak to porażka zadania z powodem,
  * nie publikacja bez napisów.
  */
 export function planCaptionBurn(input: {
   captions: boolean;
   captionStyle: string | null | undefined;
-  burnerConfigured: boolean;
+  /** Sekrety Remotion Lambda są ustawione (jedyny silnik wykończenia). */
+  remotionConfigured: boolean;
   videoUrl: string | null | undefined;
   srtUrl: string | null | undefined;
   /** Dołóż znaczek „AI" do wypalanych napisów. */
@@ -107,7 +109,7 @@ export function planCaptionBurn(input: {
   overlays?: DynamicOverlays | null;
 }): CaptionBurnPlan {
   if (!input.captions) return { action: "skip" };
-  if (!input.burnerConfigured) return { action: "fail", reason: NO_BURNER_REASON };
+  if (!input.remotionConfigured) return { action: "fail", reason: NO_REMOTION_REASON };
   const videoUrl = input.videoUrl ?? "";
   if (!videoUrl) return { action: "fail", reason: NO_MASTER_REASON };
   const srtUrl = input.srtUrl ?? "";
@@ -130,20 +132,20 @@ export type BadgeBurnPlan =
   | { action: "skip"; reason: string | null };
 
 /**
- * Znaczek „AI" i/lub nakładki dynamiczne dla rolki bez napisów: usługa
- * wypalania kładzie je na czysty master. Bez usługi nie da się ich położyć
+ * Znaczek „AI" i/lub nakładki dynamiczne dla rolki bez napisów: Remotion
+ * kładzie je na czysty master. Bez sekretów Remotion nie da się ich położyć
  * (HeyGen nie ma warstw) — mówimy o tym w `last_error`, ale rolki nie
  * blokujemy.
  */
 export function planBadgeBurn(input: {
   aiBadge: boolean;
-  burnerConfigured: boolean;
+  remotionConfigured: boolean;
   videoUrl: string | null | undefined;
   overlays?: DynamicOverlays | null;
 }): BadgeBurnPlan {
   const overlays = input.overlays ?? null;
   if (!input.aiBadge && !overlays) return { action: "skip", reason: null };
-  if (!input.burnerConfigured) {
+  if (!input.remotionConfigured) {
     const what =
       input.aiBadge && overlays
         ? "Znaczek AI i nakładki dynamiczne pominięte"
@@ -152,7 +154,7 @@ export function planBadgeBurn(input: {
           : "Nakładki dynamiczne pominięte";
     return {
       action: "skip",
-      reason: `${what}: brak usługi wypalania (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).`,
+      reason: `${what}: Remotion Lambda nie jest skonfigurowany (sekrety REMOTION_*).`,
     };
   }
   if (!input.videoUrl) return { action: "skip", reason: null };
@@ -168,7 +170,7 @@ export type CaptionBurnFallback = {
 
 export type CaptionBurnResolution =
   | { state: "waiting" }
-  /** Usługa skończyła — pobierz plik i zapisz (I/O robi wołający). */
+  /** Render skończony — pobierz plik i zapisz (I/O robi wołający). */
   | { state: "store" }
   | { state: "retry"; reason: string }
   /** Zmiana napisów gotowej rolki nie wyszła — zostaje poprzednia wersja. */
@@ -183,7 +185,7 @@ export type CaptionBurnResolution =
   | { state: "fail"; note: string };
 
 /**
- * Domyka wypalanie po odpytaniu usługi. Błąd, zaginione zadanie i przekroczony
+ * Domyka wykończenie po odpytaniu Lambdy. Błąd, zaginiony render i przekroczony
  * czas nie zostawiają joba w zawieszeniu: najpierw ponowienie (do limitu),
  * potem porażka z jasnym komunikatem (albo powrót poprzedniej wersji przy
  * zmianie napisów gotowej rolki).
@@ -212,11 +214,11 @@ export function resolveCaptionBurn(input: {
     if (elapsed < timeoutMs) return { state: "waiting" };
     return failureFor(
       input.fallback,
-      `${label}: usługa nie skończyła w ciągu ${Math.round(timeoutMs / 60_000)} min`,
+      `${label}: render nie skończył się w ciągu ${Math.round(timeoutMs / 60_000)} min`,
     );
   }
 
-  const why = input.error ?? (input.status === "missing" ? "zadanie zaginęło" : "błąd usługi");
+  const why = input.error ?? (input.status === "missing" ? "render zaginął" : "błąd renderu");
   if (input.attempts < maxAttempts) return { state: "retry", reason: why };
   return failureFor(input.fallback, `${label}: ${why}`);
 }

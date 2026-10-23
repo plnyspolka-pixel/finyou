@@ -1,18 +1,21 @@
-// Napisy własne — czysta logika: SRT → ASS ze stylem (bez I/O, testowalna).
+// Napisy własne — czysta logika: presety stylów, parsowanie SRT, cięcie
+// kwestii, geometria nakładek (bez I/O, testowalna).
 //
 // DLACZEGO: napisów HeyGena nie da się ostylować (v3 przyjmuje w
 // `caption.style` wyłącznie "default"), a ich tekst z rozpoznawania mowy
 // przekręcał nazwę firmy — Studio nie zamawia ich wcale. Plik SRT budujemy
 // sami z tekstu scenariusza i czasów znaków ElevenLabs (studio-subtitles.ts).
-// Backend chodzi na Cloudflare Workers, gdzie nie ma FFmpega, więc obraz
-// wypala osobna usługa (services/caption-burner). Cały wygląd napisów
-// rozstrzyga się TUTAJ: z SRT budujemy ASS (Advanced SubStation Alpha —
-// format, w którym styl jest częścią pliku), a usługa tylko nakłada go
-// filtrem libass. Usługa nic nie interpretuje, więc zmiana wyglądu to
-// zmiana w tym pliku, nie w infrastrukturze.
 //
-// Rozmiary w presetach są w pikselach kadru 720×1280 (PlayResY = 1280);
-// libass skaluje je proporcjonalnie, gdy plik ma inną rozdzielczość.
+// PRODUKCJA: jedynym silnikiem wykończenia jest Remotion Lambda
+// (services/remotion). Plan rolki buduje studio-reel-plan.ts z funkcji z tego
+// pliku (style, `chunkCues`, `layoutLines`, geometria kart, czasy nakładek),
+// a kompozycja StudioReel tylko go rysuje. Generator ASS niżej (`srtToAss`,
+// `extrasAss`, zdarzenia znaczka i nakładek) został jako REFERENCJA wyglądu
+// i wyrocznia testów (plan Remotion ma dawać te same porcje i czasy) — na
+// produkcji nic go nie woła (usługa FFmpeg caption-burner usunięta 24.10.2026).
+//
+// Rozmiary w presetach są w pikselach kadru 720×1280; kompozycja skaluje je
+// proporcjonalnie do rozdzielczości mastera.
 
 import { fixBrandInCues } from "./caption-brand";
 
@@ -26,7 +29,7 @@ export type SrtCue = {
   text: string;
 };
 
-// Wszystkie style wypalamy u nas (usługa caption-burner) — napisów HeyGena
+// Wszystkie style wypalamy u nas (Remotion) — napisów HeyGena
 // Studio nie zamawia. Wartość 'heygen' zostaje tylko w starych wierszach
 // `studio_video_jobs.caption_style` (rozpoznajemy ją po etykiecie, nie oferujemy).
 export const CAPTION_STYLE_IDS = ["reels", "tiktok", "box", "minimal"] as const;
@@ -40,7 +43,7 @@ export type CaptionStyle = {
   id: CustomCaptionStyleId;
   label: string;
   description: string;
-  /** Rodzina czcionki (fontconfig w usłudze; Inter jest w obrazie Dockera). */
+  /** Rodzina czcionki (Inter jest w `public/fonts` usługi Remotion). */
   font: string;
   /** Wysokość czcionki w px przy kadrze 1280 px. */
   fontSize: number;
@@ -164,7 +167,7 @@ export const CAPTION_STYLE_OPTIONS: ReadonlyArray<{
 /** Styl wybierany domyślnie — ten sam w panelu Studia, serii, cronie i MCP. */
 export const DEFAULT_CUSTOM_CAPTION_STYLE: CustomCaptionStyleId = "reels";
 
-/** Domyślny styl napisów rolki — zawsze własny, wypalany naszą usługą. */
+/** Domyślny styl napisów rolki — zawsze własny, wypalany przez Remotion. */
 export function defaultCaptionStyle(): CaptionStyleId {
   return DEFAULT_CUSTOM_CAPTION_STYLE;
 }
@@ -486,10 +489,9 @@ function highlightedEvents(
 // ── Znaczek „AI" ────────────────────────────────────────────────────────────
 //
 // Oznaczenie treści wygenerowanej przez AI: mała półprzezroczysta „pigułka"
-// z napisem AI w prawym górnym rogu, przez cały film. Rysujemy ją w tym samym
-// pliku ASS co napisy (tryb rysowania libass `\p1`), więc usługa wypalania
-// nie potrzebuje żadnych zmian. Wymiary w pikselach kadru 720×1280 — libass
-// skaluje je do faktycznej rozdzielczości.
+// z napisem AI w prawym górnym rogu, przez cały film. Specyfikacja `AI_BADGE`
+// idzie w planie rolki do Remotion (rysuje ją StudioReel); zdarzenia ASS
+// niżej to referencja do testów. Wymiary w pikselach kadru 720×1280.
 //
 // TYLKO pigułka — bez pełnej etykiety tekstowej („Treść wygenerowana przez AI"
 // w pierwszych sekundach): właściciel wycofał ją 23.10.2026 po tym, jak wyszła
@@ -616,8 +618,8 @@ export function aiBadgeEvents(
 //   * DUŻE pytanie na środku — dokładnie to, co mówi lektor; pojawia się,
 //     gdy znacznik rusza do góry, i znika z końcem kwestii SRT, w której
 //     pytanie pada (overlaysWithCueTiming).
-// Ta sama droga co znaczek „AI": zdarzenia w pliku ASS, usługa wypalania
-// bez żadnych zmian. Wymiary w pikselach kadru 720×1280.
+// Ta sama droga co znaczek „AI": dane w planie rolki dla Remotion (zdarzenia
+// ASS niżej to referencja do testów). Wymiary w pikselach kadru 720×1280.
 //
 // WYGLĄD: szata graficzna strony (system „dark-glow navy+gold" ze
 // src/styles.css, sekcja .fy-marketing): znacznik to złoty tekst na
@@ -625,8 +627,8 @@ export function aiBadgeEvents(
 // tekstu, więc skaluje się z animacją), pytanie — biel z granatowym obrysem
 // i złotym błyskiem po pojawieniu się (\t po \1c). Pod oboma leży miękka
 // niebieska poświata (rozmyty obrys \bord+\blur w kolorze akcentu) — jak
-// „blue glow" cieni na stronie. Czcionka zostaje Inter: obraz Dockera usługi
-// nie ma Montserrata, a Inter to najbliższy dostępny geometryczny sans.
+// „blue glow" cieni na stronie. Czcionka zostaje Inter: usługa Remotion ma
+// ją w public/fonts, a to najbliższy Montserratowi geometryczny sans.
 
 export type OverlayCardRow = {
   /** Znak przed tekstem: "check" = złoty ptaszek, "dot" = złota kropka. */
@@ -692,7 +694,7 @@ export type DynamicOverlays = {
   cards?: OverlayCard[];
   /**
    * Elementy dynamiczne z katalogu (motion-catalog.ts) zaprojektowane przez
-   * AI — rysuje je tylko silnik Remotion; plik ASS (caption-burner) je pomija.
+   * AI — rysuje je Remotion; referencyjny plik ASS je pomija.
    */
   motion?: MotionDesignElement[] | null;
 };
@@ -1237,8 +1239,8 @@ export function extrasAss(
 }
 
 /**
- * Plik ASS z samym znaczkiem „AI" — do rolki bez napisów; usługa wypalania
- * dokłada wtedy tylko znaczek.
+ * Plik ASS z samym znaczkiem „AI" — referencja dla rolki bez napisów
+ * (Remotion dokłada wtedy tylko znaczek i nakładki).
  */
 export function aiBadgeAss(dims: AssDimensions = DEFAULT_ASS_DIMENSIONS): string {
   return extrasAss({ aiBadge: true }, dims)!;

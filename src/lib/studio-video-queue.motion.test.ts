@@ -85,7 +85,6 @@ function job(over: Partial<StudioJobRow> = {}): StudioJobRow {
     auto_published_at: null,
     last_error: null,
     created_by: null,
-    render_engine: "remotion",
     motion_design: null,
     ...over,
   };
@@ -130,9 +129,10 @@ describe("projekt elementów dynamicznych przy wykończeniu", () => {
     db = createFakeSupabase({
       studio_video_jobs: [{ ...job({ status: "failed", captions: false }), motion_design: ROBOT }],
     });
-    vi.doMock("./caption-burner.server", () => ({
-      isFinisherConfigured: async () => true,
+    vi.doMock("./remotion-render.server", () => ({
+      isRemotionConfigured: () => true,
       isAiBadgeEnabled: () => true,
+      isDynamicOverlaysEnabled: () => true,
     }));
     const r = await retryStudioJob(job({ status: "failed", captions: false }));
     expect(r.mode).toBe("rerender");

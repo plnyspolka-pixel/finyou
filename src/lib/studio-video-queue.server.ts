@@ -10,7 +10,8 @@
 // NAPISY: zawsze nasze. Przy renderze powstaje plik SRT z tekstu scenariusza
 // i czasów znaków ElevenLabs (`subtitle_url`); gdy job ma napisy włączone,
 // gotowy render nie idzie od razu do publikacji — czysty master + ten SRT
-// lecą do usługi wypalania (services/caption-burner), job dostaje status
+// lecą do Remotion Lambda (services/remotion — JEDYNY silnik wykończenia:
+// napisy, znaczek „AI", nakładki, hook, kadrowanie), job dostaje status
 // 'captioning', a kolejne odpytanie zapisuje gotowy plik w buckecie
 // `studio-media` i dopiero wtedy publikuje. HeyGen nie dostaje zlecenia na
 // napisy i nie ma „wersji z napisami HeyGena" na zapas: gdy napisów nie da
@@ -38,7 +39,6 @@ import {
 import type { CustomCaptionStyleId, DynamicOverlays, SrtCue } from "./caption-style";
 import type { MotionDesignElement } from "./motion-catalog";
 import { AVATARS_PER_REEL } from "./studio-scenes";
-import { STUDIO_FINISHER_FALLBACK_ACTION } from "./autopilot/types";
 
 export type StudioJobRow = {
   id: string;
@@ -73,8 +73,6 @@ export type StudioJobRow = {
   material_audience?: string | null;
   /** Model ElevenLabs lektora (NULL = ustawienie Studia w chwili renderu). */
   tts_model_id?: string | null;
-  /** Silnik wykończenia (studio-render-engine.ts); brak / `auto` = ustawienie Studia. */
-  render_engine?: string | null;
   /** Projekt elementów dynamicznych (motion-catalog.ts); null = zaprojektuj przy wykończeniu. */
   motion_design?: unknown;
   /** Hook wizualny 0–2,5 s (studio-hook.ts); null = zaplanuje generator. */
@@ -98,9 +96,8 @@ export type HeygenRenderStatus = HeygenCaptionOutputs & {
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
- * Ile czekać na usługę napisów, zanim opublikujemy wersję zapasową. Domyślnie
- * 45 min; gdy usługa stoi na komputerze, który bywa wyłączony, można podnieść
- * (np. 720 = pół doby) — joby poczekają na włączenie zamiast schodzić na HeyGen.
+ * Ile czekać na render Remotion, zanim zadanie padnie do ponowienia.
+ * Domyślnie 45 min (CAPTION_BURN_TIMEOUT_MINUTES).
  */
 function captionBurnTimeoutMs(): number | undefined {
   const minutes = Number(process.env.CAPTION_BURN_TIMEOUT_MINUTES);
@@ -126,33 +123,6 @@ async function appendJobNote(jobId: string, note: string): Promise<void> {
     .eq("id", jobId);
 }
 
-/**
- * Zejście caption-burner → Remotion do dziennika autopilota (raport dzienny
- * pokazuje je w sekcji „Produkcja”). Najwyżej jeden wpis na 6 h — tick idzie
- * co 10 min, a właściciel ma się dowiedzieć, nie dostać spam.
- */
-export async function reportFinisherFallback(reason: string): Promise<void> {
-  try {
-    const since = new Date(Date.now() - 6 * 3_600_000).toISOString();
-    const { data } = await supabaseAdmin
-      .from("ai_growth_action_log")
-      .select("id")
-      .eq("action", STUDIO_FINISHER_FALLBACK_ACTION)
-      .gte("created_at", since)
-      .limit(1);
-    if (data?.length) return;
-    const { logAutopilot } = await import("./autopilot/state.server");
-    await logAutopilot({
-      action: STUDIO_FINISHER_FALLBACK_ACTION,
-      status: "warning",
-      summary: `caption-burner nie odpowiada — rolki wykańcza automatycznie Remotion (${reason}).`,
-      payload: { reason },
-    });
-  } catch (e) {
-    console.warn(`[Studio] wpis o zejściu na Remotion nieudany: ${errMsg(e)}`);
-  }
-}
-
 // Tytuł do publikacji: publish_title, a w ostateczności prompt bez tagu "#N · ".
 function fallbackTitle(job: JobRow): string {
   if (job.publish_title.trim()) return job.publish_title.trim();
@@ -171,7 +141,7 @@ function fallbackTitle(job: JobRow): string {
  * `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza całość.
  */
 async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
-  const { isDynamicOverlaysEnabled } = await import("./caption-burner.server");
+  const { isDynamicOverlaysEnabled } = await import("./remotion-render.server");
   if (!isDynamicOverlaysEnabled()) return null;
 
   // Odcinek serii: nakładki i karty zdefiniowane ręcznie w shorts-series.ts
@@ -191,8 +161,8 @@ async function overlaysForJob(job: JobRow): Promise<DynamicOverlays | null> {
   }
 
   const script = job.script?.trim();
-  // Silnik Remotion: elementy dynamiczne projektuje Claude z katalogu
-  // komponentów (motion-catalog.ts) — zastępują karty. Porażka projektanta
+  // Elementy dynamiczne projektuje Claude z katalogu komponentów
+  // (motion-catalog.ts) — zastępują karty. Porażka projektanta
   // spada na zwykłe karty niżej.
   if (script) {
     const motion = await designMotionForJob(job, q?.question ?? job.prompt);
@@ -297,16 +267,14 @@ export async function saveMotionDesign(
 }
 
 /**
- * Elementy dynamiczne do wykończenia (tylko silnik Remotion): zapisany projekt
- * (od AI albo wgrany przez robota `set_studio_motion`), a bez niego nowy
- * projekt Claude. null = brak — wtedy zwykłe karty.
+ * Elementy dynamiczne do wykończenia: zapisany projekt (od AI albo wgrany
+ * przez robota `set_studio_motion`), a bez niego nowy projekt Claude.
+ * null = brak — wtedy zwykłe karty.
  */
 export async function designMotionForJob(
   job: JobRow,
   topic: string | null,
 ): Promise<MotionDesignElement[] | null> {
-  const { resolveRenderEngine } = await import("./studio-render-engine");
-  if (resolveRenderEngine(job.render_engine) !== "remotion") return null;
   const fresh = await loadSavedMotionDesign(job.id);
   if (fresh !== undefined) job.motion_design = fresh;
   if (job.motion_design != null) {
@@ -342,56 +310,38 @@ export async function processStudioVideoQueue(
 ): Promise<{ processed: number; failed: number; remaining: number; deferred: string | null }> {
   let processed = 0;
   let failed = 0;
-  // Bramka caption-burnera: sprawdzana raz na przebieg, dopiero gdy w kolejce
-  // coś jest. Gdy usługa nie odpowiada, joby zostają 'queued' (bez zużycia
-  // kredytów HeyGen) i ruszą w kolejnym ticku.
+  // Bramka Remotion: sprawdzana raz na przebieg, dopiero gdy w kolejce coś
+  // jest. Bez sekretów Lambdy joby zostają 'queued' (bez zużycia kredytów
+  // HeyGen) i ruszą w kolejnym ticku.
   let deferred: string | null = null;
-  let burnerChecked = false;
-  // caption-burner padł, a Remotion jest skonfigurowany — joby na
-  // caption-burnerze przechodzą w tym przebiegu na Remotion (zamiast stać).
-  let fallback: { reason: string } | null = null;
+  let gateChecked = false;
 
   for (let i = 0; i < limit; i++) {
     // Claim najstarszego joba z kolejki — warunek status='queued' w UPDATE
     // chroni przed podwójnym przetworzeniem (tick vs otwarty panel).
     const { data: queued } = await supabaseAdmin
       .from("studio_video_jobs")
-      .select("id, captions, render_engine")
+      .select("id")
       .eq("status", "queued")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (!queued) break;
 
-    if (!burnerChecked) {
-      burnerChecked = true;
-      const { resolveFinisherForRender } = await import("./caption-burner.server");
-      const gate = await resolveFinisherForRender({
-        captions: queued.captions !== false,
-        engine: queued.render_engine,
-      });
+    if (!gateChecked) {
+      gateChecked = true;
+      const { remotionPreflight } = await import("./remotion-render.server");
+      const gate = remotionPreflight();
       if (!gate.ok) {
         deferred = gate.reason;
         console.warn(`[Studio] kolejka wstrzymana: ${gate.reason}`);
         break;
       }
-      if (gate.fallback) {
-        fallback = { reason: gate.fallback.reason };
-        console.warn(
-          `[Studio] caption-burner padł — wykończenie w Remotion: ${gate.fallback.reason}`,
-        );
-        await reportFinisherFallback(gate.fallback.reason);
-      }
     }
 
-    const { resolveRenderEngine } = await import("./studio-render-engine");
-    const switchEngine = fallback && resolveRenderEngine(queued.render_engine) !== "remotion";
     const { data: claimed } = await supabaseAdmin
       .from("studio_video_jobs")
-      .update({
-        status: "generating_script",
-        ...(switchEngine ? { render_engine: "remotion" } : {}),
-      })
+      .update({ status: "generating_script" })
       .eq("id", queued.id)
       .eq("status", "queued")
       .select("*");
@@ -400,10 +350,6 @@ export async function processStudioVideoQueue(
 
     try {
       await processClaimedJob(job);
-      if (switchEngine && fallback) {
-        const { finisherFallbackNote } = await import("./caption-burner.server");
-        await appendJobNote(job.id, finisherFallbackNote(fallback.reason));
-      }
       processed++;
     } catch (e) {
       failed++;
@@ -507,16 +453,14 @@ async function processClaimedJob(job: JobRow): Promise<void> {
       last_error: rendered.note,
     })
     .eq("id", job.id);
-  await startHookIfRemotion(job.id, job.render_engine);
+  await startHook(job.id);
 }
 
 /**
- * Hook wizualny: plan + zlecenie klipu równolegle z renderem awatara — tylko
- * gdy wykończy Remotion (caption-burner hooka nie narysuje, kredyty zostają).
+ * Hook wizualny: plan + zlecenie klipu równolegle z renderem awatara
+ * (rysuje go Remotion przy wykończeniu; kredyty HeyGena zostają).
  */
-export async function startHookIfRemotion(jobId: string, engine: unknown): Promise<void> {
-  const { resolveRenderEngine } = await import("./studio-render-engine");
-  if (resolveRenderEngine(engine) !== "remotion") return;
+export async function startHook(jobId: string): Promise<void> {
   const { prepareHookForJob } = await import("./studio-hook.server");
   await prepareHookForJob(jobId);
 }
@@ -524,7 +468,7 @@ export async function startHookIfRemotion(jobId: string, engine: unknown): Promi
 // ── Domykanie renderu i napisów ─────────────────────────────────────────────
 
 export type SettleOutcome =
-  /** Czekamy jeszcze na usługę wypalania. */
+  /** Czekamy jeszcze na render Remotion. */
   | { state: "waiting" }
   /** Zlecono napisy (albo sam znaczek AI) — job w statusie 'captioning'. */
   | { state: "captioning" }
@@ -578,7 +522,7 @@ async function submitBurn(
   thumbnailUrl: string | null,
   extra: Record<string, unknown> = {},
 ): Promise<void> {
-  const sent = await submitFinish(job, {
+  const burnId = await submitFinish(job, {
     videoUrl: plan.videoUrl,
     srtUrl: plan.srtUrl,
     styleId: plan.styleId,
@@ -586,12 +530,10 @@ async function submitBurn(
     overlays: plan.overlays,
     name: fallbackTitle(job),
   });
-  const burnId = sent.burnId;
   await supabaseAdmin
     .from("studio_video_jobs")
     .update({
       status: "captioning",
-      ...sent.patch,
       caption_style: plan.styleId,
       caption_burn_id: burnId,
       caption_burn_started_at: new Date().toISOString(),
@@ -621,7 +563,7 @@ async function submitBadgeBurn(
     overlays: DynamicOverlays | null;
   },
 ): Promise<void> {
-  const sent = await submitFinish(
+  const burnId = await submitFinish(
     { ...job, last_error: src.lastError },
     {
       videoUrl: src.videoUrl,
@@ -633,7 +575,6 @@ async function submitBadgeBurn(
       name: fallbackTitle(job),
     },
   );
-  const burnId = sent.burnId;
   await supabaseAdmin
     .from("studio_video_jobs")
     .update({
@@ -648,20 +589,17 @@ async function submitBadgeBurn(
       subtitle_url: src.subtitleUrl,
       thumbnail_url: src.thumbnailUrl ?? job.thumbnail_url ?? null,
       last_error: src.lastError,
-      ...sent.patch,
     })
     .eq("id", job.id);
 }
 
 /**
- * Ponowne wykończenie gotowej / nieudanej rolki (restyle, retry) w Remotion:
- * hook zaplanowany i z zasobami, zanim plan pójdzie na Lambdę — tak stara
- * rolka dostaje hook bez nowego renderu HeyGena. Klip Flows w toku = błąd
+ * Ponowne wykończenie gotowej / nieudanej rolki (restyle, retry): hook
+ * zaplanowany i z zasobami, zanim plan pójdzie na Lambdę — tak stara rolka
+ * dostaje hook bez nowego renderu HeyGena. Klip Flows w toku = błąd
  * z prośbą o ponowienie za kilka minut.
  */
 async function ensureHookReady(job: JobRow): Promise<void> {
-  const { resolveRenderEngine } = await import("./studio-render-engine");
-  if (resolveRenderEngine(job.render_engine) !== "remotion") return;
   const { hookForFinish } = await import("./studio-hook.server");
   const h = await hookForFinish(job.id);
   if (h.waiting) {
@@ -678,51 +616,19 @@ async function reelExtrasForJob(job: JobRow) {
 }
 
 type FinishInput = Omit<
-  Parameters<typeof import("./caption-burner.server").submitCaptionBurn>[0],
-  "engine"
+  Parameters<typeof import("./remotion-render.server").submitRemotionReel>[0],
+  "hook" | "framing"
 >;
 
 /**
- * Zlecenie wykończenia silnikiem zadania, a gdy caption-burner nie przyjmie
- * zlecenia (timeout, błąd) i Remotion jest skonfigurowany — od razu Remotion.
- * `patch` niesie zmianę silnika i uwagę do zapisania przy zadaniu. Hook
- * wizualny i kadrowanie awatarów dokłada tylko Remotion (caption-burner ich
- * nie rysuje).
+ * Zlecenie wykończenia w Remotion: plan z napisami, znaczkiem i nakładkami
+ * plus hook wizualny i kadrowanie awatarów (patrz studio-hook.server.ts).
+ * Zwraca id renderu do `caption_burn_id`.
  */
-async function submitFinish(
-  job: JobRow,
-  input: FinishInput,
-): Promise<{ burnId: string; patch: Record<string, unknown> }> {
-  const burner = await import("./caption-burner.server");
-  const { resolveRenderEngine } = await import("./studio-render-engine");
+async function submitFinish(job: JobRow, input: FinishInput): Promise<string> {
+  const { submitRemotionReel } = await import("./remotion-render.server");
   const extras = await reelExtrasForJob(job);
-  const withExtras = (engine: unknown) =>
-    resolveRenderEngine(engine) === "remotion" ? { ...input, ...extras } : input;
-  try {
-    const burnId = await burner.submitCaptionBurn({
-      ...withExtras(job.render_engine),
-      engine: job.render_engine,
-    });
-    return { burnId, patch: {} };
-  } catch (e) {
-    if (resolveRenderEngine(job.render_engine) === "remotion") throw e;
-    const { isRemotionConfigured } = await import("./remotion-render.server");
-    if (!isRemotionConfigured()) throw e;
-    const reason = `caption-burner nie przyjął zlecenia (${errMsg(e).replace(/^caption-burner: /, "")})`;
-    console.warn(`[Studio] ${reason} — wykańczam w Remotion (${job.id}).`);
-    const burnId = await burner.submitCaptionBurn({
-      ...withExtras("remotion"),
-      engine: "remotion",
-    });
-    await reportFinisherFallback(reason);
-    return {
-      burnId,
-      patch: {
-        render_engine: "remotion",
-        last_error: joinNotes(job.last_error, burner.finisherFallbackNote(reason)),
-      },
-    };
-  }
+  return submitRemotionReel({ ...input, ...extras });
 }
 
 const RETRY_HINT =
@@ -744,8 +650,8 @@ async function markCaptionFailure(
   },
 ): Promise<SettleOutcome> {
   if (job.caption_burn_id) {
-    const burner = await import("./caption-burner.server");
-    await burner.discardCaptionBurn(job.caption_burn_id);
+    const { discardRemotionRender } = await import("./remotion-render.server");
+    await discardRemotionRender(job.caption_burn_id);
   }
   const note = `${src.note} ${RETRY_HINT}`;
   await supabaseAdmin
@@ -774,13 +680,12 @@ export async function settleHeygenCompletion(
   job: JobRow,
   status: HeygenRenderStatus,
 ): Promise<SettleOutcome> {
-  const { isFinisherConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  const burnerConfigured = await isFinisherConfigured(job.render_engine);
-  // Hook wizualny rysuje tylko Remotion: dokończ jego zasoby (odbiór klipu
-  // Flows, zejście na obraz). Klip w toku = czekamy z wykończeniem do
-  // kolejnego odpytania (render HeyGena zostaje w statusie 'rendering').
-  const { resolveRenderEngine } = await import("./studio-render-engine");
-  if (resolveRenderEngine(job.render_engine) === "remotion" && burnerConfigured) {
+  const { isRemotionConfigured, isAiBadgeEnabled } = await import("./remotion-render.server");
+  const remotionConfigured = isRemotionConfigured();
+  // Hook wizualny: dokończ jego zasoby (odbiór klipu, zejście na obraz).
+  // Klip w toku = czekamy z wykończeniem do kolejnego odpytania (render
+  // HeyGena zostaje w statusie 'rendering').
+  if (remotionConfigured) {
     const { hookForFinish } = await import("./studio-hook.server");
     const h = await hookForFinish(job.id);
     if (h.waiting) return { state: "waiting" };
@@ -796,7 +701,7 @@ export async function settleHeygenCompletion(
   const plan = planCaptionBurn({
     captions: job.captions,
     captionStyle: job.caption_style,
-    burnerConfigured,
+    remotionConfigured,
     videoUrl,
     srtUrl,
     aiBadge,
@@ -825,10 +730,10 @@ export async function settleHeygenCompletion(
   }
 
   // Rolka bez napisów: znaczek „AI" i/lub nakładki dynamiczne na czystym
-  // masterze, zanim pójdzie do publikacji; bez usługi — publikacja bez nich
-  // z adnotacją.
+  // masterze, zanim pójdzie do publikacji; bez sekretów Remotion — publikacja
+  // bez nich z adnotacją.
   let badgeNote: string | null = null;
-  const badge = planBadgeBurn({ aiBadge, burnerConfigured, videoUrl, overlays });
+  const badge = planBadgeBurn({ aiBadge, remotionConfigured, videoUrl, overlays });
   if (badge.action === "badge") {
     try {
       await submitBadgeBurn(job, {
@@ -861,21 +766,22 @@ export async function settleHeygenCompletion(
 }
 
 /**
- * Job w statusie 'captioning': odpytuje usługę wypalania i domyka — zapis
- * gotowego pliku, ponowienie (usługa mogła się zrestartować) albo porażka
+ * Job w statusie 'captioning': odpytuje Remotion Lambda i domyka — zapis
+ * gotowego pliku, ponowienie (Lambda mogła odrzucić zlecenie) albo porażka
  * po błędzie / przekroczeniu czasu.
  */
 export async function settleCaptionBurn(job: JobRow): Promise<SettleOutcome> {
-  const burner = await import("./caption-burner.server");
+  const { getRemotionRenderStatus } = await import("./remotion-render.server");
   let probe: { status: CaptionBurnState; error: string | null };
   if (!job.caption_burn_id) {
-    probe = { status: "missing", error: "brak id zadania w usłudze" };
+    probe = { status: "missing", error: "brak id renderu Remotion" };
   } else {
     try {
-      probe = await burner.getCaptionBurnStatus(job.caption_burn_id);
+      const r = await getRemotionRenderStatus(job.caption_burn_id);
+      probe = { status: r.status, error: r.error };
     } catch (e) {
-      // Usługa nie odpowiada — nie zużywamy próby, czekamy do limitu czasu.
-      console.warn(`[Studio] usługa napisów nie odpowiada (${job.id}): ${errMsg(e)}`);
+      // Lambda nie odpowiada — nie zużywamy próby, czekamy do limitu czasu.
+      console.warn(`[Studio] Remotion nie odpowiada (${job.id}): ${errMsg(e)}`);
       probe = { status: "processing", error: null };
     }
   }
@@ -886,14 +792,14 @@ async function finishCaptionBurn(
   job: JobRow,
   probe: { status: CaptionBurnState; error: string | null },
 ): Promise<SettleOutcome> {
-  const burner = await import("./caption-burner.server");
+  const remotion = await import("./remotion-render.server");
   // Przy zmianie napisów gotowego wideo poprzedni plik zostaje pod video_url
   // i wraca, gdy nowe napisy się nie udadzą; przy pierwszym renderze go nie ma.
   const previous = job.video_url
     ? { videoUrl: job.video_url, captions: job.captions, captionStyle: job.caption_style }
     : null;
-  // Rolka bez napisów niesie w usłudze sam znaczek — przy porażce wychodzi
-  // bez znaczka, zamiast padać.
+  // Rolka bez napisów niesie w Remotion sam znaczek i nakładki — przy
+  // porażce wychodzi bez nich, zamiast padać.
   const badgeOnly = !job.captions;
   const resolution = resolveCaptionBurn({
     status: probe.status,
@@ -910,8 +816,8 @@ async function finishCaptionBurn(
 
   if (resolution.state === "store") {
     try {
-      const stored = await burner.storeCaptionBurnResult(job.caption_burn_id!, fallbackTitle(job));
-      await burner.discardCaptionBurn(job.caption_burn_id!);
+      const stored = await remotion.storeRemotionResult(job.caption_burn_id!, fallbackTitle(job));
+      await remotion.discardRemotionRender(job.caption_burn_id!);
       return await markReady(job, {
         video_url: stored.url,
         // Sam znaczek nie zmienia tego, czy plik ma napisy.
@@ -926,9 +832,7 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "retry" && badgeOnly) {
-    const source = (await burner.isFinisherConfigured(job.render_engine))
-      ? job.video_url_clean
-      : null;
+    const source = remotion.isRemotionConfigured() ? job.video_url_clean : null;
     if (source) {
       try {
         console.warn(`[Studio] ponawiam znaczek AI (${job.id}): ${resolution.reason}`);
@@ -937,7 +841,7 @@ async function finishCaptionBurn(
           subtitleUrl: job.subtitle_url,
           thumbnailUrl: job.thumbnail_url,
           lastError: job.last_error,
-          aiBadge: burner.isAiBadgeEnabled(),
+          aiBadge: remotion.isAiBadgeEnabled(),
           overlays: await overlaysForJob(job),
         });
         return { state: "captioning" };
@@ -954,10 +858,10 @@ async function finishCaptionBurn(
     const plan = planCaptionBurn({
       captions: true,
       captionStyle: job.caption_style,
-      burnerConfigured: await burner.isFinisherConfigured(job.render_engine),
+      remotionConfigured: remotion.isRemotionConfigured(),
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
-      aiBadge: burner.isAiBadgeEnabled(),
+      aiBadge: remotion.isAiBadgeEnabled(),
       overlays: await overlaysForJob(job),
     });
     if (plan.action === "burn") {
@@ -976,7 +880,7 @@ async function finishCaptionBurn(
   }
 
   if (resolution.state === "fallback") {
-    if (job.caption_burn_id) await burner.discardCaptionBurn(job.caption_burn_id);
+    if (job.caption_burn_id) await remotion.discardRemotionRender(job.caption_burn_id);
     return markReady(job, {
       video_url: resolution.videoUrl,
       captions: resolution.captionsBurned,
@@ -989,7 +893,7 @@ async function finishCaptionBurn(
 
   // resolution.state === "fail"
   if (badgeOnly && job.video_url_clean) {
-    if (job.caption_burn_id) await burner.discardCaptionBurn(job.caption_burn_id);
+    if (job.caption_burn_id) await remotion.discardRemotionRender(job.caption_burn_id);
     return markReady(job, {
       video_url: job.video_url_clean,
       captions: false,
@@ -1008,7 +912,7 @@ async function finishCaptionBurn(
 
 /**
  * Zmiana napisów gotowego wideo: czysty master (video_url_clean, a gdy go nie
- * ma — video_url bez napisów) + nasz SRT lecą do usługi w nowym stylu.
+ * ma — video_url bez napisów) + nasz SRT lecą do Remotion w nowym stylu.
  * Poprzedni plik zostaje pod video_url do czasu sukcesu (wraca przy porażce).
  * Nie publikuje ponownie — auto_published_at zostaje, publikacja ręcznie.
  */
@@ -1017,14 +921,9 @@ export async function restyleJobCaptions(
   styleId: CustomCaptionStyleId,
 ): Promise<void> {
   if (job.status !== "ready") throw new Error("Napisy można zmienić tylko dla gotowego wideo.");
-  const { isFinisherConfigured, isAiBadgeEnabled } = await import("./caption-burner.server");
-  if (!(await isFinisherConfigured(job.render_engine))) {
-    const { resolveRenderEngine } = await import("./studio-render-engine");
-    throw new Error(
-      resolveRenderEngine(job.render_engine) === "remotion"
-        ? "Remotion Lambda nie jest skonfigurowany (REMOTION_* w sekretach środowiska)."
-        : "Usługa wypalania napisów nie jest skonfigurowana (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET).",
-    );
+  const { isRemotionConfigured, isAiBadgeEnabled } = await import("./remotion-render.server");
+  if (!isRemotionConfigured()) {
+    throw new Error("Remotion Lambda nie jest skonfigurowany (REMOTION_* w sekretach środowiska).");
   }
   const clean = job.video_url_clean ?? (!job.captions ? job.video_url : null);
   if (!clean) throw new Error("Brak czystego mastera bez napisów — nie ma na czym wypalić nowych.");
@@ -1036,7 +935,7 @@ export async function restyleJobCaptions(
   const plan = planCaptionBurn({
     captions: true,
     captionStyle: styleId,
-    burnerConfigured: true,
+    remotionConfigured: true,
     videoUrl: clean,
     srtUrl: job.subtitle_url,
     aiBadge: isAiBadgeEnabled(),
@@ -1054,23 +953,18 @@ export async function restyleJobCaptions(
  */
 export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | "rerender" }> {
   if (job.status !== "failed") throw new Error("Ponowić można tylko zadanie ze statusem failed.");
-  const burner = await import("./caption-burner.server");
-  if (
-    job.captions &&
-    job.video_url_clean &&
-    job.subtitle_url &&
-    (await burner.isFinisherConfigured(job.render_engine))
-  ) {
+  const remotion = await import("./remotion-render.server");
+  if (job.captions && job.video_url_clean && job.subtitle_url && remotion.isRemotionConfigured()) {
     await ensureHookReady(job).catch((e) =>
       console.warn(`[Studio] hook przy ponowieniu (${job.id}): ${errMsg(e)}`),
     );
     const plan = planCaptionBurn({
       captions: true,
       captionStyle: job.caption_style,
-      burnerConfigured: true,
+      remotionConfigured: true,
       videoUrl: job.video_url_clean,
       srtUrl: job.subtitle_url,
-      aiBadge: burner.isAiBadgeEnabled(),
+      aiBadge: remotion.isAiBadgeEnabled(),
       overlays: await overlaysForJob(job),
     });
     if (plan.action === "burn") {
@@ -1080,7 +974,7 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
         });
         return { mode: "captions" };
       } catch (e) {
-        // Usługa nie przyjęła zlecenia — zostaje pełny render od nowa.
+        // Lambda nie przyjęła zlecenia — zostaje pełny render od nowa.
         console.warn(`[Studio] ponowienie napisów nieudane (${job.id}): ${errMsg(e)}`);
       }
     }
@@ -1112,7 +1006,7 @@ export async function retryStudioJob(job: JobRow): Promise<{ mode: "captions" | 
   return { mode: "rerender" };
 }
 
-// Odpytuje HeyGen o joby 'rendering' i usługę napisów o joby 'captioning';
+// Odpytuje HeyGen o joby 'rendering' i Remotion o joby 'captioning';
 // domyka gotowe/nieudane. Gotowe joby z auto-publikacją wpadają do kolejek.
 export async function pollStudioRenderingJobs(): Promise<{
   completed: number;
@@ -1250,13 +1144,6 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
       .eq("id", job.id);
   }
 
-  // Kompresja przed publikacją (video_renditions) — rolka z HeyGena zwykle
-  // spełnia profil i wraca jako `unchanged`, ale sprawdzenie robi tick, nie
-  // publikator w chwili wysyłki.
-  const { requestVideoRendition } = await import("./video-rendition.server");
-  await requestVideoRendition(job.video_url).catch((e) =>
-    console.warn(`[renditions] ${errMsg(e)}`),
-  );
   return errors.length < job.auto_publish_platforms.length;
 }
 
@@ -1265,7 +1152,7 @@ export async function runStudioVideoTick(): Promise<{
   processed: number;
   failed: number;
   remaining: number;
-  /** Kolejka wstrzymana — powód (caption-burner nie odpowiada); null = szła. */
+  /** Kolejka wstrzymana — powód (brak sekretów Remotion); null = szła. */
   deferred: string | null;
   completed: number;
   autoPublished: number;

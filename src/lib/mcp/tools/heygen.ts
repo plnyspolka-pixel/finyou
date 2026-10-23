@@ -36,7 +36,6 @@ import {
   ttsModelLabel,
 } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL } from "@/lib/studio-scenes";
-import { RENDER_ENGINES } from "@/lib/studio-render-engine";
 import type { StudioDefaultAvatar } from "@/lib/studio-avatars.server";
 
 const ADMIN_ONLY = ["administrator"] as const;
@@ -53,11 +52,11 @@ const PRIVACY = ["public", "unlisted", "private"] as const;
 const ASPECT = ["9:16", "16:9", "1:1"] as const;
 const RESOLUTION = ["720p", "1080p"] as const;
 const CAPTIONS = ["burned", "sidecar", "off"] as const;
-/** Style napisów Studia: heygen = wypala HeyGen; reszta = u nas (usługa caption-burner). */
+/** Style napisów Studia — wszystkie wypala Remotion (jedyny silnik) z naszego SRT. */
 const CAPTION_STYLE = z
   .enum(CAPTION_STYLE_IDS)
   .describe(
-    "Styl napisów wypalanych naszą usługą (renderer caption-burner): reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Pomiń pole, a będzie jak w panelu Studia (reels). Napisów HeyGena Studio nie zamawia — tekst napisów to scenariusz, czasy z ElevenLabs.",
+    "Styl napisów wypalanych przez Remotion (jedyny silnik wykończenia): reels (duże z obrysem), tiktok (wielkie litery, podświetlanie słów), box (ramka), minimal (małe u dołu). Pomiń pole, a będzie jak w panelu Studia (reels). Napisów HeyGena Studio nie zamawia — tekst napisów to scenariusz, czasy z ElevenLabs.",
   );
 
 const TTS_MODEL = z
@@ -174,7 +173,7 @@ export const heygenStatus = defineTool({
   name: "heygen_status",
   title: "HeyGen status",
   description:
-    "Stan integracji HeyGen: klucz API, pozostałe kredyty, usługa wypalania napisów i znaczek „AI” w rogu rolek (`ai_badge`), model ElevenLabs lektora obowiązujący w Studiu (`tts_model`, zmienia `update_studio_settings`), liczba awatarów (moje / publiczne / ze zdjęcia), zestaw domyślnych awatarów z panelu Studia (rotacja) i domyślny głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
+    "Stan integracji HeyGen: klucz API, pozostałe kredyty, silnik wykończenia rolek Remotion (`remotion`) i znaczek „AI” w rogu rolek (`ai_badge`), model ElevenLabs lektora obowiązujący w Studiu (`tts_model`, zmienia `update_studio_settings`), liczba awatarów (moje / publiczne / ze zdjęcia), zestaw domyślnych awatarów z panelu Studia (rotacja) i domyślny głos (Filip), zadania Studia po statusach z ostatnim błędem, filmy Awatar FAQ. Tylko administrator/operator.",
   inputSchema: {},
   annotations: READ,
   handler: (_a, ctx: ToolContext) =>
@@ -182,33 +181,22 @@ export const heygenStatus = defineTool({
       const s = await requireTeamAdmin(ctx);
       const hg = await import("@/lib/heygen-api.server");
       const d = await defaults();
-      const burner = await import("@/lib/caption-burner.server");
+      const remotion = await import("@/lib/remotion-render.server");
+      const r = remotion.getRemotionEnv();
       const out: Record<string, unknown> = {
         api_key_configured: hg.hasHeygenApiKey(),
         elevenlabs_configured: Boolean(process.env.ELEVENLABS_API_KEY),
         ai_configured: Boolean(process.env.LOVABLE_API_KEY),
-        // Własne style napisów (rozmiar, pozycja) — usługa FFmpeg poza HeyGenem.
-        caption_burner: burner.isCaptionBurnerConfigured()
-          ? await burner.checkCaptionBurnerHealth()
-          : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
-        render_engine: await (async () => {
-          const { resolveRenderEngine } = await import("@/lib/studio-render-engine");
-          const { getRemotionEnv } = await import("@/lib/remotion-render.server");
-          const r = getRemotionEnv();
-          return {
-            default: resolveRenderEngine("auto"),
-            remotion: {
-              configured: r.configured,
-              missing: r.missing,
-              region: r.region,
-              function_name: r.functionName || null,
-            },
-            note: "Silnik wykończenia rolki (napisy, znaczek „AI”, nakładki) po renderze HeyGena: `caption_burner` (FFmpeg) albo `remotion` (StudioReel na AWS Lambda). Wybór per zadanie polem `render_engine` w `create_studio_video_job` / `update_studio_job`; `auto` = STUDIO_RENDER_ENGINE, a bez niego Remotion, gdy skonfigurowany (tylko on rysuje hook wizualny i kadruje poziome awatary). Gdy caption-burner nie odpowiada, zadania same przechodzą na Remotion (wpis w raporcie autopilota).",
-          };
-        })(),
+        remotion: {
+          configured: r.configured,
+          missing: r.missing,
+          region: r.region,
+          function_name: r.functionName || null,
+          note: "Jedyny silnik wykończenia rolek (napisy, znaczek „AI”, nakładki, hook wizualny, kadrowanie): kompozycja StudioReel na AWS Lambda (services/remotion). Bez sekretów REMOTION_* render HeyGena nie rusza — zadania czekają w kolejce (kredyty zostają).",
+        },
         default_caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
         captions_note:
-          "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i wypala je usługa caption-burner — HeyGen nie dostaje zlecenia na napisy. Bez usługi rolka z napisami nie wychodzi (zadanie pada do ponowienia).",
+          "Napisy rolek Studia powstają z tekstu scenariusza i czasów znaków ElevenLabs i wypala je Remotion — HeyGen nie dostaje zlecenia na napisy. Bez sekretów Remotion zadanie czeka w kolejce.",
         tts_model: await (async () => {
           const { getStudioTtsModelId } = await import("@/lib/studio-settings.server");
           const id = await getStudioTtsModelId();
@@ -225,9 +213,9 @@ export const heygenStatus = defineTool({
           };
         })(),
         ai_badge: {
-          enabled: burner.isAiBadgeEnabled(),
-          active: burner.isAiBadgeEnabled() && burner.isCaptionBurnerConfigured(),
-          note: "Znaczek „AI” w prawym górnym rogu każdej rolki Studia — wypala go usługa caption-burner (HeyGen nie ma warstw). Bez usługi rolki wychodzą bez znaczka, z adnotacją w last_error; STUDIO_AI_BADGE=0 wyłącza.",
+          enabled: remotion.isAiBadgeEnabled(),
+          active: remotion.isAiBadgeEnabled() && r.configured,
+          note: "Dyskretna pigułka „AI” w prawym górnym rogu każdej rolki Studia (bez etykiety tekstowej — wycofana 23.10.2026) — kładzie ją Remotion przy wykończeniu (HeyGen nie ma warstw); STUDIO_AI_BADGE=0 wyłącza.",
         },
         default_avatar: { id: d.avatarId, name: d.avatarName, source: d.avatarSource },
         studio_default_avatars: {
@@ -870,12 +858,6 @@ export const generateStudioImage = defineTool({
     }),
 });
 
-const RENDER_ENGINE = z
-  .enum(RENDER_ENGINES)
-  .describe(
-    "Silnik wykończenia rolki po renderze HeyGena (napisy, znaczek „AI”, nakładki): `caption_burner` — usługa FFmpeg, `remotion` — kompozycja StudioReel na AWS Lambda (gdy caption-burner leży albo dla porównania jakości), `auto` — ustawienie Studia (`STUDIO_RENDER_ENGINE`; bez niego Remotion, gdy skonfigurowany). Hook wizualny i kadrowanie poziomych awatarów rysuje tylko Remotion; gdy caption-burner nie odpowiada, zadanie samo przechodzi na Remotion. HeyGen i ElevenLabs działają tak samo przy obu.",
-  );
-
 const HOOK_INPUT = z
   .object({
     visual_prompt: z
@@ -944,7 +926,7 @@ export const createStudioVideoJob = defineTool({
   name: "create_studio_video_job",
   title: "Create studio video job",
   description:
-    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a bez usługi caption-burner zadanie z napisami pada do ponowienia. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (wypala go usługa caption-burner; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. Przed zleceniem renderu sprawdzamy usługę caption-burner: gdy nie odpowiada, render w HeyGen nie rusza (kredyty zostają), zadanie czeka w kolejce, a odpowiedź ma pole `deferred` z powodem. Tick wstrzymuje kolejkę tak samo. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
+    "Zakłada zadanie wideo w Studiu publikacji — JEDYNA droga do rolek: zadanie widać w panelu Studia (/admin/studio-publikacji), a gotowy film trafia sam do biblioteki materiałów (/admin/materialy, kategoria `material_audience`). Nie składaj rolek bokiem przez `heygen_api_request` / `generate_avatar_video` — tych filmów Studio nie widzi. Awatar HeyGen + głos ElevenLabs Filipa, pion 9:16, napisy wypalone: `prompt` (temat) i opcjonalnie gotowy `script` — bez scenariusza napisze go AI; `question_id` bierze pytanie z bazy 250 Shorts. Napisy ZAWSZE z naszego renderera: tekst to scenariusz, czasy z ElevenLabs, styl domyślnie `reels` (`caption_style` zmienia wygląd); HeyGen nie dostaje zlecenia na napisy, a wykończenie (napisy, znaczek, nakładki, hook) robi wyłącznie Remotion na AWS Lambda. Głos: ElevenLabs, model z ustawień Studia (`tts_model` nadpisuje dla tej rolki). Domyślny montaż: stała struktura rolki z przebitkami b-roll (ujęcie → przebitka → a-roll drugiej twarzy) i dwie twarze z zestawu domyślnych ustawionego w panelu Studia — prowadzi pierwszy z zestawu (albo `avatar_id`), partnera dobiera rotacja po ostatnich rolkach (najdawniej użyty). `avatars_per_reel` zmienia liczbę twarzy, `avatar_ids` ustala rotację wprost, `reel_structure=false` daje pojedyncze ujęcie. Gotowa rolka dostaje w prawym górnym rogu mały znaczek „AI” (kładzie go Remotion; stan w `heygen_status` → `ai_badge`). Zestaw pokazuje `list_heygen_avatars` → `default_avatars` — nie zgaduj domyślnych awatarów po nazwie. Domyślnie trafia do kolejki (tick co 10 min), `start_now=true` renderuje od razu. Przed zleceniem renderu sprawdzamy sekrety Remotion: gdy ich brak, render w HeyGen nie rusza (kredyty zostają), zadanie czeka w kolejce, a odpowiedź ma pole `deferred` z powodem. Tick wstrzymuje kolejkę tak samo. `auto_publish_platforms` publikuje gotowy film automatycznie (YouTube, Facebook, Instagram, TikTok) — bez tego film czeka na `publish_studio_job`. Zużywa kredyty HeyGen. Tylko administrator/operator.",
   inputSchema: {
     prompt: z.string().min(3).max(2000).optional().describe("Temat / brief odcinka."),
     script: z.string().max(5000).optional().describe("Gotowy tekst lektora; pusty = AI."),
@@ -992,7 +974,6 @@ export const createStudioVideoJob = defineTool({
     publish_title: z.string().max(100).optional(),
     publish_description: z.string().max(5000).optional(),
     material_audience: MATERIAL_AUDIENCE.optional(),
-    render_engine: RENDER_ENGINE.default("auto"),
     hook: HOOK_INPUT.optional(),
     hook_variant: HOOK_VARIANT.optional(),
     start_now: z.boolean().default(false),
@@ -1026,21 +1007,13 @@ export const createStudioVideoJob = defineTool({
         }
       }
       if (!prompt) return fail("Podaj `prompt` albo `question_id`.");
-      // Bramka caption-burnera przed HeyGenem: gdy usługa nie odpowiada,
-      // `start_now` nie zleca renderu (kredyty zostają), zadanie idzie do
-      // kolejki, a tick Studia ruszy je, gdy usługa wróci.
-      const { resolveFinisherForRender, CAPTION_BURNER_GUARD_NOTE, finisherFallbackNote } =
-        await import("@/lib/caption-burner.server");
-      const gate = a.start_now
-        ? await resolveFinisherForRender({ captions: a.captions, engine: a.render_engine })
-        : null;
+      // Bramka Remotion przed HeyGenem: bez sekretów Lambdy `start_now` nie
+      // zleca renderu (kredyty zostają), zadanie idzie do kolejki, a tick
+      // Studia ruszy je, gdy sekrety się pojawią.
+      const { remotionPreflight, REMOTION_GUARD_NOTE } =
+        await import("@/lib/remotion-render.server");
+      const gate = a.start_now ? remotionPreflight() : null;
       const startNow = a.start_now && gate?.ok !== false;
-      // caption-burner padł, Remotion skonfigurowany → wykończy Remotion.
-      const renderEngine = gate?.ok && gate.fallback ? "remotion" : a.render_engine;
-      if (gate?.ok && gate.fallback) {
-        const { reportFinisherFallback } = await import("@/lib/studio-video-queue.server");
-        await reportFinisherFallback(gate.fallback.reason);
-      }
       if (!script && startNow) {
         const { generateVideoScript } = await import("@/lib/studio-ai.server");
         const gen = await generateVideoScript(prompt, {
@@ -1074,8 +1047,7 @@ export const createStudioVideoJob = defineTool({
       const clipErr = await hookClipSlugError(a.hook?.clip_slug, hook?.clip_slug);
       if (clipErr) return fail(clipErr);
       const createNotes = [
-        gate && !gate.ok ? `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}` : null,
-        gate?.ok && gate.fallback ? finisherFallbackNote(gate.fallback.reason) : null,
+        gate && !gate.ok ? `${gate.reason}. ${REMOTION_GUARD_NOTE}` : null,
         lead.swapped
           ? `Prowadzący zmieniony na pionowego awatara ${leadAvatar} (wskazany ma poziome zdjęcie).`
           : null,
@@ -1093,7 +1065,6 @@ export const createStudioVideoJob = defineTool({
         ...(a.hook_variant ? { hook_variant: a.hook_variant } : {}),
         captions: a.captions,
         caption_style: captionStyle,
-        render_engine: renderEngine,
         dynamic_scenes: a.dynamic_scenes || a.reel_structure,
         reel_structure: a.reel_structure,
         auto_publish_platforms: a.auto_publish_platforms,
@@ -1106,7 +1077,7 @@ export const createStudioVideoJob = defineTool({
         s,
         "studio_video_jobs",
         row,
-        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, render_engine, tts_model_id, auto_publish_platforms",
+        "id, status, prompt, publish_title, avatar_id, avatar_ids, reel_structure, dynamic_scenes, caption_style, tts_model_id, auto_publish_platforms",
       );
       const { setJobMaterialAudience } = await import("@/lib/studio-materials.server");
       await setJobMaterialAudience(job.id, a.material_audience);
@@ -1115,7 +1086,7 @@ export const createStudioVideoJob = defineTool({
           ok: true,
           job,
           deferred: gate.reason,
-          note: CAPTION_BURNER_GUARD_NOTE,
+          note: REMOTION_GUARD_NOTE,
         });
       }
       if (!startNow) {
@@ -1155,8 +1126,8 @@ export const createStudioVideoJob = defineTool({
           },
           "id, status, heygen_video_id, publish_title, avatar_id, avatar_ids, reel_structure, tts_model_id, auto_publish_platforms, last_error",
         );
-        const { startHookIfRemotion } = await import("@/lib/studio-video-queue.server");
-        await startHookIfRemotion(job.id, renderEngine);
+        const { startHook } = await import("@/lib/studio-video-queue.server");
+        await startHook(job.id);
         return ok({
           ok: true,
           job: updated,
@@ -1176,7 +1147,7 @@ export const updateStudioJob = defineTool({
   name: "update_studio_job",
   title: "Update studio video job",
   description:
-    "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. `render_engine` (caption-burner / Remotion) można zmienić w każdym statusie poza `captioning` (wykończenie w toku) — silnik czyta się przy domykaniu renderu, więc działa też dla zadania w `rendering`, a dla `failed` / `ready` przy ponowieniu i zmianie napisów. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
+    "Zmienia zadanie Studia: scenariusz, awatar (i rotację a-rolli `avatar_ids`), głos i model lektora (`tts_model`), napisy (i ich styl), przebitki oraz strukturę rolki — tylko gdy zadanie czeka (queued) albo padło (failed); tytuł, opis, prywatność i platformy auto-publikacji — dopóki film nie został wysłany do kolejek. Styl napisów GOTOWEGO filmu zmienia `restyle_studio_job_captions`. Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     script: z.string().max(5000).optional(),
@@ -1196,7 +1167,6 @@ export const updateStudioJob = defineTool({
     publish_description: z.string().max(5000).optional(),
     publish_privacy: z.enum(PRIVACY).optional(),
     auto_publish_platforms: z.array(z.enum(PLATFORMS)).optional(),
-    render_engine: RENDER_ENGINE.optional(),
     hook: HOOK_INPUT.nullable()
       .optional()
       .describe(
@@ -1243,12 +1213,6 @@ export const updateStudioJob = defineTool({
           "Film już trafił do kolejek publikacji — zmień wpisy w `list_youtube_queue` / kolejce social.",
         );
       }
-      const enginePatch = patchOf(a, ["render_engine"]);
-      if (Object.keys(enginePatch).length && job.status === "captioning") {
-        return fail(
-          "Wykończenie rolki jest w toku (captioning) — zmień silnik po jego zakończeniu albo niepowodzeniu.",
-        );
-      }
       const hookPatch: Record<string, unknown> = {};
       if (a.hook !== undefined || a.hook_variant !== undefined) {
         if (job.status === "captioning") {
@@ -1269,14 +1233,14 @@ export const updateStudioJob = defineTool({
         hookPatch.hook = hook;
         if (a.hook_variant) hookPatch.hook_variant = a.hook_variant;
       }
-      const patch = { ...renderPatch, ...publishPatch, ...enginePatch, ...hookPatch };
+      const patch = { ...renderPatch, ...publishPatch, ...hookPatch };
       if (!Object.keys(patch).length) return fail("Brak pól do zmiany.");
       const updated = await updateOne(
         s,
         "studio_video_jobs",
         a.id,
         patch,
-        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, render_engine, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id, hook, hook_variant",
+        "id, status, publish_title, publish_privacy, auto_publish_platforms, captions, caption_style, dynamic_scenes, reel_structure, avatar_id, avatar_ids, voice_id, tts_model_id, hook, hook_variant",
       );
       return ok({ ok: true, job: updated, actor: actorId(ctx) });
     }),
@@ -1286,7 +1250,7 @@ export const restyleStudioJobCaptions = defineTool({
   name: "restyle_studio_job_captions",
   title: "Restyle captions of a ready studio video",
   description:
-    "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym stylu (reels / tiktok / box / minimal): czysty master + nasz plik SRT (tekst scenariusza z czasami ElevenLabs) idą do naszej usługi FFmpeg, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Przy silniku Remotion dokłada hook wizualny (planuje go i generuje zasoby, jeśli zadanie go nie ma) i kadruje ujęcia poziomych awatarów — tak starsza rolka dostaje hook bez nowego renderu HeyGena. Nie publikuje ponownie. Wymaga usługi CAPTION_BURNER_URL albo Remotion; link do czystego mastera HeyGena wygasa po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
+    "Wypala napisy GOTOWEGO filmu Studia na nowo w wybranym stylu (reels / tiktok / box / minimal): czysty master + nasz plik SRT (tekst scenariusza z czasami ElevenLabs) idą do Remotion, film przechodzi do statusu captioning, a gotowy plik (trwały link w Storage) zastępuje video_url. Poprzednia wersja zostaje do czasu sukcesu; przy porażce wraca. Dokłada hook wizualny (planuje go i generuje zasoby, jeśli zadanie go nie ma) i kadruje ujęcia poziomych awatarów — tak starsza rolka dostaje hook bez nowego renderu HeyGena. Nie publikuje ponownie. Wymaga sekretów Remotion (REMOTION_*); link do czystego mastera HeyGena wygasa po ~7 dniach, więc działa dla świeżych filmów. Tylko administrator/operator.",
   inputSchema: {
     id: z.string().uuid(),
     caption_style: z.enum(["reels", "tiktok", "box", "minimal"]),

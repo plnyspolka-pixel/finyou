@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CAPTION_BURN_MAX_ATTEMPTS,
   CAPTION_BURN_TIMEOUT_MS,
-  NO_BURNER_REASON,
+  NO_REMOTION_REASON,
   NO_SRT_REASON,
   captionBadgeLabel,
   planBadgeBurn,
@@ -28,12 +28,12 @@ describe("captionBadgeLabel", () => {
 });
 
 describe("planCaptionBurn", () => {
-  it("wypala u siebie, gdy napisy włączone, usługa jest, master i SRT są", () => {
+  it("wypala u siebie, gdy napisy włączone, Remotion jest, master i SRT są", () => {
     expect(
       planCaptionBurn({
         captions: true,
         captionStyle: "reels",
-        burnerConfigured: true,
+        remotionConfigured: true,
         videoUrl: CLEAN,
         srtUrl: SRT,
       }),
@@ -59,7 +59,7 @@ describe("planCaptionBurn", () => {
       planCaptionBurn({
         captions: true,
         captionStyle: "reels",
-        burnerConfigured: true,
+        remotionConfigured: true,
         videoUrl: CLEAN,
         srtUrl: SRT,
         overlays,
@@ -72,7 +72,7 @@ describe("planCaptionBurn", () => {
       planCaptionBurn({
         captions: true,
         captionStyle: "tiktok",
-        burnerConfigured: true,
+        remotionConfigured: true,
         videoUrl: CLEAN,
         srtUrl: SRT,
         aiBadge: true,
@@ -86,7 +86,7 @@ describe("planCaptionBurn", () => {
         planCaptionBurn({
           captions: true,
           captionStyle,
-          burnerConfigured: true,
+          remotionConfigured: true,
           videoUrl: CLEAN,
           srtUrl: SRT,
         }),
@@ -99,28 +99,28 @@ describe("planCaptionBurn", () => {
       planCaptionBurn({
         captions: false,
         captionStyle: "reels",
-        burnerConfigured: false,
+        remotionConfigured: false,
         videoUrl: CLEAN,
         srtUrl: null,
       }),
     ).toEqual({ action: "skip" });
   });
 
-  it("brak usługi, mastera albo SRT = porażka zadania z powodem, nigdy publikacja bez napisów", () => {
+  it("brak Remotion, mastera albo SRT = porażka zadania z powodem, nigdy publikacja bez napisów", () => {
     expect(
       planCaptionBurn({
         captions: true,
         captionStyle: "box",
-        burnerConfigured: false,
+        remotionConfigured: false,
         videoUrl: CLEAN,
         srtUrl: SRT,
       }),
-    ).toEqual({ action: "fail", reason: NO_BURNER_REASON });
+    ).toEqual({ action: "fail", reason: NO_REMOTION_REASON });
     expect(
       planCaptionBurn({
         captions: true,
         captionStyle: "box",
-        burnerConfigured: true,
+        remotionConfigured: true,
         videoUrl: CLEAN,
         srtUrl: null,
       }),
@@ -128,7 +128,7 @@ describe("planCaptionBurn", () => {
     const noMaster = planCaptionBurn({
       captions: true,
       captionStyle: "box",
-      burnerConfigured: true,
+      remotionConfigured: true,
       videoUrl: "",
       srtUrl: SRT,
     });
@@ -222,8 +222,8 @@ describe("planBadgeBurn", () => {
     headlineEndSeconds: 6,
   };
 
-  it("włączony znaczek i usługa → znaczek na pliku do publikacji", () => {
-    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: CLEAN })).toEqual({
+  it("włączony znaczek i Remotion → znaczek na pliku do publikacji", () => {
+    expect(planBadgeBurn({ aiBadge: true, remotionConfigured: true, videoUrl: CLEAN })).toEqual({
       action: "badge",
       videoUrl: CLEAN,
       aiBadge: true,
@@ -235,7 +235,7 @@ describe("planBadgeBurn", () => {
     expect(
       planBadgeBurn({
         aiBadge: false,
-        burnerConfigured: true,
+        remotionConfigured: true,
         videoUrl: CLEAN,
         overlays: OVERLAYS,
       }),
@@ -243,23 +243,23 @@ describe("planBadgeBurn", () => {
   });
 
   it("wyłączony znaczek albo brak pliku — bez komunikatu", () => {
-    expect(planBadgeBurn({ aiBadge: false, burnerConfigured: true, videoUrl: CLEAN })).toEqual({
+    expect(planBadgeBurn({ aiBadge: false, remotionConfigured: true, videoUrl: CLEAN })).toEqual({
       action: "skip",
       reason: null,
     });
-    expect(planBadgeBurn({ aiBadge: true, burnerConfigured: true, videoUrl: "" })).toEqual({
+    expect(planBadgeBurn({ aiBadge: true, remotionConfigured: true, videoUrl: "" })).toEqual({
       action: "skip",
       reason: null,
     });
   });
 
-  it("brak usługi wypalania mówi wprost, czego nie będzie", () => {
-    const plan = planBadgeBurn({ aiBadge: true, burnerConfigured: false, videoUrl: CLEAN });
+  it("brak Remotion mówi wprost, czego nie będzie", () => {
+    const plan = planBadgeBurn({ aiBadge: true, remotionConfigured: false, videoUrl: CLEAN });
     expect(plan.action).toBe("skip");
     expect((plan as { reason: string }).reason).toMatch(/Znaczek AI pominięty/);
     const both = planBadgeBurn({
       aiBadge: true,
-      burnerConfigured: false,
+      remotionConfigured: false,
       videoUrl: CLEAN,
       overlays: OVERLAYS,
     });
@@ -268,7 +268,7 @@ describe("planBadgeBurn", () => {
     );
     const onlyOverlays = planBadgeBurn({
       aiBadge: false,
-      burnerConfigured: false,
+      remotionConfigured: false,
       videoUrl: CLEAN,
       overlays: OVERLAYS,
     });

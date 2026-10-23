@@ -138,9 +138,9 @@ Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/stu
   `preview_studio_hook` (podgląd i zasoby bez renderu HeyGena), gotową rolkę wykańcza na nowo
   `restyle_studio_job_captions` (bez kredytów HeyGen). `STUDIO_VISUAL_HOOK=0` wyłącza hook.
 
-**Silnik wykończenia:** `auto` bez `STUDIO_RENDER_ENGINE` = Remotion, gdy skonfigurowany.
-Gdy caption-burner nie odpowiada na preflight albo nie przyjmie zlecenia, zadanie przechodzi
-samo na Remotion (wpis `studio_finisher_fallback`, sekcja „Produkcja” w raporcie).
+**Silnik wykończenia:** wyłącznie Remotion Lambda (decyzja właściciela 24.10.2026 — usługa
+FFmpeg caption-burner i napisy HeyGena usunięte). Bez sekretów `REMOTION_*` zadania czekają
+w kolejce bez zużycia kredytów HeyGen.
 
 **Awatary poziome:** orientację zdjęcia wykrywamy z podglądu (`studio_avatar_orientations`).
 Poziomy awatar nie prowadzi rolki (hook mówi pionowy z zestawu), a jego ujęcia Remotion

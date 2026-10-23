@@ -59,7 +59,7 @@ describe("tor pożyczkobiorcy — bez akcentu „tylko dla firm” w rolkach", (
 });
 
 describe("raport autopilota — produkcja rolek", () => {
-  it("zejście na Remotion trafia do raportu; bez sekcji o planie Pro ElevenLabs", async () => {
+  it("uwagi o produkcji trafiają do raportu; bez sekcji o planie Pro ElevenLabs", async () => {
     const { buildReportText } = await import("./metrics");
     const text = buildReportText({
       periodLabel: "21.10",
@@ -68,9 +68,9 @@ describe("raport autopilota — produkcja rolek", () => {
       changes: [],
       alarms: [],
       paused: false,
-      production: ["caption-burner nie odpowiada — rolki wykańcza automatycznie Remotion"],
+      production: ["render HeyGena odrzucony — zadanie ponowione"],
     });
-    expect(text).toMatch(/Produkcja: caption-burner nie odpowiada/);
+    expect(text).toMatch(/Produkcja: render HeyGena odrzucony/);
     expect(text).not.toMatch(/plan Pro/);
   });
 });

@@ -48,7 +48,6 @@ import {
 } from "@/lib/studio.functions";
 // Etykiety platform są wspólne z panelem materiałów (/admin/materialy).
 import { PLATFORM_LABELS } from "@/lib/studio-platforms";
-import { isVideoPreparingNote } from "@/lib/video-rendition";
 import { captionBadgeLabel } from "@/lib/studio-captions";
 import {
   CAPTION_STYLE_OPTIONS,
@@ -58,11 +57,6 @@ import {
   isCustomCaptionStyle,
   type CaptionStyleId,
 } from "@/lib/caption-style";
-import {
-  RENDER_ENGINES,
-  RENDER_ENGINE_LABELS,
-  type RenderEngine,
-} from "@/lib/studio-render-engine";
 import { DEFAULT_TTS_MODEL_ID, TTS_MODEL_OPTIONS, type TtsModelId } from "@/lib/studio-tts-models";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, describeScenePlan } from "@/lib/studio-scenes";
 import { listYoutubeQueue, type YoutubeQueueItem } from "@/lib/youtube-shorts.functions";
@@ -393,7 +387,7 @@ function StudioPage() {
   const tiktokConnected = !!tiktokStatus?.connected;
 
   // Automatyczny polling dla jobów w trakcie renderowania (HeyGen) i wypalania
-  // własnych napisów (usługa caption-burner).
+  // własnych napisów (Remotion).
   useEffect(() => {
     const rendering = videoJobs.filter(
       (j) => j.status === "rendering" || j.status === "captioning",
@@ -422,7 +416,7 @@ function StudioPage() {
         for (let i = 0; i < 30 && !cancelled; i++) {
           const r = await processQueueFn();
           qc.invalidateQueries({ queryKey: ["studio-video-jobs"] });
-          // Kolejka wstrzymana (caption-burner nie odpowiada) — dokończy tick.
+          // Kolejka wstrzymana (brak sekretów Remotion) — dokończy tick.
           if (!r.remaining || r.deferred) break;
         }
       } catch {
@@ -531,18 +525,13 @@ function StudioPage() {
   }, [ttsModelSetting]);
   // Shorty i rolki ogląda się bez dźwięku — napisy domyślnie włączone.
   const [captionsOn, setCaptionsOn] = useState(true);
-  // Styl napisów — zawsze własny, wypalany naszą usługą FFmpeg z tekstu
+  // Styl napisów — zawsze własny, wypalany przez Remotion z tekstu
   // scenariusza i czasów ElevenLabs (napisów HeyGena nie zamawiamy).
   const [captionStyle, setCaptionStyle] = useState<CaptionStyleId>(DEFAULT_CUSTOM_CAPTION_STYLE);
-  const captionBurnerOn = !!status?.captionBurnerConfigured;
-  // Silnik wykończenia rolki (napisy, znaczek, nakładki): caption-burner albo
-  // Remotion na AWS Lambda; `auto` = ustawienie Studia.
-  const [renderEngine, setRenderEngine] = useState<RenderEngine>("auto");
+  // Jedyny silnik wykończenia (napisy, znaczek, nakładki, hook): Remotion na
+  // AWS Lambda — bez sekretów REMOTION_* render HeyGena nie rusza.
   const remotionOn = !!status?.remotionConfigured;
-  const effectiveEngine =
-    renderEngine === "auto" ? (status?.defaultRenderEngine ?? "caption_burner") : renderEngine;
-  const finisherOn = effectiveEngine === "remotion" ? remotionOn : captionBurnerOn;
-  // Znaczek „AI" w rogu rolki kładzie usługa wypalania (HeyGen nie ma warstw).
+  // Znaczek „AI" w rogu rolki kładzie Remotion (HeyGen nie ma warstw).
   const aiBadgeOn = status?.aiBadgeEnabled !== false;
   // Montaż rolki: pojedyncze ujęcie | przebitki wskazane przez AI | stała
   // struktura (ujęcie → przebitka → a-roll innego awatara).
@@ -961,7 +950,6 @@ function StudioPage() {
           tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
-          render_engine: renderEngine,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -1036,7 +1024,6 @@ function StudioPage() {
           tts_model_id: ttsModelId,
           captions: captionsOn,
           caption_style: captionStyle,
-          render_engine: renderEngine,
           dynamic_scenes: dynamicScenesOn,
           reel_structure: reelStructureOn,
           avatar_ids: avatarRotation,
@@ -1407,13 +1394,7 @@ function StudioPage() {
                               : `Plan: ${new Date(item.scheduled_at).toLocaleString("pl-PL")}`}
                           </p>
                           {item.last_error && (
-                            <p
-                              className={`break-words text-xs ${
-                                isVideoPreparingNote(item.last_error)
-                                  ? "text-muted-foreground"
-                                  : "text-destructive"
-                              }`}
-                            >
+                            <p className="break-words text-xs text-destructive">
                               {item.last_error}
                             </p>
                           )}
@@ -1503,13 +1484,7 @@ function StudioPage() {
                               ` • próby: ${item.attempt_count}/${MAX_PUBLISH_ATTEMPTS}`}
                           </p>
                           {item.last_error && (
-                            <p
-                              className={`break-words text-xs ${
-                                isVideoPreparingNote(item.last_error)
-                                  ? "text-muted-foreground"
-                                  : "text-destructive"
-                              }`}
-                            >
+                            <p className="break-words text-xs text-destructive">
                               {item.last_error}
                             </p>
                           )}
@@ -2214,44 +2189,31 @@ function StudioPage() {
                         Tekst napisów to dokładnie scenariusz z panelu, czasy słów prosto z
                         ElevenLabs — HeyGen nie dokłada własnych napisów.
                       </p>
-                      {!finisherOn && (
+                      {!remotionOn && (
                         <p className="text-xs text-amber-600 dark:text-amber-500">
-                          {effectiveEngine === "remotion"
-                            ? "Remotion Lambda nie jest skonfigurowany (sekrety REMOTION_*, opis w services/remotion/README.md) — render HeyGena nie ruszy, zadanie poczeka w kolejce."
-                            : "Brak usługi napisów (sekrety CAPTION_BURNER_URL i CAPTION_BURNER_SECRET, opis w docs/studio-publikacji.md) — rolka z napisami zatrzyma się z błędem do ponowienia po konfiguracji."}
+                          Remotion Lambda nie jest skonfigurowany (sekrety REMOTION_*, opis w
+                          services/remotion/README.md) — render HeyGena nie ruszy, zadanie poczeka w
+                          kolejce.
                         </p>
                       )}
                       {aiBadgeOn && (
                         <p
                           className={
-                            finisherOn
+                            remotionOn
                               ? "text-xs text-muted-foreground"
                               : "text-xs text-amber-600 dark:text-amber-500"
                           }
                         >
-                          {finisherOn
-                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (kładzie go silnik wykończenia razem z napisami)."
-                            : "Znaczek „AI” w rogu wymaga silnika wykończenia — bez niego rolki wyjdą bez znaczka."}
+                          {remotionOn
+                            ? "Każda rolka dostaje w prawym górnym rogu mały znaczek „AI” (kładzie go Remotion razem z napisami)."
+                            : "Znaczek „AI” w rogu kładzie Remotion — bez jego sekretów rolki nie wyjdą."}
                         </p>
                       )}
                     </>
                   )}
-                  <select
-                    className="h-10 w-full rounded-md border bg-background p-2 text-sm"
-                    value={renderEngine}
-                    title="Silnik wykończenia rolki"
-                    onChange={(e) => setRenderEngine(e.target.value as RenderEngine)}
-                  >
-                    {RENDER_ENGINES.map((id) => (
-                      <option key={id} value={id}>
-                        Wykończenie: {RENDER_ENGINE_LABELS[id]}
-                      </option>
-                    ))}
-                  </select>
                   <p className="text-xs text-muted-foreground">
-                    Czym kładziemy napisy, znaczek „AI” i nakładki na film z HeyGena. Remotion
-                    renderuje na AWS Lambda
-                    {remotionOn ? "" : " (jeszcze nieskonfigurowany)"}.
+                    Napisy, znaczek „AI”, nakładki i hook kładzie na film z HeyGena wyłącznie
+                    Remotion na AWS Lambda{remotionOn ? "" : " (jeszcze nieskonfigurowany)"}.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -2529,7 +2491,7 @@ function StudioPage() {
                               </Button>
                             </a>
                           )}
-                          {captionBurnerOn &&
+                          {remotionOn &&
                             j.status === "ready" &&
                             j.subtitle_url &&
                             (j.video_url_clean || !j.captions) && (

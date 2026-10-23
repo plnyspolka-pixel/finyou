@@ -28,8 +28,8 @@ Mapa tego, co już jest w kodzie, co rozbudowujemy i czego brakuje. Podstawa: ko
 | Scenariusz | `shorts-script.ts` (bank 250 pytań), `shorts-series.ts`, `studio-ai.server.ts` | Brak bramki compliance na scenariuszach i opisach. |
 | Głos / awatar | `avatar-faq.server.ts` (`ttsElevenLabsWithTimestamps`, HeyGen `/v3/videos`), `studio-render.server.ts` | Jedno źródło czasów (SRT z ElevenLabs) już jest. |
 | B-roll | `studio-broll.server.ts`, `studio-scenes.ts` | Hooki wizualne (`kind='hook'`) wycofane – do przywrócenia w Etapie 4. |
-| Napisy / znaczek AI | `caption-style.ts:517` `AI_BADGE`, `caption-burner`, Remotion `StudioReel.tsx` | Znaczek „AI” przez całość jest; etykieta „Treść wygenerowana przez AI” w 1. sekundzie **wycofana decyzją właściciela 23.10.2026** (nie dokładać), brak pętli, brak segmentu hooka. |
-| Kompresja | `transcode-plan.mjs` (60 MiB), `video-rendition.server.ts` `ensurePublishableVideo` | Bez `CAPTION_BURNER_URL` publikowany jest oryginał (stąd 86 MB do X). |
+| Napisy / znaczek AI | `caption-style.ts` `AI_BADGE`, `studio-reel-plan.ts`, Remotion `StudioReel.tsx` (jedyny silnik od 24.10.2026) | Znaczek „AI” przez całość jest; etykieta „Treść wygenerowana przez AI” w 1. sekundzie **wycofana decyzją właściciela 23.10.2026** (nie dokładać), brak pętli, brak segmentu hooka. |
+| Kompresja | — | **Usunięta 24.10.2026** razem z usługą FFmpeg (nigdy nie działała na produkcji); rolki z Remotion mają 10–16 MB i mieszczą się w limitach, materiały z biblioteki idą w oryginale. |
 | Koszt per rolka | – | **Brak.** |
 
 ## 3. Dystrybucja

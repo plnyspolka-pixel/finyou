@@ -8,12 +8,7 @@ import {
   srtToAss,
 } from "./caption-style";
 import { buildReelPlan } from "./studio-reel-plan";
-import {
-  parseRemotionJobId,
-  parseRenderEngine,
-  remotionJobId,
-  resolveRenderEngine,
-} from "./studio-render-engine";
+import { parseRemotionJobId, remotionJobId } from "./remotion-job-id";
 
 const SRT = [
   "1",
@@ -27,7 +22,7 @@ const SRT = [
 ].join("\n");
 
 describe("buildReelPlan", () => {
-  it("napisy: te same porcje co plik ASS dla caption-burnera", () => {
+  it("napisy: te same porcje co referencyjny plik ASS (ta sama logika cięcia)", () => {
     const plan = buildReelPlan({ srt: SRT, styleId: "reels", aiBadge: false, overlays: null });
     const ass = srtToAss(SRT, "reels")!;
     const dialogues = ass.split("\n").filter((l) => l.startsWith("Dialogue: 0,"));
@@ -137,7 +132,7 @@ describe("buildReelPlan", () => {
     expect(plan.overlays!.cardLayout).toBe(OVERLAY_CARD_LAYOUT);
   });
 
-  it("puste SRT przy zamówionych napisach — błąd jak w caption-burnerze", () => {
+  it("puste SRT przy zamówionych napisach — czytelny błąd zamiast pustego planu", () => {
     expect(() =>
       buildReelPlan({ srt: "", styleId: "reels", aiBadge: true, overlays: null }),
     ).toThrow(/SRT/);
@@ -148,14 +143,6 @@ describe("buildReelPlan", () => {
 });
 
 describe("silnik wykończenia", () => {
-  it("nieznane wartości (np. avatar_iv) to auto, auto → ustawienie środowiska", () => {
-    expect(parseRenderEngine("avatar_iv")).toBe("auto");
-    expect(resolveRenderEngine("avatar_iv", undefined)).toBe("caption_burner");
-    expect(resolveRenderEngine("auto", "remotion")).toBe("remotion");
-    expect(resolveRenderEngine("caption_burner", "remotion")).toBe("caption_burner");
-    expect(resolveRenderEngine("remotion", undefined)).toBe("remotion");
-  });
-
   it("id renderu Remotion w caption_burn_id", () => {
     const id = remotionJobId("remotionlambda-eucentral1-abc", "r123");
     expect(parseRemotionJobId(id)).toEqual({

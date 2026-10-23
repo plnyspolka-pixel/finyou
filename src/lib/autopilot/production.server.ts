@@ -321,7 +321,6 @@ export async function produceReels(
           status: "queued",
           captions: true,
           caption_style: DEFAULT_CUSTOM_CAPTION_STYLE,
-          render_engine: "auto",
           dynamic_scenes: true,
           reel_structure: true,
           auto_publish_platforms: [],

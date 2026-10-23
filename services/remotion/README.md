@@ -39,11 +39,11 @@ kawałki po `framesPerLambda` klatek (+1 wywołanie orkiestrujące), więc dłu�
 filmy przy obecnym limicie trzeba renderować z większym `framesPerLambda`
 albo podnieść limit w Service Quotas (Lambda → Concurrent executions).
 
-## Studio: kompozycja `StudioReel` (silnik `remotion`)
+## Studio: kompozycja `StudioReel` (jedyny silnik wykończenia)
 
-Gdy zadanie Studia ma `render_engine = "remotion"` (albo `auto` przy
-`STUDIO_RENDER_ENGINE=remotion`), backend po renderze HeyGena nie woła
-caption-burnera, tylko `renderMediaOnLambda` z kompozycją `StudioReel`
+Remotion to od 24.10.2026 JEDYNY silnik wykończenia rolek Studia (usługa
+FFmpeg caption-burner i napisy HeyGena usunięte): backend po renderze HeyGena
+woła `renderMediaOnLambda` z kompozycją `StudioReel`
 (`src/StudioReel.tsx`). Wejście: `videoUrl` (czysty master HeyGena) i `plan`
 z `src/lib/studio-reel-plan.ts` w głównym projekcie — napisy, znaczek „AI”
 i nakładki w kadrze 720×1280, przeskalowane do rozdzielczości mastera.

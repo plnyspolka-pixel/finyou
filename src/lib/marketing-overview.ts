@@ -84,7 +84,7 @@ export function channelReadiness(status: {
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
-  captionBurnerConfigured?: boolean;
+  remotionConfigured?: boolean;
 }): { ready: string[]; missing: { channel: string; fix: string }[] } {
   const ready: string[] = [];
   const missing: { channel: string; fix: string }[] = [];
@@ -110,11 +110,11 @@ export function channelReadiness(status: {
   add(status.heygenConfigured, "heygen", "Sekret HEYGEN_API_KEY.");
   add(status.elevenlabsConfigured, "elevenlabs", "Sekret ELEVENLABS_API_KEY.");
   add(status.aiConfigured, "ai", "Sekret LOVABLE_API_KEY (scenariusze, opisy, grafiki).");
-  if (status.captionBurnerConfigured !== undefined) {
+  if (status.remotionConfigured !== undefined) {
     add(
-      status.captionBurnerConfigured,
-      "caption_burner",
-      "Usługa FFmpeg (CAPTION_BURNER_URL / CAPTION_BURNER_SECRET) — bez niej rolki Studia z napisami nie wychodzą (zadania padają do ponowienia), a wideo idzie na platformy bez kompresji do profilu publikacji (ryzyko błędu „Plik za duży”).",
+      status.remotionConfigured,
+      "remotion",
+      "Sekrety REMOTION_* (AWS Lambda, opis w services/remotion/README.md) — jedyny silnik wykończenia rolek Studia; bez nich zadania czekają w kolejce.",
     );
   }
   return { ready, missing };

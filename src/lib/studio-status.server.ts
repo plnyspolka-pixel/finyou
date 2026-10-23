@@ -38,9 +38,7 @@ export async function collectStudioStatus(): Promise<StudioStatus> {
     heygenConfigured: !!process.env.HEYGEN_API_KEY,
     elevenlabsConfigured: !!process.env.ELEVENLABS_API_KEY,
     aiConfigured: !!process.env.LOVABLE_API_KEY,
-    captionBurnerConfigured: (await import("./caption-burner.server")).isCaptionBurnerConfigured(),
-    aiBadgeEnabled: (await import("./caption-burner.server")).isAiBadgeEnabled(),
+    aiBadgeEnabled: (await import("./remotion-render.server")).isAiBadgeEnabled(),
     remotionConfigured: (await import("./remotion-render.server")).isRemotionConfigured(),
-    defaultRenderEngine: (await import("./studio-render-engine")).resolveRenderEngine("auto"),
   };
 }

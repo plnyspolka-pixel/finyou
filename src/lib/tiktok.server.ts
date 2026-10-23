@@ -492,10 +492,7 @@ async function uploadVideo(
 ): Promise<string> {
   if (!item.video_url) throw new Error("Publikacja na TikToku wymaga URL wideo (MP4, pion 9:16).");
 
-  // Kompresja do profilu publikacji (≤ 60 MB, H.264) — rzuca
-  // VideoPreparingError, gdy plik jeszcze się przygotowuje.
-  const { ensurePublishableVideo } = await import("./video-rendition.server");
-  const sourceUrl = await ensurePublishableVideo(item.video_url);
+  const sourceUrl = item.video_url;
 
   const videoRes = await fetch(sourceUrl);
   if (!videoRes.ok) throw new Error(`Pobranie wideo nieudane: HTTP ${videoRes.status}`);
@@ -684,8 +681,6 @@ export async function processTiktokQueueItem(id: string): Promise<{
   ok: boolean;
   publishId?: string;
   processing?: boolean;
-  /** Wideo w kompresji — wpis odroczony, publikacja ruszy z ticka. */
-  preparing?: boolean;
   error?: string;
 }> {
   const { data: claimed, error: claimErr } = await supabaseAdmin
@@ -731,21 +726,6 @@ export async function processTiktokQueueItem(id: string): Promise<{
     if (poll.failed) return { ok: false, error: poll.error };
     return poll.done ? { ok: true, publishId } : { ok: true, processing: true, publishId };
   } catch (err) {
-    const { VideoPreparingError } = await import("./video-rendition.server");
-    if (err instanceof VideoPreparingError) {
-      // Wideo się kompresuje — wpis wraca do kolejki na kilka minut BEZ
-      // zużycia próby; init się nie zaczął, więc nic nie poszło na profil.
-      await supabaseAdmin
-        .from("social_publish_queue")
-        .update({
-          status: "pending",
-          tiktok_status: null,
-          last_error: err.note,
-          scheduled_at: err.nextAt.toISOString(),
-        })
-        .eq("id", item.id);
-      return { ok: true, preparing: true };
-    }
     const raw = err instanceof Error ? err.message : String(err);
     // Błąd audytu aplikacji (i podobne trwałe) — od razu 'failed' z jasnym
     // komunikatem zamiast trzech identycznych prób.
@@ -889,7 +869,7 @@ export async function runTiktokPublishTick(): Promise<{
     processed += 1;
     const result = await processTiktokQueueItem(item.id);
     if (result.ok && result.processing) processing += 1;
-    else if (result.ok && !result.preparing) published += 1;
+    else if (result.ok) published += 1;
     else if (result.error) errors.push(result.error);
   }
 

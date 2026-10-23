@@ -9,7 +9,7 @@ import {
 
 // Rejestr kompozycji. Każda <Composition> to osobny film, który Lambda
 // renderuje po `id` (np. `node render.mjs HelloFinanceYou`).
-// `StudioReel` renderuje Studio (render_engine = "remotion") — długość i kadr
+// `StudioReel` wykańcza rolki Studia (jedyny silnik) — długość i kadr
 // bierze z pliku mastera (calculateMetadata), plan rysunku z inputProps.
 export const RemotionRoot: React.FC = () => (
   <>

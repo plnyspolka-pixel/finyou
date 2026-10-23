@@ -11,8 +11,8 @@
 // src/lib/studio-tts-models.ts) wywołaniem `/with-timestamps`, które oddaje
 // czas każdego znaku. Z tych czasów i TEKSTU SCENARIUSZA budujemy własny plik
 // SRT (src/lib/studio-subtitles.ts), zapisujemy go w buckecie `studio-media`
-// i oddajemy jako `subtitleUrl` — po renderze HeyGena wypala go nasza usługa
-// (caption-burner). HeyGen dostaje gotowe audio i NIE zamawiamy u niego
+// i oddajemy jako `subtitleUrl` — po renderze HeyGena wypala go Remotion
+// (studio-video-queue.server.ts). HeyGen dostaje gotowe audio i NIE zamawiamy u niego
 // napisów (ich rozpoznawanie mowy przekręcało nazwę firmy).
 //
 // Materiał na przebitki bierzemy z BANKU B-ROLLI
@@ -174,8 +174,8 @@ async function narrate(
 }
 
 /**
- * Plik SRT z kwestii → bucket `studio-media` (trwały publiczny link; usługa
- * wypalania pobiera go po renderze HeyGena, także z innego ticka).
+ * Plik SRT z kwestii → bucket `studio-media` (trwały publiczny link; Remotion
+ * pobiera go po renderze HeyGena, także z innego ticka).
  */
 async function storeSubtitles(cues: SrtCue[], name: string): Promise<string> {
   if (!cues.length) throw new Error("Napisy: ElevenLabs nie oddał czasów ani jednego słowa.");

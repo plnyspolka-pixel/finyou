@@ -9,7 +9,6 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { StudioPromptKind } from "./studio-ai.server";
 import type { StudioPlatform } from "./studio-platforms";
 import { isCustomCaptionStyle, parseCaptionStyleId } from "./caption-style";
-import { parseRenderEngine } from "./studio-render-engine";
 import { AVATARS_PER_REEL, MAX_AVATARS_PER_REEL, type ScenePlanItem } from "./studio-scenes";
 import {
   isTtsModelId,
@@ -39,14 +38,10 @@ export type StudioStatus = {
   heygenConfigured: boolean;
   elevenlabsConfigured: boolean;
   aiConfigured: boolean;
-  /** Usługa wypalania napisów — bez niej rolki z napisami nie wychodzą (zadania padają do ponowienia). */
-  captionBurnerConfigured: boolean;
-  /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go usługa wypalania. */
+  /** Remotion Lambda ma sekrety REMOTION_* — jedyny silnik wykończenia rolek; bez niego rolki czekają w kolejce. */
+  remotionConfigured: boolean;
+  /** Znaczek „AI" w rogu rolek (STUDIO_AI_BADGE); kładzie go Remotion. */
   aiBadgeEnabled?: boolean;
-  /** Remotion Lambda ma sekrety REMOTION_* (silnik wykończenia `remotion`). */
-  remotionConfigured?: boolean;
-  /** Silnik, który dostaje zadanie z `render_engine = auto`. */
-  defaultRenderEngine?: "caption_burner" | "remotion";
 };
 
 export const getStudioStatus = createServerFn({ method: "GET" })
@@ -170,17 +165,11 @@ export const retrySocialQueueItem = createServerFn({ method: "POST" })
     // TikTok odwrotnie: publish_id jest jednorazowy, więc czyścimy go razem
     // z tiktok_status (tick szuka wpisów z tiktok_status IS NULL). Tak samo X:
     // media_id wygasa, a tick X-a szuka wpisów z x_media_status IS NULL.
-    // Nieudana kompresja wideo (video_renditions) też dostaje nowy budżet
-    // prób — inaczej ponowienie od razu słałoby oryginał.
     const { data: current } = await supabaseAdmin
       .from("social_publish_queue")
-      .select("video_url, platform")
+      .select("platform")
       .eq("id", data.id)
       .maybeSingle();
-    if (current?.video_url) {
-      const { resetVideoRendition } = await import("./video-rendition.server");
-      await resetVideoRendition(current.video_url).catch(() => {});
-    }
     const { error } = await supabaseAdmin
       .from("social_publish_queue")
       .update({
@@ -221,24 +210,22 @@ export const publishSocialQueueItemNow = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!row) throw new Error("Nie znaleziono wpisu w kolejce.");
 
-    // `preparing` = wideo jeszcze się kompresuje do profilu publikacji; wpis
-    // został w kolejce i tick opublikuje go, gdy plik będzie gotowy.
     if (row.platform === "tiktok") {
       const { processTiktokQueueItem } = await import("./tiktok.server");
       const result = await processTiktokQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
+      return { ok: true, processing: !!result.processing };
     }
     if (row.platform === "x") {
       const { processXQueueItem } = await import("./x.server");
       const result = await processXQueueItem(data.id);
       if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-      return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
+      return { ok: true, processing: !!result.processing };
     }
     const { processSocialQueueItem } = await import("./studio-publishing.server");
     const result = await processSocialQueueItem(data.id);
     if (!result.ok) throw new Error(result.error ?? "Publikacja nieudana.");
-    return { ok: true, processing: !!result.processing, preparing: !!result.preparing };
+    return { ok: true, processing: !!result.processing };
   });
 
 // Gotowe wideo do podstawienia jako źródło: joby Studia + Awatar FAQ.
@@ -299,7 +286,7 @@ export type StudioVideoJob = {
   caption_style: string;
   /** Model ElevenLabs lektora (null = ustawienie Studia w chwili renderu). */
   tts_model_id: string | null;
-  /** Id zadania w usłudze wypalania — gdy status to 'captioning'. */
+  /** Id renderu Remotion (remotion:<bucket>:<renderId>) — gdy status to 'captioning'. */
   caption_burn_id: string | null;
   caption_burn_started_at: string | null;
   caption_burn_attempts: number;
@@ -569,8 +556,6 @@ export const startStudioVideo = createServerFn({ method: "POST" })
       tiktok_post_options?: unknown;
       publish_title?: string;
       publish_description?: string;
-      /** Silnik wykończenia rolki (studio-render-engine.ts); brak = `auto`. */
-      render_engine?: string;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -595,23 +580,12 @@ export const startStudioVideo = createServerFn({ method: "POST" })
     });
     const reelStructure = data.reel_structure === true;
 
-    // Bramka: bez działającego caption-burnera render HeyGena zużyłby kredyty,
-    // a rolka nie dostałaby napisów ani znaczka „AI" — gdy jest Remotion,
-    // wykończy on; inaczej zadanie idzie do kolejki i ruszy w ticku.
-    const { resolveFinisherForRender, CAPTION_BURNER_GUARD_NOTE, finisherFallbackNote } =
-      await import("./caption-burner.server");
-    const gate = await resolveFinisherForRender({
-      captions: data.captions !== false,
-      engine: parseRenderEngine(data.render_engine),
-    });
-    const renderEngine =
-      gate.ok && gate.fallback ? "remotion" : parseRenderEngine(data.render_engine);
-    if (gate.ok && gate.fallback) {
-      const { reportFinisherFallback } = await import("./studio-video-queue.server");
-      await reportFinisherFallback(gate.fallback.reason);
-    }
+    // Bramka: bez sekretów Remotion render HeyGena zużyłby kredyty, a rolka
+    // nie dostałaby napisów ani znaczka „AI" — zadanie idzie wtedy do kolejki
+    // i ruszy w ticku, gdy Lambda będzie skonfigurowana.
+    const { remotionPreflight, REMOTION_GUARD_NOTE } = await import("./remotion-render.server");
+    const gate = remotionPreflight();
     const createNote = [
-      gate.ok && gate.fallback ? finisherFallbackNote(gate.fallback.reason) : null,
       lead.swapped
         ? "Prowadzący zmieniony na pionowego awatara (wskazany ma poziome zdjęcie)."
         : null,
@@ -628,10 +602,9 @@ export const startStudioVideo = createServerFn({ method: "POST" })
         voice_id: voiceId,
         tts_model_id: ttsModelId,
         status: gate.ok ? "generating_audio" : "queued",
-        last_error: gate.ok ? createNote || null : `${gate.reason}. ${CAPTION_BURNER_GUARD_NOTE}`,
+        last_error: gate.ok ? createNote || null : `${gate.reason}. ${REMOTION_GUARD_NOTE}`,
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
-        render_engine: renderEngine,
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         avatar_ids: avatarIds,
@@ -679,8 +652,8 @@ export const startStudioVideo = createServerFn({ method: "POST" })
           last_error: [createNote, rendered.note].filter(Boolean).join(" ") || null,
         })
         .eq("id", job.id);
-      const { startHookIfRemotion } = await import("./studio-video-queue.server");
-      await startHookIfRemotion(job.id as string, renderEngine);
+      const { startHook } = await import("./studio-video-queue.server");
+      await startHook(job.id as string);
       return { ok: true, id: job.id as string, deferred: null as string | null };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -705,8 +678,6 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
       tts_model_id?: string;
       captions?: boolean;
       caption_style?: string;
-      /** Silnik wykończenia rolki (studio-render-engine.ts); brak = `auto`. */
-      render_engine?: string;
       dynamic_scenes?: boolean;
       reel_structure?: boolean;
       /** Pula twarzy z panelu (prowadzący + zestaw domyślnych). */
@@ -761,7 +732,6 @@ export const enqueueStudioVideoBatch = createServerFn({ method: "POST" })
         status: "queued",
         captions: data.captions !== false,
         caption_style: parseCaptionStyleId(data.caption_style),
-        render_engine: parseRenderEngine(data.render_engine),
         dynamic_scenes: data.dynamic_scenes === true || reelStructure,
         reel_structure: reelStructure,
         // Uzupełniane niżej — każda rolka serii dostaje kolejnego partnera.

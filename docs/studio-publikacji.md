@@ -34,17 +34,13 @@ Jedno miejsce (panel **/admin/studio-publikacji**) do:
 | Dialog „Publikuj" (Materiały)                | `src/components/admin/material-publish-dialog.tsx`                                        |
 | Napisy własne — styl (SRT → ASS, presety)    | `src/lib/caption-style.ts` (+ testy `caption-style.test.ts`)                              |
 | Napisy własne — decyzje pipeline'u           | `src/lib/studio-captions.ts` (+ testy `studio-captions.test.ts`)                          |
-| Napisy własne — klient usługi wypalania      | `src/lib/caption-burner.server.ts`                                                        |
-| Silnik wykończenia (caption-burner / Remotion) | `src/lib/studio-render-engine.ts`, `src/lib/remotion-render.server.ts`                  |
+| Wykończenie rolki — klient Remotion Lambda (jedyny silnik) | `src/lib/remotion-render.server.ts` (id renderu: `src/lib/remotion-job-id.ts`) |
 | Plan rolki dla Remotion (napisy, znaczek, nakładki) | `src/lib/studio-reel-plan.ts` (+ testy `studio-reel-plan.test.ts`)                 |
 | Kompozycja Remotion `StudioReel`             | `services/remotion/src/StudioReel.tsx` (README w `services/remotion/`)                    |
 | Napisy z tekstu scenariusza + czasów ElevenLabs | `src/lib/studio-subtitles.ts` (+ testy `studio-subtitles.test.ts`)                     |
 | Modele ElevenLabs lektora (lista, ustawienia głosu) | `src/lib/studio-tts-models.ts` (+ testy `studio-tts-models.test.ts`)               |
 | Ustawienia globalne Studia (model lektora)   | `src/lib/studio-settings.server.ts`                                                       |
-| Usługa FFmpeg (napisy + kompresja)           | `services/caption-burner/` (server.mjs, transcode-plan.mjs, Dockerfile, fly.toml, README) |
-| Kompresja przed publikacją — decyzje         | `src/lib/video-rendition.ts` (+ testy `video-rendition.test.ts`)                          |
-| Kompresja przed publikacją — usługa, Storage | `src/lib/video-rendition.server.ts`                                                       |
-| Migracja: kompresja (video_renditions)       | `supabase/migrations/20260929120000_video_renditions.sql`                                 |
+| Migracja: jeden silnik (Remotion), koniec kompresji | `supabase/migrations/20261024120000_studio_jeden_silnik_remotion.sql` |
 | Baza 250 pytań do shortów (generowana)       | `src/lib/shorts-question-bank.ts`                                                         |
 | Źródło bazy pytań + generator                | `docs/shorts/pozyczki-prywatne-250-pytan.md`, `scripts/generate-shorts-question-bank.ts`  |
 | Cron tick Meta                               | `src/routes/api/public/hooks/social-publish-tick.ts`                                      |
@@ -130,17 +126,13 @@ co poprawić.
 | `HEYGEN_API_KEY`                  | Generowanie wideo awatara (już używany przez Awatar FAQ)                                                     |
 | `PEXELS_API_KEY`                  | Opcjonalny; źródło b-rolli (bez niego bank bierze stock HeyGena)                                             |
 | `HEYGEN_CAPTION_STYLE`            | Opcjonalny styl napisów HeyGen dla ścieżek spoza Studia (Awatar FAQ); Studio napisów HeyGena nie zamawia     |
-| `CAPTION_BURNER_URL`              | Adres usługi FFmpeg (napisy rolek + kompresja przed publikacją) — bez niej rolki z napisami nie wychodzą      |
-| `CAPTION_BURNER_SECRET`           | Sekret tej usługi (Bearer) — bez pary URL+sekret zadania z napisami padają do ponowienia, publikacja bez kompresji |
-| `STUDIO_RENDER_ENGINE`            | Opcjonalny; silnik dla zadań z `render_engine = auto`: `remotion` albo (domyślnie) caption-burner             |
-| `REMOTION_AWS_ACCESS_KEY_ID`      | Klucz IAM do Remotion Lambda (silnik `remotion`; polityka z `npx remotion lambda policies user`)             |
+| `REMOTION_AWS_ACCESS_KEY_ID`      | Klucz IAM do Remotion Lambda — JEDYNY silnik wykończenia rolek (polityka z `npx remotion lambda policies user`); bez kompletu REMOTION_* zadania Studia czekają w kolejce |
 | `REMOTION_AWS_SECRET_ACCESS_KEY`  | Sekret tego klucza                                                                                           |
 | `REMOTION_FUNCTION_NAME`          | Nazwa funkcji z `npm run lambda:deploy` (services/remotion)                                                  |
 | `REMOTION_SERVE_URL`              | Serve URL strony z `npm run lambda:deploy`                                                                   |
 | `REMOTION_REGION`                 | Opcjonalny; domyślnie `eu-central-1`                                                                         |
 | `REMOTION_FRAMES_PER_LAMBDA`      | Opcjonalny; klatek na jedno wywołanie (domyślnie 300 — mieści 60 s rolki w limicie 10 wywołań)               |
-| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na wynik usługi, zanim zadanie padnie do ponowienia (domyślnie 45)                    |
-| `VIDEO_RENDITION_TIMEOUT_MINUTES` | Opcjonalny; ile czekać na kompresję wideo, zanim ponowimy / wyślemy oryginał (domyślnie 120)                 |
+| `CAPTION_BURN_TIMEOUT_MINUTES`    | Opcjonalny; ile czekać na render Remotion, zanim zadanie padnie do ponowienia (domyślnie 45)                 |
 | `STUDIO_AI_BADGE`                 | Opcjonalny; `0` / `off` wyłącza znaczek „AI" w rogu rolek (domyślnie włączony)                               |
 | `STUDIO_DYNAMIC_OVERLAYS`         | Opcjonalny; `0` / `off` wyłącza wypalane nakładki dynamiczne rolek z paczki 250 pytań (domyślnie włączone)   |
 | `STUDIO_SAVE_TO_MATERIALS`        | Opcjonalny; `0` / `off` wyłącza zapis gotowych rolek do /admin/materialy (domyślnie włączony)                |
@@ -192,89 +184,26 @@ kontenera na IG.
 Wcześniej kod używał `/video-reels/…`, na co Meta odpowiadała
 „Endpoint … doesn't exist" i każdy FB Reel kończył się błędem.
 
-Te limity są pilnowane **automatycznie**: przed wysyłką na którąkolwiek
-platformę wideo przechodzi przez kompresję do wspólnego profilu publikacji
-(sekcja niżej). Ręcznie trzeba pilnować tylko **długości** materiału (Shorts
-≤ 3 min, X ≤ 2:20 na koncie bez Premium, TikTok wg `max_video_post_duration_sec`
-z `get_tiktok_creator_info`) — kompresja nie tnie treści.
+Rolki ze Studia (Remotion: 1080×1920, H.264/AAC, zwykle 10–16 MB) mieszczą
+się w tych limitach bez żadnej kompresji. Materiały z biblioteki idą na
+platformy **w oryginale** — plik ponad bufor publikatora (X 64 MB, TikTok
+i YouTube 100 MB) kończy się komunikatem „Plik za duży”, a MOV/HEVC z telefonu
+odrzuca sama platforma; taki materiał przygotuj przed wgraniem do biblioteki
+(MP4 H.264/AAC, ≤ 1080p, ≤ 30 kl./s). Długości materiału trzeba pilnować
+ręcznie (Shorts ≤ 3 min, X ≤ 2:20 na koncie bez Premium, TikTok wg
+`max_video_post_duration_sec` z `get_tiktok_creator_info`).
 
-## Kompresja wideo przed publikacją (`video_renditions`)
+## Kompresja wideo przed publikacją — usunięta (24.10.2026)
 
-**Problem.** Każda platforma ma inne limity i wymagania, a do tego nasze
-publikatory TikToka, YouTube'a i X-a buforują plik w pamięci workera
-(Cloudflare: 128 MB), więc tną go na 100 MB / 100 MB / 64 MB. Filmy z biblioteki
-materiałów bywają nagrane telefonem (MOV, HEVC, 4K, 60 kl./s, po kilkaset MB)
-— publikacja kończyła się „Plik za duży" albo odrzuceniem po stronie
-platformy (X i Reels nie przyjmują HEVC/MOV), i to dopiero w chwili wysyłki.
-
-**Rozwiązanie.** Jeden **profil publikacji**, do którego usługa FFmpeg
-(`services/caption-burner`, zadanie `transcode`) sprowadza każde wideo PRZED
-wysyłką na jakąkolwiek platformę:
-
-| Parametr        | Wartość                                            | Dlaczego                                                                                                      |
-| --------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Kontener, kodek | MP4, H.264 High 4.1, yuv420p, `faststart`          | jedyny zestaw przyjmowany przez wszystkie cztery platformy                                                    |
-| Rozdzielczość   | ≤ 1080 px krótszy bok (1080×1920 / 1920×1080)      | Reels/TikTok i tak skalują do 1080p                                                                           |
-| Klatkaż         | ≤ 30 kl./s                                         | 60 kl./s podwaja rozmiar bez zysku na telefonie                                                               |
-| Audio           | AAC-LC 128 kb/s, stereo, 48 kHz                    | wymóg X-a (≤ 48 kHz) i Reels                                                                                  |
-| Rozmiar         | ≤ **60 MB**                                        | poniżej najciaśniejszego bufora (X: 64 MB) z zapasem                                                          |
-| Bitrate         | z długości filmu: `60 MB × 8 / czas`, sufit 6 Mb/s | rolka 60 s → pełne 6 Mb/s; 3 min → ~2,6 Mb/s; dłuższe schodzą do 720p / 540p / 480p, żeby nie rozmazać obrazu |
-
-Wartości siedzą w `VIDEO_RENDITION_TARGET` (`src/lib/video-rendition.ts`);
-zmiana progów w dół = **nowa wersja profilu** (`VIDEO_RENDITION_PROFILE`),
-żeby stare renditions nie były brane za dobre.
-
-**Jak to działa.**
-
-1. Wpis z wideo trafia do kolejki (Studio, „Publikuj" przy materiale, MCP
-   `queue_social_publication` / `publish_marketing_material`, auto-publikacja
-   HeyGena) → `requestVideoRendition(url)` zakłada wiersz `pending` w
-   `video_renditions` (klucz: adres źródłowy + profil). Tani zapis, bez
-   wołania usługi.
-2. Tick `social-publish-tick` (co 10 min) w `runVideoRenditionTick()`:
-   zakłada renditions dla wszystkich wpisów `pending` w obu kolejkach
-   (także YouTube — plik ma być gotowy PRZED terminem), domyka zadania w toku
-   (odpytanie usługi → zapis wyniku) i zleca nowe (2 na przebieg; usługa
-   koduje jedno naraz).
-3. Usługa robi `ffprobe`. Plik **zgodny z profilem** (typowa rolka z HeyGena
-   po wypaleniu napisów) wraca jako `unchanged` — publikujemy oryginał,
-   zero straty jakości. Inaczej koduje i **sama wgrywa wynik** na podpisany
-   URL Storage (`createSignedUploadUrl`, bajty nie idą przez worker) do
-   `studio-media/renditions/<profil>/<id>.mp4`; gdy upload jej nie wyjdzie,
-   plik pobiera worker (wynik jest ≤ 60 MB, więc mieści się w pamięci).
-4. Każdy publikator (YouTube `uploadShort`, TikTok `uploadVideo`, X
-   `uploadMedia`, Meta: post z wideo / FB Reels / kontener IG) woła
-   `ensurePublishableVideo(url)` **tuż przed pobraniem pliku**:
-   - rendition gotowy → dostaje adres skompresowanego pliku (albo oryginał
-     przy `unchanged`),
-   - trwa albo dopiero zlecony → `VideoPreparingError`: wpis wraca do
-     `pending` na 5 min z notatką „Wideo w przygotowaniu…" w `last_error`
-     (panel pokazuje ją szarym, nie czerwonym; **próba nie jest zużywana**;
-     nic nie poszło na platformę — przy FB Reels sprawdzenie jest przed
-     `upload_phase=start`, więc nie zostaje otwarta sesja),
-   - usługa nieskonfigurowana albo kompresja ostatecznie nieudana → oryginał,
-     jak dotąd (i dotychczasowy komunikat „Plik za duży", jeśli przekracza
-     bufor).
-     „Publikuj teraz" w panelu i w MCP zwraca wtedy `preparing: true`
-     (toast: „wideo jest kompresowane… wpis wyjdzie automatycznie").
-5. Ten sam film na cztery platformy = **jedna** kompresja (deduplikacja po
-   adresie źródłowym). Ponowna publikacja tego samego materiału używa
-   gotowego renditionu.
-
-**Odporność** (decyzje w `resolveVideoRendition`, testy w
-`video-rendition.test.ts`): usługa nie odpowiada (uśpiony kontener) → czekamy
-do limitu (`VIDEO_RENDITION_TIMEOUT_MINUTES`, domyślnie 120 — darmowy Render
-koduje wolno); błąd usługi, zaginione zadanie (restart) albo przekroczony
-czas → jedno ponowienie, potem `failed` i publikacja oryginału z powodem
-w `last_error` renditionu; „Ponów" przy wpisie kolejki zeruje też próby
-renditionu, więc po naprawie usługi kompresja rusza od nowa. Optymistyczne
-przejęcie wiersza (`pending → processing`) chroni przed podwójnym zleceniem,
-gdy tick i „Publikuj teraz" trafią na ten sam plik w tej samej chwili.
-
-Diagnostyka: `run_publish_tick` (MCP) zwraca sekcję `renditions`
-(`discovered / submitted / ready / failed / errors`), a `GET /health` usługi
-mówi, czy ma `ffprobe`. Stan konkretnego pliku: tabela `video_renditions`
-(`status`, `unchanged`, `output_url`, `last_error`).
+Dawna tabela `video_renditions` i zadanie `transcode` usługi FFmpeg
+(caption-burner) miały sprowadzać każde wideo do jednego profilu publikacji.
+Na produkcji **nigdy nie zadziałały**: wdrożona usługa nie znała zadania
+`transcode`, każdy wiersz kończył się błędem „usługa FFmpeg nie obsługuje
+jeszcze kompresji (stara wersja)”, a publikatory i tak słały oryginał.
+Razem z decyzją o jednym silniku wykończenia (Remotion) usługa, jej klient,
+tabela i cała ścieżka „Wideo w przygotowaniu” zostały usunięte
+(migracja `20261024120000_studio_jeden_silnik_remotion.sql`). Publikatory
+pobierają plik wprost spod adresu z kolejki.
 
 ## Użycie
 
@@ -371,20 +300,20 @@ Zakładki panelu:
    mają tekst tylko w SRT HeyGena — ten też idzie przez nasz renderer.
 
    Jak to działa dalej: backend chodzi na Cloudflare Workers, gdzie nie ma
-   FFmpega, więc obraz wypala mała usługa `services/caption-burner` (FFmpeg +
-   libass, jeden plik, bez zależności). Stanie na darmowym planie Render.com
-   (`render.yaml` w repo — Blueprint), na Koyebie, na własnym komputerze
-   z Cloudflare Tunnel albo na Fly.io z usypianiem za grosze — zadania
-   zapisuje na dysku, więc uśpienie i wybudzenie nic nie gubi; patrz
-   `services/caption-burner/README.md`. Pipeline po zakończeniu renderu
-   HeyGena bierze **czysty master** (`video_url` HeyGena → `video_url_clean`)
-   i **nasz SRT** (`subtitle_url`), z SRT buduje ASS w wybranym stylu
-   (`srtToAss`: cięcie kwestii do maks. 1–2 wierszy po N znaków, wyrównanie
-   dwóch wierszy, opcjonalne wielkie litery i podświetlanie słowa), wysyła
-   zadanie do usługi i przechodzi w status **`captioning`**. Kolejne
-   odpytanie (panel co 15 s, tick co 10 min) pobiera gotowy MP4, zapisuje go
-   w buckecie `studio-media` (**trwały link** — linki HeyGena wygasają po
-   ~7 dniach) i dopiero wtedy ustawia `ready` + auto-publikację.
+   FFmpega ani Chromium, więc obraz wykańcza **Remotion Lambda**
+   (`services/remotion`, kompozycja `StudioReel`) — od 24.10.2026 JEDYNY
+   silnik wykończenia (usługa FFmpeg caption-burner i napisy HeyGena
+   usunięte). Pipeline po zakończeniu renderu HeyGena bierze **czysty master**
+   (`video_url` HeyGena → `video_url_clean`) i **nasz SRT** (`subtitle_url`),
+   buduje plan rolki (`studio-reel-plan.ts`: cięcie kwestii do maks. 1–2
+   wierszy po N znaków, wyrównanie dwóch wierszy, opcjonalne wielkie litery
+   i podświetlanie słów, znaczek „AI”, nakładki, hook, kadrowanie), zleca
+   render na Lambdzie (`remotion-render.server.ts`, id renderu
+   `remotion:<bucket>:<renderId>` w `caption_burn_id`) i przechodzi w status
+   **`captioning`**. Kolejne odpytanie (panel co 15 s, tick co 10 min) pobiera
+   gotowy MP4 z S3, zapisuje go w buckecie `studio-media` (**trwały link** —
+   linki HeyGena wygasają po ~7 dniach), sprząta render w S3 i dopiero wtedy
+   ustawia `ready` + auto-publikację.
 
    **Nie ma wersji zapasowej z napisami HeyGena.** Decyzje
    (`planCaptionBurn` / `resolveCaptionBurn` w `studio-captions.ts`, testy):
@@ -401,31 +330,22 @@ Zakładki panelu:
    zamówiony. Kolumny: `caption_style` (`heygen` tylko w starych wierszach),
    `caption_burn_id`, `caption_burn_started_at`, `caption_burn_attempts`.
 
-   **Silnik wykończenia** (`studio_video_jobs.render_engine`): `caption_burner`
-   (opisany wyżej FFmpeg + ASS) albo `remotion` — kompozycja `StudioReel` na
-   AWS Lambda (`services/remotion`). Wybór per zadanie: select „Wykończenie”
-   w panelu, `render_engine` w `create_studio_video_job` / `update_studio_job`;
-   `auto` (domyślne) = `STUDIO_RENDER_ENGINE`, bez niego caption-burner.
-   Inne stare wartości kolumny (np. `avatar_iv`) liczą się jak `auto`.
-   HeyGen i ElevenLabs działają tak samo — silnik dotyczy tylko etapu po
-   renderze. Remotion rysuje ten sam wygląd co ASS: plan (porcje napisów,
-   podświetlanie słów, czasy nakładek, geometria kart) liczy
-   `studio-reel-plan.ts` z tych samych funkcji co `srtToAss`, kompozycja tylko
-   go rysuje. Id renderu trafia do `caption_burn_id` z prefiksem
-   `remotion:<bucket>:<renderId>`, więc statusy, limit czasu, ponowienia
-   i „Zmień napisy…” działają bez zmian; wynik z S3 kopiujemy do
-   `studio-media` i sprzątamy render w S3.
+   **Jeden silnik wykończenia.** Kolumna `studio_video_jobs.render_engine`
+   została w bazie dla starych wierszy, ale kod jej nie czyta — każde
+   zadanie wykańcza Remotion. HeyGen i ElevenLabs działają jak dotąd;
+   silnik dotyczy tylko etapu po renderze. Wygląd napisów liczy
+   `studio-reel-plan.ts` z tych samych funkcji co referencyjny generator ASS
+   w `caption-style.ts` (testy porównują porcje), kompozycja tylko go rysuje.
 
    **Bramka przed HeyGenem.** Zanim zlecimy render (panel, kolejka/tick,
-   `create_studio_video_job` z `start_now`), sprawdzamy silnik: caption-burner
-   — `GET /health` (limit 45 s, Fly budzi maszynę), Remotion — komplet
-   sekretów. Gdy silnik nie działa, kredyty HeyGena nie są zużywane: zadanie
+   `create_studio_video_job` z `start_now`), sprawdzamy komplet sekretów
+   `REMOTION_*`. Gdy silnik nie działa, kredyty HeyGena nie są zużywane: zadanie
    zostaje w `queued` z powodem w `last_error` i rusza w pierwszym ticku, gdy
    silnik wróci (odpowiedź MCP i ticka ma pole `deferred`).
 
    **Zmiana napisów gotowego filmu** — w bibliotece przy gotowym wideo select
    „Zmień napisy…" (także `restyle_studio_job_captions` w MCP): czysty master
-   - nasz SRT lecą do usługi w nowym stylu, poprzedni plik zostaje do czasu
+   - nasz SRT lecą do Remotion w nowym stylu, poprzedni plik zostaje do czasu
      sukcesu i wraca przy porażce. Nie publikuje ponownie. Działa dla filmów
      z ostatnich ~7 dni (potem link do czystego mastera HeyGena wygasa); dla
      starszych trzeba wygenerować rolkę od nowa.
@@ -660,10 +580,9 @@ Cały proces da się zlecić z czatu (konektor MCP), a efekt widać w panelu:
    w Studiu (`/admin/studio-publikacji`).
 2. Render, napisy i znaczek domyka tick Studia albo `poll_studio_jobs`
    (`get_studio_job` pokazuje postęp). Napisy domyślnie jak w panelu: własny
-   styl `reels` z naszego renderera (caption-burner), gdy usługa jest
-   skonfigurowana (`defaultCaptionStyle`); `heygen` tylko na wyraźną prośbę.
-   Import filmu spoza Studia też dostaje napisy z renderera — z pliku napisów
-   HeyGena (SRT, WebVTT albo ASS) na czystym masterze.
+   styl `reels`, wypala Remotion (`defaultCaptionStyle`); napisów HeyGena nie
+   ma. Import filmu spoza Studia też dostaje napisy z Remotion — z pliku
+   napisów HeyGena (SRT, WebVTT albo ASS) na czystym masterze.
 3. Gotowa rolka **sama trafia do biblioteki materiałów** (`/admin/materialy`):
    plik kopiujemy do bucketu `marketing-materials` pod stałą ścieżką
    `studio/<id joba>.mp4` (trwale — linki HeyGena wygasają po ~7 dniach)
@@ -689,20 +608,20 @@ pośrednika — gotowa rolka jest tam od razu, zanim ktoś ją opublikuje.
 Każda rolka Studia dostaje w prawym górnym rogu mały znaczek **„AI"**
 (półprzezroczysta pigułka z białym napisem, 64×36 px w kadrze 720×1280,
 140 px od góry — poniżej ikonek aplikacji, powyżej przycisków polubień).
-Znaczek jest częścią pliku ASS, który wypala usługa `caption-burner`
-(`aiBadgeEvents` / `aiBadgeAss` w `src/lib/caption-style.ts`), więc sama
-usługa nie wymaga zmian. HeyGen nie ma warstw, na których dałoby się go położyć.
+Znaczek jest częścią planu rolki (`AI_BADGE` w `src/lib/caption-style.ts`,
+plan w `studio-reel-plan.ts`) — rysuje go kompozycja `StudioReel` w Remotion.
+HeyGen nie ma warstw, na których dałoby się go położyć.
 
 Jak trafia na film (`settleHeygenCompletion`):
 
 - **napisy własne** (reels / tiktok / box / minimal) — znaczek jedzie tym samym
-  przebiegiem co napisy, bez dodatkowego kosztu;
-- **napisy HeyGena albo bez napisów** — po renderze (i karencji na wersję
-  z napisami) plik HeyGena idzie do usługi jeszcze raz, tylko po znaczek
-  (`planBadgeBurn`, status „captioning"; `caption_style` zostaje `heygen`);
-- **porażka** (usługa nie odpowiada, błąd FFmpega, limit czasu) — jedno
+  renderem co napisy, bez dodatkowego kosztu;
+- **bez napisów** — po renderze HeyGena plik idzie do Remotion tylko po znaczek
+  i nakładki (`planBadgeBurn`, status „captioning");
+- **porażka** (Lambda nie przyjęła zlecenia, błąd renderu, limit czasu) — jedno
   ponowienie, potem publikacja pliku HeyGena bez znaczka z adnotacją
-  „Znaczek AI nieudany…" w `last_error`; brak usługi = „Znaczek AI pominięty…".
+  „Znaczek AI nieudany…" w `last_error`; brak sekretów Remotion = „Znaczek AI
+  pominięty…".
 
 Zmiana napisów gotowego filmu (`restyle_studio_job_captions`) też dokłada
 znaczek; `video_url_clean` zostaje czystym masterem bez znaczka, żeby nowe

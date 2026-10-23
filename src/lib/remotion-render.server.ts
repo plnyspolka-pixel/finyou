@@ -1,8 +1,17 @@
-// Klient Remotion Lambda (services/remotion) — silnik wykończenia rolki
-// `remotion`: kompozycja `StudioReel` kładzie na czysty master HeyGena
-// napisy, znaczek „AI" i nakładki według planu z studio-reel-plan.ts.
-// Zastępuje wtedy caption-burner (FFmpeg) — reszta potoku Studia (HeyGen,
-// ElevenLabs, statusy `captioning` → `ready`, ponowienia) zostaje ta sama.
+// Klient Remotion Lambda (services/remotion) — JEDYNY silnik wykończenia
+// rolek Studia (decyzja właściciela 24.10.2026: bez usługi FFmpeg
+// caption-burner i bez napisów HeyGena). Kompozycja `StudioReel` kładzie na
+// czysty master HeyGena napisy, znaczek „AI", nakładki dynamiczne, hook
+// wizualny i kadrowanie według planu z studio-reel-plan.ts. Reszta potoku
+// Studia (HeyGen, ElevenLabs, statusy `captioning` → `ready`, ponowienia)
+// siedzi w studio-video-queue.server.ts.
+//
+// Ustawienia wykończenia (env):
+//   STUDIO_AI_BADGE         — `0` / `off` wyłącza znaczek „AI" w rogu rolek
+//                             (domyślnie włączony; bez etykiety tekstowej)
+//   STUDIO_DYNAMIC_OVERLAYS — `0` / `off` wyłącza nakładki dynamiczne
+//                             (znacznik kategorii, duże pytanie, karty,
+//                             elementy motion; domyślnie włączone)
 //
 // Konfiguracja (sekrety środowiska):
 //   REMOTION_AWS_ACCESS_KEY_ID / REMOTION_AWS_SECRET_ACCESS_KEY — klucz
@@ -15,7 +24,7 @@
 
 import type { DynamicOverlays, CustomCaptionStyleId } from "./caption-style";
 import { fetchBytes, storeMedia, type StoredMedia } from "./media-storage.server";
-import { parseRemotionJobId, remotionJobId } from "./studio-render-engine";
+import { parseRemotionJobId, remotionJobId } from "./remotion-job-id";
 import { buildReelPlan, type ReelFramingInput } from "./studio-reel-plan";
 import type { StudioHook } from "./studio-hook";
 import { AwsClient } from "aws4fetch";
@@ -57,6 +66,43 @@ export function getRemotionEnv(): RemotionEnv {
 }
 
 export const isRemotionConfigured = (): boolean => getRemotionEnv().configured;
+
+/**
+ * Czy rolki dostają znaczek „AI" w rogu. Domyślnie tak — dyskretna pigułka
+ * (bez etykiety tekstowej); `STUDIO_AI_BADGE=0` wyłącza.
+ */
+export function isAiBadgeEnabled(): boolean {
+  const v = (process.env.STUDIO_AI_BADGE ?? "").trim().toLowerCase();
+  return !["0", "false", "off", "no", "nie"].includes(v);
+}
+
+/**
+ * Czy rolki dostają nakładki dynamiczne (znacznik kategorii, duże pytanie,
+ * karty, elementy motion). Domyślnie tak; `STUDIO_DYNAMIC_OVERLAYS=0` wyłącza.
+ */
+export function isDynamicOverlaysEnabled(): boolean {
+  const v = (process.env.STUDIO_DYNAMIC_OVERLAYS ?? "").trim().toLowerCase();
+  return !["0", "false", "off", "no", "nie"].includes(v);
+}
+
+/**
+ * Bramka przed renderem HeyGena: render kosztuje kredyty, a bez sekretów
+ * Remotion rolka nie dostałaby napisów ani znaczka — więc konfigurację
+ * sprawdzamy PRZED zleceniem. Lambdy nie odpytujemy (zimny start zdarza
+ * się dopiero przy renderze i nic nie kosztuje).
+ */
+export function remotionPreflight(): { ok: true } | { ok: false; reason: string } {
+  const env = getRemotionEnv();
+  return env.configured
+    ? { ok: true }
+    : {
+        ok: false,
+        reason: `Remotion Lambda nie jest skonfigurowany (brak: ${env.missing.join(", ")})`,
+      };
+}
+
+export const REMOTION_GUARD_NOTE =
+  "Render w HeyGen nie został zlecony (kredyty nie zużyte) — zadanie czeka w kolejce i ruszy przy pierwszym ticku Studia, gdy sekrety REMOTION_* będą ustawione.";
 
 function requireEnv(): RemotionEnv {
   const env = getRemotionEnv();
@@ -290,7 +336,7 @@ export async function getRemotionRenderStatus(id: string): Promise<RemotionStatu
   };
 }
 
-/** Gotowy MP4 z S3 → publiczny bucket `studio-media` (jak wynik caption-burnera). */
+/** Gotowy MP4 z S3 → publiczny bucket `studio-media` (trwały link do publikacji). */
 export async function storeRemotionResult(id: string, name: string): Promise<StoredMedia> {
   const s = await getRemotionRenderStatus(id);
   if (s.status !== "done" || !s.outputFile) {

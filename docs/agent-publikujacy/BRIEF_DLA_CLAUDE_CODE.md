@@ -34,7 +34,7 @@ Optymalizujemy cały proces: koszt i czas produkcji, jakość pierwszych sekund,
 
 ### 2.3 Technika i marka
 - **Rozbudowa, nie nowy system** – patrz sekcja 3a.
-- **Studio publikacji to jedyna droga do wideo** (`create_studio_video_job`); napisy zawsze z naszego renderera (caption-burner / Remotion).
+- **Studio publikacji to jedyna droga do wideo** (`create_studio_video_job`); napisy zawsze z naszego renderera (Remotion — jedyny silnik wykończenia).
 - **Awatary: HeyGen, głos i audio: ElevenLabs** (decyzja Filipa 19.10.2026). Bez innych dostawców awatarów.
 - Marka: Finance You. Liczby dozwolone w komunikacji: ok. 15 lat na rynku finansowania pozabankowego, ok. 12 stałych partnerów finansowych, tysiące przeanalizowanych tematów, setki obsłużonych klientów, ponad 100 wypłaconych pożyczek. **Nigdy: łączna wartość kapitału, stopy zwrotu, oprocentowanie jako obietnica.**
 - Priorytet systemu: poprawność, audytowalność, idempotencja, RLS – ponad skalowalność. Każda decyzja agenta logowana w `ai_growth_action_log`.
@@ -42,7 +42,7 @@ Optymalizujemy cały proces: koszt i czas produkcji, jakość pierwszych sekund,
 ## 3. Stan obecny (sprawdzony 19.10.2026 przez MCP)
 
 **Produkcja (Studio publikacji):**
-- Pipeline: prompt/`question_id` (bank 250 pytań) → scenariusz AI → głos ElevenLabs „Głos Filipa” (`voice_id 9STbwZjpEbcYG88ZekIQ`, model `eleven_v4`) → awatary HeyGen Filipa (2 twarze na rolkę, rotacja z zestawu domyślnego) → ujęcie → przebitka B-roll → druga twarz → napisy caption-burner (styl `reels`) lub Remotion → znaczek „AI” → biblioteka materiałów → kolejka publikacji.
+- Pipeline: prompt/`question_id` (bank 250 pytań) → scenariusz AI → głos ElevenLabs „Głos Filipa” (`voice_id 9STbwZjpEbcYG88ZekIQ`, model `eleven_v4`) → awatary HeyGen Filipa (2 twarze na rolkę, rotacja z zestawu domyślnego) → ujęcie → przebitka B-roll → druga twarz → wykończenie w Remotion (napisy styl `reels`, znaczek „AI”, nakładki, hook) → biblioteka materiałów → kolejka publikacji.
 - Komponenty motion Remotion: stat, range, threshold, versus, checklist, steps, keyword, mythFact, alert, cta.
 - Bank B-roll: grafiki dobierane po tagach, rotacja najdawniej użytych.
 - 35 zadań w stanie `ready`, kilka gotowych rolek nieopublikowanych.
@@ -68,7 +68,7 @@ Optymalizujemy cały proces: koszt i czas produkcji, jakość pierwszych sekund,
 | Obszar | Co już istnieje | Jak rozbudować |
 |---|---|---|
 | Agent i silnik wzrostu | `ai_growth_settings`, `ai_growth_action_log`, moduły `growth_agent`, `agent_owner` (SMS), `seo_content_engine`; tryby `off / manual_review / semi_auto / full_autopilot`, budżet AI | Nowy moduł wideo/kanału/lead magnetów w tym samym agencie i dzienniku; `full_autopilot`; **dwa profile odbiorców** (pożyczkobiorca, inwestor) z osobną grupą docelową, CTA i budżetem – obecne ustawienia stają się profilem „pożyczkobiorca”. |
-| Produkcja | `studio_video_jobs`, `studio_settings`, `studio_default_avatars`, `studio_broll_assets`, `studio_images`, `video_pipeline`, `video_renditions`; caption-burner, Remotion; `create_studio_video_job`, `generate_studio_script`, `set_studio_motion`, `restyle_studio_job_captions` | Hook wizualny, etykieta AI, pętla, warianty wykonania hooka, koszt per rolka, optymalizacja HeyGen. |
+| Produkcja | `studio_video_jobs`, `studio_settings`, `studio_default_avatars`, `studio_broll_assets`, `studio_images`, `video_pipeline`; Remotion (jedyny silnik wykończenia); `create_studio_video_job`, `generate_studio_script`, `set_studio_motion`, `restyle_studio_job_captions` | Hook wizualny, etykieta AI, pętla, warianty wykonania hooka, koszt per rolka, optymalizacja HeyGen. |
 | Bank treści | baza 250 pytań (`question_id`), `training_videos`, `avatar_faqs` | Bank do gruntownej przebudowy (5.1a) – automatycznie, na dwa tory. |
 | Materiały | `marketing_materials` (klient / inwestor / pośrednik) | `material_audience` zgodnie z torem (`klient` dla pożyczkobiorców, `inwestor`). |
 | Publikacja | `social_publish_queue`, `youtube_publish_queue`, `social_posts`, integracje YT/TikTok/X; `queue_social_publication`, `publish_studio_job`, `run_publish_tick` | Sloty per tor, natywne podpisy, opis-lejek, naprawy z Etapu 0. |

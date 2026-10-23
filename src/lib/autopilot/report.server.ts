@@ -12,13 +12,7 @@ import {
   type TrackReport,
 } from "./metrics";
 import { loadAutopilotConfig, logAutopilot, reportPeriodLabel, smsOwner } from "./state.server";
-import {
-  AUTOPILOT_LOG_MODULE,
-  STUDIO_FINISHER_FALLBACK_ACTION,
-  TRACKS,
-  TRACK_TO_AUDIENCE,
-  type Track,
-} from "./types";
+import { AUTOPILOT_LOG_MODULE, TRACKS, TRACK_TO_AUDIENCE, type Track } from "./types";
 
 const db = supabaseAdmin as unknown as { from: (t: string) => any };
 
@@ -127,7 +121,6 @@ export async function buildAutopilotReport(opts: { now?: Date; days: number }): 
     .slice(0, 3)
     .map((a) => String(a.summary));
 
-  const { production } = productionNotes(actionRows);
   const input: ReportInput = {
     periodLabel:
       opts.days <= 1 ? reportPeriodLabel(now) : `${opts.days} dni do ${reportPeriodLabel(now)}`,
@@ -136,7 +129,6 @@ export async function buildAutopilotReport(opts: { now?: Date; days: number }): 
     changes,
     alarms,
     paused: cfg.state.paused,
-    production,
   };
   return { input, text: buildReportText(input), sms: buildReportSms(input) };
 }
@@ -158,15 +150,4 @@ export async function runScheduledReport(kind: "daily" | "weekly", now: Date = n
     ? await smsOwner(r.sms, "report")
     : { sent: false, reason: "Autopilot nieaktywny – raport tylko w dzienniku." };
   return { ...r, sms };
-}
-
-/** Wpisy Studia z dziennika → sekcja „Produkcja” raportu. */
-export function productionNotes(actions: Array<{ action?: string; summary?: string }>): {
-  production: string[];
-} {
-  const production: string[] = [];
-  if (actions.some((x) => x.action === STUDIO_FINISHER_FALLBACK_ACTION)) {
-    production.push("caption-burner nie odpowiada — rolki wykańcza automatycznie Remotion");
-  }
-  return { production };
 }

@@ -185,14 +185,5 @@ export async function enqueuePublication(
     }
   }
 
-  // Kompresja przed publikacją: zakładamy rendition od razu (tani wiersz,
-  // zlecenie robi tick), żeby plik był gotowy przed terminem. Nieudane
-  // założenie nie psuje kolejkowania — publikator i tak sprawdzi sam.
-  if (videoUrl) {
-    const { requestVideoRendition } = await import("./video-rendition.server");
-    await requestVideoRendition(videoUrl).catch((e) =>
-      console.warn(`[renditions] ${e instanceof Error ? e.message : String(e)}`),
-    );
-  }
   return result;
 }

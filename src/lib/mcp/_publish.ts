@@ -45,11 +45,6 @@ export type PublishOutcome = {
   ok: boolean;
   /** Plik wysłany, platforma przetwarza (IG / TikTok / X wideo) — tick domknie. */
   processing: boolean;
-  /**
-   * Wideo jeszcze się kompresuje do profilu publikacji (video_renditions) —
-   * wpis został w kolejce, tick opublikuje go po zakończeniu.
-   */
-  preparing: boolean;
   external_id: string | null;
   error: string | null;
 };
@@ -72,7 +67,6 @@ export async function processQueuedNow(
           platform: s.platform,
           ok: r.ok,
           processing: !!r.processing,
-          preparing: !!r.preparing,
           external_id: r.publishId ?? null,
           error: r.error ?? null,
         };
@@ -85,7 +79,6 @@ export async function processQueuedNow(
           platform: s.platform,
           ok: r.ok,
           processing: !!r.processing,
-          preparing: !!r.preparing,
           external_id: r.postId ?? null,
           error: r.error ?? null,
         };
@@ -97,7 +90,6 @@ export async function processQueuedNow(
         platform: s.platform,
         ok: r.ok,
         processing: !!r.processing,
-        preparing: !!r.preparing,
         external_id: r.externalId ?? null,
         error: r.error ?? null,
       };
@@ -107,7 +99,6 @@ export async function processQueuedNow(
         platform: s.platform,
         ok: false,
         processing: false,
-        preparing: false,
         external_id: null,
         error: (e as Error).message,
       };
@@ -122,7 +113,6 @@ export async function processQueuedNow(
         platform: "youtube",
         ok: r.ok,
         processing: false,
-        preparing: !!r.preparing,
         external_id: r.videoId ?? null,
         error: r.error ?? null,
       };
@@ -132,7 +122,6 @@ export async function processQueuedNow(
         platform: "youtube",
         ok: false,
         processing: false,
-        preparing: false,
         external_id: null,
         error: (e as Error).message,
       };
