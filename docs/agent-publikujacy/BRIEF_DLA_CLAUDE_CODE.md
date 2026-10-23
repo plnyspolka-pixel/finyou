@@ -143,10 +143,10 @@ Pełne dane w `raporty/`.
 - **Hook wizualny i B-roll**: modele wideo/obrazu ElevenLabs (ElevenCreative) – biblioteka generowana i odświeżana automatycznie, zapis do banku B-roll z tagami per tor; limit powtórzeń.
 - **ElevenLabs Recast**: tylko ilustracyjne sceny B-roll, oznaczone jako AI; nigdy postać mówiąca o pieniądzach.
 - **Muzyka i SFX**: bank z ElevenLabs, przypisany do serii.
-- **Remotion**: segment hooka wizualnego 0–1,5 s, etykieta „Treść wygenerowana przez AI” w 1. sekundzie + znaczek przez całość, pętla, komponenty motion sterowane planem, linia ryzyka (`alert`) w treściach o pieniądzach.
+- **Remotion**: segment hooka wizualnego 0–1,5 s, znaczek „AI” przez całość (etykieta tekstowa „Treść wygenerowana przez AI” w 1. sekundzie wycofana decyzją właściciela 23.10.2026 — nie dokładać), pętla, komponenty motion sterowane planem, linia ryzyka (`alert`) w treściach o pieniądzach.
 - Długość 30–45 s (20–60); kompresja pod limity platform (X 67 MB, FB 60 MB).
 - Koszt na publikację (TTS, HeyGen, wideo-AI, LLM) w panelu.
-- **Kontrola jakości automatyczna**: po renderze transkrypcja Scribe i porównanie ze scenariuszem (zgodność słów, brak przekłamań liczb), detekcja pustych/czarnych klatek, zgodność długości i rozmiaru, obecność etykiety AI. Błąd → ponowienie lub odrzucenie, bez człowieka.
+- **Kontrola jakości automatyczna**: po renderze transkrypcja Scribe i porównanie ze scenariuszem (zgodność słów, brak przekłamań liczb), detekcja pustych/czarnych klatek, zgodność długości i rozmiaru, obecność znaczka „AI”. Błąd → ponowienie lub odrzucenie, bez człowieka.
 
 ### 5.3 Dystrybucja
 - Naprawy z Etapu 0 (FB Reels, wiszące publikacje, TikTok audit, X, SEO 2024).
@@ -203,7 +203,7 @@ Każda treść (scenariusz, napisy, tytuł, opis, odpowiedź na komentarz, mail,
    - wspólne: „gwarant*”, „bez ryzyka”, „pewny/bezpieczny zysk”, „minimalne ryzyko”, „stabilne zyski”, konkretne % zwrotu lub oprocentowania jako obietnica, „podwój”, superlatywy bez pokrycia, zaproszenia do zamkniętych grup/klubów w treściach awatara, logotypy i nazwy instytucji (KNF, banki) jako rekomendacja, „to nie jest porada” jako jedyne zastrzeżenie, ceny w wideo, dane osobowe/identyfikujące klientów;
    - tor pożyczkobiorcy: kierowanie do konsumentów (cel inny niż gospodarczy), „dla każdego”, „bez sprawdzania”, „100% decyzji pozytywnych”, „bez BIK/bez zdolności” jako obietnica, presja czasu wobec osób w trudnej sytuacji, koszt/oprocentowanie jako hasło;
    - tor inwestora: obietnice zwrotu, gwarancja odkupu, „drukarka do pieniędzy” bez zdania równoważącego ryzyko, „sam też inwestuję” jako wabik.
-2. **Elementy obowiązkowe**: etykieta AI w 1. sekundzie i znaczek przez całość, oznaczenie AI w opisie i flagi platform (YouTube altered/synthetic, Meta AI info, TikTok AIGC), linia ryzyka w treściach o pieniądzach, identyfikacja nadawcy (Finance You, KRS) w opisie, oznaczenie autopromocji tam, gdzie wymagane.
+2. **Elementy obowiązkowe**: znaczek „AI” przez całość (bez etykiety tekstowej w 1. sekundzie — wycofana decyzją właściciela 23.10.2026), oznaczenie AI w opisie i flagi platform (YouTube altered/synthetic, Meta AI info, TikTok AIGC), linia ryzyka w treściach o pieniądzach, identyfikacja nadawcy (Finance You, KRS) w opisie, oznaczenie autopromocji tam, gdzie wymagane.
 3. **Recenzent LLM niezależny od autora** (inny model / osobny prompt) ocenia ryzyko (wprowadzanie w błąd, obietnice, ton wobec osób w trudnej sytuacji, zgodność z torem) i zwraca konkretne poprawki.
 4. **Pętla naprawcza**: autor przepisuje według uwag (maks. 3 iteracje); jeśli nadal nie przechodzi – treść jest odrzucana, temat wraca do banku z adnotacją, agent bierze kolejny. **Nic nie czeka na człowieka.**
 5. **Po publikacji**: monitoring komentarzy i sygnałów platform (ostrzeżenia, usunięcia, ograniczenia zasięgu, fala negatywnych komentarzy) → automatyczne ukrycie/usunięcie publikacji, pauza serii i SMS do Filipa.

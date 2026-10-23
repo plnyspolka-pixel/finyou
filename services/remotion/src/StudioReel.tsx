@@ -235,40 +235,6 @@ const Badge: React.FC<{ spec: NonNullable<ReelPlan["badge"]>; k: Scale; width: n
   </div>
 );
 
-/** Etykieta „Treść wygenerowana przez AI” w pierwszych sekundach (AI Act art. 50). */
-const BadgeIntro: React.FC<{
-  spec: NonNullable<ReelPlan["badge"]>;
-  k: Scale;
-  width: number;
-  t: number;
-}> = ({ spec, k, width, t }) => {
-  const intro = spec.intro;
-  if (!intro || t >= intro.seconds) return null;
-  const opacity = interpolate(t, [intro.seconds - 0.3, intro.seconds], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  return (
-    <div
-      style={{
-        position: "absolute",
-        right: spec.marginRight * k.x,
-        top: (spec.marginTop + spec.height + 8) * k.y,
-        maxWidth: width * 0.8,
-        textAlign: "right",
-        fontFamily,
-        fontWeight: 700,
-        fontSize: intro.fontSize * k.y,
-        color: spec.textColor,
-        textShadow: `0 0 ${3 * k.y}px rgba(0,0,0,0.85), 0 ${1 * k.y}px ${2 * k.y}px rgba(0,0,0,0.85)`,
-        opacity,
-      }}
-    >
-      {intro.text}
-    </div>
-  );
-};
-
 // ── Nakładki dynamiczne ─────────────────────────────────────────────────────
 
 type Overlays = NonNullable<ReelPlan["overlays"]>;
@@ -540,7 +506,6 @@ export const StudioReel: React.FC<StudioReelProps> = ({ videoUrl, plan }) => {
       {plan?.hook ? <HookMusic hook={plan.hook} /> : null}
       {/* Znaczek i etykieta AI zawsze na wierzchu — także nad hookiem (AI Act art. 50). */}
       {plan?.badge ? <Badge spec={plan.badge} k={k} width={width} /> : null}
-      {plan?.badge ? <BadgeIntro spec={plan.badge} k={k} width={width} t={t} /> : null}
     </AbsoluteFill>
   );
 };
