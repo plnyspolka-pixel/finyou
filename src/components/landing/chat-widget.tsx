@@ -89,13 +89,13 @@ export function ChatWidget({ source = "landing", endpoint, subtitle = "asystentk
   }
 
   return (
-    <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-3 z-50 sm:right-5">
+    <div className="fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-50 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:right-5">
       {!open ? (
         <Button onClick={() => setOpen(true)} aria-label="Otwórz rozmowę z Anią" className="h-12 gap-2 rounded-full px-4 shadow-lg">
           <MessageCircle className="h-5 w-5" /> Ania
         </Button>
       ) : (
-        <section aria-label="Rozmowa z Anią" data-conversation-id={conversationId} className="flex h-[min(560px,calc(100dvh-9rem))] w-[min(380px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-2xl">
+        <section aria-label="Rozmowa z Anią" data-conversation-id={conversationId} className="flex h-[min(560px,calc(100dvh-12rem))] w-[min(380px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-2xl">
           <header className="flex shrink-0 items-center gap-3 border-b border-border p-3">
             <img src={mark.url} alt="Finance You" className="h-10 w-10 object-contain" />
             <div className="min-w-0 flex-1"><h2 className="font-semibold">Ania</h2><p className="text-xs text-muted-foreground">{subtitle}</p></div>

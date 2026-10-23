@@ -33,6 +33,7 @@ export function createAniaSession(options: {
     if (active) return Promise.resolve(active);
     if (connecting) return connecting;
     let firstResponse = true;
+    const reconnecting = hasGreeting;
     connecting = startVoiceConversation(
       { surface: options.surface, dynamicVariables: options.dynamicVariables, mode: "text" },
       {
@@ -68,7 +69,7 @@ export function createAniaSession(options: {
       if (stopped) { session.stop(); throw new Error("Rozmowa zakończona."); }
       active = session;
       retry = 0;
-      if (history.length) {
+      if (reconnecting && history.length) {
         session.sendContext(`Poprzednia część tej rozmowy (po ponownym połączeniu):\n${history.join("\n").slice(-12000)}`);
       }
       await session.setMode(mode);
