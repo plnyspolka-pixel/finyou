@@ -280,6 +280,8 @@ export async function startVoiceConversation(
         if (meta.conversation_id) handlers.onConversationId?.(meta.conversation_id);
         void playCtx?.resume().catch(() => {});
         setState("listening");
+        clearTimeout(readyTimer);
+        resolveReady();
         break;
       }
       case "audio": {
