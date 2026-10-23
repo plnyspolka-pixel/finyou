@@ -170,5 +170,8 @@ describe("produkcja — hasło i tytuł rolki", () => {
     expect(long.length).toBeLessThanOrEqual(100);
     expect(long.endsWith("Napisz KSIĘGA")).toBe(true);
     expect(publishTitleWithKeyword("Tytuł", null)).toBe("Tytuł");
+    expect(publishTitleWithKeyword("Zobacz alternatywne rozwiązania", "ODMOWA")).toBe(
+      "Zobacz alternatywne rozwiązania. Napisz ODMOWA",
+    );
   });
 });
