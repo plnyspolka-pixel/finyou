@@ -90,7 +90,9 @@ opublikowanych (`ready-reels.server.ts`):
    Brak slotu → rolka wraca w kolejnym ticku.
 6. Po publikacji (tick Meta / YouTube) wpis z `lead_magnet_id` jest automatycznie wiązany z postem
    w `lead_magnet_posts` (`linkPublishedPost`), więc komentarz z hasłem od razu dostaje link.
-   Rolki z zapasu sprzed Etapu 1, oznaczone `compliance_status = 'archived'`, autopilot pomija.
+   Rolki z zapasu sprzed Etapu 1 (duplikaty, testy, opublikowane inną ścieżką) dostały
+   `compliance_status = 'rejected'` z notatką w `last_error` — autopilot je pomija; żeby któraś
+   wróciła do obiegu, wyczyść `compliance_status` i przypisz tor w panelu.
 
 ## Hook wizualny rolek Studia (21.10.2026)
 
