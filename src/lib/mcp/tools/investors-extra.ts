@@ -18,7 +18,7 @@ import { defineListTool, flag, since, text, uuid } from "../_list-tool";
 const ADMIN_ONLY = ["administrator"] as const;
 
 const INVESTOR_SAFE =
-  "id, first_name, last_name, company_name, email, phone, investor_type, entity_type, legal_form, nip, krs, regon, city, postal_code, country, representative_first_name, representative_last_name, representative_role, is_active, subscription_plan, subscription_status, subscription_active_until, subscription_source, web2learn_status, user_id, created_at, updated_at";
+  "id, first_name, last_name, company_name, email, phone, investor_type, entity_type, legal_form, nip, krs, regon, city, postal_code, country, representative_first_name, representative_last_name, representative_role, is_active, sof_status, sof_declared_at, subscription_plan, subscription_status, subscription_active_until, subscription_source, web2learn_status, user_id, created_at, updated_at";
 
 export const getInvestor = defineTool({
   name: "get_investor",
