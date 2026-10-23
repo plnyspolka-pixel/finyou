@@ -185,10 +185,11 @@ const startInwestora = defineMagnet({
   stage: "swiadomosc",
   series: ["czy-wiesz-ze", "bank-vs-ty", "dzien-x-ze-100"],
   title: "Jak zarabiać na nieruchomościach jak bank – przewodnik startowy inwestora",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
   headline:
-    "Zarabiaj na nieruchomościach tak, jak robią to banki – bez kupowania, remontów i najemców",
+    "Pobierz przewodnik startowy. Zarabiaj na nieruchomościach jak bank – bez kupowania, remontów i najemców.",
   subheadline:
-    "Bezpłatny przewodnik PDF dla prywatnych inwestorów: jak działa pożyczka zabezpieczona hipoteką, co chroni Twój kapitał, gdzie są ryzyka i od czego zacząć.",
+    "Zanim zaangażujesz pierwszą złotówkę, dowiedz się, co naprawdę chroni Twój kapitał, gdzie czyha ryzyko i od czego zacząć. Czyta się w jeden wieczór.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Zrozumiesz, jak zarabia się na nieruchomości, której nigdy nie kupisz – i dlaczego banki robią to od dekad",
@@ -197,7 +198,7 @@ const startInwestora = defineMagnet({
     "Rozszyfrujesz 12 pojęć, przy których początkujący kiwają głową, choć ich nie rozumieją",
     "Wyjdziesz z planem na pierwsze 30 dni – od pierwszej rozmowy do pierwszej decyzji",
   ],
-  cta_text: "Wyślij mi przewodnik",
+  cta_text: "Pobierz przewodnik",
   meta_description:
     "Bezpłatny przewodnik dla inwestorów prywatnych: jak zarabiać na pożyczkach zabezpieczonych hipoteką jak bank – mechanizm, zabezpieczenia, ryzyka i pierwsze kroki.",
   thank_you_message:
@@ -493,10 +494,11 @@ const checklistaKsiegi = defineMagnet({
   stage: "przygotowanie",
   series: ["audyt-zabezpieczenia"],
   title: "Checklista księgi wieczystej: co sprawdzić przed pożyczką pod hipotekę",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
   headline:
-    "Księga wieczysta w 20 minut: checklista, która wyłapie wady zabezpieczenia, zanim zaangażujesz kapitał",
+    "Pobierz checklistę księgi wieczystej. Wyłap wady zabezpieczenia w 20 minut, zanim zaangażujesz kapitał.",
   subheadline:
-    "Dział po dziale: co czytać, jakie wpisy są sygnałem ostrzegawczym i o co dopytać, zanim podpiszesz umowę. Do wydruku i odhaczenia przy każdej transakcji.",
+    "Jeden wpis w dziale III albo IV może zamienić dobre zabezpieczenie w kłopot. Ta lista pokaże Ci, gdzie patrzeć i o co dopytać, zanim podpiszesz cokolwiek.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Sprawdzisz księgę wieczystą w 20 minut, bez prawnika – i zrozumiesz, co właściwie widzisz",
@@ -505,7 +507,7 @@ const checklistaKsiegi = defineMagnet({
     "Zobaczysz tabelę sygnałów ostrzegawczych – i co zrobić, gdy któryś się pojawi",
     "Dowiesz się, o co zapytać pożyczkobiorcę i notariusza, zanim podpiszesz cokolwiek",
   ],
-  cta_text: "Wyślij mi checklistę",
+  cta_text: "Pobierz checklistę",
   meta_description:
     "Bezpłatna checklista księgi wieczystej dla inwestora: działy I–IV, wzmianki, hipoteki, służebności i sygnały ostrzegawcze przed udzieleniem pożyczki pod hipotekę.",
   thank_you_message:
@@ -721,10 +723,11 @@ const bledyInwestora = defineMagnet({
   stage: "decyzja",
   series: ["3-bledy-inwestora"],
   title: "7 błędów inwestora w pożyczkach pod hipotekę – i jak ich uniknąć",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
   headline:
-    "7 błędów, przez które inwestorzy tracą pieniądze w pożyczkach pod hipotekę – i prosta procedura, która przed nimi chroni",
+    "Pobierz 7 błędów inwestora. Dowiedz się, na czym inni stracili pieniądze – zanim powtórzysz ich błąd.",
   subheadline:
-    "Każdy błąd: jak go rozpoznać, co naprawdę kosztuje i co zrobić zamiast tego. Z przykładem liczbowym i listą kontrolną „przed decyzją” na końcu.",
+    "Każdy błąd ma sygnał ostrzegawczy, cenę i prostą procedurę, która go zatrzymuje. Na końcu 15 pytań, które zadasz sobie przed każdą decyzją.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Poznasz 7 błędów, przez które inwestorzy tracą pieniądze – i jak ich uniknąć, zanim podpiszesz umowę",
@@ -733,7 +736,7 @@ const bledyInwestora = defineMagnet({
     "Dowiesz się, co zrobić w pierwszym tygodniu opóźnienia, żeby nie stracić kontroli",
     "Dostaniesz 15 pytań „przed decyzją” – jeśli na któreś nie znasz odpowiedzi, nie wypłacaj pieniędzy",
   ],
-  cta_text: "Wyślij mi materiał",
+  cta_text: "Pobierz 7 błędów",
   meta_description:
     "7 błędów inwestora w pożyczkach zabezpieczonych hipoteką: wycena, księga wieczysta, LTV, umowa, weryfikacja pożyczkobiorcy, plan na opóźnienie, koncentracja. Bezpłatny PDF.",
   thank_you_message:
@@ -1075,9 +1078,11 @@ const bankOdmowil = defineMagnet({
   stage: "swiadomosc",
   series: ["bank-odmowil"],
   title: "Bank odmówił? 5 dróg do finansowania firmy pod nieruchomość",
-  headline: "Bank odmówił – co dalej? 5 realnych dróg do finansowania firmy, gdy masz nieruchomość",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
+  headline:
+    "Pobierz przewodnik „Bank odmówił – co dalej?”. Poznaj 5 realnych dróg do finansowania firmy, gdy masz nieruchomość.",
   subheadline:
-    "Dlaczego banki odmawiają, kto zamiast nich patrzy na Twoją nieruchomość, ile realnie możesz uzyskać i jakich ofert unikać. Bezpłatny przewodnik dla przedsiębiorców.",
+    "Odmowa banku nie zamyka tematu. Zobacz, kto zamiast banku patrzy na Twoją nieruchomość, ile realnie możesz uzyskać i jakich ofert unikać.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Zrozumiesz, dlaczego bank odmówił – i które z tych powodów nie mają znaczenia, gdy masz nieruchomość",
@@ -1087,7 +1092,7 @@ const bankOdmowil = defineMagnet({
     "Rozpoznasz 9 cech ofert, od których trzeba trzymać się z daleka",
     "Wyjdziesz z planem na 7 dni – co zrobić najpierw, żeby nie tracić czasu",
   ],
-  cta_text: "Wyślij mi przewodnik",
+  cta_text: "Pobierz przewodnik",
   meta_description:
     "Bank odmówił finansowania firmie? Bezpłatny przewodnik: 5 dróg do finansowania pod nieruchomość, LTV na przykładach, koszty i czerwone flagi ofert.",
   thank_you_message:
@@ -1359,9 +1364,11 @@ const checklistaDokumentow = defineMagnet({
   stage: "przygotowanie",
   series: ["3-bledy-finansowanie"],
   title: "Checklista dokumentów do finansowania pod zastaw nieruchomości",
-  headline: "Komplet dokumentów w 48 godzin: checklista, która skraca drogę od wniosku do wypłaty",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
+  headline:
+    "Pobierz checklistę dokumentów. Skompletuj wszystko w 48 godzin i skróć drogę od wniosku do wypłaty.",
   subheadline:
-    "Co przygotować dla firmy, nieruchomości, celu finansowania i osób – z podziałem na „konieczne” i „przyspiesza decyzję”. Do wydruku i odhaczenia.",
+    "Wiesz dokładnie, co przygotować dla firmy, nieruchomości i celu finansowania – i co jest naprawdę konieczne, a co tylko przyspiesza decyzję. Bez odsyłania dokumentów do poprawy.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Zbierzesz komplet dokumentów w 48 godzin – wiesz dokładnie, co, skąd i w jakiej kolejności",
@@ -1370,7 +1377,7 @@ const checklistaDokumentow = defineMagnet({
     "Poznasz braki, które najczęściej wydłużają proces o tygodnie – i unikniesz ich od razu",
     "Dowiesz się, jak przygotować skany, żeby analityk nie odsyłał ich do poprawy",
   ],
-  cta_text: "Wyślij mi checklistę",
+  cta_text: "Pobierz checklistę",
   meta_description:
     "Bezpłatna checklista dokumentów do pożyczki pod zastaw nieruchomości dla firm: firma, nieruchomość, cel finansowania, osoby. Co jest konieczne, co przyspiesza decyzję.",
   thank_you_message:
@@ -1537,10 +1544,11 @@ const odWnioskuDoWyplaty = defineMagnet({
   stage: "decyzja",
   series: ["od-wniosku-do-wyplaty", "mit-vs-fakt"],
   title: "Od wniosku do wypłaty: mapa procesu finansowania pod hipotekę",
+  // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
   headline:
-    "Od wniosku do wypłaty w 10 krokach – kto, co i kiedy robi, zanim pieniądze trafią na konto firmy",
+    "Pobierz mapę procesu. Zobacz, co dzieje się od wniosku do wypłaty i kiedy pieniądze trafią na konto firmy.",
   subheadline:
-    "Mapa procesu z typowymi terminami, dokumentami na każdym etapie, rozliczeniem wypłaty i odpowiedziami na 8 mitów o finansowaniu pozabankowym.",
+    "10 kroków z realnymi terminami, dokumentami na każdym etapie i rozliczeniem wypłaty na przykładzie. Plus 8 mitów o finansowaniu pozabankowym, które warto odłożyć.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
     "Zobaczysz całą drogę w 10 krokach – kto, co i kiedy robi, zanim pieniądze trafią na konto firmy",
@@ -1549,7 +1557,7 @@ const odWnioskuDoWyplaty = defineMagnet({
     "Skonfrontujesz 8 mitów o pożyczkach pozabankowych z tym, jak jest naprawdę",
     "Poznasz, co najczęściej wydłuża proces – i jak to ominąć",
   ],
-  cta_text: "Wyślij mi mapę procesu",
+  cta_text: "Pobierz mapę procesu",
   meta_description:
     "Jak wygląda finansowanie firmy pod hipotekę od wniosku do wypłaty: 10 kroków, terminy, notariusz, wpis hipoteki, rozliczenie wypłaty i mity o pożyczkach pozabankowych.",
   thank_you_message:
