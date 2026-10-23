@@ -238,7 +238,7 @@ Klienci zamknięci nie są rescreenowani. Ich historia zostaje.
   - progi, premie i kary;
   - okres karencji PEP;
   - parametry selekcji;
-  - adresy e-mail osoby odpowiedzialnej za AML i zarządu;
+  - adresy e-mail osoby odpowiedzialnej za AML i zarządu (kto nią jest: `docs/aml/osoby-odpowiedzialne.md`);
   - włączenie źródeł;
   - liczba cykli do alertu.
 - **Zmienna `EU_FSF_TOKEN`** — własny token z portalu FSF Komisji Europejskiej (zalecane).

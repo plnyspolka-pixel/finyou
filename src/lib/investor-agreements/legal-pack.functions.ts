@@ -39,7 +39,7 @@ async function myInvestorRow(supabaseAdmin: any, userId: string) {
   const { data } = await supabaseAdmin
     .from("investors")
     .select(
-      "id, user_id, first_name, last_name, company_name, email, phone, pesel, nip, krs, regon, address, street, city, postal_code, legal_form, representative_first_name, representative_last_name, representative_role, entity_variant, is_consumer, bank_account, bank_account_bank_name, bank_account_confirmed_at, lender_data_completed_at, screening_result",
+      "id, user_id, first_name, last_name, company_name, email, phone, pesel, nip, krs, regon, address, street, city, postal_code, legal_form, representative_first_name, representative_last_name, representative_role, entity_variant, is_consumer, bank_account, bank_account_bank_name, bank_account_confirmed_at, lender_data_completed_at, screening_result, sof_status",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -322,7 +322,9 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
       );
     }
     // Pipeline jest sekwencyjny również po stronie serwera: komparycję umowy
-    // wypełniamy danymi, które przeszły już weryfikację (kroki 1–4).
+    // wypełniamy danymi, które przeszły już weryfikację (kroki 1–5). Środki
+    // bezpieczeństwa finansowego (KYC, screening, źródło środków) stosujemy
+    // PRZED nawiązaniem stosunków gospodarczych, czyli przed Umową ramową.
     if (!investor.lender_data_completed_at) {
       throw new Error("Najpierw uzupełnij krok 1 — dane pożyczkodawcy.");
     }
@@ -334,6 +336,13 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
         investor.screening_result
           ? "Screening list sankcyjnych wymaga analizy Finance You — dokumenty odblokujemy po jej zakończeniu."
           : "Najpierw przejdź weryfikację tożsamości i screening list sankcyjnych (kroki 3–4).",
+      );
+    }
+    if (investor.sof_status !== "zlozone" && investor.sof_status !== "zaakceptowane") {
+      throw new Error(
+        investor.sof_status === "odrzucone"
+          ? "Oświadczenie o źródle pochodzenia środków zostało odrzucone przez compliance Finance You — skontaktuj się z nami."
+          : "Najpierw złóż oświadczenie o źródle pochodzenia środków (krok 5).",
       );
     }
 
@@ -496,13 +505,13 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Bramka: komplet pipeline'u (dane pożyczkodawcy, rachunek do spłaty,
-    // KYC, screening sankcyjny i pakiet dokumentów).
+    // KYC, screening sankcyjny, oświadczenie o źródle środków i pakiet dokumentów).
     const { data: complete } = await loose(supabaseAdmin).rpc("investor_pipeline_complete", {
       _user_id: userId,
     });
     if (!complete) {
       throw new Error(
-        "Zlecenie jest nieaktywne — dokończ pipeline inwestora (dane pożyczkodawcy, rachunek do spłaty, KYC, screening i komplet dokumentów).",
+        "Zlecenie jest nieaktywne — dokończ pipeline inwestora (dane pożyczkodawcy, rachunek do spłaty, KYC, screening, oświadczenie o źródle środków i komplet dokumentów).",
       );
     }
 

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ScreeningStrip } from "@/components/screening/screening-strip";
+import { InvestorSourceOfFundsCard } from "@/components/aml/investor-source-of-funds-card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,6 +122,7 @@ function InwestorDetail() {
         </span>
       </h1>
       <ScreeningStrip kind="investor" id={id} />
+      <InvestorSourceOfFundsCard investorId={id} />
       <Card>
         <CardHeader>
           <CardTitle>Dane</CardTitle>

@@ -2,9 +2,10 @@
 // rachunek do spłaty, KYC, screening list sankcyjnych) oraz zagregowany stan
 // dla kolorowego steppera w panelu.
 //
-// Kroki 5–9 (doręczenie, umowa ramowa, NDA, RODO, Zlecenie) żyją w
-// legal-pack.functions.ts — tutaj tylko spinamy je w jeden widok i jedną
-// bramkę kolejności (computeInvestorPipeline).
+// Krok 5 (oświadczenie o źródle pochodzenia środków — AML) żyje w
+// source-of-funds.functions.ts, kroki 6–10 (doręczenie, umowa ramowa, NDA,
+// RODO, Zlecenie) w legal-pack.functions.ts — tutaj tylko spinamy je w jeden
+// widok i jedną bramkę kolejności (computeInvestorPipeline).
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -15,6 +16,7 @@ import {
   type PipelineInput,
   type KycStatus,
   type ScreeningResult,
+  type SourceOfFundsStatus,
 } from "@/lib/investor-plan/pipeline";
 
 // Typy wygenerowane dla Supabase nie znają jeszcze kolumn tej migracji.
@@ -31,7 +33,8 @@ const INVESTOR_COLUMNS =
   "representative_first_name, representative_last_name, representative_role, " +
   "bank_account, bank_account_bank_name, bank_account_confirmed_at, " +
   "lender_data_completed_at, lender_lookup_source, lender_lookup_at, " +
-  "screening_id, screening_result, screening_updated_at";
+  "screening_id, screening_result, screening_updated_at, " +
+  "sof_declaration_id, sof_status, sof_declared_at, sof_reviewed_at";
 
 async function myInvestor(db: any, userId: string) {
   const { data } = await db
@@ -393,6 +396,12 @@ export interface InvestorPipelineState {
   input: PipelineInput;
   kyc: { status: KycStatus; url: string | null; fullName: string | null } | null;
   screening: { result: ScreeningResult | null; updatedAt: string | null };
+  /** Krok 5: status najnowszego oświadczenia o źródle środków (szczegóły pobiera karta kroku). */
+  sourceOfFunds: {
+    status: SourceOfFundsStatus | null;
+    declaredAt: string | null;
+    reviewedAt: string | null;
+  };
   bank: { account: string | null; bankName: string | null; confirmedAt: string | null };
 }
 
@@ -442,6 +451,7 @@ export const getInvestorPipelineState = createServerFn({ method: "GET" })
       ),
       kycStatus: mapKycStatus(didit?.status),
       screeningResult: (investor?.screening_result ?? null) as ScreeningResult | null,
+      sourceOfFunds: (investor?.sof_status ?? null) as SourceOfFundsStatus | null,
       delivered: (deliveries ?? []).length > 0,
       isConsumer: Boolean(investor?.is_consumer),
       documents: activeDocs.map((d: any) => ({
@@ -469,6 +479,11 @@ export const getInvestorPipelineState = createServerFn({ method: "GET" })
       screening: {
         result: input.screeningResult,
         updatedAt: (investor?.screening_updated_at ?? null) as string | null,
+      },
+      sourceOfFunds: {
+        status: input.sourceOfFunds,
+        declaredAt: (investor?.sof_declared_at ?? null) as string | null,
+        reviewedAt: (investor?.sof_reviewed_at ?? null) as string | null,
       },
       bank: {
         account: (investor?.bank_account ?? null) as string | null,

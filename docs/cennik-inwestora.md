@@ -83,7 +83,8 @@ Zakres opisuje `src/lib/investor-plan/plans.ts` (`ACCESS_PRESENTATION`,
 `ALL_FEATURES`).
 
 - pełny pipeline: dane pożyczkodawcy, rachunek spłaty, KYC (Didit), screening
-  sankcyjny, akceptacja pakietu umów online,
+  sankcyjny, oświadczenie o źródle środków (AML), akceptacja pakietu umów
+  online,
 - składanie Zleceń poszukiwania Projektów (Zał. 7),
 - Projekty dopasowane do przyjętego Zlecenia: teaser, Karta Leada, raport o
   inwestycji, harmonogram zaakceptowany przez Klienta, dane kontaktowe,
@@ -134,9 +135,10 @@ Wyłączenie pakietu: `/admin/umowy-inwestorow`.
 Kolejność kroków liczy `computeInvestorPipeline`
 (`src/lib/investor-plan/pipeline.ts`) — ta sama funkcja zasila stepper
 w `/inwestor/umowy` i bramki serwerowe: dane pożyczkodawcy → rachunek spłaty →
-KYC → screening → doręczenie pakietu (Konsument) → NDA → Umowa ramowa → RODO →
-Zlecenie. Limity Zleceń i rezerwacji pochodzą z `project_module_settings`
-(`docs/projekty-inwestycyjne.md`).
+KYC → screening → oświadczenie o źródle pochodzenia środków (AML,
+`docs/aml/zrodlo-srodkow-inwestora.md`) → doręczenie pakietu (Konsument) →
+Umowa ramowa → NDA → RODO → Zlecenie. Limity Zleceń i rezerwacji pochodzą
+z `project_module_settings` (`docs/projekty-inwestycyjne.md`).
 
 ## Przełącznik Prowizji od Pożyczkobiorcy przy Zleceniu
 
