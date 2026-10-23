@@ -1216,6 +1216,7 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
       privacy_status: job.publish_privacy || "public",
       scheduled_at: now,
       created_by: job.created_by,
+      studio_job_id: job.id,
     });
     if (error) errors.push(`youtube: ${error.message}`);
   }
