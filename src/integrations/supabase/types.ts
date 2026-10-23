@@ -15246,6 +15246,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          first_comment_error: string | null
+          first_comment_id: string | null
+          first_comment_started_at: string | null
           id: string
           idempotency_key: string | null
           keyword: string | null
@@ -15272,6 +15275,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          first_comment_error?: string | null
+          first_comment_id?: string | null
+          first_comment_started_at?: string | null
           id?: string
           idempotency_key?: string | null
           keyword?: string | null
@@ -15298,6 +15304,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          first_comment_error?: string | null
+          first_comment_id?: string | null
+          first_comment_started_at?: string | null
           id?: string
           idempotency_key?: string | null
           keyword?: string | null
