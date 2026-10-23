@@ -106,7 +106,8 @@ Każda rolka wykańczana silnikiem Remotion dostaje hook 0–2,5 s (`src/lib/stu
   wstrząsem i błyskiem w 0,2 s. Model obrazu/wideo ma zakaz tekstu w kadrze.
 - **Tekst:** 1–4 słowa na całą szerokość (min. 12% wysokości kadru), jedno słowo złote.
   Napisy lektora, znacznik serii i elementy dynamiczne wchodzą dopiero po hooku; znaczek
-  i etykieta AI zostają na wierzchu.
+  „AI” zostaje na wierzchu (etykieta tekstowa „Treść wygenerowana przez AI” wycofana
+  decyzją właściciela 23.10.2026 — nie dokładać).
 - **Dźwięk:** efekt uderzenia z ElevenLabs Sound Effects (działa na obecnym planie),
   opcjonalnie podkład `music_prompt` ściszony pod lektorem.
 - **Źródło klipu (`source`, domyślnie `auto`):** decyzja właściciela 21.10 — bez grafiki

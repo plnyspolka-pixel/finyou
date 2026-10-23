@@ -710,6 +710,10 @@ wypalenie nie dołożyło drugiego. Filmy gotowe przed wdrożeniem znaczka go ni
 mają. Stan: `heygen_status` → `ai_badge` (MCP) i podpowiedź przy napisach
 w panelu.
 
+Tylko pigułka — **bez** pełnej etykiety tekstowej „Treść wygenerowana przez AI”
+w pierwszych sekundach rolki. Właściciel wycofał ją 23.10.2026 po tym, jak wyszła
+na rolkach na Instagramie; nie dokładać jej ponownie (ani w ASS, ani w Remotion).
+
 ## TikTok — Content Posting API (Direct Post)
 
 ### Połączenie konta (OAuth, raz)

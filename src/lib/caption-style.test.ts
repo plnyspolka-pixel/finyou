@@ -233,8 +233,8 @@ describe("znaczek AI", () => {
     expect(ass).toMatch(/\[Events\]/);
     expect(ass).toMatch(/^Style: AiBadge,Inter,/m);
     const events = dialogues(ass);
-    // pigułka, napis „AI” i etykieta wstępna (AI Act art. 50)
-    expect(events).toHaveLength(3);
+    // pigułka i napis „AI” — bez etykiety tekstowej (wycofana 23.10.2026)
+    expect(events).toHaveLength(2);
     expect(events[0]).toMatch(/\\p1/);
     expect(events[0]).toMatch(/,9:59:59\.99,AiBadge,/);
     expect(events[1]).toMatch(/\}AI$/);
@@ -252,11 +252,12 @@ describe("znaczek AI", () => {
       `\\pos(${x + AI_BADGE.width / 2},${AI_BADGE.marginTop + AI_BADGE.height / 2})`,
     );
     expect(AI_BADGE.marginTop).toBeGreaterThanOrEqual(110);
-    // AI Act art. 50: pełna etykieta w pierwszych sekundach, pod znaczkiem.
-    const intro = aiBadgeEvents({ width: 720, height: 1280 })[2];
-    expect(intro).toContain("Treść wygenerowana przez AI");
-    expect(intro).toContain("0:00:00.00,0:00:02.50");
-    expect(intro).toContain(`\\pos(${720 - AI_BADGE.marginRight},${AI_BADGE.marginTop + AI_BADGE.height + 8})`);
+    // Bez etykiety „Treść wygenerowana przez AI” — właściciel wycofał ją
+    // 23.10.2026 po publikacji rolek na Instagramie; tylko pigułka „AI".
+    const all = aiBadgeEvents({ width: 720, height: 1280 });
+    expect(all).toHaveLength(2);
+    expect(all.join("\n")).not.toMatch(/wygenerowan/i);
+    expect(JSON.stringify(AI_BADGE)).not.toMatch(/wygenerowan/i);
   });
 
   it("napisy własne + znaczek: oba style, znaczek na wyższej warstwie", () => {
@@ -264,7 +265,7 @@ describe("znaczek AI", () => {
     expect(ass.split("\n").filter((l) => l.startsWith("Style:"))).toHaveLength(2);
     const events = dialogues(ass);
     const badge = events.filter((l) => l.includes(",AiBadge,"));
-    expect(badge).toHaveLength(3);
+    expect(badge).toHaveLength(2);
     expect(badge.every((l) => Number(l.split(",")[0].split(" ")[1]) > 0)).toBe(true);
   });
 
