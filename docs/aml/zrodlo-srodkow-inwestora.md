@@ -85,7 +85,8 @@ oświadczenie złożone na starszej wersji tekstu.
 - **Bez sygnałów** → status `zlozone`: krok zamknięty, pipeline idzie dalej.
 - **Co najmniej jeden sygnał** → status `do_weryfikacji`: krok „wymaga uwagi”,
   umowy i Zlecenie wstrzymane, e-mail do osoby odpowiedzialnej za AML
-  (`screening_settings.aml_officer_emails`) z linkiem do karty inwestora.
+  (`screening_settings.aml_officer_emails`, kto nią jest:
+  `docs/aml/osoby-odpowiedzialne.md`) z linkiem do karty inwestora.
 
 Progi (lista krajów, skala) są stałymi w module — zmiana wymaga zmiany kodu
 i wpisu w procedurze.
