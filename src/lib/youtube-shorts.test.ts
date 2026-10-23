@@ -16,7 +16,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {
 } }));
 vi.mock("./autopilot/state.server", () => ({ withOriginFilter: (q: unknown) => q }));
 vi.mock("./autopilot/publish-gate.server", () => ({ gateClaimedItem: async () => ({ proceed: true, message: "Test" }) }));
-vi.mock("./video-rendition.server", () => ({ ensurePublishableVideo: async (url: string) => url }));
+vi.mock("./video-rendition.server", () => ({ ensurePublishableVideo: async (url: string) => url, VideoPreparingError: class extends Error {} }));
 vi.mock("./youtube-first-comment.server", () => ({ addYoutubeFirstComment: state.comment }));
 import { processQueueItem } from "./youtube-shorts.server";
 beforeEach(() => {

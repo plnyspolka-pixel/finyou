@@ -10,9 +10,8 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {
   from: (table: string) => {
-    let patch: Record<string, unknown> | undefined;
     const q: any = {
-      update: (p: Record<string, unknown>) => { patch = p; state.saves.push(p); return q; },
+      update: (p: Record<string, unknown>) => { state.saves.push(p); return q; },
       insert: (p: Record<string, unknown>) => { state.logs.push(p); return Promise.resolve({ error: null }); },
       eq: () => q, is: () => q, select: () => q, limit: () => q,
       maybeSingle: async () => {
