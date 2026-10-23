@@ -30,7 +30,7 @@ import type { LeadMagnetAudience } from "./core";
 export { CATALOG_SLUGS, isCatalogSlug, type CatalogSlug };
 
 /** Wersja katalogu — na okładce PDF i w dzienniku provisioningu. Podbij przy zmianie treści. */
-export const CATALOG_VERSION = "2026-10-22.2";
+export const CATALOG_VERSION = "2026-10-23.1";
 
 /** Prefiks ścieżek plików katalogu w buckecie `lead-magnets` (plik zespołu ma `<grupa>/<uuid>.<ext>`). */
 export const CATALOG_FILE_PREFIX = "katalog/";
@@ -981,10 +981,12 @@ const wzorUmowyPozyczki = defineMagnet({
     "Pobierz wzór umowy pożyczki. Oszczędź 5–\u206010 tys. zł na kosztach kancelarii prawnej.",
   subheadline:
     "Tyle kosztuje napisanie takiej umowy od zera w kancelarii. Tu dostajesz gotowy tekst z biblioteki klauzul, z której Finance You składa prawdziwe umowy dla inwestorów.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis paragrafów.
   benefits: [
-    "7 paragrafów: hipoteka, art. 777 k.p.c., oświadczenia B2B, windykacja, wypowiedzenie",
-    "Przykład: 100 000 zł, 12 rat, zabezpieczenie do 260 000 zł",
-    "Załączniki 1–4 i wniosek – w pakiecie dokumentów dla inwestorów",
+    "Zobaczysz, jak zapisać zabezpieczenie, żeby mieć z czego odzyskać pieniądze, gdy pożyczkobiorca przestanie płacić",
+    "Poznasz 3 zapisy, bez których umowa jest tylko kartką papieru – wzory z internetu zwykle ich nie mają",
+    "Dowiesz się, jakich dokumentów żądać, zanim wypłacisz choćby złotówkę",
+    "Sprawdzisz na przykładzie 100 000 zł, jak wygląda umowa, którą podpisują inwestorzy Finance You",
   ],
   cta_text: "Pobierz wzór umowy",
   meta_description:
