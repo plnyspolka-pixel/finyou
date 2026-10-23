@@ -145,7 +145,18 @@ export async function produceReels(
   // Produkcja to nie wyjście na zewnątrz: w semi_auto jedzie sama; w
   // manual_review tylko na wyraźne żądanie właściciela (force).
   if (!guard.allowed || (guard.asDraft && !opts.force)) {
-    return { results: [], skipped: guard.reasons.join(" ") || cfg.state.mode };
+    const skipped = guard.reasons.join(" ") || cfg.state.mode;
+    // Blokada strażnika jest rzadka — zostaje w dzienniku, żeby było widać, czemu nic nie powstało.
+    if (cfg.state.mode === "full_autopilot" || opts.force) {
+      await logAutopilot({
+        action: "reel_production_skipped",
+        status: "warning",
+        summary: `Produkcja pominięta: ${skipped}`.slice(0, 500),
+        payload: { reasons: guard.reasons, credits, aiSpentTodayPln: usage.aiSpentTodayPln },
+        actor: opts.actor ?? null,
+      }).catch(() => null);
+    }
+    return { results: [], skipped };
   }
 
   const dayStart = warsawDayStartIso(now);
@@ -160,6 +171,17 @@ export async function produceReels(
         : { produce: true, reason: "na żądanie (bufor pominięty)" }
       : decideProduction(pipeline);
     if (!decision.produce) {
+      // Pełny zapas to stan normalny (co godzinę) — do dziennika idzie tylko
+      // wyczerpany limit dzienny i wywołanie na żądanie.
+      if (opts.force || /limit/.test(decision.reason)) {
+        await logAutopilot({
+          action: "reel_production_skipped",
+          status: "ok",
+          summary: `Produkcja (${track}) pominięta: ${decision.reason}`,
+          payload: { track, pipeline },
+          actor: opts.actor ?? null,
+        }).catch(() => null);
+      }
       results.push({ track, action: "skipped", reason: decision.reason, pipeline });
       continue;
     }

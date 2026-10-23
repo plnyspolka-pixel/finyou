@@ -52,17 +52,33 @@ async function runTick(force?: string | null): Promise<Response> {
     // bramkę i zakłada job w Studiu; render robi tick Studia.
     if (cfg.state.mode === "full_autopilot" && !cfg.state.paused) {
       const { produceReels } = await import("@/lib/autopilot/production.server");
-      reports.production = await produceReels({ now }).catch((e) => ({
-        error: e instanceof Error ? e.message : String(e),
-      }));
+      reports.production = await produceReels({ now }).catch(async (e) => {
+        const error = e instanceof Error ? e.message : String(e);
+        const { logAutopilot } = await import("@/lib/autopilot/state.server");
+        await logAutopilot({
+          action: "tick_error",
+          status: "error",
+          summary: `Tick: produkcja rolek — ${error}`.slice(0, 500),
+          payload: { step: "production", error },
+        }).catch(() => null);
+        return { error };
+      });
     }
     // Gotowe rolki Studia → bramka compliance → sloty torów (tylko
     // full_autopilot bez wyłącznika; funkcja sama sprawdza tryb).
     if (cfg.state.mode === "full_autopilot" && !cfg.state.paused) {
       const { scheduleReadyReels } = await import("@/lib/autopilot/ready-reels.server");
-      reports.readyReels = await scheduleReadyReels(now).catch((e) => ({
-        error: e instanceof Error ? e.message : String(e),
-      }));
+      reports.readyReels = await scheduleReadyReels(now).catch(async (e) => {
+        const error = e instanceof Error ? e.message : String(e);
+        const { logAutopilot } = await import("@/lib/autopilot/state.server");
+        await logAutopilot({
+          action: "tick_error",
+          status: "error",
+          summary: `Tick: planowanie rolek — ${error}`.slice(0, 500),
+          payload: { step: "ready_reels", error },
+        }).catch(() => null);
+        return { error };
+      });
     }
     if (hour === 20 || force === "daily")
       reports.daily = (await runScheduledReport("daily", now)).sms;
@@ -74,6 +90,17 @@ async function runTick(force?: string | null): Promise<Response> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    try {
+      const { logAutopilot } = await import("@/lib/autopilot/state.server");
+      await logAutopilot({
+        action: "tick_error",
+        status: "error",
+        summary: `Tick autopilota przerwany: ${msg}`.slice(0, 500),
+        payload: { step: "tick", error: msg },
+      });
+    } catch {
+      /* dziennik nie może zepsuć odpowiedzi */
+    }
     return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
