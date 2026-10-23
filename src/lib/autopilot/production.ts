@@ -196,7 +196,9 @@ export function publishTitleWithKeyword(title: string, keyword: string | null, m
   if (base.toLocaleUpperCase("pl").includes(keyword.toLocaleUpperCase("pl")))
     return base.slice(0, max);
   const suffix = ` Napisz ${keyword}`;
-  const room = max - suffix.length;
+  const room = max - suffix.length - 1;
   const head = base.length > room ? `${base.slice(0, Math.max(0, room - 1)).trimEnd()}…` : base;
-  return `${head}${suffix}`;
+  // Kropka przed „Napisz HASŁO”, gdy tytuł nie kończy się znakiem interpunkcyjnym.
+  const sep = /[.!?…:]$/.test(head) ? "" : ".";
+  return `${head}${sep}${suffix}`;
 }
