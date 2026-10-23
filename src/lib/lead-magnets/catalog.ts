@@ -1080,7 +1080,7 @@ const bankOdmowil = defineMagnet({
   title: "Bank odmówił? 5 dróg do finansowania firmy pod nieruchomość",
   // Nagłówek i podtytuł: jeden komunikat w języku korzyści, nie opis materiału.
   headline:
-    "Pobierz przewodnik „Bank odmówił – co dalej?”. Poznaj 5 realnych dróg do finansowania firmy, gdy masz nieruchomość.",
+    "Bank odmówił? Pobierz przewodnik: 5 realnych dróg do finansowania firmy, gdy masz nieruchomość.",
   subheadline:
     "Odmowa banku nie zamyka tematu. Zobacz, kto zamiast banku patrzy na Twoją nieruchomość, ile realnie możesz uzyskać i jakich ofert unikać.",
   // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
