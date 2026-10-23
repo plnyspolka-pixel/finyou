@@ -4,12 +4,13 @@
 //   2. Rachunek bankowy do spłaty pożyczki (wymuszony)
 //   3. Weryfikacja tożsamości — KYC Didit
 //   4. Screening list sankcyjnych i PEP (Dilisense)
-//   5. Doręczenie pakietu na trwałym nośniku
-//   6. Ramowa umowa pośrednictwa  7. NDA  8. RODO
-//   9. Zlecenie poszukiwania okazji
+//   5. Oświadczenie o źródle pochodzenia środków (AML)
+//   6. Doręczenie pakietu na trwałym nośniku
+//   7. Ramowa umowa pośrednictwa  8. NDA  9. RODO
+//  10. Zlecenie poszukiwania okazji
 // Kolejność liczy computeInvestorPipeline (ta sama funkcja po stronie serwera),
 // § 15 ust. 7: żaden checkbox nie startuje zaznaczony.
-// Umowy (kroki 6–8) są ODBLOKOWANE do wglądu od razu: pełna treść każdej
+// Umowy (kroki 7–9) są ODBLOKOWANE do wglądu od razu: pełna treść każdej
 // umowy jest widoczna niezależnie od stanu pipeline'u; kolejność dotyczy
 // wyłącznie podpisu (egzekwuje ją serwer w acceptLegalDocument).
 import { useState } from "react";
@@ -51,6 +52,7 @@ import {
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
 import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { PipelineProgress, PipelineStepCard } from "@/components/inwestor/pipeline-stepper";
+import { SourceOfFundsStep } from "@/components/inwestor/source-of-funds-step";
 import {
   LenderDataStep,
   RepaymentAccountStep,
@@ -144,7 +146,7 @@ function PipelinePage() {
       <FancyPageHeader
         eyebrow="Złóż zlecenie"
         title="Od danych inwestora do Zlecenia"
-        subtitle="Dziewięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, komplet umów i Zlecenie poszukiwania Projektów."
+        subtitle="Dziesięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, źródło środków, komplet umów i Zlecenie poszukiwania Projektów."
       />
 
       {tpay && payment ? (
@@ -159,8 +161,8 @@ function PipelinePage() {
         <Card className="border-amber-300 bg-amber-50/40">
           <CardContent className="py-4 text-sm text-amber-900">
             Pakiet dokumentów jest w przygotowaniu (przegląd kancelarii). Treść umów możesz
-            przeglądać już teraz; podpis kroków 6–8 i Zlecenie odblokujemy po aktywacji pakietu —
-            damy znać e-mailem. Kroki 1–4 możesz przejść już teraz.
+            przeglądać już teraz; podpis kroków 7–9 i Zlecenie odblokujemy po aktywacji pakietu —
+            damy znać e-mailem. Kroki 1–5 możesz przejść już teraz.
           </CardContent>
         </Card>
       ) : null}
@@ -182,6 +184,13 @@ function PipelinePage() {
         <SanctionsScreeningStep
           screening={pipe.screening}
           kycApproved={pipe.input.kycStatus === "approved"}
+          onDone={refresh}
+        />
+      </PipelineStepCard>
+
+      <PipelineStepCard step={step("zrodlo_srodkow")}>
+        <SourceOfFundsStep
+          locked={step("zrodlo_srodkow").state === "zablokowany"}
           onDone={refresh}
         />
       </PipelineStepCard>
@@ -570,7 +579,7 @@ function DocumentStep({
       {!canSign ? (
         <p className="text-sm text-muted-foreground">
           {locked
-            ? "Podpis w formie dokumentowej będzie możliwy po ukończeniu wcześniejszych kroków pipeline'u (dane inwestora, rachunek, KYC, screening, doręczenie i wcześniejsze umowy). Treść możesz przeczytać już teraz."
+            ? "Podpis w formie dokumentowej będzie możliwy po ukończeniu wcześniejszych kroków pipeline'u (dane inwestora, rachunek, KYC, screening, źródło środków, doręczenie i wcześniejsze umowy). Treść możesz przeczytać już teraz."
             : "Podpis będzie możliwy po aktywacji pakietu dokumentów przez kancelarię."}
         </p>
       ) : (

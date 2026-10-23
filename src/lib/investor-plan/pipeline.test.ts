@@ -14,6 +14,7 @@ const base: PipelineInput = {
   repaymentAccountConfirmed: false,
   kycStatus: "not_started",
   screeningResult: null,
+  sourceOfFunds: null,
   delivered: false,
   isConsumer: false,
   documents: [
@@ -31,6 +32,7 @@ const complete: PipelineInput = {
   repaymentAccountConfirmed: true,
   kycStatus: "approved",
   screeningResult: "clear",
+  sourceOfFunds: "zlozone",
   delivered: true,
   documents: [
     { code: "umowa_ramowa", accepted: true },
@@ -63,6 +65,48 @@ describe("pipeline inwestora", () => {
       kycStatus: "approved",
     });
     expect(v.currentStep).toBe("screening");
+  });
+
+  it("oświadczenie o źródle środków jest krokiem po screeningu, przed doręczeniem", () => {
+    const v = computeInvestorPipeline({
+      ...base,
+      lenderDataCompleted: true,
+      repaymentAccountConfirmed: true,
+      kycStatus: "approved",
+      screeningResult: "clear",
+    });
+    expect(v.currentStep).toBe("zrodlo_srodkow");
+    expect(v.steps.map((s) => s.key).slice(3, 6)).toEqual([
+      "screening",
+      "zrodlo_srodkow",
+      "doreczenie",
+    ]);
+    expect(v.steps.find((s) => s.key === "doreczenie")?.state).toBe("zablokowany");
+    expect(v.canSubmitOrder).toBe(false);
+  });
+
+  it("oświadczenie w analizie compliance wymaga uwagi i blokuje Zlecenie", () => {
+    const v = computeInvestorPipeline({ ...complete, sourceOfFunds: "do_weryfikacji" });
+    const step = v.steps.find((s) => s.key === "zrodlo_srodkow");
+    expect(step?.state).toBe("uwaga");
+    expect(step?.hint).toMatch(/compliance/);
+    expect(v.attention).toContain("zrodlo_srodkow");
+    expect(v.canSubmitOrder).toBe(false);
+    expect(() =>
+      assertPipelineReadyForOrder({ ...complete, sourceOfFunds: "do_weryfikacji" }),
+    ).toThrow(/Źródło pochodzenia środków/);
+  });
+
+  it("oświadczenie zaakceptowane przez compliance zamyka krok tak samo jak złożone", () => {
+    expect(
+      computeInvestorPipeline({ ...complete, sourceOfFunds: "zaakceptowane" }).canSubmitOrder,
+    ).toBe(true);
+    expect(
+      computeInvestorPipeline({ ...complete, sourceOfFunds: "odrzucone" }).canSubmitOrder,
+    ).toBe(false);
+    expect(computeInvestorPipeline({ ...complete, sourceOfFunds: null }).canSubmitOrder).toBe(
+      false,
+    );
   });
 
   it("trafienie sankcyjne oznacza krok jako wymagający uwagi", () => {
@@ -111,7 +155,7 @@ describe("pipeline inwestora", () => {
     const v = computeInvestorPipeline(complete);
     expect(v.currentStep).toBe("zlecenie");
     expect(v.canSubmitOrder).toBe(true);
-    expect(v.progress).toBe(89);
+    expect(v.progress).toBe(90);
     expect(() => assertPipelineReadyForOrder(complete)).not.toThrow();
   });
 

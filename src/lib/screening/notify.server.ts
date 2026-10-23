@@ -90,3 +90,24 @@ export async function notifyImportAlert(settings: ScreeningSettings, lines: stri
     ].join("\n"),
   );
 }
+
+/** Oświadczenie o źródle środków z sygnałami ryzyka → osoba odpowiedzialna za AML. */
+export async function notifySourceOfFundsReview(
+  settings: ScreeningSettings,
+  d: { investorId: string; flags: string[] },
+) {
+  const base = PANEL_URL.replace(/\/admin\/screening$/, "");
+  return sendAll(
+    settings.aml_officer_emails,
+    "[AML] Oświadczenie o źródle środków inwestora do analizy",
+    [
+      `Inwestor złożył oświadczenie o źródle pochodzenia środków z sygnałami podwyższonego ryzyka.`,
+      ``,
+      `Sygnały: ${d.flags.join(", ") || "—"}`,
+      ``,
+      `Umowy i Zlecenie inwestora są wstrzymane do decyzji compliance`,
+      `(akceptacja / prośba o dokumenty / odrzucenie) — treść oświadczenia w panelu.`,
+      `Inwestor: ${base}/admin/inwestorzy/${d.investorId}`,
+    ].join("\n"),
+  );
+}

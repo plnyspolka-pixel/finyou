@@ -7,17 +7,26 @@
 //   2. Rachunek bankowy do spłaty pożyczki (NRB/IBAN, obowiązkowy)
 //   3. Weryfikacja tożsamości — KYC Didit
 //   4. Screening list sankcyjnych i PEP (Dilisense — nie Didit)
-//   5. Doręczenie pakietu na trwałym nośniku
-//   6. Ramowa umowa pośrednictwa
-//   7. NDA i zakaz obchodzenia
-//   8. Umowa powierzenia danych (RODO)
-//   9. Zlecenie poszukiwania okazji
+//   5. Oświadczenie o źródle pochodzenia środków (AML, art. 34 ust. 1 pkt 4 lit. b)
+//   6. Doręczenie pakietu na trwałym nośniku
+//   7. Ramowa umowa pośrednictwa
+//   8. NDA i zakaz obchodzenia
+//   9. Umowa powierzenia danych (RODO)
+//  10. Zlecenie poszukiwania okazji
+import {
+  SOF_ATTENTION_STATUSES,
+  SOF_DONE_STATUSES,
+  type SourceOfFundsStatus,
+} from "./source-of-funds";
+
+export type { SourceOfFundsStatus } from "./source-of-funds";
 
 export type PipelineStepKey =
   | "dane_pozyczkodawcy"
   | "rachunek_splaty"
   | "kyc"
   | "screening"
+  | "zrodlo_srodkow"
   | "doreczenie"
   | "umowa_ramowa"
   | "nda"
@@ -49,6 +58,8 @@ export interface PipelineInput {
   repaymentAccountConfirmed: boolean;
   kycStatus: KycStatus;
   screeningResult: ScreeningResult | null;
+  /** Status oświadczenia o źródle pochodzenia środków (`investors.sof_status`). */
+  sourceOfFunds: SourceOfFundsStatus | null;
   /** Pakiet doręczony e-mailem na trwałym nośniku. */
   delivered: boolean;
   isConsumer: boolean;
@@ -93,6 +104,12 @@ const STEP_META: Record<PipelineStepKey, { title: string; subtitle: string; hue:
     title: "Screening list sankcyjnych",
     subtitle: "Sankcje, PEP i listy ostrzegawcze (Dilisense) — uruchamiany automatycznie po KYC.",
     hue: 160,
+  },
+  zrodlo_srodkow: {
+    title: "Źródło pochodzenia środków",
+    subtitle:
+      "Oświadczenie AML: skąd pochodzą środki na pożyczki, kraj ich pochodzenia i planowana skala finansowania.",
+    hue: 146,
   },
   doreczenie: {
     title: "Doręczenie pakietu",
@@ -155,6 +172,18 @@ function screeningDone(result: ScreeningResult | null): boolean {
   return result === "clear";
 }
 
+const SOF_ATTENTION_HINTS: Partial<Record<SourceOfFundsStatus, string>> = {
+  do_weryfikacji:
+    "Oświadczenie trafiło do analizy compliance Finance You — możemy poprosić o dokumenty potwierdzające źródło środków.",
+  do_uzupelnienia:
+    "Compliance prosi o uzupełnienie oświadczenia albo dokumenty — sprawdź e-mail i złóż nowe oświadczenie.",
+  odrzucone: "Źródło pochodzenia środków nie zostało zaakceptowane — dalsze kroki są zablokowane.",
+};
+
+function sourceOfFundsDone(status: SourceOfFundsStatus | null): boolean {
+  return status !== null && SOF_DONE_STATUSES.includes(status);
+}
+
 export function computeInvestorPipeline(input: PipelineInput): PipelineView {
   const accepted = new Map(input.documents.map((d) => [d.code, d.accepted]));
 
@@ -189,6 +218,14 @@ export function computeInvestorPipeline(input: PipelineInput): PipelineView {
           ? input.screeningResult === "confirmed_sanctions_match"
             ? "Potwierdzone trafienie sankcyjne — dalsze kroki są zablokowane."
             : "Trafienie wymaga analizy compliance Finance You."
+          : null,
+    },
+    {
+      key: "zrodlo_srodkow",
+      done: sourceOfFundsDone(input.sourceOfFunds),
+      attention:
+        input.sourceOfFunds && SOF_ATTENTION_STATUSES.includes(input.sourceOfFunds)
+          ? (SOF_ATTENTION_HINTS[input.sourceOfFunds] ?? null)
           : null,
     },
     {
