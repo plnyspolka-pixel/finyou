@@ -14,10 +14,10 @@ o źródle środków”. Obowiązek wynika z kilku przepisów czytanych razem:
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | art. 34 ust. 1 pkt 4 lit. b | środek bezpieczeństwa finansowego: „badanie źródła pochodzenia wartości majątkowych będących w dyspozycji klienta – w przypadkach uzasadnionych okolicznościami” | inwestor wnosi własne środki na pożyczki — sama natura relacji jest okolicznością uzasadniającą badanie; podejście oparte na ryzyku |
 | art. 34 ust. 3              | instytucja dokumentuje zastosowane środki i na żądanie organów wykazuje, że były odpowiednie do ryzyka                                                           | oświadczenie z pełną treścią, wersją, IP i czasem to dowód dla kontroli GIIF                                                        |
-| art. 43 ust. 4 pkt 2        | transakcje „opiewające na wysokie kwoty, które nie są uzasadnione okolicznościami” → wyjaśnienie okoliczności, intensyfikacja monitoringu                        | deklarowana skala od 1 mln zł rocznie kieruje oświadczenie do analizy człowieka                                                     |
-| art. 44 ust. 1 pkt 2        | państwo trzecie wysokiego ryzyka → **obowiązkowo** informacja o źródle majątku i źródle pochodzenia wartości majątkowych                                         | środki spoza EOG, Szwajcarii i Wielkiej Brytanii → analiza człowieka                                                                |
+| art. 43 ust. 4 pkt 2        | transakcje „opiewające na wysokie kwoty, które nie są uzasadnione okolicznościami” → wyjaśnienie okoliczności, intensyfikacja monitoringu                        | deklarowana skala od 1 mln zł rocznie to sygnał ryzyka zgłaszany compliance                                                         |
+| art. 44 ust. 1 pkt 2        | państwo trzecie wysokiego ryzyka → **obowiązkowo** informacja o źródle majątku i źródle pochodzenia wartości majątkowych                                         | środki spoza EOG, Szwajcarii i Wielkiej Brytanii to sygnał ryzyka zgłaszany compliance                                              |
 | art. 46 ust. 2 pkt 2        | PEP → **obowiązkowo** „odpowiednie środki w celu ustalenia źródła majątku klienta i źródła pochodzenia wartości majątkowych”                                     | dla potwierdzonego PEP dodatkowo wzmożone środki w module screeningu (źródło majątku + załączniki + akceptacja zarządu)             |
-| art. 41 ust. 1              | brak możliwości zastosowania środka → brak nawiązania / rozwiązanie stosunków gospodarczych                                                                      | bez oświadczenia inwestor nie podpisze umów i nie złoży Zlecenia; odmowa = status „odrzucone”                                       |
+| art. 41 ust. 1              | brak możliwości zastosowania środka → brak nawiązania / rozwiązanie stosunków gospodarczych                                                                      | bez oświadczenia inwestor nie podpisze umów i nie złoży Zlecenia; odrzucenie przez compliance blokuje je ponownie                   |
 | art. 49                     | przechowywanie dokumentacji środków bezpieczeństwa przez 5 lat                                                                                                   | tabela oświadczeń jest append-only, bez FK kasujących dane po usunięciu konta                                                       |
 
 Wniosek: dla inwestorów oświadczenie przy onboardingu jest minimalnym,
@@ -65,13 +65,15 @@ Kolejność kroków i stany liczy `computeInvestorPipeline`
 4. **Planowaną skalę finansowania** przez Finance You w 12 miesięcy
    (do 100 tys. zł … powyżej 5 mln zł).
 5. Trzy oświadczenia (środki własne i nie na rachunek osoby trzeciej; legalne
-   pochodzenie; gotowość przedstawienia dokumentów i aktualizacji) oraz
-   potwierdzenie prawdziwości i kompletności.
+   pochodzenie; obowiązek poinformowania o zmianie okoliczności) oraz
+   potwierdzenie prawdziwości i kompletności. Oświadczenie nie wymaga
+   załączników ani zobowiązania do ich przedstawienia — decyzja biznesowa
+   z 23 października 2026 r.
 
 Zmiana treści wymaga podbicia `SOF_DECLARATION_TEXT_VERSION`; serwer odrzuca
 oświadczenie złożone na starszej wersji tekstu.
 
-## 4. Podejście oparte na ryzyku — co zamyka automat, co człowiek
+## 4. Podejście oparte na ryzyku — oświadczenie zamyka krok, sygnały idą do compliance
 
 `assessSourceOfFunds` liczy sygnały ryzyka przy złożeniu:
 
@@ -82,11 +84,13 @@ oświadczenie złożone na starszej wersji tekstu.
 | `kraj_podwyzszonego_ryzyka` | kraj spoza EOG, Szwajcarii i Wielkiej Brytanii | art. 43 ust. 2 pkt 10, art. 44        |
 | `wysoka_skala`              | skala „1–5 mln zł” albo „powyżej 5 mln zł”     | art. 43 ust. 4 pkt 2                  |
 
-- **Bez sygnałów** → status `zlozone`: krok zamknięty, pipeline idzie dalej.
-- **Co najmniej jeden sygnał** → status `do_weryfikacji`: krok „wymaga uwagi”,
-  umowy i Zlecenie wstrzymane, e-mail do osoby odpowiedzialnej za AML
-  (`screening_settings.aml_officer_emails`, kto nią jest:
-  `docs/aml/osoby-odpowiedzialne.md`) z linkiem do karty inwestora.
+- Każde poprawnie złożone oświadczenie dostaje status `zlozone` i **zamyka
+  krok** — pipeline idzie dalej niezależnie od sygnałów.
+- Sygnały zapisujemy przy oświadczeniu (`risk_flags`) i pokazujemy na karcie
+  inwestora w panelu administratora. Gdy jest co najmniej jeden, osoba
+  odpowiedzialna za AML (`screening_settings.aml_officer_emails`, kto nią
+  jest: `docs/aml/osoby-odpowiedzialne.md`) dostaje e-mail „do wglądu”
+  z linkiem do karty. Nic nie jest wstrzymywane automatycznie.
 
 Progi (lista krajów, skala) są stałymi w module — zmiana wymaga zmiany kodu
 i wpisu w procedurze.
@@ -94,13 +98,13 @@ i wpisu w procedurze.
 ## 5. Decyzje compliance (panel administratora, karta inwestora)
 
 Decyzję dla najnowszego oświadczenia podejmuje administrator albo operator
-(`decideInvestorSourceOfFunds`), zawsze z uzasadnieniem (min. 10 znaków):
+(`decideInvestorSourceOfFunds`), zawsze z uzasadnieniem (min. 10 znaków),
+widocznym wyłącznie dla personelu (zakaz tipping-off, art. 54):
 
-| Decyzja           | Skutek                                                                                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `zaakceptowane`   | krok zamknięty, pipeline odblokowany                                                                                                                     |
-| `do_uzupelnienia` | treść uzasadnienia widzi inwestor w panelu (co ma dostarczyć); dokumenty przesyła e-mailem; po nich składa nowe oświadczenie — ocena od nowa             |
-| `odrzucone`       | brak możliwości zastosowania środka (art. 41) — inwestor nie złoży nowego oświadczenia bez zmiany statusu przez compliance; umowy i Zlecenie zablokowane |
+| Decyzja         | Skutek                                                                                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zaakceptowane` | potwierdzenie przeglądu; nic nie zmienia w pipelinie (krok był już zamknięty)                                                                            |
+| `odrzucone`     | brak możliwości zastosowania środka (art. 41) — umowy i Zlecenie zablokowane; inwestor nie złoży nowego oświadczenia bez zmiany statusu przez compliance |
 
 Każde złożenie (`sof_declaration.signed`) i każda decyzja
 (`sof_declaration.decided`) trafiają do nieusuwalnego logu
@@ -108,9 +112,10 @@ Każde złożenie (`sof_declaration.signed`) i każda decyzja
 'source_of_funds'`).
 
 Dla potwierdzonego PEP obowiązują dodatkowo wzmożone środki modułu
-screeningu (`docs/aml/screening-pep-sankcje.md`, pkt o źródle majątku
-i źródle środków z załącznikami oraz akceptacji członka zarządu) — oświadczenie
-z kroku 5 jest punktem wyjścia, nie zastępuje tamtej procedury.
+screeningu (`docs/aml/screening-pep-sankcje.md`: źródło majątku i źródło
+środków z załącznikami oraz akceptacja członka zarządu) — tam dokumenty są
+wymagane ustawowo (art. 46 ust. 2 pkt 2). Oświadczenie z kroku 5 jest
+punktem wyjścia, nie zastępuje tamtej procedury.
 
 ## 6. Dane i przechowywanie
 
@@ -130,9 +135,10 @@ Migracja: `supabase/migrations/20261023090000_oswiadczenie_zrodlo_srodkow_inwest
 
 ## 7. Czego moduł nie robi
 
-- Nie przyjmuje załączników w kroku 5 — dokumenty potwierdzające (PIT/CIT,
-  akt notarialny, umowa sprzedaży, wyciąg) inwestor przesyła e-mailem na
-  prośbę compliance; dla PEP załączniki trzyma moduł screeningu.
+- Nie zbiera załączników ani nie wymaga ich od inwestora — oświadczenie jest
+  jedynym elementem kroku. Jeśli compliance uzna za konieczne wyjaśnienia,
+  kontaktuje się z inwestorem poza systemem; dla PEP załączniki trzyma moduł
+  screeningu.
 - Nie weryfikuje oświadczenia automatycznie w zewnętrznych bazach — ocena
   prawdziwości należy do człowieka.
 - Nie monitoruje transakcji inwestora po onboardingu — to rejestr

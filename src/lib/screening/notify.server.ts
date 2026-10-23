@@ -105,8 +105,8 @@ export async function notifySourceOfFundsReview(
       ``,
       `Sygnały: ${d.flags.join(", ") || "—"}`,
       ``,
-      `Umowy i Zlecenie inwestora są wstrzymane do decyzji compliance`,
-      `(akceptacja / prośba o dokumenty / odrzucenie) — treść oświadczenia w panelu.`,
+      `Krok pipeline'u jest zamknięty — umowy i Zlecenie NIE są wstrzymane.`,
+      `Oświadczenie jest do wglądu na karcie inwestora; możesz je tam potwierdzić albo odrzucić (odrzucenie blokuje umowy i Zlecenie).`,
       `Inwestor: ${base}/admin/inwestorzy/${d.investorId}`,
     ].join("\n"),
   );

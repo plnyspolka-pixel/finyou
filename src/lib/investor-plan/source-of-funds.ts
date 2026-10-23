@@ -169,9 +169,8 @@ export const SOF_STATEMENTS = [
       "Środki pochodzą z legalnych, wskazanych wyżej źródeł i nie pochodzą z przestępstwa ani z przestępstwa skarbowego.",
   },
   {
-    code: "dokumenty_i_aktualizacja",
-    label:
-      "Na żądanie Finance You przedstawię dokumenty potwierdzające źródło środków (np. PIT/CIT, umowę sprzedaży, akt notarialny, wyciąg bankowy) i niezwłocznie poinformuję o zmianie powyższych okoliczności.",
+    code: "aktualizacja_okolicznosci",
+    label: "Niezwłocznie poinformuję Finance You o zmianie powyższych okoliczności.",
   },
 ] as const;
 
@@ -213,9 +212,9 @@ export const SourceOfFundsInput = z
       legalne_pochodzenie: z.literal(true, {
         errorMap: () => ({ message: "Potwierdź legalne pochodzenie środków." }),
       }),
-      dokumenty_i_aktualizacja: z.literal(true, {
+      aktualizacja_okolicznosci: z.literal(true, {
         errorMap: () => ({
-          message: "Potwierdź gotowość przedstawienia dokumentów i aktualizacji oświadczenia.",
+          message: "Potwierdź, że poinformujesz o zmianie okoliczności.",
         }),
       }),
     }),
@@ -263,7 +262,7 @@ export function emptySourceOfFunds(): SourceOfFundsDraft {
     statements: {
       srodki_wlasne: false,
       legalne_pochodzenie: false,
-      dokumenty_i_aktualizacja: false,
+      aktualizacja_okolicznosci: false,
     },
     truth_confirmed: false,
     declaration_text_version: SOF_DECLARATION_TEXT_VERSION,
@@ -278,31 +277,25 @@ export function sourceOfFundsError(v: unknown): string | null {
     : (r.error.issues[0]?.message ?? "Uzupełnij oświadczenie o źródle środków.");
 }
 
-/** Status oświadczenia w pipelinie — `investors.sof_status`. */
-export type SourceOfFundsStatus =
-  | "zlozone"
-  | "do_weryfikacji"
-  | "zaakceptowane"
-  | "do_uzupelnienia"
-  | "odrzucone";
+/**
+ * Status oświadczenia w pipelinie — `investors.sof_status`. Samo złożenie
+ * zamyka krok (`zlozone`); compliance może je dodatkowo potwierdzić
+ * (`zaakceptowane`) albo odrzucić (`odrzucone` — jedyny status blokujący,
+ * art. 41 ustawy AML).
+ */
+export type SourceOfFundsStatus = "zlozone" | "zaakceptowane" | "odrzucone";
 
 export const SOF_STATUS_LABELS: Record<SourceOfFundsStatus, string> = {
   zlozone: "Oświadczenie złożone",
-  do_weryfikacji: "W analizie compliance",
-  zaakceptowane: "Zaakceptowane przez compliance",
-  do_uzupelnienia: "Do uzupełnienia — compliance prosi o dokumenty",
-  odrzucone: "Odrzucone",
+  zaakceptowane: "Potwierdzone przez compliance",
+  odrzucone: "Odrzucone przez compliance",
 };
 
 /** Statusy, które zamykają krok pipeline'u i otwierają dalsze kroki. */
 export const SOF_DONE_STATUSES: readonly SourceOfFundsStatus[] = ["zlozone", "zaakceptowane"];
 
-/** Statusy, które wymagają reakcji człowieka (inwestora albo compliance). */
-export const SOF_ATTENTION_STATUSES: readonly SourceOfFundsStatus[] = [
-  "do_weryfikacji",
-  "do_uzupelnienia",
-  "odrzucone",
-];
+/** Statusy, które wymagają reakcji człowieka. */
+export const SOF_ATTENTION_STATUSES: readonly SourceOfFundsStatus[] = ["odrzucone"];
 
 export type SofRiskFlag =
   | "inne_zrodlo"
@@ -318,15 +311,16 @@ export const SOF_RISK_FLAG_LABELS: Record<SofRiskFlag, string> = {
 };
 
 export interface SourceOfFundsAssessment {
-  /** Status zapisywany przy złożeniu: bez flag — `zlozone`, z flagami — `do_weryfikacji`. */
-  status: Extract<SourceOfFundsStatus, "zlozone" | "do_weryfikacji">;
+  /** Sygnały podwyższonego ryzyka — informacja dla compliance, nie blokada. */
   flags: SofRiskFlag[];
+  /** true = compliance dostaje e-mail z prośbą o wgląd w oświadczenie. */
+  flagged: boolean;
 }
 
 /**
- * Ocena oparta na ryzyku: automat zamyka krok tylko dla oświadczenia bez
- * sygnałów podwyższonego ryzyka; każdy sygnał kieruje oświadczenie do analizy
- * człowieka (compliance Finance You) i wstrzymuje umowy oraz Zlecenie.
+ * Ocena oparta na ryzyku: oświadczenie zawsze zamyka krok pipeline'u; sygnały
+ * ryzyka zapisujemy przy oświadczeniu i pokazujemy compliance (e-mail + karta
+ * inwestora), które może je odrzucić. Nic nie jest wstrzymywane automatycznie.
  */
 export function assessSourceOfFunds(
   v: Pick<SourceOfFundsValue, "sources" | "funds_country" | "planned_scale">,
@@ -338,5 +332,5 @@ export function assessSourceOfFunds(
     flags.push("kraj_podwyzszonego_ryzyka");
   }
   if (HIGH_SCALE_CODES.includes(v.planned_scale)) flags.push("wysoka_skala");
-  return { status: flags.length ? "do_weryfikacji" : "zlozone", flags };
+  return { flags, flagged: flags.length > 0 };
 }

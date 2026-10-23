@@ -85,19 +85,19 @@ describe("pipeline inwestora", () => {
     expect(v.canSubmitOrder).toBe(false);
   });
 
-  it("oświadczenie w analizie compliance wymaga uwagi i blokuje Zlecenie", () => {
-    const v = computeInvestorPipeline({ ...complete, sourceOfFunds: "do_weryfikacji" });
+  it("oświadczenie odrzucone przez compliance wymaga uwagi i blokuje Zlecenie", () => {
+    const v = computeInvestorPipeline({ ...complete, sourceOfFunds: "odrzucone" });
     const step = v.steps.find((s) => s.key === "zrodlo_srodkow");
     expect(step?.state).toBe("uwaga");
-    expect(step?.hint).toMatch(/compliance/);
+    expect(step?.hint).toMatch(/odrzucone/);
     expect(v.attention).toContain("zrodlo_srodkow");
     expect(v.canSubmitOrder).toBe(false);
-    expect(() =>
-      assertPipelineReadyForOrder({ ...complete, sourceOfFunds: "do_weryfikacji" }),
-    ).toThrow(/Źródło pochodzenia środków/);
+    expect(() => assertPipelineReadyForOrder({ ...complete, sourceOfFunds: "odrzucone" })).toThrow(
+      /Źródło pochodzenia środków/,
+    );
   });
 
-  it("oświadczenie zaakceptowane przez compliance zamyka krok tak samo jak złożone", () => {
+  it("samo złożenie zamyka krok; potwierdzenie compliance niczego nie zmienia, odrzucenie blokuje", () => {
     expect(
       computeInvestorPipeline({ ...complete, sourceOfFunds: "zaakceptowane" }).canSubmitOrder,
     ).toBe(true);

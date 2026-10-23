@@ -340,8 +340,8 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
     }
     if (investor.sof_status !== "zlozone" && investor.sof_status !== "zaakceptowane") {
       throw new Error(
-        investor.sof_status
-          ? "Oświadczenie o źródle pochodzenia środków czeka na decyzję compliance Finance You — umowy odblokujemy po jej zakończeniu."
+        investor.sof_status === "odrzucone"
+          ? "Oświadczenie o źródle pochodzenia środków zostało odrzucone przez compliance Finance You — skontaktuj się z nami."
           : "Najpierw złóż oświadczenie o źródle pochodzenia środków (krok 5).",
       );
     }

@@ -66,8 +66,6 @@ const OTHER_COUNTRY = "__inny__";
 const STATUS_TONE: Record<SourceOfFundsStatus, string> = {
   zlozone: "bg-emerald-100 text-emerald-800",
   zaakceptowane: "bg-emerald-100 text-emerald-800",
-  do_weryfikacji: "bg-amber-100 text-amber-800",
-  do_uzupelnienia: "bg-amber-100 text-amber-800",
   odrzucone: "bg-red-100 text-red-800",
 };
 
@@ -93,9 +91,9 @@ export function SourceOfFundsStep({ locked, onDone }: { locked: boolean; onDone:
     mutationFn: () => submitFn({ data: draft as never }),
     onSuccess: (res) => {
       toast.success(
-        res.status === "zlozone"
-          ? "Oświadczenie zapisane — krok zamknięty."
-          : "Oświadczenie zapisane — trafiło do analizy compliance Finance You.",
+        res.flags.length
+          ? "Oświadczenie zapisane — krok zamknięty. Compliance Finance You ma je do wglądu."
+          : "Oświadczenie zapisane — krok zamknięty.",
       );
       setEditing(false);
       setDraft(emptySourceOfFunds());
@@ -137,9 +135,7 @@ export function SourceOfFundsStep({ locked, onDone }: { locked: boolean; onDone:
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-sm">
-            {latest.review_status === "odrzucone" ||
-            latest.review_status === "do_weryfikacji" ||
-            latest.review_status === "do_uzupelnienia" ? (
+            {latest.review_status === "odrzucone" ? (
               <ShieldAlert className="h-4 w-4 text-amber-600" />
             ) : (
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
@@ -153,25 +149,10 @@ export function SourceOfFundsStep({ locked, onDone }: { locked: boolean; onDone:
           </p>
           {canRenew ? (
             <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-              {latest.review_status === "do_uzupelnienia"
-                ? "Złóż uzupełnione oświadczenie"
-                : "Zmieniły się okoliczności — złóż nowe"}
+              Zmieniły się okoliczności — złóż nowe
             </Button>
           ) : null}
         </div>
-
-        {latest.review_status === "do_uzupelnienia" && latest.review_note ? (
-          <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-3 text-sm text-amber-900">
-            <div className="text-xs font-semibold uppercase tracking-wide">
-              Compliance Finance You prosi o uzupełnienie
-            </div>
-            <p className="mt-1 whitespace-pre-wrap">{latest.review_note}</p>
-            <p className="mt-2 text-xs">
-              Dokumenty wyślij odpowiedzią na e-mail od compliance, a następnie złóż uzupełnione
-              oświadczenie.
-            </p>
-          </div>
-        ) : null}
 
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>
@@ -218,8 +199,7 @@ export function SourceOfFundsStep({ locked, onDone }: { locked: boolean; onDone:
       <p className="text-sm text-muted-foreground">
         Jako instytucja obowiązana musimy ustalić, skąd pochodzą środki, które zamierzasz pożyczać
         (art. 34 ust. 1 pkt 4 lit. b ustawy o przeciwdziałaniu praniu pieniędzy oraz finansowaniu
-        terroryzmu). Typowe źródła z Polski zamykają krok od razu; sygnały podwyższonego ryzyka
-        kieruje do analizy compliance Finance You człowiek, nie automat.
+        terroryzmu). Wystarczy Twoje oświadczenie — zamyka ten krok od razu.
       </p>
 
       <div className="space-y-2">

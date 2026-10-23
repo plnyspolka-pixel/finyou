@@ -26,10 +26,10 @@ create table if not exists public.investor_source_of_funds_declarations (
   funds_country char(2) not null default 'PL',
   planned_scale text not null
     check (planned_scale in ('do_100k','100k_500k','500k_1m','1m_5m','powyzej_5m')),
-  -- {srodki_wlasne: true, legalne_pochodzenie: true, dokumenty_i_aktualizacja: true, truth_confirmed: true}
+  -- {srodki_wlasne: true, legalne_pochodzenie: true, aktualizacja_okolicznosci: true, truth_confirmed: true}
   statements jsonb not null,
   -- sygnały ryzyka policzone przy złożeniu (inne_zrodlo, srodki_obce,
-  -- kraj_podwyzszonego_ryzyka, wysoka_skala); puste = krok zamknięty automatycznie
+  -- kraj_podwyzszonego_ryzyka, wysoka_skala) — informacja dla compliance, nie blokada
   risk_flags text[] not null default '{}'::text[],
   declaration_text_version text not null,
   declaration_text text not null,
@@ -37,9 +37,10 @@ create table if not exists public.investor_source_of_funds_declarations (
   ip text,
   user_agent text,
   channel text not null default 'investor_pipeline',
-  -- decyzja compliance — jedyne pola zmienialne po zapisie
+  -- decyzja compliance — jedyne pola zmienialne po zapisie; samo złożenie
+  -- zamyka krok, blokuje wyłącznie 'odrzucone' (art. 41)
   review_status text not null default 'zlozone'
-    check (review_status in ('zlozone','do_weryfikacji','zaakceptowane','do_uzupelnienia','odrzucone')),
+    check (review_status in ('zlozone','zaakceptowane','odrzucone')),
   reviewed_by uuid,
   reviewed_at timestamptz,
   review_note text
@@ -48,17 +49,17 @@ create table if not exists public.investor_source_of_funds_declarations (
 comment on table public.investor_source_of_funds_declarations is
   'Oświadczenia inwestorów o źródle pochodzenia środków (AML, art. 34 ust. 1 pkt 4 lit. b). Treść niezmienialna; compliance zmienia tylko review_*.';
 comment on column public.investor_source_of_funds_declarations.review_status is
-  'zlozone (bez sygnałów ryzyka) | do_weryfikacji (sygnały → analiza człowieka) | zaakceptowane | do_uzupelnienia (prośba o dokumenty, notatka widoczna dla inwestora) | odrzucone';
+  'zlozone (krok zamknięty) | zaakceptowane (potwierdzenie compliance, bez zmiany w pipelinie) | odrzucone (jedyny status blokujący umowy i Zlecenie)';
 comment on column public.investor_source_of_funds_declarations.review_note is
-  'Uzasadnienie decyzji compliance. Dla statusu do_uzupelnienia treść widzi inwestor (co ma dostarczyć).';
+  'Uzasadnienie decyzji compliance — widoczne tylko dla personelu (zakaz tipping-off).';
 
 create index if not exists inv_sof_user_idx
   on public.investor_source_of_funds_declarations (user_id, signed_at desc);
 create index if not exists inv_sof_investor_idx
   on public.investor_source_of_funds_declarations (investor_id, signed_at desc);
-create index if not exists inv_sof_pending_idx
+create index if not exists inv_sof_flagged_idx
   on public.investor_source_of_funds_declarations (signed_at desc)
-  where review_status = 'do_weryfikacji';
+  where cardinality(risk_flags) > 0;
 
 -- Treść oświadczenia jest dowodem dla kontroli GIIF: żadnych DELETE, a UPDATE
 -- tylko pól decyzji compliance.
@@ -102,12 +103,12 @@ alter table public.investors
   add column if not exists sof_declaration_id uuid
     references public.investor_source_of_funds_declarations(id) on delete set null,
   add column if not exists sof_status text
-    check (sof_status in ('zlozone','do_weryfikacji','zaakceptowane','do_uzupelnienia','odrzucone')),
+    check (sof_status in ('zlozone','zaakceptowane','odrzucone')),
   add column if not exists sof_declared_at timestamptz,
   add column if not exists sof_reviewed_at timestamptz;
 
 comment on column public.investors.sof_status is
-  'Status najnowszego oświadczenia o źródle środków. Krok pipeline''u zamykają zlozone i zaakceptowane; pozostałe blokują umowy i Zlecenie.';
+  'Status najnowszego oświadczenia o źródle środków. Krok pipeline''u zamykają zlozone i zaakceptowane; odrzucone blokuje umowy i Zlecenie.';
 
 -- ── 3. RLS: inwestor widzi własne oświadczenia, personel — wszystkie; zapis tylko serwer ──
 alter table public.investor_source_of_funds_declarations enable row level security;

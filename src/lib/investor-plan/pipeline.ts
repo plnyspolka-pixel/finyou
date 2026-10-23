@@ -173,11 +173,8 @@ function screeningDone(result: ScreeningResult | null): boolean {
 }
 
 const SOF_ATTENTION_HINTS: Partial<Record<SourceOfFundsStatus, string>> = {
-  do_weryfikacji:
-    "Oświadczenie trafiło do analizy compliance Finance You — możemy poprosić o dokumenty potwierdzające źródło środków.",
-  do_uzupelnienia:
-    "Compliance prosi o uzupełnienie oświadczenia albo dokumenty — sprawdź e-mail i złóż nowe oświadczenie.",
-  odrzucone: "Źródło pochodzenia środków nie zostało zaakceptowane — dalsze kroki są zablokowane.",
+  odrzucone:
+    "Oświadczenie o źródle środków zostało odrzucone przez compliance Finance You — dalsze kroki są zablokowane, skontaktuj się z nami.",
 };
 
 function sourceOfFundsDone(status: SourceOfFundsStatus | null): boolean {

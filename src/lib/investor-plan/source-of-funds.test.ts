@@ -23,7 +23,7 @@ const complete: SourceOfFundsDraft = {
   statements: {
     srodki_wlasne: true,
     legalne_pochodzenie: true,
-    dokumenty_i_aktualizacja: true,
+    aktualizacja_okolicznosci: true,
   },
   truth_confirmed: true,
 };
@@ -93,14 +93,14 @@ describe("oświadczenie o źródle środków — walidacja", () => {
 });
 
 describe("oświadczenie o źródle środków — ocena ryzyka", () => {
-  it("typowe źródła z Polski w małej skali zamykają krok automatycznie", () => {
-    expect(assessSourceOfFunds(complete)).toEqual({ status: "zlozone", flags: [] });
+  it("typowe źródła z Polski w małej skali nie dają żadnych sygnałów", () => {
+    expect(assessSourceOfFunds(complete)).toEqual({ flags: [], flagged: false });
   });
 
-  it("„inne” i środki obce kierują do analizy compliance", () => {
+  it("„inne” i środki obce są sygnałami dla compliance", () => {
     expect(assessSourceOfFunds({ ...complete, sources: ["inne"] })).toEqual({
-      status: "do_weryfikacji",
       flags: ["inne_zrodlo"],
+      flagged: true,
     });
     expect(assessSourceOfFunds({ ...complete, sources: ["kredyt_pozyczka"] }).flags).toContain(
       "srodki_obce",
@@ -115,8 +115,8 @@ describe("oświadczenie o źródle środków — ocena ryzyka", () => {
     ]);
     expect(assessSourceOfFunds({ ...complete, planned_scale: "500k_1m" }).flags).toEqual([]);
     expect(assessSourceOfFunds({ ...complete, planned_scale: "1m_5m" })).toEqual({
-      status: "do_weryfikacji",
       flags: ["wysoka_skala"],
+      flagged: true,
     });
   });
 
@@ -126,7 +126,7 @@ describe("oświadczenie o źródle środków — ocena ryzyka", () => {
       funds_country: "US",
       planned_scale: "powyzej_5m",
     });
-    expect(a.status).toBe("do_weryfikacji");
+    expect(a.flagged).toBe(true);
     expect(a.flags).toEqual([
       "inne_zrodlo",
       "srodki_obce",

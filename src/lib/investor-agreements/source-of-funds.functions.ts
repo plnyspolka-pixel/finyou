@@ -4,11 +4,12 @@
 // Zasady:
 //  - oświadczenie zapisujemy w całości (treść + wersja + IP + user-agent) do
 //    tabeli append-only; profil inwestora trzyma tylko status najnowszego;
-//  - bez sygnałów ryzyka krok zamyka się sam (`zlozone`); każdy sygnał kieruje
-//    oświadczenie do człowieka (`do_weryfikacji`) i wstrzymuje umowy i Zlecenie;
-//  - decyzje (akceptacja / prośba o dokumenty / odrzucenie) podejmuje personel
-//    (administrator lub operator) z obowiązkowym uzasadnieniem — trafiają do
-//    nieusuwalnego logu audytowego modułu screeningu.
+//  - samo złożenie zamyka krok (`zlozone`); sygnały ryzyka zapisujemy przy
+//    oświadczeniu i wysyłamy e-mail do osoby odpowiedzialnej za AML — bez
+//    wstrzymywania umów i Zlecenia;
+//  - compliance (administrator lub operator) może oświadczenie potwierdzić
+//    albo odrzucić (jedyna blokada, art. 41), zawsze z uzasadnieniem — decyzje
+//    trafiają do nieusuwalnego logu audytowego modułu screeningu.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
@@ -74,7 +75,7 @@ export interface SourceOfFundsDeclarationView {
   channel: string;
   review_status: SourceOfFundsStatus;
   reviewed_at: string | null;
-  /** Dla inwestora wypełniona tylko przy statusie `do_uzupelnienia` (co ma dostarczyć). */
+  /** Widoczne tylko dla personelu (zakaz tipping-off) — dla inwestora zawsze null. */
   review_note: string | null;
 }
 
@@ -93,8 +94,7 @@ function toView(row: any, opts: { forInvestor: boolean }): SourceOfFundsDeclarat
     channel: row.channel,
     review_status: status,
     reviewed_at: row.reviewed_at ?? null,
-    review_note:
-      opts.forInvestor && status !== "do_uzupelnienia" ? null : (row.review_note ?? null),
+    review_note: opts.forInvestor ? null : (row.review_note ?? null),
   };
 }
 
@@ -207,7 +207,7 @@ export const submitMySourceOfFundsDeclaration = createServerFn({ method: "POST" 
         ip: meta.ip,
         user_agent: meta.userAgent,
         channel: "investor_pipeline",
-        review_status: assessment.status,
+        review_status: "zlozone",
       })
       .select("id")
       .single();
@@ -217,7 +217,7 @@ export const submitMySourceOfFundsDeclaration = createServerFn({ method: "POST" 
       .from("investors")
       .update({
         sof_declaration_id: row.id,
-        sof_status: assessment.status,
+        sof_status: "zlozone",
         sof_declared_at: nowIso,
         sof_reviewed_at: null,
       })
@@ -233,15 +233,16 @@ export const submitMySourceOfFundsDeclaration = createServerFn({ method: "POST" 
       details: {
         kind: "source_of_funds",
         investorId: investor.id,
-        status: assessment.status,
+        status: "zlozone",
         flags: assessment.flags,
         version: SOF_DECLARATION_TEXT_VERSION,
         channel: "investor_pipeline",
       },
     });
 
-    // Sygnały ryzyka → osoba odpowiedzialna za AML. Błąd poczty nie cofa zapisu.
-    if (assessment.status === "do_weryfikacji") {
+    // Sygnały ryzyka → e-mail do osoby odpowiedzialnej za AML (do wglądu, bez
+    // blokady). Błąd poczty nie cofa zapisu.
+    if (assessment.flagged) {
       try {
         const [{ getScreeningSettings }, { notifySourceOfFundsReview }] = await Promise.all([
           import("@/lib/screening/db.server"),
@@ -256,7 +257,7 @@ export const submitMySourceOfFundsDeclaration = createServerFn({ method: "POST" 
       }
     }
 
-    return { ok: true as const, id: row.id, status: assessment.status, flags: assessment.flags };
+    return { ok: true as const, id: row.id, status: "zlozone" as const, flags: assessment.flags };
   });
 
 // ── Panel administratora (compliance) ───────────────────────────────────────
@@ -318,12 +319,13 @@ export const listInvestorSourceOfFunds = createServerFn({ method: "POST" })
     };
   });
 
-export const SofDecision = z.enum(["zaakceptowane", "do_uzupelnienia", "odrzucone"]);
+export const SofDecision = z.enum(["zaakceptowane", "odrzucone"]);
 export type SofDecision = z.infer<typeof SofDecision>;
 
 /**
- * Decyzja compliance dla NAJNOWSZEGO oświadczenia inwestora. Uzasadnienie
- * obowiązkowe; przy `do_uzupelnienia` jego treść widzi inwestor w panelu.
+ * Decyzja compliance dla NAJNOWSZEGO oświadczenia inwestora: potwierdzenie
+ * (bez zmiany w pipelinie) albo odrzucenie (blokuje umowy i Zlecenie).
+ * Uzasadnienie obowiązkowe i widoczne tylko dla personelu.
  */
 export const decideInvestorSourceOfFunds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

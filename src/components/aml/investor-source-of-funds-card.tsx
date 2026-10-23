@@ -34,26 +34,19 @@ import {
 const STATUS_TONE: Record<SourceOfFundsStatus, string> = {
   zlozone: "bg-emerald-100 text-emerald-800",
   zaakceptowane: "bg-emerald-100 text-emerald-800",
-  do_weryfikacji: "bg-amber-100 text-amber-800",
-  do_uzupelnienia: "bg-amber-100 text-amber-800",
   odrzucone: "bg-red-100 text-red-800",
 };
 
 const DECISIONS: { code: SofDecision; label: string; hint: string }[] = [
   {
     code: "zaakceptowane",
-    label: "Zaakceptuj",
-    hint: "Źródło środków wyjaśnione — pipeline inwestora odblokowany.",
-  },
-  {
-    code: "do_uzupelnienia",
-    label: "Poproś o dokumenty / uzupełnienie",
-    hint: "Treść uzasadnienia zobaczy inwestor w panelu; umowy i Zlecenie pozostają wstrzymane do nowego oświadczenia.",
+    label: "Potwierdź",
+    hint: "Oświadczenie przejrzane, bez zastrzeżeń. Nie zmienia nic w pipelinie — krok jest już zamknięty.",
   },
   {
     code: "odrzucone",
     label: "Odrzuć",
-    hint: "Brak możliwości zastosowania środka bezpieczeństwa (art. 41) — inwestor nie złoży nowego oświadczenia bez kontaktu z compliance.",
+    hint: "Brak możliwości zastosowania środka bezpieczeństwa (art. 41) — blokuje umowy i Zlecenie; inwestor nie złoży nowego oświadczenia bez kontaktu z compliance. Uzasadnienia inwestor nie widzi.",
   },
 ];
 
@@ -107,7 +100,7 @@ function DeclarationDetails({ d }: { d: SourceOfFundsDeclarationView }) {
               ))}
             </ul>
           ) : (
-            <span className="text-emerald-700">brak — krok zamknięty automatycznie</span>
+            <span className="text-emerald-700">brak</span>
           )}
         </dd>
       </div>
@@ -141,8 +134,8 @@ export function InvestorSourceOfFundsCard({ investorId }: { investorId: string }
     onSuccess: (res) => {
       toast.success(
         res.unlocksPipeline
-          ? "Decyzja zapisana — pipeline inwestora odblokowany."
-          : "Decyzja zapisana — inwestor zobaczy ją w panelu.",
+          ? "Decyzja zapisana — oświadczenie potwierdzone."
+          : "Decyzja zapisana — umowy i Zlecenie inwestora są zablokowane.",
       );
       setNote("");
       void qc.invalidateQueries({ queryKey: ["investor-sof", investorId] });
@@ -164,7 +157,8 @@ export function InvestorSourceOfFundsCard({ investorId }: { investorId: string }
   const latest = q.data.declarations[0] ?? null;
   const older = q.data.declarations.slice(1);
   const status = q.data.investor?.sof_status ?? null;
-  const needsDecision = status === "do_weryfikacji";
+  // Sygnały ryzyka bez decyzji compliance — karta prosi o wgląd, nic nie blokuje.
+  const needsDecision = status === "zlozone" && (latest?.risk_flags.length ?? 0) > 0;
 
   return (
     <Card className={cn(needsDecision && "border-amber-300")}>
@@ -176,6 +170,11 @@ export function InvestorSourceOfFundsCard({ investorId }: { investorId: string }
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           )}
           Źródło pochodzenia środków (AML)
+          {needsDecision ? (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+              sygnały ryzyka do wglądu
+            </span>
+          ) : null}
           {status ? (
             <span
               className={cn(
@@ -234,11 +233,7 @@ export function InvestorSourceOfFundsCard({ investorId }: { investorId: string }
                     rows={4}
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder={
-                      decision === "do_uzupelnienia"
-                        ? "Co inwestor ma dostarczyć, np. PIT-37 za 2025 r. i akt notarialny sprzedaży mieszkania."
-                        : "Co sprawdzono i na jakiej podstawie podjęto decyzję."
-                    }
+                    placeholder="Co sprawdzono i na jakiej podstawie podjęto decyzję."
                   />
                 </div>
               </div>
