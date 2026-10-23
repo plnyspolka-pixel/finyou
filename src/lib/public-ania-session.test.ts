@@ -54,6 +54,20 @@ describe("public Ania session", () => {
     expect(ANIA_RECEPTION_AGENT_ID).toBe("agent_8901m4n7kbq2f0ba2bvb096nwwqq");
     expect(mock.start).toHaveBeenCalledWith(expect.objectContaining({ surface: "reception" }), expect.any(Object));
   });
+  it("shows the first real answer when reception has no greeting", async () => {
+    const t = setup();
+    mock.start.mockImplementation(async () => t.connection);
+    await t.session.send("chcę zainwestować");
+    // Capture a connection which does not emit a greeting during setup.
+    t.session.stop();
+    let handlers: any;
+    mock.start.mockImplementation(async (_options, callbacks) => { handlers = callbacks; return t.connection; });
+    const session = createAniaSession(t.options);
+    await session.send("chcę zainwestować");
+    handlers.onAgentMessage("Jak dziś lokujesz wolne środki?");
+    expect(t.options.onMessage).toHaveBeenLastCalledWith("assistant", "Jak dziś lokujesz wolne środki?");
+    session.stop();
+  });
   it.each(["voice", "text"] as const)("accepts transferred-agent answers in the same %s session", async (mode) => {
     const t = setup(); await t.session.start(); await t.session.setMode(mode);
     t.callbacks().onAgentMessage("Przekazuję rozmowę opiekunowi inwestora.");

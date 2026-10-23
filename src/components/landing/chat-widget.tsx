@@ -118,7 +118,7 @@ export function ChatWidget({ source = "landing", subtitle = "asystentka Finance 
               <textarea aria-label="Wiadomość do Ani" placeholder="Napisz wiadomość…" value={input} maxLength={4000} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }} rows={2} className="min-w-0 flex-1 resize-none rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-ring" />
               <Button type="submit" size="icon" disabled={!input.trim() || sending} aria-label="Wyślij"><Send className="h-4 w-4" /></Button>
             </form> : <><p className="mb-2 text-xs text-muted-foreground">Mikrofon pozwoli Ani usłyszeć Twoje pytanie.</p><Button className="w-full" onClick={() => void startVoice()} disabled={state === "connecting"}><Mic className="mr-2 h-4 w-4" />{state === "listening" || state === "speaking" ? "Włącz głos" : "Porozmawiaj z Anią"}</Button></>}
-            <p className="mt-2 whitespace-nowrap text-[6px] text-muted-foreground sm:text-[7px]">Rozmawiasz z Anią — asystentką AI Finance You. Rozmowy są nagrywane. <a href="/polityka-prywatnosci" className="underline">Polityka prywatności</a></p>
+            <p className="mt-2 overflow-x-auto whitespace-nowrap text-[10px] text-muted-foreground">Rozmawiasz z Anią — asystentką AI Finance You. Rozmowy są nagrywane. <a href="/polityka-prywatnosci" className="underline">Polityka prywatności</a></p>
           </div>
         </section>
       )}

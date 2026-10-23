@@ -148,6 +148,12 @@ export async function startVoiceConversation(
   handlers: VoiceConversationHandlers = {},
 ): Promise<VoiceConversation> {
   const surface = options.surface ?? "intake";
+  const sessionId = crypto.randomUUID();
+  const dynamicVariables = {
+    session_id: sessionId,
+    thread_key: `web:${sessionId}`,
+    ...options.dynamicVariables,
+  };
   const setState = (s: VoiceState) => handlers.onState?.(s);
 
   if (typeof window === "undefined") throw new Error("Rozmowa dostępna w przeglądarce.");
@@ -255,7 +261,7 @@ export async function startVoiceConversation(
       ws.send(
         JSON.stringify({
           type: "conversation_initiation_client_data",
-          dynamic_variables: options.dynamicVariables ?? {},
+          dynamic_variables: dynamicVariables,
         }),
       );
     } catch {
