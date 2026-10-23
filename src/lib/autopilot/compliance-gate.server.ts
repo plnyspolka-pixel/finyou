@@ -28,7 +28,8 @@ Oceń ryzyko (0–100) i zwróć konkretne poprawki. Sprawdź:
 - ton wobec osób w trudnej sytuacji finansowej (bez straszenia i bez presji),
 - zgodność z torem: pożyczkobiorca = pożyczka pod zastaw nieruchomości bez kierowania do konsumentów (nigdy „na dowolny cel”, „na wakacje”, „dla osób prywatnych”, kredyt konsumencki); w scenariuszach, tytułach i hookach rolek NIE wymagaj dopisywania „firma/przedsiębiorca/działalność” — decyzja właściciela: oferty nie akcentujemy jako „tylko dla firm” (te słowa najwyżej raz), warunki klient poznaje przy wniosku, a linię o celu gospodarczym ma stopka opisu; inwestor = szanse z uczciwą linią o ryzyku,
 - awatar AI może edukować i odpowiadać na FAQ, nie składa ofert, nie podaje stóp zwrotu i nie wywiera presji.
-verdict: "ok" gdy treść można opublikować bez zmian; "fix" gdy wystarczą poprawki; "reject" gdy temat jest nie do uratowania.`;
+Zatwierdzone mechanizmy (nie są naruszeniem): CTA „Skomentuj HASŁO, a wyślę Ci [bezpłatny materiał edukacyjny]” i „obserwuj profil” to lead magnet Finance You (bezpłatny PDF albo kalkulator za komentarz, zapis na listę dobrowolny przy pobraniu) — nie traktuj tego jak schematu finfluencerskiego ani ujawniania sytuacji widza; hook może nazywać sytuację widza („Bank odmówił?”), byle bez presji i straszenia; w rolce 60–140 słów jedno uczciwe zdanie o ryzyku wystarcza, a linia o celu gospodarczym i oznaczenie AI są w stopce opisu, nie w scenariuszu.
+Proporcjonalność: gdy nie ma naruszeń z listy, a ryzyko ≤ 40, zwróć verdict "ok" — uwagi stylistyczne i możliwe ulepszenia nie są powodem do "fix". "fix" tylko przy realnym problemie z listy, "reject" gdy temat jest nie do uratowania.`;
 
 const reviewSchema = {
   type: "object",

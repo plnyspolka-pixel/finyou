@@ -12,7 +12,7 @@
 import { COMPANY_DATA } from "@/lib/company";
 import type { ContentKind, PublishPlatform, Track } from "./types";
 
-export const COMPLIANCE_RULES_VERSION = "2026-10-19.1";
+export const COMPLIANCE_RULES_VERSION = "2026-10-23.1";
 
 export type RuleSeverity = "block" | "require";
 
@@ -127,8 +127,11 @@ const PATTERNS: PatternRule[] = [
   {
     code: "dla_kazdego",
     re: re("dla\\s+każdego|każdy\\s+(?:dostanie|otrzyma)|każda\\s+firma\\s+(?:dostanie|otrzyma)"),
-    message: "„Dla każdego” – decyzja zależy od finansujących i zabezpieczenia.",
+    message:
+      "„Dla każdego” – decyzja zależy od finansujących i zabezpieczenia. Nie używaj tej frazy wcale (zaprzeczenie też omiń).",
     tracks: ["pozyczkobiorca"],
+    // „nie dla każdego” to ostrzeżenie, nie obietnica.
+    allowNegated: true,
   },
   {
     code: "bez_weryfikacji",

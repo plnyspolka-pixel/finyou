@@ -55,14 +55,16 @@ W `full_autopilot` (i w `semi_auto`) tick co godzinę dba o zapas rolek per tor
    próg `heygenMinRemainingCredits`).
 2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`). Poniżej
    bufora `REEL_BUFFER_PER_TRACK` (2) powstaje jedna rolka; maks. `MAX_PRODUCED_PER_TRACK_PER_DAY`
-   (2) na dobę.
+   (2) na dobę. Jeden tick = jedna rolka (kilka wywołań LLM musi zmieścić się w jednym żądaniu);
+   tory ustawiają się w kolejce: najpierw mniejszy zapas, potem ten dawniej obsłużony.
 3. Seria rotacyjnie (najdawniej użyta w ostatnich rolkach toru; bez odcinków tygodniowych), hasło
    serii → **opublikowany** lead magnet z katalogu albo kalkulator (`resolveKeywordTarget`); bez
    opublikowanego materiału rolka kończy się zachętą do obserwowania, bez hasła. Temat z
    `allowedTopics` profilu, też rotacyjnie.
 4. Brief (`buildReelBrief`: szkielet serii, ton toru, lead magnet, CTA „Skomentuj HASŁO”, zdanie o
    ryzyku, ostatnie tytuły do uniknięcia) → scenariusz (`generateVideoScript` z zasadami toru) →
-   bramka compliance z poprawkami → tytuł z hasłem (`… Napisz HASŁO`).
+   bramka compliance z maks. 2 poprawkami (recenzent zna mechanizm lead magnetu i ocenia
+   proporcjonalnie) → tytuł z hasłem (`… Napisz HASŁO`) sprawdzony regułami twardymi.
 5. Job `queued` w Studiu z `track`, `series`, `compliance_status`, promptem z prefiksem
    `[autopilot]`; render i napisy robi tick Studia, a gotową rolkę planuje Etap 0 w slotach toru.
 

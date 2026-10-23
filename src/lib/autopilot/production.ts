@@ -129,7 +129,7 @@ export function buildReelBrief(input: ReelBriefInput): string {
     lines.push("Zakończ zachętą do obserwowania profilu (bez obietnic).");
   }
   lines.push(
-    "Jedno uczciwe zdanie o ryzyku w naturalnym miejscu (przed CTA). Bez liczb o zwrocie w procentach, bez gwarancji i bez obiecywania, że ryzyka nie ma.",
+    "Jedno uczciwe zdanie o ryzyku w naturalnym miejscu (przed CTA). Bez liczb o zwrocie w procentach, bez gwarancji i bez obiecywania, że ryzyka nie ma. Nie używaj frazy „dla każdego” w żadnej formie (także zaprzeczonej); nie obiecuj, że weryfikacji nie będzie, i nie sugeruj przeznaczenia prywatnego.",
   );
   const examples = TRACK_HOOK_EXAMPLES[track];
   if (examples.length)

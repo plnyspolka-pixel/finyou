@@ -9,8 +9,8 @@
 // Każda decyzja ląduje w dzienniku autopilota (reel_produced / _skipped / _rejected).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { resolveKeywordTarget, type KeywordTarget } from "@/lib/lead-magnets/catalog";
-import { runComplianceGate } from "./compliance-gate.server";
-import { COMPLIANCE_RULES_VERSION } from "./compliance-rules";
+import { llmGateDeps, runComplianceGate } from "./compliance-gate.server";
+import { COMPLIANCE_RULES_VERSION, checkHardRules } from "./compliance-rules";
 import {
   MAX_PRODUCED_PER_TRACK_PER_DAY,
   PRODUCTION_COST_PLN,
@@ -38,6 +38,27 @@ const IN_PROGRESS_STATUSES = [
   "captioning",
   "processing",
 ];
+
+/**
+ * Jeden tick = jedna rolka. Produkcja to kilka wywołań LLM (scenariusz,
+ * recenzent, poprawki) — dwa tory naraz nie mieszczą się w jednym żądaniu
+ * ticka. Drugi tor dostaje rolkę w następnej godzinie.
+ */
+const REELS_PER_RUN = 1;
+/** Poprawek w bramce produkcji mniej niż globalnie (czas żądania); po nich temat wraca do banku. */
+const MAX_PRODUCTION_REWRITES = 2;
+
+function limitedRewriteDeps(max: number) {
+  let used = 0;
+  return {
+    review: llmGateDeps.review,
+    rewrite: async (...args: Parameters<typeof llmGateDeps.rewrite>) => {
+      used += 1;
+      if (used > max) throw new Error(`Limit ${max} poprawek w produkcji wyczerpany.`);
+      return llmGateDeps.rewrite(...args);
+    },
+  };
+}
 
 export type ProductionResult = {
   track: Track;
@@ -85,15 +106,22 @@ export async function loadPipeline(track: Track, dayStartIso: string): Promise<T
 
 async function recentJobs(
   track: Track,
-): Promise<Array<{ series: string | null; publish_title: string; prompt: string }>> {
+): Promise<
+  Array<{ series: string | null; publish_title: string; prompt: string; created_at: string }>
+> {
   const { data } = await db
     .from("studio_video_jobs")
-    .select("series, publish_title, prompt")
+    .select("series, publish_title, prompt, created_at")
     .or(trackFilter(track))
     .neq("status", "failed")
     .order("created_at", { ascending: false })
     .limit(12);
-  return (data ?? []) as Array<{ series: string | null; publish_title: string; prompt: string }>;
+  return (data ?? []) as Array<{
+    series: string | null;
+    publish_title: string;
+    prompt: string;
+    created_at: string;
+  }>;
 }
 
 async function adminUserId(): Promise<string | null> {
@@ -162,9 +190,31 @@ export async function produceReels(
   const dayStart = warsawDayStartIso(now);
   const results: ProductionResult[] = [];
   let createdBy: string | null = opts.actor ?? null;
+  let produced = 0;
 
-  for (const track of opts.tracks ?? TRACKS) {
-    const pipeline = await loadPipeline(track, dayStart);
+  // Kolejność torów: najpierw ten z najmniejszym zapasem, przy remisie ten,
+  // który dawniej dostał rolkę — przy jednej rolce na tick tory się zmieniają.
+  const candidates = await Promise.all(
+    (opts.tracks ?? [...TRACKS]).map(async (track) => ({
+      track,
+      pipeline: await loadPipeline(track, dayStart),
+      recent: await recentJobs(track),
+    })),
+  );
+  candidates.sort((a, b) => {
+    const za = a.pipeline.ready + a.pipeline.inProgress;
+    const zb = b.pipeline.ready + b.pipeline.inProgress;
+    if (za !== zb) return za - zb;
+    const la = a.recent[0]?.created_at ?? "";
+    const lb = b.recent[0]?.created_at ?? "";
+    return la < lb ? -1 : la > lb ? 1 : 0;
+  });
+
+  for (const { track, pipeline, recent } of candidates) {
+    if (produced >= (opts.tracks?.length && opts.force ? opts.tracks.length : REELS_PER_RUN)) {
+      results.push({ track, action: "skipped", reason: "jedna rolka na tick", pipeline });
+      continue;
+    }
     const decision = opts.force
       ? pipeline.producedToday >= MAX_PRODUCED_PER_TRACK_PER_DAY
         ? decideProduction(pipeline)
@@ -186,7 +236,6 @@ export async function produceReels(
       continue;
     }
 
-    const recent = await recentJobs(track);
     const series = pickSeries(
       track,
       recent.map((r) => r.series).filter((s): s is string => Boolean(s)),
@@ -215,11 +264,10 @@ export async function produceReels(
       const { generateVideoScript } = await import("@/lib/studio-ai.server");
       const gen = await generateVideoScript(brief, { track });
       const ref = { production: true, series: series.slug, track, keyword };
-      const scriptGate = await runComplianceGate({
-        text: gen.script,
-        ctx: { kind: "script", track },
-        ref,
-      });
+      const scriptGate = await runComplianceGate(
+        { text: gen.script, ctx: { kind: "script", track }, ref },
+        limitedRewriteDeps(MAX_PRODUCTION_REWRITES),
+      );
       if (scriptGate.status === "rejected") {
         await logAutopilot({
           action: "reel_production_rejected",
@@ -239,16 +287,12 @@ export async function produceReels(
         });
         continue;
       }
+      // Tytuł: reguły twarde bez recenzenta (czas żądania); przy blokadzie tytuł serii.
       const rawTitle = publishTitleWithKeyword(gen.title || series.title, keyword);
-      const titleGate = await runComplianceGate({
-        text: rawTitle,
-        ctx: { kind: "title", track },
-        ref,
-      }).catch(() => ({ status: "rejected" as const, text: "", reason: "" }));
-      const title =
-        titleGate.status === "rejected"
-          ? publishTitleWithKeyword(series.title, keyword)
-          : titleGate.text.slice(0, 100);
+      const titleBlocked = checkHardRules(rawTitle, { kind: "title", track }).some(
+        (h) => h.severity === "block",
+      );
+      const title = titleBlocked ? publishTitleWithKeyword(series.title, keyword) : rawTitle;
       const description = [gen.description.trim(), gen.hashtags.slice(0, 5).join(" ")]
         .filter(Boolean)
         .join("\n\n");
@@ -312,6 +356,7 @@ export async function produceReels(
         costPln: PRODUCTION_COST_PLN,
         actor: opts.actor ?? null,
       });
+      produced += 1;
       results.push({
         track,
         action: "produced",
