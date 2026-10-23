@@ -30,7 +30,7 @@ import type { LeadMagnetAudience } from "./core";
 export { CATALOG_SLUGS, isCatalogSlug, type CatalogSlug };
 
 /** Wersja katalogu — na okładce PDF i w dzienniku provisioningu. Podbij przy zmianie treści. */
-export const CATALOG_VERSION = "2026-10-23.1";
+export const CATALOG_VERSION = "2026-10-23.2";
 
 /** Prefiks ścieżek plików katalogu w buckecie `lead-magnets` (plik zespołu ma `<grupa>/<uuid>.<ext>`). */
 export const CATALOG_FILE_PREFIX = "katalog/";
@@ -189,12 +189,13 @@ const startInwestora = defineMagnet({
     "Zarabiaj na nieruchomościach tak, jak robią to banki – bez kupowania, remontów i najemców",
   subheadline:
     "Bezpłatny przewodnik PDF dla prywatnych inwestorów: jak działa pożyczka zabezpieczona hipoteką, co chroni Twój kapitał, gdzie są ryzyka i od czego zacząć.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "Mechanizm krok po kroku: kto pożycza, kto spłaca i co chroni inwestora",
-    "Pięć filarów bezpieczeństwa: hipoteka, LTV, księga wieczysta, umowa, cel gospodarczy",
-    "Uczciwa mapa ryzyk – co może pójść nie tak i jak się na to przygotować",
-    "Słownik 12 pojęć, które trzeba rozumieć przed pierwszą decyzją",
-    "Plan pierwszych 30 dni inwestora",
+    "Zrozumiesz, jak zarabia się na nieruchomości, której nigdy nie kupisz – i dlaczego banki robią to od dekad",
+    "Poznasz 5 filarów, które decydują, czy Twój kapitał wróci – zanim w ogóle zaczniesz rozmawiać o oprocentowaniu",
+    "Dostaniesz uczciwą mapę ryzyk: co naprawdę może pójść nie tak i jak się na to przygotować",
+    "Rozszyfrujesz 12 pojęć, przy których początkujący kiwają głową, choć ich nie rozumieją",
+    "Wyjdziesz z planem na pierwsze 30 dni – od pierwszej rozmowy do pierwszej decyzji",
   ],
   cta_text: "Wyślij mi przewodnik",
   meta_description:
@@ -496,12 +497,13 @@ const checklistaKsiegi = defineMagnet({
     "Księga wieczysta w 20 minut: checklista, która wyłapie wady zabezpieczenia, zanim zaangażujesz kapitał",
   subheadline:
     "Dział po dziale: co czytać, jakie wpisy są sygnałem ostrzegawczym i o co dopytać, zanim podpiszesz umowę. Do wydruku i odhaczenia przy każdej transakcji.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "Jak znaleźć i otworzyć księgę online i co oznacza jej numer",
-    "Działy I–IV: ponad 30 punktów do odhaczenia, z wyjaśnieniem po ludzku",
-    "Wzmianki, roszczenia, służebności, hipoteki – które wpisy dyskwalifikują zabezpieczenie",
-    "Tabela sygnałów ostrzegawczych z zalecaną reakcją",
-    "Co sprawdzić poza księgą oraz pytania do pożyczkobiorcy i notariusza",
+    "Sprawdzisz księgę wieczystą w 20 minut, bez prawnika – i zrozumiesz, co właściwie widzisz",
+    "Poznasz wpisy, które z pozoru wyglądają niewinnie, a dyskwalifikują zabezpieczenie",
+    "Dostaniesz ponad 30 punktów do odhaczenia, dział po dziale, wyjaśnionych po ludzku",
+    "Zobaczysz tabelę sygnałów ostrzegawczych – i co zrobić, gdy któryś się pojawi",
+    "Dowiesz się, o co zapytać pożyczkobiorcę i notariusza, zanim podpiszesz cokolwiek",
   ],
   cta_text: "Wyślij mi checklistę",
   meta_description:
@@ -723,12 +725,13 @@ const bledyInwestora = defineMagnet({
     "7 błędów, przez które inwestorzy tracą pieniądze w pożyczkach pod hipotekę – i prosta procedura, która przed nimi chroni",
   subheadline:
     "Każdy błąd: jak go rozpoznać, co naprawdę kosztuje i co zrobić zamiast tego. Z przykładem liczbowym i listą kontrolną „przed decyzją” na końcu.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "7 błędów z praktyki finansowania pozabankowego – od wyceny po windykację",
-    "Dla każdego błędu: sygnał ostrzegawczy, koszt i działanie zapobiegawcze",
-    "Przykład liczbowy: jak LTV i kolejność hipotek zmieniają wynik egzekucji",
-    "Co zrobić w pierwszym tygodniu opóźnienia spłaty",
-    "Lista kontrolna „przed decyzją” – 15 pytań do odhaczenia",
+    "Poznasz 7 błędów, przez które inwestorzy tracą pieniądze – i jak ich uniknąć, zanim podpiszesz umowę",
+    "Przy każdym błędzie: po czym go poznać, ile kosztuje i jak go uniknąć jednym działaniem",
+    "Zobaczysz na liczbach, jak LTV i kolejność hipotek decydują, ile odzyskasz z egzekucji",
+    "Dowiesz się, co zrobić w pierwszym tygodniu opóźnienia, żeby nie stracić kontroli",
+    "Dostaniesz 15 pytań „przed decyzją” – jeśli na któreś nie znasz odpowiedzi, nie wypłacaj pieniędzy",
   ],
   cta_text: "Wyślij mi materiał",
   meta_description:
@@ -1075,13 +1078,14 @@ const bankOdmowil = defineMagnet({
   headline: "Bank odmówił – co dalej? 5 realnych dróg do finansowania firmy, gdy masz nieruchomość",
   subheadline:
     "Dlaczego banki odmawiają, kto zamiast nich patrzy na Twoją nieruchomość, ile realnie możesz uzyskać i jakich ofert unikać. Bezpłatny przewodnik dla przedsiębiorców.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "Prawdziwe powody odmów – i które z nich nie mają znaczenia przy finansowaniu pod nieruchomość",
-    "5 dróg finansowania z plusami, minusami i typowym czasem",
-    "Ile możesz uzyskać: LTV na przykładach i wzór do własnych obliczeń",
-    "Koszty bez tajemnic: prowizja, odsetki, notariusz, wpis hipoteki",
-    "Czerwone flagi: 9 cech ofert, od których trzymaj się z daleka",
-    "Plan działania na 7 dni",
+    "Zrozumiesz, dlaczego bank odmówił – i które z tych powodów nie mają znaczenia, gdy masz nieruchomość",
+    "Poznasz 5 dróg do finansowania firmy, z plusami, minusami i czasem, którego naprawdę wymagają",
+    "Policzysz, ile możesz uzyskać pod swoją nieruchomość – wzór i przykłady do własnych liczb",
+    "Zobaczysz pełny koszt bez drobnego druku: prowizja, odsetki, notariusz, wpis hipoteki",
+    "Rozpoznasz 9 cech ofert, od których trzeba trzymać się z daleka",
+    "Wyjdziesz z planem na 7 dni – co zrobić najpierw, żeby nie tracić czasu",
   ],
   cta_text: "Wyślij mi przewodnik",
   meta_description:
@@ -1358,12 +1362,13 @@ const checklistaDokumentow = defineMagnet({
   headline: "Komplet dokumentów w 48 godzin: checklista, która skraca drogę od wniosku do wypłaty",
   subheadline:
     "Co przygotować dla firmy, nieruchomości, celu finansowania i osób – z podziałem na „konieczne” i „przyspiesza decyzję”. Do wydruku i odhaczenia.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "4 grupy dokumentów: firma, nieruchomość, cel i spłata, osoby",
-    "Oznaczenie, co jest konieczne, a co tylko przyspiesza decyzję",
-    "Skąd wziąć każdy dokument i ile to trwa: EKW, CEIDG / KRS, e-Urząd Skarbowy, PUE ZUS",
-    "Najczęstsze braki, które wydłużają proces o tygodnie",
-    "Jak przygotować skany, żeby analityk nie odsyłał ich do poprawy",
+    "Zbierzesz komplet dokumentów w 48 godzin – wiesz dokładnie, co, skąd i w jakiej kolejności",
+    "Rozróżnisz, co jest naprawdę konieczne, a co tylko przyspiesza decyzję",
+    "Dostaniesz gotowe ścieżki: skąd pobrać każdy dokument online i ile to zajmuje",
+    "Poznasz braki, które najczęściej wydłużają proces o tygodnie – i unikniesz ich od razu",
+    "Dowiesz się, jak przygotować skany, żeby analityk nie odsyłał ich do poprawy",
   ],
   cta_text: "Wyślij mi checklistę",
   meta_description:
@@ -1536,12 +1541,13 @@ const odWnioskuDoWyplaty = defineMagnet({
     "Od wniosku do wypłaty w 10 krokach – kto, co i kiedy robi, zanim pieniądze trafią na konto firmy",
   subheadline:
     "Mapa procesu z typowymi terminami, dokumentami na każdym etapie, rozliczeniem wypłaty i odpowiedziami na 8 mitów o finansowaniu pozabankowym.",
+  // Punkty w języku korzyści i ciekawości (co w środku), nie spis rozdziałów.
   benefits: [
-    "10 kroków procesu z typowym czasem trwania każdego z nich",
-    "Co dokładnie dzieje się u notariusza i w sądzie wieczystoksięgowym",
-    "Jak liczona jest wypłata: przykład z prowizją i spłatą wcześniejszej hipoteki",
-    "Mit vs fakt: 8 przekonań o pożyczkach pozabankowych skonfrontowanych z zasadami",
-    "Co wydłuża proces – i jak tego uniknąć",
+    "Zobaczysz całą drogę w 10 krokach – kto, co i kiedy robi, zanim pieniądze trafią na konto firmy",
+    "Dowiesz się, co naprawdę dzieje się u notariusza i w sądzie wieczystoksięgowym – i ile to trwa",
+    "Policzysz na przykładzie, ile z kwoty pożyczki trafi na Twoje konto po prowizji i spłacie starej hipoteki",
+    "Skonfrontujesz 8 mitów o pożyczkach pozabankowych z tym, jak jest naprawdę",
+    "Poznasz, co najczęściej wydłuża proces – i jak to ominąć",
   ],
   cta_text: "Wyślij mi mapę procesu",
   meta_description:
