@@ -8,6 +8,7 @@ import {
   listMetaLeadForms,
   setMetaLeadFormAssignee,
   setMetaLeadFormRole,
+  setMetaLeadFormLeadRole,
   backfillMetaLeadAccounts,
 } from "@/lib/meta-lead-forms.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +90,17 @@ function MetaPage() {
       setRoleFn({ data: vars }),
     onSuccess: () => {
       toast.success("Zapisano kategorię konta");
+      qc.invalidateQueries({ queryKey: ["meta-lead-forms"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const setLeadRoleFn = useServerFn(setMetaLeadFormLeadRole);
+  const setLeadRole = useMutation({
+    mutationFn: (vars: { formId: string; leadRole: "klient" | "inwestor" | null }) =>
+      setLeadRoleFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Zapisano rolę leada");
       qc.invalidateQueries({ queryKey: ["meta-lead-forms"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -252,6 +264,7 @@ function MetaPage() {
                   <TableHead>Strona</TableHead>
                   <TableHead className="text-right">Leady</TableHead>
                   <TableHead>Ostatni lead</TableHead>
+                  <TableHead className="w-44">Rola leada</TableHead>
                   <TableHead className="w-44">Kategoria konta</TableHead>
                   <TableHead className="w-72">Właściciel leadów</TableHead>
                 </TableRow>
@@ -267,6 +280,26 @@ function MetaPage() {
                     <TableCell className="text-right">{f.total_leads_pulled ?? 0}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {f.last_lead_at ? formatDateTime(f.last_lead_at) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={f.lead_role ?? "__auto__"}
+                        onValueChange={(v) =>
+                          setLeadRole.mutate({
+                            formId: f.id,
+                            leadRole: v === "__auto__" ? null : (v as "klient" | "inwestor"),
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__auto__">Auto (nazwa „inwest”)</SelectItem>
+                          <SelectItem value="klient">Pożyczkobiorca</SelectItem>
+                          <SelectItem value="inwestor">Inwestor</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       <Select
