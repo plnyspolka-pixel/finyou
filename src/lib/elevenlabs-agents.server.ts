@@ -256,6 +256,8 @@ export interface SyncPromptsResult {
   errors: Array<{ surface: AgentSurface; error: string }>;
   /** Agent telefoniczny (voicebot_settings.agent_id) inny niż A1 — jego prompt żyje w konsoli ElevenLabs. */
   phoneAgentOutOfSync: string | null;
+  /** Agent telefonu zarządzany osobno w ElevenLabs (np. 7201) — świadomie nie synchronizowany. */
+  phoneAgentManagedSeparately: string | null;
 }
 
 /**
@@ -271,6 +273,7 @@ export async function syncElevenLabsAgentPrompts(
     skipped: [],
     errors: [],
     phoneAgentOutOfSync: null,
+    phoneAgentManagedSeparately: null,
   };
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
@@ -287,6 +290,11 @@ export async function syncElevenLabsAgentPrompts(
     const agentId = await getAgentIdForSurface(surface);
     if (!agentId) {
       result.skipped.push({ surface, reason: "brak agenta — najpierw go utwórz" });
+      continue;
+    }
+    const { isSeparatelyManagedAgent } = await import("./phone-agent-managed");
+    if (isSeparatelyManagedAgent(agentId)) {
+      result.skipped.push({ surface, reason: "agent zarządzany osobno w ElevenLabs — bez zmian" });
       continue;
     }
     try {
@@ -362,7 +370,10 @@ export async function syncElevenLabsAgentPrompts(
       .eq("id", 1)
       .maybeSingle();
     const phoneAgentId = (data?.agent_id as string | null) ?? null;
-    if (phoneAgentId && phoneAgentId !== intakeId) result.phoneAgentOutOfSync = phoneAgentId;
+    const { phoneAgentSyncStatus } = await import("./phone-agent-managed");
+    const st = phoneAgentSyncStatus(phoneAgentId, intakeId);
+    result.phoneAgentOutOfSync = st.outOfSync;
+    result.phoneAgentManagedSeparately = st.managedSeparately;
   } catch {
     /* informacja poglądowa — brak nie jest błędem synchronizacji */
   }
