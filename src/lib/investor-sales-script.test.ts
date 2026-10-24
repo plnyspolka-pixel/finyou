@@ -19,8 +19,12 @@ describe("scenariusz rozmowy z inwestorem", () => {
     expect(s).toContain("do 30% rocznie");
     expect(s).toContain("powyżej 50% rocznie");
   });
-  it("opisuje proces od A do Z i mentoring", () => {
-    expect(s).toContain("od A do Z");
-    expect(s).toContain("mentoring");
+  it("opisuje proces: zlecenie, tematy, pełny kontakt, umowa w 2 kliknięcia, notariusz, wypłata, windykacja", () => {
+    expect(s).toContain("składa {{forma}} zlecenie");
+    expect(s).toContain("pełny kontakt do klienta od razu");
+    expect(s).toContain("dwa kliknięcia");
+    expect(s).toContain("notariusz");
+    expect(s).toContain("moduł windykacyjny");
+    expect(s).toContain("Filip");
   });
 });
