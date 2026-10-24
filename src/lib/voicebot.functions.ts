@@ -245,6 +245,8 @@ async function maybeSendSms(
   // Szablon SMS-a zapowiada telefon Ani w sprawie wniosku — pożyczkobiorca
   // z windykacji nie może go dostać (inna sprawa, inny agent, inny ton).
   if (ctx.source === "windykacja") return;
+  // Leady inwestorskie mają własny SMS powitalny — bez zapowiedzi „w sprawie wniosku”.
+  if (ctx.source === "meta_lead_inwestor" || ctx.source === "ania_investor_callback") return;
   const settings = await loadSettings();
   if (!settings?.sms_enabled) return;
   if ((settings.sms_trigger ?? "off") !== trigger) return;
@@ -360,6 +362,7 @@ export async function placeOutboundCallInternal(opts: {
       meta_lead_id: opts.metaLeadId ?? null,
       source: opts.source,
       agent_id: opts.agentIdOverride ?? settings.agent_id,
+      dynamic_variables: (opts.dynamicVariables ?? {}) as any,
       status: "oczekuje",
       scheduled_at: nextIso,
       result_summary: `Quiet hours (${window.reason}, godzina ${window.hour}:00 Warszawa) — zaplanowano na ${fmtWarsaw(nextIso)}`,
@@ -415,7 +418,7 @@ export async function placeOutboundCallInternal(opts: {
       meta_lead_id: opts.metaLeadId ?? null,
       source: opts.source,
       agent_id: effectiveAgentId,
-
+      dynamic_variables: (opts.dynamicVariables ?? {}) as any,
       status: "w_trakcie",
       started_at: new Date().toISOString(),
       attempts: 1,
