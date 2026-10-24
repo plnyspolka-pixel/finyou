@@ -124,13 +124,16 @@ function MaterialCard({ audience, m }: { audience: LeadMagnetAudience; m: FreeMa
           style={{
             margin: "0.7rem 0 0",
             paddingLeft: "1.1rem",
+            listStyle: "disc",
             fontSize: "0.84rem",
             lineHeight: 1.5,
             color: "var(--muted-foreground)",
           }}
         >
           {m.benefits.map((b) => (
-            <li key={b}>{b}</li>
+            <li key={b} style={{ marginTop: "0.3rem" }}>
+              {b}
+            </li>
           ))}
         </ul>
       )}
