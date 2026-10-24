@@ -3,8 +3,9 @@
 // Zwraca wyłącznie agent_id (i tak widoczny w osadzonym widgecie) — brak id
 // oznacza, że powierzchnia działa jeszcze na starym silniku tekstowym.
 import { createFileRoute } from "@tanstack/react-router";
+import { ANIA_RECEPTION_AGENT_ID } from "@/lib/ania-reception";
 
-const SURFACES = new Set(["intake", "investor_info", "investor_panel"]);
+const SURFACES = new Set(["reception", "intake", "investor_info", "investor_panel"]);
 
 export const Route = createFileRoute("/api/public/agent-config")({
   server: {
@@ -17,7 +18,9 @@ export const Route = createFileRoute("/api/public/agent-config")({
         }
         try {
           const { getAgentIdForSurface } = await import("@/lib/elevenlabs-agents.server");
-          const agentId = await getAgentIdForSurface(surface as any);
+          const agentId = surface === "investor_panel"
+            ? await getAgentIdForSurface("investor_panel")
+            : ANIA_RECEPTION_AGENT_ID;
           return Response.json(
             { agentId },
             { headers: { "Cache-Control": "public, max-age=300" } },
