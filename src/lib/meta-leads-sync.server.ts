@@ -3,6 +3,7 @@
 // - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
 import { ensureMetaTokens } from "@/lib/meta-tokens.server";
+import { leadDynamicVariables, resolveLeadRole } from "@/lib/ania-lead-context";
 import { konfiguracjaKlienta, przekazLeadaKlientowi } from "@/lib/meta-leads-client-forward.server";
 import {
   normPhone,
@@ -177,6 +178,25 @@ export async function runMetaLeadsSync(): Promise<{
                 .from("meta_lead_forms")
                 .update({ last_error: `lead ${leadgenId}: ${wynik.error}`.slice(0, 500) })
                 .eq("meta_form_id", formId);
+            }
+            continue;
+          }
+
+          // Lead inwestorski (rola formularza) — osobna ścieżka bez wniosku pożyczkowego.
+          if (resolveLeadRole(form as any) === "inwestor") {
+            const { captureMetaInvestorLead } = await import("@/lib/meta-investor-capture.server");
+            try {
+              const r = await captureMetaInvestorLead({
+                leadgenId,
+                formId: lead.form_id ?? formId,
+                campaignId: lead.campaign_id ?? null,
+                createdTime: lead.created_time ?? null,
+                fieldData: fd,
+                allowCall: !!autoCall && (form as any).voicebot_enabled !== false,
+              });
+              if (r.callResult === "dispatched") summary.calls_queued += 1;
+            } catch (e: any) {
+              summary.errors.push(`investor ${leadgenId}: ${e?.message ?? e}`);
             }
             continue;
           }
@@ -413,6 +433,14 @@ export async function runMetaLeadsSync(): Promise<{
               clientId,
               loanApplicationId,
               firstName: first,
+              dynamicVariables: leadDynamicVariables({
+                firstName: first,
+                source: "meta_ads",
+                role: "klient",
+                amount: extractLeadAmount(fd),
+                createdAt: lead.created_time ?? null,
+                callDirection: "outbound",
+              }),
             })
               .then(() => {
                 summary.calls_queued += 1;
