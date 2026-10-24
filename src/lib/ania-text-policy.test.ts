@@ -9,14 +9,14 @@ describe("text channel policy", () => {
   it("does not personalize unknown sources", () => expect(investorFirstMessage({})).toBeUndefined());
   it("uses feminine form and yesterday in Warsaw", () => {
     const text = investorFirstMessage({ lead_source: "meta_ads", first_name: "Anna", forma: "Pani", lead_amount: "100 000 zł", lead_created_at: "2026-10-23T12:00:00Z" }, new Date("2026-10-24T15:37:00Z"));
-    expect(text).toContain("Pani Anna");
+    expect(text).toContain("Pani Anno");
     expect(text).toContain("wczorajsze zgłoszenie");
     expect(text).toContain("wpisała Pani kwotę 100 000 zł");
     expect(text).not.toContain("zł zł");
   });
   it("uses masculine form and omits absent amount", () => {
     const text = investorFirstMessage({ lead_source: "meta_ads", first_name: "Kuba", forma: "Pan", lead_amount: "" });
-    expect(text).toContain("Panie Kuba");
+    expect(text).toContain("Panie Kubo");
     expect(text).toContain("inwestuje Pan");
     expect(text).not.toContain("kwotę");
   });

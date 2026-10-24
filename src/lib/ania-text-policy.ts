@@ -9,7 +9,11 @@ export function investorFirstMessage(vars: Record<string, unknown>, now = new Da
   if (!String(vars.lead_source ?? "").trim()) return undefined;
   const first = usableFirstName(String(vars.first_name ?? ""));
   const forma = vars.forma === "Pan" || vars.forma === "Pani" ? vars.forma : honorificFor(first);
-  const greeting = first && forma ? `, ${forma === "Pan" ? "Panie" : "Pani"} ${first}` : first ? `, ${first}` : "";
+  // The nominative name cannot follow Panie/Pani (Jan → Janie, Anna → Anno).
+  // Keep unknown names intact in a separate neutral line rather than guessing declension.
+  const vocatives: Record<string, string> = { Jan: "Janie", Marek: "Marku", Piotr: "Piotrze", Filip: "Filipie", Dawid: "Dawidzie", Kuba: "Kubo", Anna: "Anno", Ewa: "Ewo", Maria: "Mario" };
+  const vocative = vocatives[first];
+  const greeting = first && vocative && forma ? `, ${forma === "Pan" ? "Panie" : "Pani"} ${vocative}` : "";
   const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Warsaw" });
   const created = new Date(String(vars.lead_created_at ?? ""));
   const when = !isNaN(created.getTime()) && day(created) === day(now) ? "dzisiejsze "
@@ -18,6 +22,6 @@ export function investorFirstMessage(vars: Record<string, unknown>, now = new Da
   const currency = /zł|pln/i.test(amount) ? amount : `${amount} zł`;
   const amountPart = amount ? forma === "Pan" ? ` — wpisał Pan kwotę ${currency}`
     : forma === "Pani" ? ` — wpisała Pani kwotę ${currency}` : ` — podana kwota to ${currency}` : "";
-  const question = forma ? `Jak dziś inwestuje ${forma} wolne środki?` : "Jak dziś inwestuje się u Ciebie wolne środki?";
+  const question = forma ? `Jak dziś inwestuje ${forma} wolne środki?` : "Jak obecnie wygląda inwestowanie wolnych środków?";
   return `Dzień dobry${greeting}, tu Ania z Finance You. Dziękuję za ${when}zgłoszenie w formularzu o inwestowaniu${amountPart}. ${question}`;
 }

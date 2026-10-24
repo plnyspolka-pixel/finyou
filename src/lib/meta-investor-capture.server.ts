@@ -24,6 +24,7 @@ import {
 } from "@/lib/meta-lead-fields";
 
 export const INVESTOR_WELCOME_SMS_SOURCE = "lead_welcome_investor";
+import { investorFirstMessage } from "./ania-text-policy";
 
 export interface InvestorLeadInput {
   leadgenId: string;
@@ -143,7 +144,7 @@ export async function captureMetaInvestorLead(
       const { sendSmsInternal } = await import("@/lib/voicebot.functions");
       const r = await sendSmsInternal({
         phone: phoneNorm,
-        body: investorWelcomeSmsBody(first),
+        body: investorFirstMessage(leadDynamicVariables({ firstName: first, source: "meta_ads", role: "inwestor", amount, createdAt })) ?? investorWelcomeSmsBody(first),
         source: INVESTOR_WELCOME_SMS_SOURCE,
         category: "automated",
         metadata: { source: INVESTOR_WELCOME_SMS_SOURCE, lead_role: "inwestor" },

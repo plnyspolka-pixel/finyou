@@ -421,7 +421,7 @@ export async function runAgentTurn(opts: {
       const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
       const { investorFirstMessage } = await import("./ania-text-policy");
       const firstMessage = elAgentId === A2P_TEXT_AGENT_ID && !(history ?? []).some(h => h.direction === "outbound" && h.channel === opts.channel)
-        ? investorFirstMessage(leadDynamicVariables({ firstName: lead.first_name, source: lead.source, role: "inwestor", amount: (lead.application_data as any)?.lead_amount ?? "", createdAt: lead.created_at })) : undefined;
+        ? investorFirstMessage(leadDynamicVariables({ firstName: lead.first_name, source: lead.source, role: "inwestor", amount: (lead.application_data as any)?.lead_amount ?? "", createdAt: lead.created_at })) : elAgentId === A2P_TEXT_AGENT_ID ? "" : undefined;
       const turn = await elevenLabsTextTurn({
         agentId: elAgentId,
         userMessage: elMessage,
