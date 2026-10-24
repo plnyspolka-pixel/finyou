@@ -196,7 +196,10 @@ export async function captureMetaInvestorLead(
 }
 
 /** Wczytuje formularz i rozstrzyga rolę leada. */
-export async function loadFormRole(formId: string | null): Promise<{
+export async function loadFormRole(
+  formId: string | null,
+  fetchFormName?: () => Promise<string | null>,
+): Promise<{
   role: "klient" | "inwestor";
   voicebotEnabled: boolean;
 }> {
@@ -207,8 +210,13 @@ export async function loadFormRole(formId: string | null): Promise<{
     .select("lead_role, assigned_role, form_name, voicebot_enabled")
     .eq("meta_form_id", String(formId))
     .maybeSingle();
+  let form: any = data;
+  if (!form?.form_name && !form?.lead_role && fetchFormName) {
+    const name = await fetchFormName().catch(() => null);
+    form = { ...(form ?? {}), form_name: name };
+  }
   return {
-    role: resolveLeadRole(data as any),
+    role: resolveLeadRole(form),
     voicebotEnabled: (data as any)?.voicebot_enabled !== false,
   };
 }
