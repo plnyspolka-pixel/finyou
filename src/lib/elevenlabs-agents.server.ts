@@ -15,6 +15,7 @@ import { createClient } from "@supabase/supabase-js";
 import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 import {
   AGENT_DYNAMIC_VARIABLE_DEFAULTS,
+  ANIA_IDENTITY_RULES,
   INTAKE_PROCESS_RULES,
   NO_INVENTED_CONTACT_RULES,
   RAPPORT_RULES,
@@ -70,9 +71,9 @@ const INTAKE_HARD_RULES =
  * stronie, widget głosowy i wiadomości, więc zasady kanałów dostaje wszystkie
  * i wybiera po zmiennej {{channel}}) + twarde zasady A1.
  */
-function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
+export function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
   // Zakaz zmyślania danych kontaktowych dotyczy każdego agenta.
-  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES;
+  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
   return (
     basePrompt +
     RAPPORT_RULES +
@@ -289,9 +290,20 @@ export async function syncElevenLabsAgentPrompts(
       continue;
     }
     try {
-      const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
-      const prompt = buildAgentPrompt(surface, fetched.prompt);
-      const firstMessage = fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface];
+      // Synchronizacja nigdy nie wysyła zaszytego fallbacku do ElevenLabs.
+      const settingsId = { intake: 1, investor_info: 2, investor_panel: 3 }[surface];
+      const { data: stored, error: settingsError } = await s
+        .from("text_agent_settings")
+        .select("system_prompt, first_message")
+        .eq("id", settingsId)
+        .maybeSingle();
+      if (settingsError) throw new Error(settingsError.message);
+      if (!stored?.system_prompt?.trim()) {
+        result.skipped.push({ surface, reason: "brak zapisanego promptu — agent pozostaje bez zmian" });
+        continue;
+      }
+      const prompt = buildAgentPrompt(surface, stored.system_prompt);
+      const firstMessage = stored.first_message ?? SURFACE_FIRST_MESSAGE[surface];
       const fingerprint = await promptFingerprint(prompt, firstMessage);
 
       // Tryb automatyczny: wysyłamy tylko wtedy, gdy prompt różni się od tego,
