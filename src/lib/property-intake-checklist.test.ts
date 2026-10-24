@@ -19,4 +19,8 @@ describe("procedura przyjmowania zgłoszenia", () => {
     expect(rules).toContain("NIE pytasz o cel pożyczki");
     expect(rules.indexOf("ZABEZPIECZENIE")).toBeLessThan(rules.indexOf("LISTA DLA TEGO RODZAJU"));
   });
+  it("przez telefon nie przyjmuje wniosku, tylko kieruje na financeyou.pl", () => {
+    expect(rules).toContain("NIE PRZYJMUJESZ WNIOSKU PRZEZ TELEFON");
+    expect(rules).toContain("financeyou.pl");
+  });
 });
