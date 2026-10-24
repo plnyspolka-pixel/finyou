@@ -22,6 +22,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
+import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { normalizeKwNumber } from "./kw";
 import {
   INTAKE_PROCESS_RULES,
@@ -478,7 +479,9 @@ export async function runAgentTurn(opts: {
         channelRules(opts.channel) +
         INTAKE_PROCESS_RULES +
         NO_INVENTED_CONTACT_RULES
-      : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
+      : variant === "inwestor"
+        ? buildInvestorSalesScript() + basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES
+        : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
 
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
   // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa

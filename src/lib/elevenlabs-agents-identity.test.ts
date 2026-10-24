@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ANIA_IDENTITY_RULES, buildChannelRulesSection, channelRules } from "./agent-channel-rules";
 import { buildAgentPrompt } from "./elevenlabs-agents.server";
 import { buildIntakeChecklistRules } from "./property-intake-checklist";
+import { buildInvestorSalesScript } from "./investor-sales-script";
 
 describe("shared Ania identity routing", () => {
   it.each(["intake", "investor_info", "investor_panel"] as const)("appends shared identity to %s without changing stored content", (surface) => {
@@ -10,6 +11,8 @@ describe("shared Ania identity routing", () => {
     if (surface === "intake") {
       // Procedura przyjmowania zgłoszenia idzie na samą górę, potem prompt z panelu bez zmian.
       expect(built.startsWith(buildIntakeChecklistRules() + stored)).toBe(true);
+    } else if (surface === "investor_info") {
+      expect(built.startsWith(buildInvestorSalesScript() + stored)).toBe(true);
     } else {
       expect(built.startsWith(stored)).toBe(true);
     }
