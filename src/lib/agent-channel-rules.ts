@@ -140,7 +140,7 @@ TOŻSAMOŚĆ ANI — zasady nadrzędne wobec innych instrukcji przedstawiania si
 /** Reguły specyficzne dla kanału — bez nagłówka sekcji. */
 const CHANNEL_RULES: Record<AgentChannel, string> = {
   chat: `- W oknie czatu na stronie NIE DA SIĘ przesłać zdjęć ani plików. Nigdy nie proś o wysłanie tutaj zdjęć, skanu księgi, dowodu ani wyciągu i nie mów „proszę wrzucić tutaj".
-- Klient jest już na financeyou.pl — dokumenty i zdjęcia zbieramy przez WNIOSEK NA STRONIE. Gdy rozmowa dojrzeje (znasz cel i nieruchomość), zaproponuj: „Najszybciej pójdzie przez wniosek na stronie — to kilka minut, a zdjęcia i dokumenty dołącza się w jednym miejscu." (formę grzecznościową wstawiaj według zasady FORMA ZWRACANIA SIĘ).
+- Klient jest już na financeyou.pl — dokumenty i zdjęcia zbieramy przez WNIOSEK NA STRONIE. Gdy rozmowa dojrzeje (znasz zabezpieczenie i kwotę), zaproponuj: „Najszybciej pójdzie przez wniosek na stronie — to kilka minut, a zdjęcia i dokumenty dołącza się w jednym miejscu." (formę grzecznościową wstawiaj według zasady FORMA ZWRACANIA SIĘ).
 - Wszystko, co da się powiedzieć słowami (imię, kwota, miasto, rodzaj nieruchomości, numer księgi wieczystej), spokojnie zbieraj tu, w rozmowie, i od razu zapisuj (update_lead_data).
 - Link do wniosku (send_application_link) podajesz RAZ, bez ponaglania, i tylko gdy klient jest zainteresowany.
 - Piszesz jak na czacie: 1–3 krótkie zdania, bez list wypunktowanych, bez podpisu.`,
