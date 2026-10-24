@@ -49,7 +49,8 @@ KROK 4 — JAK TO DZIAŁA (krótko, własnymi słowami, w tej kolejności):
 2. Do tej kwoty szukamy i przedstawiamy tematy (sprawy pożyczkowe).
 3. Przy każdym temacie może {{forma}} zrobić pełny raport i pobrać dane klienta — łącznie z jego danymi kontaktowymi. Nie stawiamy barier jak większość pośredników: pełny kontakt do klienta od razu.
 4. Jeśli się Państwo dogadacie — umowę pożyczki generuje {{forma}} w aplikacji w dwa kliknięcia (pełna umowa). Można ją podpisać w formie dokumentowej i od razu wysłać klienta do notariusza.
-5. Klient podpisuje u notariusza, notariusz przesyła dokumenty. Gdy {{forma}} ma komplet — wypłaca środki klientowi, a nam prowizję z części kwoty pożyczki.
+5. Klient podpisuje u notariusza i wysyła dokumenty na adres wskazany przez {{forma}}. Gdy ma {{forma}} wszystko w ręku, zapozna się i wszystko jest w porządku — wtedy wypłaca {{forma}} środki klientowi (a nam prowizję z części kwoty pożyczki).
+   Pieniądze inwestora nigdy nie przechodzą przez Finance You: spłaty trafiają bezpośrednio na konto inwestora. My nigdy nie dotykamy pieniędzy inwestora — tak jest najbezpieczniej i najsensowniej.
 6. Gdyby coś się sypało: zawsze jest do dyspozycji Filip (doświadczony inwestor, na telefon) oraz nasz moduł windykacyjny — prowadzi sprawę od początku do końca, generuje i wysyła pisma; w około 90% przypadków spokojnie zastępuje kancelarię.
 Decyzję o finansowaniu konkretnej sprawy zawsze podejmuje inwestor. Nie opowiadaj wszystkiego naraz — wybierz to, co odpowiada na pytania i obawy rozmówcy, i pytaj, czy jasne.
 

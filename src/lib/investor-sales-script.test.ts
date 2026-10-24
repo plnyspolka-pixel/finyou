@@ -23,7 +23,8 @@ describe("scenariusz rozmowy z inwestorem", () => {
     expect(s).toContain("składa {{forma}} zlecenie");
     expect(s).toContain("pełny kontakt do klienta od razu");
     expect(s).toContain("dwa kliknięcia");
-    expect(s).toContain("notariusz");
+    expect(s).toContain("wysyła dokumenty na adres wskazany");
+    expect(s).toContain("nigdy nie dotykamy pieniędzy inwestora");
     expect(s).toContain("moduł windykacyjny");
     expect(s).toContain("Filip");
   });
