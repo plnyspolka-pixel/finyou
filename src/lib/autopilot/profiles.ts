@@ -25,6 +25,11 @@ export const audienceProfileSchema = z.object({
   tone: z.string().min(5),
   ctaUrl: z.string().url(),
   ctaLabel: z.string().min(2),
+  /** Pierwszy komentarz YouTube; osobny od CTA opisu i innych platform. */
+  youtubeFirstComment: z.object({
+    text: z.string().trim().min(1).max(8000),
+    url: z.string().url().max(1000).refine((v) => v.startsWith("https://")),
+  }).optional(),
   allowedTopics: z.array(z.string()).default([]),
   /** Dodatkowe frazy zakazane w torze (poza regułami twardymi w kodzie). */
   forbiddenPhrases: z.array(z.string()).default([]),
@@ -86,6 +91,10 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
       tone: "Konkretnie, po ludzku, bez straszenia. Widz jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie. Nie powtarzamy słów „firma”, „przedsiębiorca”, „działalność” – maksymalnie raz i tylko gdy temat tego wymaga.",
       ctaUrl: row.primary_cta_url?.trim() || BORROWER_DEFAULT_CTA_URL,
       ctaLabel: "Złóż bezpłatny wniosek",
+      youtubeFirstComment: {
+        text: "👉 Sprawdź, ile możesz uzyskać pod swoją nieruchomość — złóż bezpłatny wniosek:",
+        url: "https://financeyou.pl/r/kuugaim5",
+      },
       allowedTopics: [
         "odmowa banku i alternatywy",
         "LTV i ile można uzyskać pod nieruchomość",
@@ -109,6 +118,10 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
       tone: "Szanse, nie straszenie. Wolność finansowa, „zarabiaj tak, jak banki od stuleci” – zawsze z uczciwą linią o ryzyku.",
       ctaUrl: INVESTOR_PAGE_URL,
       ctaLabel: "Zobacz, jak to działa",
+      youtubeFirstComment: {
+        text: "👉 Jak zarabiać na pożyczkach zabezpieczonych hipoteką — i jakie ryzyko się z tym wiąże:",
+        url: "https://financeyou.pl/r/0eurrzyb",
+      },
       allowedTopics: [
         "jak bank zarabia na odsetkach",
         "zabezpieczenie hipoteczne i LTV",

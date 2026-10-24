@@ -335,6 +335,13 @@ export function LoanCalculator({
   // Wartość referencyjna prowizji inwestora = wzór MPKK (art. 36a UoKK) jako % kwoty.
   // Tylko punkt odniesienia — pożyczki są B2B, więc limit ustawowy ich nie obejmuje.
   const referenceCommissionPct = amount > 0 ? (maxNonInterest / amount) * 100 : 0;
+  // Domyślna (maksymalna referencyjna) prowizja inwestora: MPKK przycięte do 45% kwoty,
+  // minus prowizja Finance You (wlicza się do MPKK); w dół do kroku suwaka 0,5%.
+  const referenceInvestorPct = (() => {
+    const fyPct = amount > 0 ? (financeYouFeePln / amount) * 100 : 0;
+    const mpkkPct = Math.min(45, Math.max(0, 10 + 10 * (months / 12))) - fyPct;
+    return Math.max(0, Math.floor(mpkkPct * 2) / 2);
+  })();
 
   // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
   const commissionPln = (amount * commissionPct) / 100;
@@ -514,15 +521,12 @@ export function LoanCalculator({
 
   useEffect(() => {
     if (!commissionTouched.current) {
-      // Maksymalna prowizja bez wątpliwości prawnych = limit MPKK (% kwoty pożyczki),
-      // przycięta do ustawowego pułapu MPKK (45% kwoty); suwak pozwala ręcznie do 50%.
-      // Prowizja Finance You wlicza się do MPKK, więc prowizja inwestora = limit − prowizja FY.
-      const fyPct = amount > 0 ? (financeYouFeePln / amount) * 100 : 0;
-      const mpkkPct = Math.min(45, Math.max(0, 10 + 10 * (months / 12))) - fyPct;
-      const rounded = Math.max(0, Math.floor(mpkkPct * 2) / 2); // krok 0,5%
-      if (Math.abs(commissionPct - rounded) > 1e-9) setCommissionPct(rounded);
+      // Maksymalna prowizja bez wątpliwości prawnych = wartość referencyjna (MPKK);
+      // suwak pozwala ręcznie do 50%.
+      if (Math.abs(commissionPct - referenceInvestorPct) > 1e-9)
+        setCommissionPct(referenceInvestorPct);
     }
-  }, [months, commissionPct, amount, financeYouFeePln]);
+  }, [commissionPct, referenceInvestorPct]);
 
   useEffect(() => {
     onChange?.({
@@ -806,7 +810,7 @@ export function LoanCalculator({
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">
               Przykładowe wyliczenie
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {/* Wykładasz */}
               <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-white/[0.06] p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2 text-white/70">
@@ -1093,7 +1097,9 @@ export function LoanCalculator({
               <span>0%</span>
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
                 {marketingPreview
-                  ? `maks. ${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}% — odsetki maksymalne`
+                  ? interestExceeds
+                    ? `powyżej odsetek maksymalnych (${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}%) — art. 359 § 2¹ KC`
+                    : `maks. ${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}% — odsetki maksymalne`
                   : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
               </span>
             </div>
@@ -1129,15 +1135,38 @@ export function LoanCalculator({
               onValueChange={(v) => setCommissionPctTouched(v[0])}
             />
             {marketingPreview ? (
-              <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>
-                  {`${commissionPct.toFixed(1).replace(".", ",")}% (${plnLabel(commissionPln)}) · klient spłaca ją w ratach`}
-                </span>
-                {commissionOver45 && (
-                  <span className="text-destructive font-medium">
-                    powyżej 45% kwoty — ryzyko rażącej dysproporcji
-                  </span>
-                )}
+              // Podgląd na landingu: statusy prowizji i krotności jako krótki kontekst
+              // pod suwakiem — tylko wskazanie przepisu, bez wyjaśnień.
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>
+                  {`${commissionPct.toFixed(1).replace(".", ",")}% (${plnLabel(commissionPln)}) · klient spłaca ją w ratach · wartość referencyjna ${referenceInvestorPct.toFixed(1).replace(".", ",")}%`}
+                </p>
+                <p
+                  className={
+                    commissionOver45
+                      ? "text-destructive font-medium"
+                      : commissionAboveReference
+                        ? "text-amber-400 font-medium"
+                        : ""
+                  }
+                >
+                  {commissionOver45
+                    ? "powyżej 45% kwoty — ryzyko rażącej dysproporcji (art. 388 KC)"
+                    : commissionAboveReference
+                      ? "powyżej wartości referencyjnej — zasady współżycia społecznego (art. 5 i 58 § 2 KC)"
+                      : "w wartości referencyjnej (wzór MPKK, art. 36a UoKK)"}
+                </p>
+                <p
+                  className={
+                    krotnoscDanger
+                      ? "text-destructive font-medium"
+                      : krotnoscWarn
+                        ? "text-amber-400 font-medium"
+                        : ""
+                  }
+                >
+                  {`krotność spłaty ${krotnoscLabel} — ${krotnoscDanger ? "powyżej" : krotnoscWarn ? "blisko" : "poniżej"} progu ${KROTNOSC_PROG_LABEL} (wyzysk: art. 388 KC, art. 304 KK)`}
+                </p>
               </div>
             ) : (
               <div className="flex justify-between text-xs text-muted-foreground">
@@ -1373,13 +1402,11 @@ export function LoanCalculator({
       )}
 
       {marketingPreview ? (
-        // Podgląd na landingu: najpierw suwaki, obok nich (lg) albo tuż pod nimi
-        // (mobile) wynik. Kolejność w DOM = kolejność czytania i tabulacji, więc
-        // bez CSS `order`.
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        // Podgląd na landingu: na górze ile wychodzi i ile wchodzi, pod spodem suwaki.
+        <>
+          {resultBlock}
           {paramsBlock}
-          <div className="lg:sticky lg:top-24">{resultBlock}</div>
-        </div>
+        </>
       ) : (
         <>
           {resultBlock}
@@ -1403,9 +1430,8 @@ export function LoanCalculator({
             {AML_THRESHOLD_LABEL} wpisujesz do rejestru i zgłaszasz do GIIF w ciągu 7 dni.
           </>
         );
-        // Podgląd na landingu: te same statusy prowizji i krotności co w panelu,
-        // ale skrócone do samego tytułu (bez podstaw prawnych i wyjaśnień).
-        const previewStatuses = marketingPreview && !investorGuidance;
+        // Podgląd na landingu: statusy są krótkim kontekstem pod suwakami.
+        if (marketingPreview && !investorGuidance) return null;
         return (
           <div className="space-y-3">
             {/* 1) Odsetki maksymalne (art. 359 §2¹ KC); w podglądzie bez zielonego „w limicie" */}
@@ -1431,45 +1457,6 @@ export function LoanCalculator({
                   </AlertDescription>
                 </Alert>
               )
-            )}
-
-            {previewStatuses && (
-              <>
-                <Alert
-                  className={
-                    commissionOver45 ? dangerCls : commissionAboveReference ? warnCls : okCls
-                  }
-                >
-                  {commissionOver45 ? (
-                    <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  ) : commissionAboveReference ? (
-                    <AlertTriangle className="h-4 w-4 !text-amber-300" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  )}
-                  <AlertTitle>
-                    {commissionOver45
-                      ? "Prowizja inwestora — ryzyko rażącej dysproporcji"
-                      : commissionAboveReference
-                        ? "Prowizja inwestora — powyżej wartości referencyjnej"
-                        : "Prowizja inwestora — w wartości referencyjnej"}
-                  </AlertTitle>
-                </Alert>
-                <Alert className={krotnoscDanger ? dangerCls : krotnoscWarn ? warnCls : okCls}>
-                  {krotnoscDanger ? (
-                    <ShieldAlert className="h-4 w-4 !text-rose-300" />
-                  ) : krotnoscWarn ? (
-                    <AlertTriangle className="h-4 w-4 !text-amber-300" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
-                  )}
-                  <AlertTitle>
-                    Krotność {krotnoscLabel} —{" "}
-                    {krotnoscDanger ? "powyżej" : krotnoscWarn ? "blisko" : "poniżej"}{" "}
-                    orientacyjnego progu {KROTNOSC_PROG_LABEL}
-                  </AlertTitle>
-                </Alert>
-              </>
             )}
 
             {/* 2) Prowizja inwestora: wartość referencyjna (wzór MPKK), nie limit ustawowy —

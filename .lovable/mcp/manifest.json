@@ -12058,6 +12058,57 @@
         "outputSchema": null
       },
       {
+        "name": "provision_lead_magnet_catalog",
+        "title": "Provision lead magnet catalog (PDF files from code)",
+        "description": "Katalog startowy lead magnetów z kodu (src/lib/lead-magnets/catalog.ts) — siedem branded PDF-ów składanych z kodu i wgrywanych jako zwykłe pliki do bucketa `lead-magnets` (ścieżka katalog/<slug>/<wersja>/<plik>): inwestor START (przewodnik startowy), KSIĘGA (checklista księgi wieczystej), BŁĘDY (7 błędów inwestora), UMOWA (wzór umowy pożyczki z silnika klauzul); pożyczkobiorca ODMOWA (bank odmówił – 5 dróg), DOKUMENTY (checklista dokumentów), PROCES (mapa od wniosku do wypłaty). Hasła są zgodne z seriami rolek autopilota; kalkulatory ILE / RATA / LTV zakłada `autopilot_provision_tools`. Narzędzie zakłada brakujące rekordy (szkice), wgrywa brakujące albo nieaktualne (stara wersja katalogu) pliki PDF i — przy `publish` — publikuje te, które przeszły kontrolę jakości (reguły twarde compliance dla strony, PDF i maila + próbny render). `refresh_files` składa i wgrywa wszystkie PDF-y ponownie (po zmianie treści bez podbicia wersji). Istniejących rekordów nie nadpisuje (chyba że `overwrite`), własnego pliku / adresu zespołu nie rusza nigdy, nigdy nie cofa publikacji. Pobranie to podpisany link do pliku; rekord bez pliku dostaje PDF składany w locie (awaryjnie). `dry_run` tylko raportuje stan, pliki (`file`: aktualny / nieaktualny / brak / własny) i problemy. `slugs` ogranicza do wybranych materiałów. Publikacja, nadpisanie i odświeżenie plików: tylko administrator; szkice: administrator/operator. W trybie full_autopilot tick robi to sam (6:00).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "publish": {
+              "type": "boolean",
+              "default": false
+            },
+            "overwrite": {
+              "type": "boolean",
+              "default": false
+            },
+            "refresh_files": {
+              "type": "boolean",
+              "default": false
+            },
+            "dry_run": {
+              "type": "boolean",
+              "default": false
+            },
+            "slugs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "start-inwestora",
+                  "checklista-ksiegi-wieczystej",
+                  "bledy-inwestora",
+                  "bank-odmowil-co-dalej",
+                  "checklista-dokumentow",
+                  "od-wniosku-do-wyplaty",
+                  "wzor-umowy-pozyczki"
+                ]
+              },
+              "maxItems": 7
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
         "name": "plan_seo_topics",
         "title": "Plan SEO blog topics (AI)",
         "description": "AI planuje `count` (3–20) tematów blogowych pod hasło / obszar `seed` (tytuł, słowo kluczowe, frazy dodatkowe, intencja, trudność, priorytet) i dodaje je do kolejki tematów SEO. Autopilot pisze z kolejki; jeden temat od ręki: `generate_seo_article`. Zużywa kredyty AI. Tylko administrator/operator.",
@@ -21790,6 +21841,26 @@
                       "type": "string",
                       "minLength": 2
                     },
+                    "youtubeFirstComment": {
+                      "type": "object",
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 8000
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri",
+                          "maxLength": 1000
+                        }
+                      },
+                      "required": [
+                        "text",
+                        "url"
+                      ],
+                      "additionalProperties": false
+                    },
                     "allowedTopics": {
                       "type": "array",
                       "items": {
@@ -21890,6 +21961,9 @@
                     },
                     "ctaLabel": {
                       "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/ctaLabel"
+                    },
+                    "youtubeFirstComment": {
+                      "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/youtubeFirstComment"
                     },
                     "allowedTopics": {
                       "$ref": "#/properties/profiles/properties/pozyczkobiorca/properties/allowedTopics"
@@ -22145,6 +22219,36 @@
           "type": "object",
           "properties": {
             "publish": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "autopilot_produce_reels",
+        "title": "Produce reels from lead magnets now",
+        "description": "Produkcja rolek z lead magnetów (Etap 1) na żądanie — to samo, co robi tick co godzinę w full_autopilot: dla toru z zapasem poniżej bufora (2 rolki gotowe lub w produkcji) wybiera serię rotacyjnie, pisze scenariusz pod hasło lead magnetu (START, KSIĘGA, BŁĘDY, UMOWA / ODMOWA, ILE, DOKUMENTY, PROCES), przepuszcza go przez bramkę compliance i zakłada job w Studiu (render robi tick Studia, publikację w slotach — tick autopilota). `force` pomija bufor (limit dzienny zostaje), `track` ogranicza do jednego toru. Zużywa budżet AI i kredyty HeyGen. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "track": {
+              "type": "string",
+              "enum": [
+                "pozyczkobiorca",
+                "inwestor"
+              ]
+            },
+            "force": {
               "type": "boolean",
               "default": false
             }

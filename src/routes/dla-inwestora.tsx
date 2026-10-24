@@ -26,7 +26,6 @@ import {
   installmentEstimatePln,
   plnLabel,
 } from "@/lib/investor-plan/plans";
-import { ChatWidget } from "@/components/landing/chat-widget";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
 import { ModuleCards } from "@/components/marketing/investor-module-ui";
@@ -206,6 +205,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       { property: "og:url", content: "https://financeyou.pl/dla-inwestora" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/dla-inwestora" }],
     scripts: [
@@ -1205,14 +1205,6 @@ function InvestorLanding() {
         buttons={[{ label: "Zostań partnerem", href: PRICING_HASH }]}
       />
 
-      <ChatWidget
-        source="dla-inwestora"
-        endpoint="/api/public/investor-chat-widget"
-        storageKey="fy_invest_chat_session_id"
-        greeting="Dzień dobry! Jestem wirtualnym asystentem Finance You. Odpowiem na pytania o program partnerski, szkolenie, narzędzia, raty i pożyczki dla firm zabezpieczone hipoteką. W sprawach współpracy przekażę kontakt opiekunowi. W czym mogę pomóc?"
-        title="Asystent inwestora"
-        subtitle="Program partnerski Finance You · 24/7"
-      />
     </MarketingShell>
   );
 }

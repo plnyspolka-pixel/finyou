@@ -1,3 +1,4 @@
+import { ChatWidget } from "@/components/landing/chat-widget";
 import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -575,6 +576,7 @@ export function MarketingShell({
       <SiteHeader page={page} />
       {children}
       <SiteFooter />
+      <ChatWidget source={`public:${page}`} />
       {sticky ? <StickyCTA label={sticky.label} href={sticky.href} /> : null}
     </div>
   );

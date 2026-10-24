@@ -387,6 +387,13 @@ export async function processQueueItem(
         attempt_count: item.attempt_count + 1,
       })
       .eq("id", id);
+    // Isolated from upload errors: failure must never requeue an uploaded film.
+    try {
+      const { addYoutubeFirstComment } = await import("./youtube-first-comment.server");
+      await addYoutubeFirstComment(id, videoId);
+    } catch {
+      console.warn("[growth_engine] Nie udało się uruchomić pierwszego komentarza YouTube.");
+    }
     // Wpis z lead magnetem (autopilot): film pod automat komentarzy YouTube.
     const leadMagnetId = (claimed as { lead_magnet_id?: string | null }).lead_magnet_id;
     if (leadMagnetId) {
