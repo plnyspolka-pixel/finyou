@@ -18,3 +18,5 @@
 # Zaproszenia Trustpilot po lead magnecie
 - [x] Ukryta kopia do adresu AFS w mailu z linkiem przy pierwszym zapisie na materiał; pole `bcc` w wysyłce Resend; karta Trustpilot w /admin/integracje (adres tylko z domeny invite.trustpilot.com, przełącznik dla lead magnetów). Testy: 5 nowych, 70 przeszło razem z pakietem lead magnetów; lint i Prettier czyste.
 - [ ] Wpisać adres AFS z Trustpilot Business i włączyć integrację; potwierdzić pierwsze zaproszenie w panelu Trustpilot po realnym pobraniu. Limit zaproszeń planu Free nieweryfikowany.
+- [x] Widżet TrustBox (Review Collector) w sekcji „Opinie” na stronie głównej i link do profilu w stopce; identyfikator profilu odczytany z publicznej strony Trustpilot. Testy komponentu: 3.
+- [ ] Po pierwszych opiniach i ewentualnym planie płatnym przełączyć sekcję na szablon z treścią opinii (Carousel).

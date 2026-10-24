@@ -14,6 +14,7 @@ import {
   type RoleCardProps,
 } from "@/components/marketing/sections";
 import { BrandIcon } from "@/components/marketing/brand-icon";
+import { TrustpilotBox } from "@/components/marketing/trustpilot-box";
 import { MktButton } from "@/components/marketing/primitives";
 import type { Icon3DName } from "@/components/marketing/icon-3d";
 import { financialServiceLd } from "@/lib/seo/company";
@@ -274,6 +275,18 @@ function Landing() {
         <SectionHead eyebrow="Jak to działa" title="Od zgłoszenia sprawy do finansowania" />
         <div style={{ marginTop: "2.5rem" }}>
           <ProcessSteps steps={FLOW} cols={3} />
+        </div>
+      </Section>
+
+      <Section id="opinie" tint>
+        <SectionHead
+          center
+          eyebrow="Opinie"
+          title="Co mówią o Finance You"
+          sub="Opinie klientów i inwestorów zbiera niezależny serwis Trustpilot. Każdy może tam ocenić współpracę z nami."
+        />
+        <div style={{ margin: "2.5rem auto 0", maxWidth: "44rem" }}>
+          <TrustpilotBox />
         </div>
       </Section>
 

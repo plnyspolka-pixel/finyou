@@ -190,6 +190,12 @@ w planie Free sprawdzasz w koncie Trustpilot.
 - Awaria odczytu ustawień albo brak wiersza nigdy nie blokuje wysyłki pliku:
   mail idzie bez BCC, a błąd trafia do logów (`[trustpilot]`).
 - W `email_send_log.metadata` każda wysyłka z kopią ma pole `bcc`.
+- Widżet na stronie: `src/components/marketing/trustpilot-box.tsx` (oficjalny
+  TrustBox, identyfikator profilu i szablony w `src/lib/trustpilot.ts`). Strona
+  główna ma sekcję „Opinie” (`/#opinie`, szablon Review Collector — dostępny
+  w planie Free), stopka link do profilu. Szablony z treścią opinii (Carousel,
+  Grid) wymagają planu płatnego — wtedy wystarczy zmienić `template` na stronie.
+  TrustBox nie zapisuje ciasteczek, więc nie podlega zgodzie cookies.
 
 ## Co jest w repo
 
