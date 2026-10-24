@@ -15,12 +15,25 @@ export async function saveLoanPurpose(conversationId: string, args: { purpose?: 
   if (!conversationId || !purpose) return { ok: false, error: "missing_purpose_or_conversation" };
   const conversation = await getConversation(conversationId);
   const phone = verifiedCallerPhone(conversation);
+  if (args.is_business !== undefined && typeof args.is_business !== "boolean") return { ok: false, error: "invalid_is_business" };
   const db: any = supabaseAdmin;
   // Browser A0 sessions may bind only by a conversation ID already recorded by a trusted hook.
   let query = db.from("leads").select("id, application_data, loan_application_id");
   query = phone ? query.eq("phone_normalized", phone) : query.eq("application_data->>elevenlabs_conversation_id", conversationId);
   const { data: leads, error } = await query.order("created_at", { ascending: false }).limit(2);
   if (error) throw error;
+  if (!leads?.length && phone) {
+    const { data: clients, error: clientError } = await db.from("clients").select("id").eq("phone_normalized", phone).limit(2);
+    if (clientError) throw clientError;
+    if (clients?.length !== 1) return { ok: false, error: "no_unique_bound_client" };
+    const { data: app, error: appError } = await db.from("loan_applications").select("id").eq("client_id", clients[0].id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (appError) throw appError;
+    if (!app) return { ok: false, error: "no_bound_application" };
+    const saved = await db.from("loan_applications").update({ situation_description: purpose }).eq("id", app.id);
+    if (saved.error) throw saved.error;
+    await db.from("automation_events").insert({ automation_type: "ania_loan_purpose_saved", status: "sent", sent_payload: { conversation_id: conversationId, application_id: app.id } });
+    return { ok: true, saved: true };
+  }
   if (!leads?.length) return { ok: false, error: "no_bound_lead" };
   if (leads.length > 1 && leads[0].loan_application_id !== leads[1].loan_application_id) return { ok: false, error: "ambiguous_lead" };
   const lead = leads[0];
