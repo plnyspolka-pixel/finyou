@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ start: vi.fn() }));
 vi.mock("./voice-conversation", () => ({ startVoiceConversation: mock.start }));
-import { createAniaSession, publicAniaSurface } from "./public-ania-session";
+import { createAniaSession } from "./public-ania-session";
+import { ANIA_RECEPTION_AGENT_ID } from "./ania-reception";
 
 describe("public Ania session", () => {
   beforeEach(() => { vi.useRealTimers(); mock.start.mockReset(); });
@@ -14,7 +15,7 @@ describe("public Ania session", () => {
       handlers.onAgentMessage("Dzień dobry");
       return connection;
     });
-    const options = { surface: "investor_info" as const, dynamicVariables: {}, onState: vi.fn(), onNotice: vi.fn(), onMessage: vi.fn(), onConversationId: vi.fn() };
+    const options = { surface: "reception" as const, dynamicVariables: {}, onState: vi.fn(), onNotice: vi.fn(), onMessage: vi.fn(), onConversationId: vi.fn() };
     return { session: createAniaSession(options), connection, options, callbacks: () => callbacks };
   }
   it("sends consecutive questions through one connection, not through the greeting", async () => {
@@ -48,10 +49,32 @@ describe("public Ania session", () => {
     expect(t.options.onMessage.mock.calls.filter(([role]) => role === "assistant")).toHaveLength(1);
     t.session.stop();
   });
-  it.each(["/dla-inwestora", "/dla-inwestorow", "/dla-inwestorow/ryzyko"])("maps %s to A2", (path) => {
-    expect(publicAniaSurface(path)).toBe("investor_info");
+  it("starts reception A0 without a page-to-agent mapping", async () => {
+    const t = setup(); await t.session.start();
+    expect(ANIA_RECEPTION_AGENT_ID).toBe("agent_8901m4n7kbq2f0ba2bvb096nwwqq");
+    expect(mock.start).toHaveBeenCalledWith(expect.objectContaining({ surface: "reception" }), expect.any(Object));
   });
-  it.each(["/", "/dla-klienta", "/pozyczka-pod-zastaw-domu"])("maps %s to A1", (path) => {
-    expect(publicAniaSurface(path)).toBe("intake");
+  it("shows the first real answer when reception has no greeting", async () => {
+    const t = setup();
+    mock.start.mockImplementation(async () => t.connection);
+    await t.session.send("chcę zainwestować");
+    // Capture a connection which does not emit a greeting during setup.
+    t.session.stop();
+    let handlers: any;
+    mock.start.mockImplementation(async (_options, callbacks) => { handlers = callbacks; return t.connection; });
+    const session = createAniaSession(t.options);
+    await session.send("chcę zainwestować");
+    handlers.onAgentMessage("Jak dziś lokujesz wolne środki?");
+    expect(t.options.onMessage).toHaveBeenLastCalledWith("assistant", "Jak dziś lokujesz wolne środki?");
+    session.stop();
+  });
+  it.each(["voice", "text"] as const)("accepts transferred-agent answers in the same %s session", async (mode) => {
+    const t = setup(); await t.session.start(); await t.session.setMode(mode);
+    t.callbacks().onAgentMessage("Przekazuję rozmowę opiekunowi inwestora.");
+    t.callbacks().onAgentMessage("Jakie projekty Cię interesują?");
+    expect(mock.start).toHaveBeenCalledTimes(1);
+    expect(t.connection.stop).not.toHaveBeenCalled();
+    expect(t.options.onConversationId.mock.calls).toEqual([["conversation-one"]]);
+    expect(t.options.onMessage).toHaveBeenLastCalledWith("assistant", "Jakie projekty Cię interesują?");
   });
 });

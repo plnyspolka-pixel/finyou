@@ -34,7 +34,7 @@ export interface VoiceConversationHandlers {
 
 export interface VoiceConversationOptions {
   /** Powierzchnia rozpoznawana przez /api/public/voice-session. */
-  surface?: "intake" | "investor_info" | "missing_info";
+  surface?: "reception" | "intake" | "investor_info" | "missing_info";
   mode?: "text" | "voice";
   /** Zmienne dynamiczne agenta (kanał, lead, brief braków…). */
   dynamicVariables?: Record<string, string | number | boolean>;
@@ -107,6 +107,7 @@ function floatToPcm16(input: Float32Array): Int16Array {
 /** Wiadomości agenta, których używamy (reszta protokołu nas nie interesuje). */
 interface ServerMessage {
   type?: string;
+  message?: string;
   conversation_initiation_metadata_event?: {
     conversation_id?: string;
     user_input_audio_format?: string;
@@ -118,7 +119,7 @@ interface ServerMessage {
   ping_event?: { event_id?: number };
 }
 
-async function fetchSignedUrl(surface: "intake" | "investor_info" | "missing_info"): Promise<string> {
+async function fetchSignedUrl(surface: "reception" | "intake" | "investor_info" | "missing_info"): Promise<string> {
   const res = await fetch("/api/public/voice-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -147,6 +148,12 @@ export async function startVoiceConversation(
   handlers: VoiceConversationHandlers = {},
 ): Promise<VoiceConversation> {
   const surface = options.surface ?? "intake";
+  const sessionId = crypto.randomUUID();
+  const dynamicVariables = {
+    session_id: sessionId,
+    thread_key: `web:${sessionId}`,
+    ...options.dynamicVariables,
+  };
   const setState = (s: VoiceState) => handlers.onState?.(s);
 
   if (typeof window === "undefined") throw new Error("Rozmowa dostępna w przeglądarce.");
@@ -254,7 +261,7 @@ export async function startVoiceConversation(
       ws.send(
         JSON.stringify({
           type: "conversation_initiation_client_data",
-          dynamic_variables: options.dynamicVariables ?? {},
+          dynamic_variables: dynamicVariables,
         }),
       );
     } catch {
@@ -280,6 +287,8 @@ export async function startVoiceConversation(
         if (meta.conversation_id) handlers.onConversationId?.(meta.conversation_id);
         void playCtx?.resume().catch(() => {});
         setState("listening");
+        clearTimeout(readyTimer);
+        resolveReady();
         break;
       }
       case "audio": {
@@ -313,6 +322,11 @@ export async function startVoiceConversation(
         } catch {
           /* ignorujemy — zamknięcie obsłuży close */
         }
+        break;
+      }
+      case "error": {
+        handlers.onError?.("Nie udało się rozpocząć rozmowy z Anią.");
+        cleanup("error");
         break;
       }
       default:

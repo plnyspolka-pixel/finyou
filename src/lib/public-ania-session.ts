@@ -6,10 +6,7 @@
 import { startVoiceConversation, type VoiceConversation, type VoiceState } from "./voice-conversation";
 
 export type AniaMode = "voice" | "text";
-export type AniaSurface = "intake" | "investor_info";
-export function publicAniaSurface(path: string): AniaSurface {
-  return /^\/dla-inwestor(?:a|ow|ów)(?:\/|$)/.test(path) ? "investor_info" : "intake";
-}
+export type AniaSurface = "reception";
 
 export function createAniaSession(options: {
   surface: AniaSurface;
@@ -26,6 +23,7 @@ export function createAniaSession(options: {
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let retry = 0;
   let hasGreeting = false;
+  let userTurnStarted = false;
   const history: string[] = [];
 
   const connect = (): Promise<VoiceConversation> => {
@@ -33,9 +31,10 @@ export function createAniaSession(options: {
     if (active) return Promise.resolve(active);
     if (connecting) return connecting;
     let firstResponse = true;
+    userTurnStarted = false;
     const reconnecting = hasGreeting;
     connecting = startVoiceConversation(
-      { surface: options.surface, dynamicVariables: options.dynamicVariables, mode: "text" },
+      { surface: "reception", dynamicVariables: options.dynamicVariables, mode: "text" },
       {
         onConversationId: options.onConversationId,
         onState: (state) => {
@@ -50,7 +49,7 @@ export function createAniaSession(options: {
           if (stopped) return;
           // The first response on a freshly opened connection is the greeting,
           // not an answer to a pending question. Never complete a turn with it.
-          if (firstResponse) {
+          if (firstResponse && !userTurnStarted) {
             firstResponse = false;
             if (hasGreeting) return;
             hasGreeting = true;
@@ -60,6 +59,7 @@ export function createAniaSession(options: {
         },
         onUserMessage: (text) => {
           if (stopped) return;
+          userTurnStarted = true;
           history.push(`Użytkownik: ${text}`);
           options.onMessage("user", text);
         },
@@ -96,6 +96,7 @@ export function createAniaSession(options: {
     start: () => connect(),
     async send(text: string) {
       const session = await connect();
+      userTurnStarted = true;
       session.sendText(text);
       history.push(`Użytkownik: ${text}`);
       options.onMessage("user", text);
