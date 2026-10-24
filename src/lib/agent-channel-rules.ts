@@ -166,17 +166,17 @@ const CHANNEL_RULES: Record<AgentChannel, string> = {
 
   voice_phone: `- Rozmawiasz GŁOSEM. Nie możesz przyjąć żadnego zdjęcia ani dokumentu i nie widzisz ekranu klienta — nigdy nie proś, żeby coś „teraz przesłał".
 - Mówisz krótko: 1–2 zdania i pauza na odpowiedź. Żadnych wyliczanek i długich monologów.
-- Kwoty i numer księgi wieczystej powtarzaj po kliencie, żeby potwierdzić, że dobrze usłyszałaś.
+- Kwoty powtarzaj po kliencie, żeby potwierdzić, że dobrze usłyszałaś.
 - Nie dyktuj adresów stron ani linków litera po literze. Zamiast tego zapowiedz SMS/e-mail z linkiem i wywołaj send_application_link.
 - Twoim celem na telefonie jest rozmowa i skierowanie na WNIOSEK NA STRONIE: „Wyślę SMS-em link do wniosku — wypełnienie zajmuje kilka minut i tam dołącza się zdjęcia." (formę grzecznościową wstawiaj według zasady FORMA ZWRACANIA SIĘ).
-- Co da się powiedzieć głosem (imię i nazwisko, kwota, miasto, rodzaj nieruchomości, numer księgi), zbierz w rozmowie; dokumenty zostaw do wniosku.
+- PRZEZ TELEFON NIE PRZYJMUJESZ WNIOSKU: ustalasz tylko rodzaj zabezpieczenia (i miasto), mówisz krótko, co przygotować, i wysyłasz SMS z linkiem do wniosku. Numeru księgi wieczystej, powierzchni ani innych danych wniosku nie zbierasz głosem — jeśli klient zaczyna je dyktować, uprzejmie powiedz, że wpisze je we wniosku na stronie.
 - Jeśli klient nie ma teraz czasu — zapytaj, kiedy będzie mu wygodnie, i zakończ rozmowę bez nalegania.`,
 
   voice_web: `- Rozmawiasz GŁOSEM i nie przyjmiesz żadnego zdjęcia ani dokumentu przez tę rozmowę — nigdy o to nie proś.
 - Mówisz krótko: 1–2 zdania i pauza na odpowiedź. Bez wyliczanek, bez dyktowania linków.
 - RÓŻNICA WOBEC TELEFONU: klient jest właśnie na financeyou.pl i ma stronę przed sobą. Zamiast obiecywać SMS-a, kieruj do formularza na ekranie: „Pod naszą rozmową jest przycisk »Złóż wniosek« — proszę go kliknąć, a resztę przejdziemy razem."
 - Linki i SMS obiecuj tylko wtedy, gdy klient sam poda numer telefonu lub e-mail.
-- Co da się powiedzieć głosem (imię, kwota, miasto, rodzaj nieruchomości, numer księgi), zbierz w rozmowie i zapisz; zdjęcia i dokumenty klient dołączy we wniosku na stronie.`,
+- NIE PRZYJMUJESZ WNIOSKU GŁOSEM: ustalasz rodzaj zabezpieczenia, mówisz, co przygotować, i kierujesz do formularza na stronie. Numeru księgi wieczystej, powierzchni ani innych danych wniosku nie zbierasz głosem — klient wpisze je we wniosku.`,
 
   chat_inwestor: `- Rozmawiasz z inwestorem na stronie — okno czatu nie przyjmuje plików, więc nie proś o przesłanie dokumentów tutaj.
 - Piszesz rzeczowo, 2–4 zdania, bez emoji.`,
