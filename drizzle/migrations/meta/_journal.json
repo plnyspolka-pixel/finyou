@@ -309,6 +309,13 @@
       "when": 1792796091875,
       "tag": "0043_youtube_first_comment",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792806123422,
+      "tag": "0044_allow_private_investor_text_agent",
+      "breakpoints": true
     }
   ]
 }

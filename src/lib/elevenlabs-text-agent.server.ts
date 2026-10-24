@@ -61,6 +61,18 @@ const cachedAgentPrompts = new Map<
 >();
 const PROMPT_TTL_MS = 5 * 60 * 1000;
 
+/** Synchronization must never use the conversation engine's built-in fallback. */
+export async function fetchStoredAgentPrompt(variant: AgentVariant) {
+  const { data, error } = await admin()
+    .from("text_agent_settings")
+    .select("system_prompt, first_message")
+    .eq("id", VARIANT_SETTINGS_ID[variant])
+    .maybeSingle();
+  if (error) throw new Error("Nie udało się odczytać zapisanego promptu.");
+  if (!data?.system_prompt?.trim()) return null;
+  return { prompt: data.system_prompt, firstMessage: data.first_message ?? null };
+}
+
 export async function fetchAgentPrompt(
   variant: AgentVariant,
 ): Promise<{ prompt: string; firstMessage: string | null }> {
