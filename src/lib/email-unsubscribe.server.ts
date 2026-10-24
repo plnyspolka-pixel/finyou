@@ -8,7 +8,6 @@
 // WSZYSTKIE tory wysyłki (suppression, clients.do_not_email, subskrybenci
 // newslettera, przypomnienia o wniosku), żeby żaden silnik nie pisał dalej.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { randomBytes } from "crypto";
 import { decideSend, type SendCategory, type OptOutStrength } from "./opt-out";
 
 /** Kategoria wysyłki maila — alias wspólnego typu z opt-out.ts. */
@@ -16,6 +15,13 @@ export type EmailCategory = SendCategory;
 
 /** Wynik strażnika wysyłki (reguła: decideSend w opt-out.ts). */
 export type SendDecision = ReturnType<typeof decideSend>;
+
+function randomTokenBase64Url(len: number): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(len));
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
 
 function admin(): SupabaseClient {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -84,7 +90,7 @@ export async function unsubscribeTokenFor(email: string): Promise<string | null>
     .maybeSingle();
   if (existing?.token) return existing.token;
 
-  const token = randomBytes(24).toString("base64url");
+  const token = randomTokenBase64Url(24);
   const { error } = await s.from("email_unsubscribe_tokens").insert({ email: addr, token });
   if (error) {
     // Wyścig dwóch wysyłek do tego samego adresu — token założył ktoś inny.
