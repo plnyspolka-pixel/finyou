@@ -1,4 +1,5 @@
 # Public Ania conversations
+- [ ] Ania test corrections: merge provider placeholders, personalized investor greeting, text filler filtering, caller-scoped loan purpose tools, callback evaluation; tests and approved publish.
 - [x] Update shared identity rules without editing stored prompts; 22 tests pass. Only A1/A2 synchronized and verified by ElevenLabs readback; all stored prompt rows unchanged. Approved publication scheduled; completion not yet confirmed.
 - [x] Route public Ania entries through A0; preserve contextual panel agents and brand investor assistant Ania. Seven tests passed; real A2P transfers verified on home and /dla-inwestora with one socket and unchanged conversation ID. /dla-inwestorow does not exist in this repository. Provider-generated greetings can recur; prompts/voices untouched. No production publication; real microphone unverified.
 - [x] Keep one live session for text and voice; preserve agent mappings and reconnect visibly. Nine session tests passed.

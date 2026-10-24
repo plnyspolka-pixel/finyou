@@ -23,6 +23,7 @@ import {
 } from "@/lib/agent-channel-rules";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
+import { mergeAgentPlaceholders } from "./agent-placeholders";
 
 export type AgentSurface = "intake" | "investor_info" | "investor_panel";
 
@@ -108,15 +109,16 @@ async function elRequestWithPlaceholderFallback(
     return { res, json };
   };
 
-  const withPlaceholders = await post({
-    dynamic_variables: { dynamic_variable_placeholders: AGENT_DYNAMIC_VARIABLE_DEFAULTS },
+  let existing = {};
+  if (method === "PATCH") {
+    const current = await fetch(url, { headers: { "xi-api-key": apiKey } });
+    if (!current.ok) throw new Error(`ElevenLabs GET ${current.status}: ${await current.text()}`);
+    const config: any = await current.json();
+    existing = config?.conversation_config?.agent?.dynamic_variables?.dynamic_variable_placeholders ?? {};
+  }
+  return post({
+    dynamic_variables: { dynamic_variable_placeholders: mergeAgentPlaceholders(existing) },
   });
-  if (withPlaceholders.res.ok) return withPlaceholders;
-  console.warn(
-    "[el-agents] próba bez dynamic_variable_placeholders — API odrzuciło pole",
-    withPlaceholders.res.status,
-  );
-  return post({});
 }
 
 /** ID agenta dla powierzchni: env ma pierwszeństwo, potem voicebot_settings. */
