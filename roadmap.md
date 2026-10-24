@@ -15,3 +15,9 @@
 - [x] Verify security boundaries and pagination: 14 tests passed; running route returns 401 without token; build OK.
 - [ ] Verify authorized export against real Storage: no token provisioned, and existing data must remain unchanged.
 - [ ] Existing public-ranking security finding: blocked by owner's decision; no unrelated policy changes authorized.
+# Investor leads & Ania tools (rebuilt 2026-10-24)
+- [x] Per-form lead role (Admin → Meta Ads → Formularze → Rola leada; fallback by name „inwest”); investor leads skip loan application/borrower SMS/cadence, get investor SMS + A2P voice call. New leads only, no backfill.
+- [x] Messenger: investor → A2P text, unrecognized → A0, borrowers unchanged. Lead context variables passed to calls and text turns.
+- [x] A3 tools (OTP + own account state) attached; borrower tool removed; panel passes investor_id + session token.
+- [x] schedule_investor_callback for A2P voice/text, real queue entries within calling rules.
+- [ ] Live Meta lead / phone / SMS test after publication (needs a real form submission).
