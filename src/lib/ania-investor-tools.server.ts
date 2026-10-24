@@ -307,7 +307,8 @@ export async function scheduleInvestorCallback(opts: {
 }): Promise<ToolResult> {
   const { A2P_VOICE_AGENT_ID, leadDynamicVariables } = await import("@/lib/ania-lead-context");
   const { getCallingWindow, normalizePhoneForVoicebot } = await import("@/lib/voicebot.functions");
-  const raw = (opts.conversationId ? await callerPhone(opts.conversationId) : null) ?? opts.phoneVar;
+  const fromCall = opts.conversationId ? await callerPhone(opts.conversationId) : null;
+  const raw = phoneDigits(fromCall) ? fromCall : opts.phoneVar;
   const phone = raw ? normalizePhoneForVoicebot(raw) : "";
   if (!phoneDigits(phone)) return { ok: false, error: "no_phone", message: "Nie znam numeru telefonu rozmówcy." };
 
