@@ -1,5 +1,6 @@
 # Text agent prompt repair
-- [ ] Allow settings ID 3 without seeding or changing prompts; test stored-only A3 synchronization and separate phone-agent diagnostics, then publish with approval.
+- [x] Allow settings ID 3 without seeding or changing prompts; four tests pass for stored-only A3 synchronization and separate phone-agent diagnostics. Database confirms IDs 1/2 unchanged and no ID 3 row; build OK.
+- [ ] Publish approved backend repair; existing critical public-ranking finding remains awaiting the owner's access decision.
 
 # Public Ania conversations
 - [x] Route public Ania entries through A0; preserve contextual panel agents and brand investor assistant Ania. Seven tests passed; real A2P transfers verified on home and /dla-inwestora with one socket and unchanged conversation ID. /dla-inwestorow does not exist in this repository. Provider-generated greetings can recur; prompts/voices untouched. No production publication; real microphone unverified.
