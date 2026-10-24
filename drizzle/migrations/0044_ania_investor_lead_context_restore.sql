@@ -1,0 +1,10 @@
+ALTER TABLE public.meta_lead_forms ADD COLUMN IF NOT EXISTS lead_role text CHECK (lead_role IN ('klient','inwestor'));
+ALTER TABLE public.call_queue ADD COLUMN IF NOT EXISTS dynamic_variables jsonb NOT NULL DEFAULT '{}'::jsonb;
+CREATE TABLE IF NOT EXISTS public.ania_investor_verifications (conversation_id text PRIMARY KEY, investor_id uuid NOT NULL, otp_hash text NOT NULL, expires_at timestamptz NOT NULL, sent_at timestamptz NOT NULL DEFAULT now(), attempts integer NOT NULL DEFAULT 0, verified_at timestamptz);
+GRANT ALL ON public.ania_investor_verifications TO service_role;
+REVOKE ALL ON public.ania_investor_verifications FROM anon, authenticated;
+ALTER TABLE public.ania_investor_verifications ENABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS public.ania_investor_capabilities (token_hash text PRIMARY KEY, investor_id uuid NOT NULL, user_id uuid NOT NULL, expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+GRANT ALL ON public.ania_investor_capabilities TO service_role;
+REVOKE ALL ON public.ania_investor_capabilities FROM anon, authenticated;
+ALTER TABLE public.ania_investor_capabilities ENABLE ROW LEVEL SECURITY;
