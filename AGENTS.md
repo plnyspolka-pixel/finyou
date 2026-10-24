@@ -1,4 +1,5 @@
 # Architecture
+- All channel paths share Ania identity rules; ElevenLabs synchronization reads stored prompts only and skips missing/empty rows to avoid overwriting configured agents with defaults.
 - Public Ania widgets enter reception on one browser-owned ElevenLabs socket for voice and text; provider-side transfers and mode changes keep it open, and disconnect recovery restores context without replaying uncertain turns or repeated greetings. Authenticated contextual agents remain separate.
 - YouTube first comments run only after new successful queue uploads, use audience-profile configuration and a durable one-shot claim to prevent duplicates on ambiguous API outcomes; failures are isolated from publication.
 - The temporary Storage manifest is isolated in its own server-only module and route; only a stored unexpired SHA-256 token hash authorizes service-role listing and signing, preventing ordinary app users from accessing export credentials.
