@@ -1,3 +1,6 @@
+# Text agent prompt repair
+- [ ] Allow settings ID 3 without seeding or changing prompts; test stored-only A3 synchronization and separate phone-agent diagnostics, then publish with approval.
+
 # Public Ania conversations
 - [x] Route public Ania entries through A0; preserve contextual panel agents and brand investor assistant Ania. Seven tests passed; real A2P transfers verified on home and /dla-inwestora with one socket and unchanged conversation ID. /dla-inwestorow does not exist in this repository. Provider-generated greetings can recur; prompts/voices untouched. No production publication; real microphone unverified.
 - [x] Keep one live session for text and voice; preserve agent mappings and reconnect visibly. Nine session tests passed.

@@ -12,7 +12,7 @@
 // które edytuje /admin/text-agent; do promptu doklejane są twarde zasady
 // rozmowy (bez obietnic kontaktu analityka).
 import { createClient } from "@supabase/supabase-js";
-import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
+import { fetchAgentPrompt, fetchStoredAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 import {
   AGENT_DYNAMIC_VARIABLE_DEFAULTS,
   INTAKE_PROCESS_RULES,
@@ -253,8 +253,9 @@ export interface SyncPromptsResult {
   updated: Array<{ surface: AgentSurface; agentId: string }>;
   skipped: Array<{ surface: AgentSurface; reason: string }>;
   errors: Array<{ surface: AgentSurface; error: string }>;
-  /** Agent telefoniczny (voicebot_settings.agent_id) inny niż A1 — jego prompt żyje w konsoli ElevenLabs. */
+  /** Compatibility field: different IDs do not establish prompt drift. */
   phoneAgentOutOfSync: string | null;
+  phoneAgentManagedSeparately: string | null;
 }
 
 /**
@@ -270,6 +271,7 @@ export async function syncElevenLabsAgentPrompts(
     skipped: [],
     errors: [],
     phoneAgentOutOfSync: null,
+    phoneAgentManagedSeparately: null,
   };
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
@@ -289,7 +291,11 @@ export async function syncElevenLabsAgentPrompts(
       continue;
     }
     try {
-      const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
+      const fetched = await fetchStoredAgentPrompt(SURFACE_VARIANT[surface]);
+      if (!fetched) {
+        result.skipped.push({ surface, reason: "brak zapisanego promptu — agent ElevenLabs pozostaje bez zmian" });
+        continue;
+      }
       const prompt = buildAgentPrompt(surface, fetched.prompt);
       const firstMessage = fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface];
       const fingerprint = await promptFingerprint(prompt, firstMessage);
@@ -340,8 +346,8 @@ export async function syncElevenLabsAgentPrompts(
     }
   }
 
-  // Telefon: gdy voicebot dzwoni innym agentem niż A1, jego prompt (a więc i
-  // zasady kanału telefonicznego) nie jest tu zarządzany — sygnalizujemy to.
+  // Different phone/intake IDs describe routing, not prompt contents or drift.
+  // Never PATCH the independently managed phone agent here.
   try {
     const intakeId = await getAgentIdForSurface("intake");
     const { data } = await (s as any)
@@ -350,7 +356,7 @@ export async function syncElevenLabsAgentPrompts(
       .eq("id", 1)
       .maybeSingle();
     const phoneAgentId = (data?.agent_id as string | null) ?? null;
-    if (phoneAgentId && phoneAgentId !== intakeId) result.phoneAgentOutOfSync = phoneAgentId;
+    if (phoneAgentId && phoneAgentId !== intakeId) result.phoneAgentManagedSeparately = phoneAgentId;
   } catch {
     /* informacja poglądowa — brak nie jest błędem synchronizacji */
   }

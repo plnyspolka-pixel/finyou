@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
 import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 
 // id wiersza w text_agent_settings per wariant (CHECK id IN (1,2,3)).
 const VARIANT_ID: Record<AgentVariant, number> = { klient: 1, inwestor: 2, inwestor_prywatny: 3 };
 
 function variantId(variant?: AgentVariant): number {
-  return VARIANT_ID[variant ?? "klient"] ?? 1;
+  return VARIANT_ID[variant ?? "klient"];
 }
 
 export const getTextAgentSettings = createServerFn({ method: "GET" })
@@ -36,7 +37,12 @@ export const getTextAgentSettings = createServerFn({ method: "GET" })
 
 export const saveTextAgentSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { systemPrompt: string; firstMessage?: string; variant?: AgentVariant }) => d)
+  .inputValidator((d: { systemPrompt: string; firstMessage?: string; variant?: AgentVariant }) =>
+    z.object({
+      systemPrompt: z.string().trim().min(20).max(60000),
+      firstMessage: z.string().max(1000).optional(),
+      variant: z.enum(["klient", "inwestor", "inwestor_prywatny"]).optional(),
+    }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: roles } = await supabaseAdmin
@@ -63,9 +69,11 @@ export const saveTextAgentSettings = createServerFn({ method: "POST" })
     try {
       const { clearAgentPromptCache } = await import("@/lib/elevenlabs-text-agent.server");
       clearAgentPromptCache(data.variant);
-      const { ensureAgentPromptsFresh } = await import("@/lib/elevenlabs-agents.server");
-      await ensureAgentPromptsFresh(true);
-      syncedToElevenLabs = true;
+      const { syncElevenLabsAgentPrompts } = await import("@/lib/elevenlabs-agents.server");
+      const surfaces = { klient: "intake", inwestor: "investor_info", inwestor_prywatny: "investor_panel" } as const;
+      const sync = await syncElevenLabsAgentPrompts({ surfaces: [surfaces[data.variant ?? "klient"]] });
+      syncedToElevenLabs = sync.updated.length === 1;
+      syncError = sync.errors[0]?.error ?? (syncedToElevenLabs ? null : sync.skipped[0]?.reason ?? "Nie wysłano promptu.");
     } catch (e: any) {
       syncError = e?.message ?? "nie udało się wysłać promptu do ElevenLabs";
       console.error("[text-agent-settings] sync promptu", e);
