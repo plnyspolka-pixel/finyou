@@ -139,7 +139,8 @@ function ElevenLabsAgentsCard() {
                     );
                   if (res.errors?.length)
                     toast.error(res.errors.map((e: any) => `${e.surface}: ${e.error}`).join("; "));
-                  if (res.phoneAgentOutOfSync)
+                  const { phoneAgentSyncStatus } = await import("@/lib/phone-agent-managed");
+                  if (phoneAgentSyncStatus(res.phoneAgentOutOfSync, null).outOfSync)
                     toast.warning(
                       `Telefon dzwoni innym agentem (${res.phoneAgentOutOfSync}) — jego prompt zmienisz w konsoli ElevenLabs albo wpisz tu ID agenta A1.`,
                     );

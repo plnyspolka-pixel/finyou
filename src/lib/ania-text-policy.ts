@@ -1,0 +1,23 @@
+import { honorificFor, usableFirstName } from "./ania-lead-context";
+
+export function isTextFiller(text: string): boolean {
+  return /^już sprawdzam[.!…]*$/i.test(text.trim());
+}
+
+/** Warsaw calendar dates, not elapsed 24-hour intervals. */
+export function investorFirstMessage(vars: Record<string, unknown>, now = new Date()): string | undefined {
+  if (!String(vars.lead_source ?? "").trim()) return undefined;
+  const first = usableFirstName(String(vars.first_name ?? ""));
+  const forma = vars.forma === "Pan" || vars.forma === "Pani" ? vars.forma : honorificFor(first);
+  const greeting = first && forma ? `, ${forma === "Pan" ? "Panie" : "Pani"} ${first}` : first ? `, ${first}` : "";
+  const day = (d: Date) => d.toLocaleDateString("sv-SE", { timeZone: "Europe/Warsaw" });
+  const created = new Date(String(vars.lead_created_at ?? ""));
+  const when = !isNaN(created.getTime()) && day(created) === day(now) ? "dzisiejsze "
+    : !isNaN(created.getTime()) && day(created) === day(new Date(now.getTime() - 86400000)) ? "wczorajsze " : "";
+  const amount = String(vars.lead_amount ?? "").trim();
+  const currency = /zł|pln/i.test(amount) ? amount : `${amount} zł`;
+  const amountPart = amount ? forma === "Pan" ? ` — wpisał Pan kwotę ${currency}`
+    : forma === "Pani" ? ` — wpisała Pani kwotę ${currency}` : ` — podana kwota to ${currency}` : "";
+  const question = forma ? `Jak dziś inwestuje ${forma} wolne środki?` : "Jak dziś inwestuje się u Ciebie wolne środki?";
+  return `Dzień dobry${greeting}, tu Ania z Finance You. Dziękuję za ${when}zgłoszenie w formularzu o inwestowaniu${amountPart}. ${question}`;
+}

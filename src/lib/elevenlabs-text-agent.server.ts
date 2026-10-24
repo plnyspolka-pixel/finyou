@@ -391,7 +391,9 @@ export async function runAgentTurn(opts: {
         : variant === "inwestor_prywatny"
           ? ("investor_panel" as const)
           : ("intake" as const);
-    const elAgentId = opts.agentIdOverride || (await getAgentIdForSurface(surface));
+    const { A2P_TEXT_AGENT_ID } = await import("./ania-lead-context");
+    const elAgentId = opts.agentIdOverride || (lead.type === "inwestorski" && ["sms", "messenger"].includes(opts.channel)
+      ? A2P_TEXT_AGENT_ID : await getAgentIdForSurface(surface));
     if (elAgentId) {
       // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
       // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
@@ -417,9 +419,13 @@ export async function runAgentTurn(opts: {
         `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}`;
 
       const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
+      const { investorFirstMessage } = await import("./ania-text-policy");
+      const firstMessage = elAgentId === A2P_TEXT_AGENT_ID && !(history ?? []).some(h => h.direction === "outbound" && h.channel === opts.channel)
+        ? investorFirstMessage(leadDynamicVariables({ firstName: lead.first_name, source: lead.source, role: "inwestor", amount: (lead.application_data as any)?.lead_amount ?? "", createdAt: lead.created_at })) : undefined;
       const turn = await elevenLabsTextTurn({
         agentId: elAgentId,
         userMessage: elMessage,
+        firstMessage,
         dynamicVariables: {
           ...channelDynamicVariables(opts.channel),
           ...leadDynamicVariables({

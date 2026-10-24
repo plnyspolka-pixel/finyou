@@ -4,6 +4,7 @@
  * and restore context, without replaying an uncertain user message.
  */
 import { startVoiceConversation, type VoiceConversation, type VoiceState } from "./voice-conversation";
+import { isTextFiller } from "./ania-text-policy";
 
 export type AniaMode = "voice" | "text";
 export type AniaSurface = "reception";
@@ -47,6 +48,7 @@ export function createAniaSession(options: {
         },
         onAgentMessage: (text) => {
           if (stopped) return;
+          if (mode === "text" && isTextFiller(text)) return;
           // The first response on a freshly opened connection is the greeting,
           // not an answer to a pending question. Never complete a turn with it.
           if (firstResponse && !userTurnStarted) {
