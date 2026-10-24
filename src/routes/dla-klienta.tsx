@@ -14,11 +14,22 @@ import {
 import { MktBadge } from "@/components/marketing/primitives";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { PROPERTY_DOCS_BY_SECURITY } from "@/components/landing/property-types-showcase";
+import { FreeMaterialsSection } from "@/components/marketing/free-materials";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
+import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
+import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 
 const APPLY = "/rejestracja?role=klient";
 
 export const Route = createFileRoute("/dla-klienta")({
+  // Dział „Darmowe materiały” – opublikowane lead magnety klienta. Odporne na
+  // brak bazy w SSR: wtedy sekcja się nie renderuje, reszta strony bez zmian.
+  loader: async () => ({
+    materials: await getFreeMaterialsFn({ data: { audience: "klient" } }).catch((e) => {
+      console.error("[dla-klienta] getFreeMaterialsFn failed", e);
+      return EMPTY_FREE_MATERIALS("klient");
+    }),
+  }),
   head: () => ({
     meta: [
       { title: "Pożyczka pod zabezpieczenie nieruchomości — sprawdź bezpłatnie | Finance You" },
@@ -219,6 +230,7 @@ function Hero() {
 }
 
 function ClientLanding() {
+  const { materials } = Route.useLoaderData();
   return (
     <MarketingShell page="klient" sticky={{ label: "Złóż bezpłatny wniosek", href: APPLY }}>
       <Hero />
@@ -388,6 +400,8 @@ function ClientLanding() {
           <FeatureGrid items={WHY} icon3d />
         </div>
       </Section>
+
+      <FreeMaterialsSection data={materials} />
 
       <Section tint id="faq">
         <SectionHead center eyebrow="FAQ" title="Najczęstsze pytania klientów" />

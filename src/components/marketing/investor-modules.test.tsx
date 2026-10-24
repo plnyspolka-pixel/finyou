@@ -91,7 +91,7 @@ function dropdownHrefs(page: "inwestor" | "inwestorModul") {
 describe("sub-menu „Inwestor” — podstrony modułów", () => {
   it("zaczyna się od podstron modułów, potem kotwice landingu", () => {
     const modules = INVESTOR_MODULES.map((m) => investorModulePath(m.slug));
-    expect(dropdownHrefs("inwestor")).toEqual([...modules, "#korzysci", "#cennik"]);
+    expect(dropdownHrefs("inwestor")).toEqual([...modules, "#korzysci", "#cennik", "#materialy"]);
   });
 
   it("poza landingiem kotwice prowadzą pełną ścieżką na /dla-inwestora", () => {

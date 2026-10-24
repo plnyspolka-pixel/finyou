@@ -89,6 +89,7 @@ const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
   { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
   { label: "Co zyskujesz", hash: "#korzysci" },
   { label: "Cennik", hash: "#cennik" },
+  { label: "Darmowe materiały", hash: "#materialy" },
 ];
 
 /** Rozwijane menu „Klient” — podstrony produktów z lib/loan-products. */
@@ -108,6 +109,13 @@ const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string 
         href: `/${p.slug}`,
       })),
       { label: "Pożyczki wg miast", href: "/pozyczki" },
+    ],
+  },
+  {
+    label: "Bezpłatnie",
+    links: [
+      { label: "Darmowe materiały (PDF)", href: "/dla-klienta#materialy" },
+      { label: "Ile uzyskasz pod nieruchomość?", href: "/narzedzie/ile-pod-nieruchomosc" },
     ],
   },
 ];

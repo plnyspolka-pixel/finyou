@@ -36,6 +36,9 @@ import { TERMS } from "@/lib/labels";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import type { AccessProduct } from "@/lib/access/core";
 import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
+import { FreeMaterialsSection } from "@/components/marketing/free-materials";
+import { EMPTY_FREE_MATERIALS, type FreeMaterials } from "@/lib/lead-magnets/free-materials";
+import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 import {
   LANDING_INVESTOR_VIDEO,
   LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
@@ -106,6 +109,17 @@ async function loadInvestorProducts(): Promise<AccessProduct[]> {
   }
 }
 
+// Dział „Darmowe materiały” – opublikowane lead magnety inwestora. Bez bazy
+// w SSR sekcja się nie renderuje, reszta strony bez zmian.
+async function loadFreeMaterials(): Promise<FreeMaterials> {
+  try {
+    return await getFreeMaterialsFn({ data: { audience: "inwestor" } });
+  } catch (e) {
+    console.error("[dla-inwestora] getFreeMaterialsFn failed", e);
+    return EMPTY_FREE_MATERIALS("inwestor");
+  }
+}
+
 // Sekcja projektów pokazuje wyłącznie wygenerowane przykłady (ilustracja) — bez danych z bazy.
 // Kroki pipeline'u pokazywane na stronie — ta sama kolejność co w panelu
 // (src/lib/investor-plan/pipeline.ts).
@@ -168,8 +182,12 @@ const PIPELINE_STEPS: { n: number; t: string; d: string; hue: number }[] = [
 
 export const Route = createFileRoute("/dla-inwestora")({
   loader: async () => {
-    const [products, video] = await Promise.all([loadInvestorProducts(), loadLandingVideo()]);
-    return { products, video };
+    const [products, video, materials] = await Promise.all([
+      loadInvestorProducts(),
+      loadLandingVideo(),
+      loadFreeMaterials(),
+    ]);
+    return { products, video, materials };
   },
   head: () => ({
     meta: [
@@ -1105,7 +1123,7 @@ function InvestorTabs({ products }: { products: AccessProduct[] }) {
 }
 
 function InvestorLanding() {
-  const { products, video } = Route.useLoaderData();
+  const { products, video, materials } = Route.useLoaderData();
   return (
     <MarketingShell page="inwestor" sticky={{ label: "Zostań partnerem", href: PRICING_HASH }}>
       <Hero video={video} />
@@ -1147,6 +1165,8 @@ function InvestorLanding() {
       )}
 
       {!SHOW.zakladki && <CennikSection products={products} />}
+
+      <FreeMaterialsSection data={materials} />
 
       <Section id="faq">
         <SectionHead center eyebrow="FAQ" title="Najczęstsze pytania inwestorów" />
