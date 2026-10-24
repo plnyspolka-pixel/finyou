@@ -27,7 +27,7 @@ async function handler() {
   const nowIso = new Date().toISOString();
   const { data: rows, error } = await supabaseAdmin
     .from("call_queue")
-    .select("id, phone_normalized, client_id, loan_application_id, meta_lead_id, source")
+    .select("id, phone_normalized, client_id, loan_application_id, meta_lead_id, source, agent_id, dynamic_variables")
     .eq("status", "oczekuje")
     .lte("scheduled_at", nowIso)
     .order("scheduled_at", { ascending: true })
@@ -92,8 +92,18 @@ async function handler() {
       }
     }
 
+    // Zmienne zapisane przy planowaniu (kontekst leada, powód oddzwonienia) mają
+    // pierwszeństwo; ścieżka inwestorska dzwoni zapisanym agentem (A2P).
+    const stored = (row as any).dynamic_variables;
+    if (stored && typeof stored === "object") {
+      for (const [k, v] of Object.entries(stored)) dynamicVariables[k] = String(v ?? "");
+    }
+    if (dynamicVariables.first_name && !firstName) firstName = dynamicVariables.first_name;
+    const investorSource =
+      row.source === "meta_lead_inwestor" || row.source === "ania_investor_callback";
     try {
       const result = await placeOutboundCallInternal({
+        agentIdOverride: investorSource ? ((row as any).agent_id ?? null) : null,
         phone: row.phone_normalized,
         source: row.source ?? "scheduled",
         clientId: row.client_id ?? null,
