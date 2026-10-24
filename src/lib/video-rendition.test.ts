@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  VIDEO_RENDITION_CLAIM_GRACE_MS,
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_TIMEOUT_MS,
   isRenditionCandidateUrl,
@@ -124,8 +125,28 @@ describe("resolveVideoRendition", () => {
     ).toEqual({ state: "give_up", reason: "za długi materiał" });
   });
 
-  it("processing bez id zadania nie wisi", () => {
-    expect(resolve(row({ job_id: null }), null).state).toBe("retry");
+  it("processing bez id zadania: świeże przejęcie czeka, stare idzie od nowa, bez prób → oryginał", () => {
+    // Zlecenie w toku (id zapisujemy po odpowiedzi usługi) — równoległy
+    // przebieg nie może zlecić drugi raz.
+    const fresh = row({ job_id: null, job_started_at: new Date(NOW.getTime() - 60_000).toISOString() });
+    expect(resolve(fresh, null)).toEqual({ state: "waiting" });
+
+    // Worker padł między przejęciem a zapisem id — po okresie łaski od nowa.
+    const stale = row({
+      job_id: null,
+      job_started_at: new Date(NOW.getTime() - VIDEO_RENDITION_CLAIM_GRACE_MS - 1000).toISOString(),
+    });
+    const r = resolve(stale, null);
+    expect(r.state).toBe("retry");
+    expect(r.state === "retry" && r.reason).toMatch(/brak id zadania/);
+
+    // Próby wyczerpane — oryginał zamiast wiecznego „Wideo w przygotowaniu".
+    expect(resolve({ ...stale, attempt_count: VIDEO_RENDITION_MAX_ATTEMPTS }, null).state).toBe(
+      "give_up",
+    );
+
+    // Bez znacznika czasu nie ma czego odtwarzać — od razu od nowa.
+    expect(resolve(row({ job_id: null, job_started_at: null }), null).state).toBe("retry");
   });
 });
 

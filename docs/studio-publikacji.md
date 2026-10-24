@@ -268,8 +268,16 @@ koduje wolno); błąd usługi, zaginione zadanie (restart) albo przekroczony
 czas → jedno ponowienie, potem `failed` i publikacja oryginału z powodem
 w `last_error` renditionu; „Ponów" przy wpisie kolejki zeruje też próby
 renditionu, więc po naprawie usługi kompresja rusza od nowa. Optymistyczne
-przejęcie wiersza (`pending → processing`) chroni przed podwójnym zleceniem,
-gdy tick i „Publikuj teraz" trafią na ten sam plik w tej samej chwili.
+przejęcie wiersza (`pending → processing`, blokada na `attempt_count`) chroni
+przed podwójnym zleceniem, gdy tick i „Publikuj teraz" trafią na ten sam plik
+w tej samej chwili. Wiersz `processing` bez `job_id` (worker padł między
+przejęciem a zapisem id zadania) dostaje okres łaski
+(`VIDEO_RENDITION_CLAIM_GRACE_MS`, 5 min) i potem jest zlecany od nowa —
+ponowienie może przejąć także wiersz `processing`, więc nic nie wisi
+bezterminowo z notatką „Wideo w przygotowaniu…" (awaria z 24.10.2026: trzy
+rolki odroczone w nieskończoność). Stara wersja usługi (bez zadania
+`transcode`) nie zużywa prób: `heygen_status` pokazuje `caption_burner.transcode`
+i prosi o redeploy, a publikacje idą z oryginałem.
 
 Diagnostyka: `run_publish_tick` (MCP) zwraca sekcję `renditions`
 (`discovered / submitted / ready / failed / errors`), a `GET /health` usługi

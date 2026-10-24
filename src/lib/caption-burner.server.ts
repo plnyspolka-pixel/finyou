@@ -424,16 +424,41 @@ export const CAPTION_BURNER_GUARD_NOTE =
 export async function checkCaptionBurnerHealth(): Promise<{
   ok: boolean;
   ffmpeg: string | null;
+  /**
+   * Czy wdrożona instancja zna zadanie `transcode` (kompresja przed
+   * publikacją). Stara wersja (sprzed `services/caption-burner` z
+   * transcode-plan.mjs) nie zwraca tej flagi — wtedy publikacje idą z
+   * oryginałem, a `video_renditions` kończą jako `failed` z prośbą o redeploy.
+   */
+  transcode: boolean;
   error: string | null;
 }> {
   const env = getCaptionBurnerEnv();
-  if (!env.configured) return { ok: false, ffmpeg: null, error: "nie skonfigurowana" };
+  if (!env.configured) {
+    return { ok: false, ffmpeg: null, transcode: false, error: "nie skonfigurowana" };
+  }
   try {
     const res = await burnerFetch("/health", { timeoutMs: 10_000 });
-    if (!res.ok) return { ok: false, ffmpeg: null, error: await errorOf(res) };
-    const json = (await res.json().catch(() => null)) as { ffmpeg?: string | null } | null;
-    return { ok: true, ffmpeg: json?.ffmpeg ?? null, error: null };
+    if (!res.ok) return { ok: false, ffmpeg: null, transcode: false, error: await errorOf(res) };
+    const json = (await res.json().catch(() => null)) as {
+      ffmpeg?: string | null;
+      transcode?: boolean;
+    } | null;
+    const transcode = json?.transcode === true;
+    return {
+      ok: true,
+      ffmpeg: json?.ffmpeg ?? null,
+      transcode,
+      error: transcode
+        ? null
+        : "stara wersja usługi bez kompresji wideo (zadanie transcode) — zrób redeploy caption-burner (render.yaml / fly.toml w services/caption-burner); do tego czasu publikacje idą z oryginalnym plikiem",
+    };
   } catch (e) {
-    return { ok: false, ffmpeg: null, error: e instanceof Error ? e.message : String(e) };
+    return {
+      ok: false,
+      ffmpeg: null,
+      transcode: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
   }
 }

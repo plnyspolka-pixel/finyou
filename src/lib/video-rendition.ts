@@ -52,6 +52,12 @@ export const VIDEO_RENDITION_MAX_ATTEMPTS = 2;
  * potrafi kodować 3-minutowy film pół godziny; 2 h to bezpieczny sufit.
  */
 export const VIDEO_RENDITION_TIMEOUT_MS = 120 * 60_000;
+/**
+ * Ile czekamy na `job_id` po przejęciu wiersza (`processing` bez id zadania).
+ * Zlecenie trwa najwyżej ~2 min (podpisany adres uploadu + limit 120 s na
+ * usługę); dłużej bez id = worker padł między przejęciem a zapisem id.
+ */
+export const VIDEO_RENDITION_CLAIM_GRACE_MS = 5 * 60_000;
 /** Po ilu minutach wpis kolejki próbuje ponownie, gdy wideo jest w przygotowaniu. */
 export const VIDEO_PREPARING_RETRY_MIN = 5;
 
@@ -125,9 +131,20 @@ export function resolveVideoRendition(input: {
   if (row.status === "pending") return { state: "submit" };
 
   // processing
-  if (!row.job_id) return retryOrGiveUp("brak id zadania w usłudze");
   const since = row.job_started_at ? Date.parse(row.job_started_at) : Number.NaN;
   const elapsed = Number.isNaN(since) ? 0 : now.getTime() - since;
+  if (!row.job_id) {
+    // Wiersz dopiero przejęty — zlecenie w toku (id zapisujemy po odpowiedzi
+    // usługi). Dopiero po okresie łaski uznajemy, że worker padł w trakcie
+    // i zlecamy od nowa; bez tej zwłoki równoległy przebieg zleciłby dwa razy.
+    // Brak `job_started_at` = stan nie do odtworzenia: od razu od nowa.
+    if (!Number.isNaN(since) && elapsed < VIDEO_RENDITION_CLAIM_GRACE_MS) {
+      return { state: "waiting" };
+    }
+    return retryOrGiveUp(
+      `zlecenie przerwane — brak id zadania po ${Math.round(elapsed / 60_000)} min`,
+    );
+  }
   const timedOut = elapsed >= timeoutMs;
 
   if (!probe) {
