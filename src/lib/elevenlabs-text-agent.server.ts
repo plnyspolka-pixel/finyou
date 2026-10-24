@@ -21,6 +21,7 @@
 //                  (investor-assistant.functions.ts), nie przez runAgentTurn.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
 import { normalizeKwNumber } from "./kw";
 import {
   INTAKE_PROCESS_RULES,
@@ -471,7 +472,8 @@ export async function runAgentTurn(opts: {
   // odpowiada bez nich i to on zmyśla.
   const systemPrompt =
     variant === "klient"
-      ? basePrompt +
+      ? buildIntakeChecklistRules() +
+        basePrompt +
         RAPPORT_RULES +
         channelRules(opts.channel) +
         INTAKE_PROCESS_RULES +
