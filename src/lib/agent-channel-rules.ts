@@ -240,6 +240,8 @@ export const AGENT_DYNAMIC_VARIABLE_DEFAULTS: Record<string, string> = {
   lead_created_at: "",
   call_direction: "",
   investor_id: "",
+  investor_access_token: "",
+  callback_reason: "",
 };
 
 /**

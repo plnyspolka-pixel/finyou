@@ -6,6 +6,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { findLeadIdBy, upsertLeadFromSource, logLeadCommunication } from "@/lib/lead-comms.server";
 import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
+import { messengerAgentFor } from "@/lib/ania-lead-context";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { downloadAndStore, attachStoredToClientDocuments } from "@/lib/inbound-attachments.server";
 import { enrichLeadFromInbound } from "@/lib/lead-enrichment.server";
@@ -266,11 +267,23 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
   }
 
   // 3) Odpowiedź agenta
+  // Messenger: inwestor → A2P (tekst), nierozpoznany → A0 (recepcja),
+  // rozpoznany pożyczkobiorca → dotychczasowy agent.
+  let messengerAgentId: string | null = null;
+  if (platform === "messenger") {
+    const { data: leadRow } = await supabaseAdmin
+      .from("leads")
+      .select("type, loan_application_id, client_id, meta_lead_id")
+      .eq("id", leadId)
+      .maybeSingle();
+    if (leadRow) messengerAgentId = messengerAgentFor(leadRow as any);
+  }
   const agent = await runAgentTurn({
     leadId,
     channel: platform,
     userMessage: userText || "[Klient przesłał załącznik]",
     attachmentsSummary,
+    agentIdOverride: messengerAgentId,
   });
 
   let replyText = agent.reply;
@@ -290,7 +303,7 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     metadata: { platform, sender_id: senderId, tool_calls: agent.toolCalls },
     status: send.ok ? "sent" : "error",
     errorMessage: send.ok ? null : send.error,
-    agentId: process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
+    agentId: messengerAgentId ?? process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
   });
 
   // 4) Po odpowiedzi (żeby nie opóźniać repliki): OCR świeżych załączników

@@ -3,6 +3,8 @@ import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { placeOutboundCallInternal } from "@/lib/voicebot.functions";
+import { leadDynamicVariables } from "@/lib/ania-lead-context";
+import { extractLeadAmount } from "@/lib/meta-lead-fields";
 import { handleMetaMessagingBody } from "@/lib/meta-messaging.server";
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
 
@@ -330,6 +332,36 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                 continue;
               }
 
+              // Rola leada per formularz (panel: Meta Ads → Formularze → Rola leada).
+              // Inwestor → osobna ścieżka: bez wniosku i SMS-a pożyczkowego, telefon A2P.
+              {
+                const fid = v.form_id ?? details.form_id ?? null;
+                const { loadFormRole, captureMetaInvestorLead } =
+                  await import("@/lib/meta-investor-capture.server");
+                const fr = await loadFormRole(fid, async () => {
+                  const r = await fetch(
+                    `${GRAPH}/${fid}?access_token=${process.env.META_ACCESS_TOKEN ?? process.env.META_SYSTEM_USER_TOKEN}&fields=name`,
+                  );
+                  return r.ok ? ((await r.json())?.name ?? null) : null;
+                });
+                if (fr.role === "inwestor") {
+                  const { data: vs } = await supabaseAdmin
+                    .from("voicebot_settings")
+                    .select("call_trigger")
+                    .eq("id", 1)
+                    .maybeSingle();
+                  await captureMetaInvestorLead({
+                    leadgenId,
+                    formId: fid,
+                    campaignId: v.campaign_id ?? details.campaign_id ?? null,
+                    createdTime: details.created_time ?? null,
+                    fieldData: fd,
+                    allowCall: !!vs && vs.call_trigger !== "manual" && fr.voicebotEnabled,
+                  }).catch((e) => console.error("[meta-leads-webhook] investor capture", e));
+                  continue;
+                }
+              }
+
               const email = extractField(fd, ["email"]);
               const rawName = extractField(fd, ["name", "imię", "imie"]);
               const phone = extractPhone(fd, rawName);
@@ -475,6 +507,14 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                     clientId: capture.clientId,
                     loanApplicationId: capture.loanApplicationId,
                     firstName: capture.firstName,
+                    dynamicVariables: leadDynamicVariables({
+                      firstName: capture.firstName,
+                      source: "meta_ads",
+                      role: "klient",
+                      amount: extractLeadAmount(fd),
+                      createdAt: details.created_time ?? null,
+                      callDirection: "outbound",
+                    }),
                   }).catch((e) => console.error("[meta-leads-webhook] call trigger", e));
                 } else {
                   await supabaseAdmin

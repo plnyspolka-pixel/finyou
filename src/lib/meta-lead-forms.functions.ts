@@ -18,7 +18,7 @@ export const listMetaLeadForms = createServerFn({ method: "GET" })
       supabaseAdmin
         .from("meta_lead_forms")
         .select(
-          "id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, assigned_role, last_lead_at, total_leads_pulled",
+          "id, meta_form_id, form_name, page_name, is_enabled, voicebot_enabled, assigned_user_id, assigned_role, lead_role, last_lead_at, total_leads_pulled",
         )
         .order("form_name", { ascending: true }),
       supabaseAdmin
@@ -120,4 +120,23 @@ export const backfillMetaLeadAccounts = createServerFn({ method: "POST" })
       failed,
       errors: errors.slice(0, 20),
     };
+  });
+
+/** Rola leada formularza: klient / inwestor / null (= automatycznie po nazwie). */
+export const setMetaLeadFormLeadRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { formId: string; leadRole: "klient" | "inwestor" | null }) => {
+    if (d.leadRole !== null && d.leadRole !== "klient" && d.leadRole !== "inwestor")
+      throw new Error("Nieprawidłowa rola leada");
+    return { formId: String(d.formId), leadRole: d.leadRole };
+  })
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("meta_lead_forms")
+      .update({ lead_role: data.leadRole } as any)
+      .eq("id", data.formId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

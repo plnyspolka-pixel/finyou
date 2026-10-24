@@ -30,6 +30,7 @@ import {
   channelRules,
 } from "./agent-channel-rules";
 import { guardOutboundContactDetails } from "./bot-contact-guard";
+import { leadDynamicVariables } from "./ania-lead-context";
 import { SUBSCRIPTION_PAYMENT_SENTENCE, SUBSCRIPTION_PRICE_SENTENCE } from "./investor-plan/plans";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
@@ -355,6 +356,8 @@ export async function runAgentTurn(opts: {
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
+  /** Konkretny agent ElevenLabs (np. A0/A2P na Messengerze) zamiast agenta powierzchni. */
+  agentIdOverride?: string | null;
 }): Promise<AgentReply> {
   const variant: AgentVariant = opts.variant ?? "klient";
   const s = admin();
@@ -388,12 +391,13 @@ export async function runAgentTurn(opts: {
         : variant === "inwestor_prywatny"
           ? ("investor_panel" as const)
           : ("intake" as const);
-    const elAgentId = await getAgentIdForSurface(surface);
+    const elAgentId = opts.agentIdOverride || (await getAgentIdForSurface(surface));
     if (elAgentId) {
       // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
       // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
-      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs.
-      await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
+      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs. Jawnie
+      // wskazanych agentów (A0/A2P) nie synchronizujemy.
+      if (!opts.agentIdOverride) await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
       const recent = (history ?? []).slice(-16);
       const historyBlock =
         recent.length > 0
@@ -418,6 +422,13 @@ export async function runAgentTurn(opts: {
         userMessage: elMessage,
         dynamicVariables: {
           ...channelDynamicVariables(opts.channel),
+          ...leadDynamicVariables({
+            firstName: lead.first_name,
+            source: lead.source,
+            role: lead.type === "inwestorski" ? "inwestor" : lead.type ? "klient" : null,
+            amount: (lead.application_data as any)?.lead_amount ?? (lead.application_data as any)?.loan_amount ?? "",
+            createdAt: lead.created_at,
+          }),
           lead_id: lead.id,
           first_name: lead.first_name ?? "",
           last_name: lead.last_name ?? "",
