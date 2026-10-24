@@ -1204,7 +1204,6 @@ function InvestorLanding() {
         sub={`Szkolenie i narzędzia w jednym abonamencie, bez prowizji od Twojego zysku. BONUS: raty od ok. ${plnLabel(YEARLY_INSTALLMENT_PLN)} / mies. i Projekty z ogólnopolskiej sieci sprzedaży.`}
         buttons={[{ label: "Zostań partnerem", href: PRICING_HASH }]}
       />
-
     </MarketingShell>
   );
 }
