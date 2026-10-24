@@ -221,6 +221,7 @@ import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
 import { Route as ApiMigrationStorageManifestRouteImport } from './routes/api/migration/storage-manifest'
 import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
+import { Route as ApiPublicAniaInvestorToolsRouteImport } from './routes/api/public/ania-investor-tools'
 import { Route as ApiPublicChatWidgetRouteImport } from './routes/api/public/chat-widget'
 import { Route as ApiPublicElevenlabsReadSmsRouteImport } from './routes/api/public/elevenlabs-read-sms'
 import { Route as ApiPublicElevenlabsSendSmsRouteImport } from './routes/api/public/elevenlabs-send-sms'
@@ -1402,6 +1403,12 @@ const ApiPublicAgentToolsRoute = ApiPublicAgentToolsRouteImport.update({
   path: '/api/public/agent-tools',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicAniaInvestorToolsRoute =
+  ApiPublicAniaInvestorToolsRouteImport.update({
+    id: '/api/public/ania-investor-tools',
+    path: '/api/public/ania-investor-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicChatWidgetRoute = ApiPublicChatWidgetRouteImport.update({
   id: '/api/public/chat-widget',
   path: '/api/public/chat-widget',
@@ -2143,6 +2150,7 @@ export interface FileRoutesByFullPath {
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
+  '/api/public/ania-investor-tools': typeof ApiPublicAniaInvestorToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
@@ -2441,6 +2449,7 @@ export interface FileRoutesByTo {
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
+  '/api/public/ania-investor-tools': typeof ApiPublicAniaInvestorToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
@@ -2750,6 +2759,7 @@ export interface FileRoutesById {
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
+  '/api/public/ania-investor-tools': typeof ApiPublicAniaInvestorToolsRoute
   '/api/public/chat-widget': typeof ApiPublicChatWidgetRoute
   '/api/public/elevenlabs-read-sms': typeof ApiPublicElevenlabsReadSmsRoute
   '/api/public/elevenlabs-send-sms': typeof ApiPublicElevenlabsSendSmsRoute
@@ -3060,6 +3070,7 @@ export interface FileRouteTypes {
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
+    | '/api/public/ania-investor-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
@@ -3358,6 +3369,7 @@ export interface FileRouteTypes {
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
+    | '/api/public/ania-investor-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
@@ -3666,6 +3678,7 @@ export interface FileRouteTypes {
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
+    | '/api/public/ania-investor-tools'
     | '/api/public/chat-widget'
     | '/api/public/elevenlabs-read-sms'
     | '/api/public/elevenlabs-send-sms'
@@ -3837,6 +3850,7 @@ export interface RootRouteChildren {
   ApiMigrationStorageManifestRoute: typeof ApiMigrationStorageManifestRoute
   ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
   ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
+  ApiPublicAniaInvestorToolsRoute: typeof ApiPublicAniaInvestorToolsRoute
   ApiPublicChatWidgetRoute: typeof ApiPublicChatWidgetRoute
   ApiPublicElevenlabsReadSmsRoute: typeof ApiPublicElevenlabsReadSmsRoute
   ApiPublicElevenlabsSendSmsRoute: typeof ApiPublicElevenlabsSendSmsRoute
@@ -5395,6 +5409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAgentToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/ania-investor-tools': {
+      id: '/api/public/ania-investor-tools'
+      path: '/api/public/ania-investor-tools'
+      fullPath: '/api/public/ania-investor-tools'
+      preLoaderRoute: typeof ApiPublicAniaInvestorToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat-widget': {
       id: '/api/public/chat-widget'
       path: '/api/public/chat-widget'
@@ -6591,6 +6612,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMigrationStorageManifestRoute: ApiMigrationStorageManifestRoute,
   ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
   ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
+  ApiPublicAniaInvestorToolsRoute: ApiPublicAniaInvestorToolsRoute,
   ApiPublicChatWidgetRoute: ApiPublicChatWidgetRoute,
   ApiPublicElevenlabsReadSmsRoute: ApiPublicElevenlabsReadSmsRoute,
   ApiPublicElevenlabsSendSmsRoute: ApiPublicElevenlabsSendSmsRoute,
