@@ -3619,6 +3619,60 @@ export type Database = {
           },
         ]
       }
+      ania_investor_capabilities: {
+        Row: {
+          created_at: string
+          expires_at: string
+          investor_id: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          investor_id: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          investor_id?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ania_investor_verifications: {
+        Row: {
+          attempts: number
+          conversation_id: string
+          expires_at: string
+          investor_id: string
+          otp_hash: string
+          sent_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          conversation_id: string
+          expires_at: string
+          investor_id: string
+          otp_hash: string
+          sent_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          conversation_id?: string
+          expires_at?: string
+          investor_id?: string
+          otp_hash?: string
+          sent_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3887,6 +3941,7 @@ export type Database = {
           client_id: string | null
           conversation_id: string | null
           created_at: string
+          dynamic_variables: Json
           finished_at: string | null
           id: string
           loan_application_id: string | null
@@ -3908,6 +3963,7 @@ export type Database = {
           client_id?: string | null
           conversation_id?: string | null
           created_at?: string
+          dynamic_variables?: Json
           finished_at?: string | null
           id?: string
           loan_application_id?: string | null
@@ -3929,6 +3985,7 @@ export type Database = {
           client_id?: string | null
           conversation_id?: string | null
           created_at?: string
+          dynamic_variables?: Json
           finished_at?: string | null
           id?: string
           loan_application_id?: string | null
@@ -10587,6 +10644,7 @@ export type Database = {
           last_error: string | null
           last_lead_at: string | null
           last_synced_at: string | null
+          lead_role: string | null
           managed_by_user_id: string | null
           meta_campaign_id: string | null
           meta_form_id: string
@@ -10608,6 +10666,7 @@ export type Database = {
           last_error?: string | null
           last_lead_at?: string | null
           last_synced_at?: string | null
+          lead_role?: string | null
           managed_by_user_id?: string | null
           meta_campaign_id?: string | null
           meta_form_id: string
@@ -10629,6 +10688,7 @@ export type Database = {
           last_error?: string | null
           last_lead_at?: string | null
           last_synced_at?: string | null
+          lead_role?: string | null
           managed_by_user_id?: string | null
           meta_campaign_id?: string | null
           meta_form_id?: string

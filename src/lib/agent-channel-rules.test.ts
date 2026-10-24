@@ -73,3 +73,12 @@ describe("twarde zasady botów przyjmujących wniosek", () => {
     expect(INTAKE_PROCESS_RULES).toMatch(/analityk się odezwie/); // wymienione jako ZAKAZANE
   });
 });
+
+describe("placeholdery zmiennych agentów", () => {
+  it("zawierają zmienne kontekstu leada, by zapis promptu ich nie kasował", async () => {
+    const { AGENT_DYNAMIC_VARIABLE_DEFAULTS } = await import("./agent-channel-rules");
+    for (const k of ["forma", "lead_source", "lead_role", "lead_amount", "lead_created_at", "call_direction", "investor_id"]) {
+      expect(AGENT_DYNAMIC_VARIABLE_DEFAULTS[k]).toBe("");
+    }
+  });
+});
