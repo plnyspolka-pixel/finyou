@@ -12,6 +12,7 @@
 
 const EL_BASE = "https://api.elevenlabs.io";
 const DEFAULT_TIMEOUT_MS = 60_000;
+import { mergeAgentPlaceholders } from "./agent-placeholders";
 
 export function elevenApiKey(): string {
   const key = process.env.ELEVENLABS_API_KEY;
@@ -298,18 +299,16 @@ export async function patchAgent(
   };
   const path = `/v1/convai/agents/${encodeURIComponent(agentId)}`;
   if (patch.dynamic_variable_placeholders) {
-    try {
-      return await elevenJson(path, {
+    const current = await getAgent(agentId);
+    const existing = current?.conversation_config?.agent?.dynamic_variables?.dynamic_variable_placeholders ?? {};
+    return await elevenJson(path, {
         method: "PATCH",
         json: build({
           dynamic_variables: {
-            dynamic_variable_placeholders: patch.dynamic_variable_placeholders,
+            dynamic_variable_placeholders: mergeAgentPlaceholders(existing, patch.dynamic_variable_placeholders),
           },
         }),
       });
-    } catch {
-      /* API odrzuciło pole — próba bez niego */
-    }
   }
   return elevenJson(path, { method: "PATCH", json: build({}) });
 }

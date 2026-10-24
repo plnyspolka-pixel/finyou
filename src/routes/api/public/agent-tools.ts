@@ -108,6 +108,13 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         const args = body?.args ?? {};
 
         try {
+          if (tool === "save_loan_purpose" || tool === "save_needs") {
+            const { saveLoanPurpose } = await import("@/lib/ania-loan-purpose.server");
+            const needs = args?.needs ?? {};
+            const result = await saveLoanPurpose(String(body?.conversation_id ?? ""), tool === "save_needs"
+              ? { purpose: args.purpose ?? needs.purpose, needs } : args);
+            return Response.json(result, { headers: { "cache-control": "no-store" } });
+          }
           // ── Narzędzia zapisu — reuse istniejącego executor-a botów ─────────
           if (WRITE_TOOLS.has(tool)) {
             let leadId = await resolveLeadId(body);
