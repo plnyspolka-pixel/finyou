@@ -29,7 +29,8 @@ export async function saveLoanPurpose(conversationId: string, args: { purpose?: 
     const { data: app, error: appError } = await db.from("loan_applications").select("id").eq("client_id", clients[0].id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (appError) throw appError;
     if (!app) return { ok: false, error: "no_bound_application" };
-    const saved = await db.from("loan_applications").update({ situation_description: purpose }).eq("id", app.id);
+    // Nigdy nie nadpisuj opisu sytuacji wpisanego przez klienta — uzupełnij tylko pusty.
+    const saved = await db.from("loan_applications").update({ situation_description: purpose }).eq("id", app.id).or("situation_description.is.null,situation_description.eq.");
     if (saved.error) throw saved.error;
     await db.from("automation_events").insert({ automation_type: "ania_loan_purpose_saved", status: "sent", sent_payload: { conversation_id: conversationId, application_id: app.id } });
     return { ok: true, saved: true };
@@ -45,7 +46,7 @@ export async function saveLoanPurpose(conversationId: string, args: { purpose?: 
   const saved = await db.from("leads").update({ application_data: applicationData }).eq("id", lead.id);
   if (saved.error) throw saved.error;
   if (lead.loan_application_id) {
-    const savedApp = await db.from("loan_applications").update({ situation_description: purpose }).eq("id", lead.loan_application_id);
+    const savedApp = await db.from("loan_applications").update({ situation_description: purpose }).eq("id", lead.loan_application_id).or("situation_description.is.null,situation_description.eq.");
     if (savedApp.error) throw savedApp.error;
   }
   await db.from("automation_events").insert({ automation_type: "ania_loan_purpose_saved", status: "sent", sent_payload: { conversation_id: conversationId, lead_id: lead.id, application_id: lead.loan_application_id ?? null } });
