@@ -120,11 +120,19 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(pageText()).toMatch(/% wyłożonej kwoty w 24 mies\. \(ok\. \d+,\d% w skali roku\)/);
   });
 
-  it("suwaki są w DOM przed wynikiem (kolejność czytania i tabulacji)", () => {
+  it("wynik (wychodzi / wchodzi) jest nad suwakami", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
     const params = screen.getByText("Parametry pożyczki");
-    const profit = screen.getByText("Twój zysk");
-    expect(params.compareDocumentPosition(profit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const cashOut = screen.getByText("Wykładasz");
+    expect(cashOut.compareDocumentPosition(params) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("pod suwakiem prowizji: wartość referencyjna i krótkie statusy z przepisami", () => {
+    renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
+    const text = pageText();
+    expect(text).toContain("wartość referencyjna 15,0%");
+    expect(text).toContain("w wartości referencyjnej (wzór MPKK, art. 36a UoKK)");
+    expect(text).toMatch(/krotność spłaty \d+,\d+× — poniżej progu 2,0×/);
   });
 });
 
