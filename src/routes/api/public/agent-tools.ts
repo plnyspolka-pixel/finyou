@@ -100,6 +100,13 @@ export const Route = createFileRoute("/api/public/agent-tools")({
 
         let body: any;
         try {
+          if (tool === "save_loan_purpose" || tool === "save_needs") {
+            const { saveLoanPurpose } = await import("@/lib/ania-loan-purpose.server");
+            const needs = args?.needs ?? {};
+            const result = await saveLoanPurpose(String(body?.conversation_id ?? ""), tool === "save_needs"
+              ? { purpose: args.purpose ?? needs.purpose, needs } : args);
+            return Response.json(result, { headers: { "cache-control": "no-store" } });
+          }
           body = await request.json();
         } catch {
           return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
