@@ -11,6 +11,7 @@ import {
   extractField,
   extractPhone,
   cleanName,
+  extractLeadAmount,
 } from "@/lib/meta-lead-fields";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
