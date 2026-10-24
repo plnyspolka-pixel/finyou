@@ -14,3 +14,7 @@
 - [x] Verify security boundaries and pagination: 14 tests passed; running route returns 401 without token; build OK.
 - [ ] Verify authorized export against real Storage: no token provisioned, and existing data must remain unchanged.
 - [ ] Existing public-ranking security finding: blocked by owner's decision; no unrelated policy changes authorized.
+
+# Zaproszenia Trustpilot po lead magnecie
+- [x] Ukryta kopia do adresu AFS w mailu z linkiem przy pierwszym zapisie na materiał; pole `bcc` w wysyłce Resend; karta Trustpilot w /admin/integracje (adres tylko z domeny invite.trustpilot.com, przełącznik dla lead magnetów). Testy: 5 nowych, 70 przeszło razem z pakietem lead magnetów; lint i Prettier czyste.
+- [ ] Wpisać adres AFS z Trustpilot Business i włączyć integrację; potwierdzić pierwsze zaproszenie w panelu Trustpilot po realnym pobraniu. Limit zaproszeń planu Free nieweryfikowany.

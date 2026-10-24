@@ -163,6 +163,34 @@ Subskrybenci z lead magnetów mają tagi, po których filtrują segmenty
 `lead-magnet:<slug>` oraz tagi własne z panelu. Źródło: `source =
 lead_magnet`, `source_id = id lead magnetu`, UTM-y z linku.
 
+## Zaproszenia do opinii Trustpilot (AFS)
+
+Każdy, kto pierwszy raz pobiera dany lead magnet, może dostać od Trustpilot
+zaproszenie do wystawienia opinii — opinia z takiego zaproszenia ma znacznik
+„Zweryfikowano”. Mechanizm to AFS (Automatic Feedback Service): Trustpilot daje
+firmie unikalny adres `…@invite.trustpilot.com`, a mail z linkiem do pliku
+dostaje ten adres w ukrytej kopii (BCC). Trustpilot sam wysyła zaproszenie po
+opóźnieniu ustawionym w jego panelu (domyślnie kilka dni); limit zaproszeń
+w planie Free sprawdzasz w koncie Trustpilot.
+
+- Konfiguracja: `/admin/integracje` → karta **Trustpilot**: adres AFS
+  (Trustpilot Business → Get reviews → Automatic invitations), przełącznik
+  „Zapraszaj po pobraniu lead magnetu” i włączenie integracji. Zapis w
+  `integration_settings` (`integration_name = trustpilot`, `configuration`:
+  `afs_bcc_email`, `invite_lead_magnets`). Adres spoza domeny
+  `invite.trustpilot.com` nie zostanie zapisany.
+- Kod: `src/lib/trustpilot.ts` (czysta logika, testy w `trustpilot.test.ts`),
+  `src/lib/trustpilot.server.ts` (odczyt ustawień), `registerLeadMagnetSignup`
+  w `src/lib/lead-magnets/lead-magnets.server.ts` dokłada BCC do maila
+  z linkiem (także do maila z własną treścią, np. z kalkulatora), a
+  `sendResendEmail` ma pole `bcc` (test `resend-send.bcc.test.ts`).
+- Ponowny zapis tego samego adresu na ten sam materiał wysyła plik jeszcze raz,
+  ale już bez BCC — nie mnożymy zaproszeń. Powtórki między różnymi materiałami
+  ogranicza ustawienie częstotliwości zaproszeń po stronie Trustpilot.
+- Awaria odczytu ustawień albo brak wiersza nigdy nie blokuje wysyłki pliku:
+  mail idzie bez BCC, a błąd trafia do logów (`[trustpilot]`).
+- W `email_send_log.metadata` każda wysyłka z kopią ma pole `bcc`.
+
 ## Co jest w repo
 
 | Element                                            | Plik                                                                                    |

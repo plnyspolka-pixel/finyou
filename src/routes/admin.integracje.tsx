@@ -8,6 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { integrationStatusLabels } from "@/lib/labels";
+import {
+  TRUSTPILOT_AFS_DOMAIN,
+  TRUSTPILOT_INTEGRATION_NAME,
+  normalizeTrustpilotAfsAddress,
+  parseTrustpilotConfig,
+} from "@/lib/trustpilot";
 
 export const Route = createFileRoute("/admin/integracje")({
   component: IntegracjePage,
@@ -23,6 +29,11 @@ const DEFAULT_INTEGRATIONS = [
   { name: "sms", label: "SMS", desc: "Bramka SMS dla powiadomień" },
   { name: "voicebot", label: "Voicebot", desc: "Voicebot wstępnej kwalifikacji" },
   { name: "gmail", label: "Gmail", desc: "Wysyłka i odbiór e-maili obsługowych" },
+  {
+    name: TRUSTPILOT_INTEGRATION_NAME,
+    label: "Trustpilot",
+    desc: "Automatyczne zaproszenia do opinii (AFS) po pobraniu lead magnetu",
+  },
 ];
 
 function IntegracjePage() {
@@ -107,14 +118,18 @@ function IntegracjePage() {
                   }
                 />
               </div>
-              <Input
-                placeholder="Webhook URL / endpoint"
-                defaultValue={r.webhook_url ?? ""}
-                onBlur={(e) => {
-                  if (e.target.value !== (r.webhook_url ?? ""))
-                    void upsert(r.name, { webhook_url: e.target.value || null });
-                }}
-              />
+              {r.name === TRUSTPILOT_INTEGRATION_NAME ? (
+                <TrustpilotFields row={r} onSave={(patch) => upsert(r.name, patch)} />
+              ) : (
+                <Input
+                  placeholder="Webhook URL / endpoint"
+                  defaultValue={r.webhook_url ?? ""}
+                  onBlur={(e) => {
+                    if (e.target.value !== (r.webhook_url ?? ""))
+                      void upsert(r.name, { webhook_url: e.target.value || null });
+                  }}
+                />
+              )}
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -136,6 +151,74 @@ function IntegracjePage() {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Trustpilot: adres AFS (ukryta kopia maila z linkiem do lead magnetu) i
+ * przełącznik zaproszeń po pobraniu. Adres musi być w domenie
+ * invite.trustpilot.com — inny nie zostanie zapisany.
+ */
+function TrustpilotFields({
+  row,
+  onSave,
+}: {
+  row: { configuration?: unknown };
+  onSave: (patch: Record<string, unknown>) => Promise<void>;
+}) {
+  const cfg = parseTrustpilotConfig(row.configuration);
+  const savedAfs = cfg.afs_bcc_email ?? "";
+  const [afs, setAfs] = useState(savedAfs);
+  useEffect(() => {
+    setAfs(savedAfs);
+  }, [savedAfs]);
+
+  const configuration = (
+    row.configuration && typeof row.configuration === "object" ? row.configuration : {}
+  ) as Record<string, unknown>;
+
+  const saveAfs = () => {
+    const typed = afs.trim();
+    const normalized = normalizeTrustpilotAfsAddress(typed);
+    if (typed && !normalized) {
+      toast.error(`Adres AFS musi kończyć się na @${TRUSTPILOT_AFS_DOMAIN}`);
+      return;
+    }
+    if ((normalized ?? "") === savedAfs) return;
+    void onSave({
+      configuration: { ...configuration, afs_bcc_email: normalized },
+      status: normalized ? "polaczona" : "wymaga_konfiguracji",
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">
+          Adres AFS (Trustpilot Business → Get reviews → Automatic invitations)
+        </label>
+        <Input
+          placeholder={`np. 1234567890@${TRUSTPILOT_AFS_DOMAIN}`}
+          value={afs}
+          onChange={(e) => setAfs(e.target.value)}
+          onBlur={saveAfs}
+        />
+      </div>
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Zapraszaj po pobraniu lead magnetu</span>
+        <Switch
+          checked={cfg.invite_lead_magnets}
+          onCheckedChange={(v) =>
+            void onSave({ configuration: { ...configuration, invite_lead_magnets: v } })
+          }
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Mail z linkiem do pliku dostaje ukrytą kopię na ten adres, a Trustpilot po swoim opóźnieniu
+        wysyła tej osobie zaproszenie do opinii. Działa, gdy integracja jest włączona i adres jest
+        wpisany.
+      </p>
     </div>
   );
 }

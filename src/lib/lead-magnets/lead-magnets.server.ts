@@ -4,6 +4,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
 import { sendResendEmail } from "@/lib/resend-send.server";
+import { trustpilotLeadMagnetBccAddresses } from "@/lib/trustpilot.server";
 import {
   DEFAULT_TEMPLATES,
   LEAD_MAGNETS_BUCKET,
@@ -217,7 +218,11 @@ export async function registerLeadMagnetSignup(
     }
   }
 
-  // 4) Mail z linkiem.
+  // 4) Mail z linkiem. Pierwszy zapis na dany materiał dostaje ukrytą kopię
+  // do AFS Trustpilot (gdy włączone w /admin/integracje) — Trustpilot sam
+  // wyśle tej osobie zaproszenie do opinii. Ponowna wysyłka tego samego pliku
+  // już nie, żeby nie mnożyć zaproszeń.
+  const bcc = existing ? [] : await trustpilotLeadMagnetBccAddresses();
   const link = input.emailOverride?.link ? input.emailOverride.link(token) : downloadUrl(token);
   const sent = input.emailOverride
     ? await sendResendEmail({
@@ -226,11 +231,12 @@ export async function registerLeadMagnetSignup(
         text: input.emailOverride.text.replaceAll("{link}", link),
         category: "transactional",
         showReplyHint: true,
+        bcc,
       }).catch((e: unknown) => ({
         ok: false as const,
         error: e instanceof Error ? e.message : String(e),
       }))
-    : await sendLeadMagnetEmail({ magnet, email, firstName, link });
+    : await sendLeadMagnetEmail({ magnet, email, firstName, link, bcc });
   await supabaseAdmin
     .from("lead_magnet_signups")
     .update({
@@ -309,6 +315,8 @@ async function sendLeadMagnetEmail(opts: {
   email: string;
   firstName: string | null;
   link: string;
+  /** Ukryta kopia (adres AFS Trustpilot) — patrz registerLeadMagnetSignup. */
+  bcc?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const vars = {
     imie: opts.firstName,
@@ -325,6 +333,7 @@ async function sendLeadMagnetEmail(opts: {
       text: renderTemplate(opts.magnet.email_body, vars),
       category: "transactional",
       showReplyHint: true,
+      bcc: opts.bcc,
     });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
