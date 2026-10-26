@@ -438,11 +438,13 @@ describe("kalkulatory z konfiguracji", () => {
     for (const c of STARTER_CALCULATORS) expect(verifyCalculator(c)).toEqual([]);
   });
 
-  it("część wyniku za zapisem na listę", () => {
-    const ile = STARTER_CALCULATORS.find((c) => c.keyword === "ILE")!;
+  it("wszystkie wyniki klienta bez zapisu na listę", () => {
+    const ile = STARTER_CALCULATORS.find((c) => c.keyword === "ILE");
+    if (!ile) throw new Error("Brak ILE");
     const r = runCalculator(ile, { property_value: 1000000, encumbrances: 0 });
     expect(r.visible.find((v) => v.key === "max_loan_pln")?.value).toMatch(/600\s000 zł/);
-    expect(r.gated.every((g) => g.value.includes("po zapisie"))).toBe(true);
+    expect(r.gated).toEqual([]);
+    expect(r.visible.map((v) => v.key)).toEqual(["max_loan_pln", "limit_pct", "fy_fee_pln", "net_pln"]);
     const unlocked = runCalculator(ile, { property_value: 1000000 }, { unlocked: true });
     expect(unlocked.gated).toEqual([]);
   });

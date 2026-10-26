@@ -10,7 +10,7 @@ export const STARTER_CALCULATORS: CalculatorConfig[] = [
     keyword: "ILE",
     title: "Ile Twoja firma może uzyskać pod nieruchomość?",
     promise:
-      "Sprawdź w 30 sekund orientacyjną kwotę finansowania pod zastaw nieruchomości – pełne wyliczenie z kosztami wyślemy Ci mailem.",
+      "Sprawdź orientacyjną kwotę finansowania pod zastaw nieruchomości, prowizję i kwotę na rękę — bezpłatnie, bez zapisu na newsletter.",
     fn: "max_amount",
     fields: [
       {
@@ -42,9 +42,9 @@ export const STARTER_CALCULATORS: CalculatorConfig[] = [
         key: "fy_fee_pln",
         label: "Prowizja Finance You (potrącana z wypłaty)",
         format: "pln",
-        gated: true,
+        gated: false,
       },
-      { key: "net_pln", label: "Orientacyjnie na rękę", format: "pln", gated: true },
+      { key: "net_pln", label: "Orientacyjnie na rękę", format: "pln", gated: false },
     ],
     assumptions: [
       "Wynik jest orientacyjny – ostateczną kwotę ustalają finansujący po analizie nieruchomości i firmy.",
@@ -59,65 +59,6 @@ export const STARTER_CALCULATORS: CalculatorConfig[] = [
       {
         input: { property_value: 200000, encumbrances: 200000 },
         expect: { max_loan_pln: 0, net_pln: 0 },
-      },
-    ],
-  },
-  {
-    slug: "kalkulator-raty",
-    track: "pozyczkobiorca",
-    keyword: "RATA",
-    title: "Kalkulator raty finansowania pod zastaw",
-    promise: "Policz ratę przy własnych założeniach – harmonogram spłat wyślemy Ci mailem.",
-    fn: "installment",
-    fields: [
-      {
-        key: "loan_amount",
-        label: "Kwota finansowania",
-        type: "number",
-        unit: "pln",
-        min: 50000,
-        max: 20000000,
-        step: 10000,
-        required: true,
-      },
-      {
-        key: "months",
-        label: "Okres (miesiące)",
-        type: "number",
-        unit: "months",
-        min: 3,
-        max: 120,
-        step: 1,
-        default: 24,
-        required: true,
-      },
-      {
-        key: "annual_rate_pct",
-        label: "Założone oprocentowanie roczne (Twoje założenie)",
-        type: "number",
-        unit: "pct",
-        min: 0,
-        max: 30,
-        step: 0.5,
-        required: true,
-        help: "To Twoje założenie do symulacji – nie oferta.",
-      },
-    ],
-    outputs: [
-      { key: "monthly_pln", label: "Rata miesięczna (symulacja)", format: "pln", gated: false },
-      { key: "total_pln", label: "Łączna spłata", format: "pln", gated: true },
-      { key: "interest_pln", label: "Suma odsetek", format: "pln", gated: true },
-      { key: "fy_fee_pln", label: "Prowizja Finance You", format: "pln", gated: true },
-    ],
-    assumptions: [
-      "Symulacja przy oprocentowaniu podanym przez Ciebie – to nie jest oferta ani deklaracja kosztu.",
-      "Rata annuitetowa, bez rat balonowych i opłat dodatkowych.",
-      "Finansowanie wyłącznie na cel gospodarczy (przedsiębiorcy).",
-    ],
-    testCases: [
-      {
-        input: { loan_amount: 120000, months: 12, annual_rate_pct: 0 },
-        expect: { monthly_pln: 10000, total_pln: 120000, interest_pln: 0, fy_fee_pln: 6000 },
       },
     ],
   },

@@ -12,13 +12,6 @@ import {
 
 export async function listFreeMaterials(audience: LeadMagnetAudience): Promise<FreeMaterials> {
   const track = TRACKS.find((t) => TRACK_TO_AUDIENCE[t] === audience) ?? null;
-  const tools = STARTER_CALCULATORS.filter((c) => c.track === track).map((c) => ({
-    slug: c.slug,
-    title: c.title,
-    promise: c.promise,
-    keyword: c.keyword,
-    url: `/narzedzie/${c.slug}`,
-  }));
   try {
     const { data, error } = await supabaseAdmin
       .from("lead_magnets")
@@ -34,11 +27,13 @@ export async function listFreeMaterials(audience: LeadMagnetAudience): Promise<F
         audience,
         toolSlugs: STARTER_CALCULATORS.map((c) => c.slug),
       }),
-      tools,
+      tools: STARTER_CALCULATORS.filter((c) => c.track === track && (data ?? []).some((r) => r.slug === c.slug)).map((c) => ({
+        slug: c.slug, title: c.title, promise: c.promise, keyword: c.keyword, url: `/narzedzie/${c.slug}`,
+      })),
     };
   } catch (e) {
     // Dział jest dodatkiem do landingu – brak bazy w SSR nie może wywrócić strony.
     console.error("[free-materials] nie udało się pobrać lead magnetów", e);
-    return { ...EMPTY_FREE_MATERIALS(audience), tools };
+    return EMPTY_FREE_MATERIALS(audience);
   }
 }

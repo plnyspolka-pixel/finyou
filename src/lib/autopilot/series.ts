@@ -228,7 +228,7 @@ export const SERIES: SeriesDef[] = [
       LOOP_BEAT,
     ],
     motion: ["steps", "keyword", "alert", "cta"],
-    defaultKeyword: "RATA",
+    defaultKeyword: "ILE",
     weekly: true,
   },
 ];

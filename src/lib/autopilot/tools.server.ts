@@ -82,7 +82,8 @@ export async function getPublicTool(slug: string) {
     .select("published")
     .eq("slug", slug)
     .maybeSingle();
-  return { config: cfg, signupOpen: Boolean(data?.published) };
+  if (!data?.published) return null;
+  return { config: cfg, signupOpen: true };
 }
 
 export async function submitToolSignup(input: {

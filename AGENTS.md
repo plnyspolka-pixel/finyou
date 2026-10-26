@@ -1,4 +1,5 @@
 # Architecture
+- Public free-tool availability requires both an active calculator configuration and a published lead-magnet row; download/tool pages share FocusShell, while borrower outputs are ungated and investor signup/token behavior is preserved.
 - Security decision (owner, 2026-10-26): public read of `seo_location_report_entries` (/raport-lokalizacje) is INTENTIONAL — it is a public SEO asset with aggregated GUS statistics only (no client data). Treat the scanner finding about its public SELECT as an accepted exception; do not restrict access or remove the page from the sitemap.
 - Agent placeholder updates read the provider configuration first and merge missing defaults without deleting provider-specific keys; failed reads abort writes.
 - Loan-purpose writes bind to provider phone-call metadata or a pre-existing conversation binding, never model-supplied identifiers; they return no personal data.
