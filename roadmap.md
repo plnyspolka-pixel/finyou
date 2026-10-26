@@ -1,12 +1,14 @@
 # Wdrożenie inwestorskie A–H
-- [ ] A: roczny cennik, checkout i kody; testy.
-- [ ] B: publiczny kalkulator zysku; testy.
-- [ ] C: strona główna inwestora, menu, licznik i anonimowe sprawy; testy.
-- [ ] D: O nas i Historie, wspólne dane i miejsca na zdjęcia; testy.
-- [ ] E: jedna darmowa lekcja, token, mailing i pomiar; testy.
-- [ ] F: rejestracja i hub klienta, kwota z kalkulatora; testy.
-- [ ] G: Ania, plakietka, Instagram i opisy stron; testy.
-- [ ] H: kontrola całości desktop/mobile i zatwierdzona publikacja.
+- [x] A: tylko roczny produkt 7 000 zł / 365 dni, 30-dniowy nieaktywny; stare okresy/płatności zachowane; checkout miesięczny przekierowuje na roczny, kod w URL.
+- [x] B: kalkulator publiczny z prowizją 3%; testy wartości i dotychczasowych limitów.
+- [x] C: investor home, /dla-klienta, alias 301, menu, godzinny licznik i bezpieczne anonimowe sprawy; desktop/mobile sprawdzone.
+- [x] D: O nas/Historie oraz wspólne dane historii i neutralne miejsca zdjęć.
+- [x] E: jedna lekcja, hash/ważność tokenu, podpisane linki 15 min, zapis i mailing; pomiar za zgodą bez tokenów.
+- [x] F: rola z linku rejestracji bez przełącznika; kwota 500 000 z URL widoczna w formularzu klienta.
+- [x] G: wyłącznie inwestorscy agenci zsynchronizowani i odczytani; 7201/głosy zachowane, plakietka ukryta; opisy nowych stron i linki.
+- [ ] H: publikacja zlecona 26.10.2026 19:34 UTC; zakończenie niepotwierdzone. Testy: 66 + 49 + 45 w kolejnych zestawach (częściowo wspólne); aktualne build OK. Pełnego zakupu nie wykonano.
+- [ ] Odtworzenie w przeglądarce: Chrome testowy zwraca code 4; pełny prywatny plik HTTP 200, ffprobe potwierdza H.264/AAC, 1920×1080, 2043.91 s; ffmpeg dekoduje klatkę. Potrzebna przeglądarka obsługująca H.264 do testu play/progress.
+- [ ] Dwa zdjęcia i adres Instagramu marki: czekają na właściciela; dotychczasowy profil pozostawiony.
 
 # Darmowe materiały i narzędzia
 - [x] Wycofać kalkulator raty i filtrować wszystkie publiczne listy publikacją.
@@ -16,7 +18,7 @@
 
 # Public Ania conversations
 - [x] Ania test corrections: merged provider placeholders, personalized investor greeting and first outbound SMS, text filler filtering, caller-scoped loan purpose tools, callback evaluation. 39 tests passed; full tsgo passed; real A2P personalized greeting and unauthenticated/identityless write rejection verified. No real lead write/call/SMS exercised.
-- [ ] Publish approved Ania corrections and confirm result; public-ranking security finding still requires owner decision.
+- [ ] Publish approved Ania corrections and confirm result; public-ranking finding accepted by owner (aggregate GUS only).
 - [x] Update shared identity rules without editing stored prompts; 22 tests pass. Only A1/A2 synchronized and verified by ElevenLabs readback; all stored prompt rows unchanged. Approved publication scheduled; completion not yet confirmed.
 - [x] Route public Ania entries through A0; preserve contextual panel agents and brand investor assistant Ania. Seven tests passed; real A2P transfers verified on home and /dla-inwestora with one socket and unchanged conversation ID. /dla-inwestorow does not exist in this repository. Provider-generated greetings can recur; prompts/voices untouched. No production publication; real microphone unverified.
 - [x] Keep one live session for text and voice; preserve agent mappings and reconnect visibly. Nine session tests passed.
@@ -32,7 +34,7 @@
 - [x] Add token-protected server route without changing existing routes or data.
 - [x] Verify security boundaries and pagination: 14 tests passed; running route returns 401 without token; build OK.
 - [ ] Verify authorized export against real Storage: no token provisioned, and existing data must remain unchanged.
-- [ ] Existing public-ranking security finding: blocked by owner's decision; no unrelated policy changes authorized.
+- [x] Public-ranking security finding: accepted owner exception for aggregate GUS only; policy/sitemap preserved.
 # Investor leads & Ania tools (rebuilt 2026-10-24)
 - [x] Per-form lead role (Admin → Meta Ads → Formularze → Rola leada; fallback by name „inwest”); investor leads skip loan application/borrower SMS/cadence, get investor SMS + A2P voice call. New leads only, no backfill.
 - [x] Messenger: investor → A2P text, unrecognized → A0, borrowers unchanged. Lead context variables passed to calls and text turns.
