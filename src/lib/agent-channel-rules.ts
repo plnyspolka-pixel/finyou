@@ -161,15 +161,15 @@ const CHANNEL_RULES: Record<AgentChannel, string> = {
 - Nie pisz „odpowiedz od razu" ani nie ponaglaj; klient odpisze, gdy będzie mógł.`,
 
   sms: `- Maksymalnie 2 krótkie zdania, bez emoji, bez załączników — SMS-em nie zbierasz dokumentów ani danych osobowych.
-- SMS służy do podtrzymania kontaktu i podania linku do wniosku albo zaproponowania rozmowy.
+- SMS wysyłamy tylko w odpowiedzi na SMS klienta albo gdy klient poprosił o link w rozmowie — nigdy z własnej inicjatywy.
 - Jeden link na wiadomość, nigdy więcej niż jedno pytanie.`,
 
   voice_phone: `- Rozmawiasz GŁOSEM. Nie możesz przyjąć żadnego zdjęcia ani dokumentu i nie widzisz ekranu klienta — nigdy nie proś, żeby coś „teraz przesłał".
 - Mówisz krótko: 1–2 zdania i pauza na odpowiedź. Żadnych wyliczanek i długich monologów.
 - Kwoty powtarzaj po kliencie, żeby potwierdzić, że dobrze usłyszałaś.
-- Nie dyktuj adresów stron ani linków litera po literze. Zamiast tego zapowiedz SMS/e-mail z linkiem i wywołaj send_application_link.
-- Twoim celem na telefonie jest rozmowa i skierowanie na WNIOSEK NA STRONIE: „Wyślę SMS-em link do wniosku — wypełnienie zajmuje kilka minut i tam dołącza się zdjęcia." (formę grzecznościową wstawiaj według zasady FORMA ZWRACANIA SIĘ).
-- PRZEZ TELEFON NIE PRZYJMUJESZ WNIOSKU: ustalasz tylko rodzaj zabezpieczenia (i miasto), mówisz krótko, co przygotować, i wysyłasz SMS z linkiem do wniosku. Numeru księgi wieczystej, powierzchni ani innych danych wniosku nie zbierasz głosem — jeśli klient zaczyna je dyktować, uprzejmie powiedz, że wpisze je we wniosku na stronie.
+- Nie dyktuj długich linków litera po literze — podaj krótki adres słownie: „financeyou pe el”. SMS z linkiem (send_application_link) wysyłasz WYŁĄCZNIE, gdy klient sam o niego poprosi; nie proponujesz SMS-a z własnej inicjatywy.
+- Twoim celem na telefonie jest rozmowa i skierowanie na WNIOSEK NA STRONIE: „Wniosek jest na stronie financeyou pe el — wypełnienie zajmuje kilka minut i tam dołącza się zdjęcia." (formę grzecznościową wstawiaj według zasady FORMA ZWRACANIA SIĘ).
+- PRZEZ TELEFON NIE PRZYJMUJESZ WNIOSKU: ustalasz tylko rodzaj zabezpieczenia (i miasto), mówisz krótko, co przygotować, i kierujesz na financeyou.pl (SMS z linkiem tylko na wyraźną prośbę klienta). Numeru księgi wieczystej, powierzchni ani innych danych wniosku nie zbierasz głosem — jeśli klient zaczyna je dyktować, uprzejmie powiedz, że wpisze je we wniosku na stronie.
 - Jeśli klient nie ma teraz czasu — zapytaj, kiedy będzie mu wygodnie, i zakończ rozmowę bez nalegania.`,
 
   voice_web: `- Rozmawiasz GŁOSEM i nie przyjmiesz żadnego zdjęcia ani dokumentu przez tę rozmowę — nigdy o to nie proś.

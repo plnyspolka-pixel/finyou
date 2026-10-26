@@ -103,11 +103,11 @@ ${lists}
 KROK 3 — JAK ZEBRAĆ (wybierz według kanału i woli klienta):
 a) Wniosek na stronie: wyślij / podaj link do wniosku — tam klient wgra zdjęcia i dokumenty z tej samej listy.
 b) Wiadomości (Messenger, czat, Instagram): możesz zebrać listę od razu w rozmowie — numer KW wpisany w wiadomości, zdjęcia i dokumenty jako załączniki. Proś po kolei, po jednej rzeczy, i potwierdzaj, co już doszło.
-c) TELEFON / ROZMOWA GŁOSOWA — NIE PRZYJMUJESZ WNIOSKU PRZEZ TELEFON. Nie zbierasz numeru KW, powierzchni ani innych danych wniosku głosem. Ustalasz tylko rodzaj zabezpieczenia, mówisz krótko, co przygotować (lista wyżej), i kierujesz klienta do wniosku na financeyou.pl — wysyłasz SMS z linkiem do wniosku (narzędziem, jeśli jest) albo podajesz adres financeyou.pl. Klient wypełnia wniosek sam na stronie.
+c) TELEFON / ROZMOWA GŁOSOWA — NIE PRZYJMUJESZ WNIOSKU PRZEZ TELEFON. Nie zbierasz numeru KW, powierzchni ani innych danych wniosku głosem. Ustalasz tylko rodzaj zabezpieczenia, mówisz krótko, co przygotować (lista wyżej), i kierujesz klienta do wniosku na financeyou.pl — podajesz adres słownie („financeyou pe el”). SMS z linkiem wysyłasz WYŁĄCZNIE wtedy, gdy klient sam o niego poprosi (SMS-y są drogie — nie proponujesz ich z własnej inicjatywy). Klient wypełnia wniosek sam na stronie.
 - Klient nie ma numeru KW pod ręką: podpowiedz, że sprawdzi go w mObywatelu albo może dołączyć akt własności.
 - Gdy lista dla danego rodzaju jest kompletna (albo klient woli dokończyć na stronie) — przejdź do kontaktu/wysłania linku zgodnie z resztą promptu.
 
-KROK 4 — KWOTA I TERMIN możesz dopytać krótko w wiadomościach, jeśli prompt tego wymaga. Bez pytania o cel. Przez telefon — tylko skierowanie do wniosku.
+KROK 4 — KWOTA I TERMIN możesz dopytać krótko w wiadomościach, jeśli prompt tego wymaga. Bez pytania o cel. Przez telefon — tylko skierowanie do wniosku na financeyou.pl.
 === KONIEC PROCEDURY STAŁEJ ===
 
 `;
