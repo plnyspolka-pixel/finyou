@@ -38,6 +38,12 @@ export async function sendResendEmail(opts: {
   showReplyHint?: boolean;
   /** Prawdziwe załączniki maila (base64) — a nie linki w treści. */
   attachments?: Array<{ filename: string; content: string; contentType?: string }>;
+  /**
+   * Ukryta kopia — dziś tylko adres AFS Trustpilot (…@invite.trustpilot.com),
+   * który uruchamia u Trustpilot zaproszenie do opinii. Adresy BCC to systemy,
+   * nie ludzie, więc nie przechodzą przez strażnika wypisów.
+   */
+  bcc?: string[];
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
   const connKey = process.env.RESEND_API_KEY;
@@ -101,6 +107,7 @@ export async function sendResendEmail(opts: {
     html: finalHtml,
   };
   if (opts.replyTo) body.reply_to = opts.replyTo;
+  if (opts.bcc?.length) body.bcc = opts.bcc;
   if (Object.keys(headers).length) body.headers = headers;
   if (opts.attachments?.length) {
     body.attachments = opts.attachments.map((a) => ({
@@ -137,6 +144,7 @@ export async function sendResendEmail(opts: {
         from_name: opts.fromName ?? null,
         reply_to: opts.replyTo ?? null,
         attachments: opts.attachments?.map((a) => a.filename) ?? null,
+        bcc: opts.bcc?.length ? opts.bcc : null,
       },
     });
   } catch (logErr) {

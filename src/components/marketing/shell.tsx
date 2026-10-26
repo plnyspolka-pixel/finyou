@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { MktButton } from "./primitives";
+import { TRUSTPILOT_PROFILE_URL } from "@/lib/trustpilot";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
 import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
@@ -408,6 +409,7 @@ export function SiteFooter() {
         { t: "Jak działa", href: "/#jak-dziala" },
         { t: "Blog", href: "/blog" },
         { t: "FAQ", href: PAGE_PATH.klient + "#faq" },
+        { t: "Opinie na Trustpilot", href: TRUSTPILOT_PROFILE_URL },
       ],
     },
     {
