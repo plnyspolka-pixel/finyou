@@ -111,7 +111,9 @@ describe("produkcja — brief dla scenarzysty", () => {
       expect(brief).toContain(`Skomentuj ${series.defaultKeyword}`);
       expect(brief).toContain(magnet.name);
       expect(brief).toContain("Stary tytuł rolki");
-      expect(brief).toContain("ryzyku");
+      // Jedno zdanie o ryzyku i ani jednego więcej (decyzja właściciela 26.10.2026).
+      expect(brief).toMatch(/DOKŁADNIE jedno krótkie zdanie o ryzyku/);
+      expect(brief).toMatch(/nie w tekście mówionym/);
       // Sam brief (instrukcja) nie zawiera fraz z reguł twardych toru.
       const blocks = checkHardRules(brief, { kind: "script", track }).filter(
         (h) => h.severity === "block",

@@ -34,7 +34,11 @@ Pauza (ręczna albo automatyczna przy anomalii) wstrzymuje **wyłącznie wpisy a
    w opisach, lead magnetach, stronach, mailach i reklamach. Flagi platform: YouTube
    `containsSyntheticMedia`, TikTok `is_aigc` (kolumna `contains_synthetic_media`, domyślnie `true`).
 3. **Recenzent LLM** – Claude (gdy jest `ANTHROPIC_API_KEY`), inaczej Gemini Pro z osobnym promptem.
-   Autor poprawek: Gemini Flash.
+   Autor poprawek: Gemini Flash. Od 26.10.2026 recenzent ocenia proporcjonalnie: jedno zdanie
+   o ryzyku w rolce wystarcza (nie żąda jego rozszerzania ani formułek „nie stanowi oferty”,
+   „wynik szacunkowy”), a zatwierdzony język marki („jak bank”, „zarabiaj tak, jak banki od
+   stuleci”, formaty serii) nie jest naruszeniem. Autor poprawek usuwa obietnicę zamiast
+   równoważyć ją kolejnym ostrzeżeniem.
 4. **Pętla** – maks. 3 poprawki; potem odrzucenie i temat wraca do banku. Brak recenzenta = odrzucenie.
 5. **Audyt** – każda decyzja w `ai_growth_action_log` (`module = compliance_gate`): wersja reguł,
    iteracje, uwagi, tekst wejściowy i finalny.
@@ -150,6 +154,24 @@ kadruje „cover” do pełnego pionu. Poprawka kadru: `set_studio_avatar_framin
 **Tor pożyczkobiorcy w rolkach:** bez akcentu „tylko dla firm” (`autopilot/track-voice.ts`):
 „firma / przedsiębiorca / działalność” najwyżej raz. Reguła compliance „konsument” i linia
 o celu gospodarczym w stopce opisu zostają.
+
+**Zastrzeżenia w rolkach (decyzja właściciela 26.10.2026):** w tekście mówionym jest
+**dokładnie jedno** zdanie o ryzyku. Formułki „nie stanowi oferty/porady”, „zwrot nie jest
+gwarantowany”, „wynik szacunkowy”, „materiał poglądowy”, zastrzeżenie doklejone do CTA — nie
+w rolce; te niesie stopka opisu (`RISK_LINES`) i sam materiał. Wcześniej scenarzysta dostawał
+polecenie o ryzyku z czterech miejsc naraz, a poprawki recenzenta dokładały kolejne zdania
+(rolki z 3–5 ostrzeżeniami na 100 słów). Teraz (`autopilot/script-warnings.ts`):
+
+- brief, szkielet serii, zasady toru, ton profilu i prompt generatora mówią zgodnie: jedno zdanie,
+- `countWarnings` liczy zdania-zastrzeżenia (ryzyko, brak gwarancji, utrata kapitału, formułki
+  prawne, „szacunkowy”); powyżej jednego `condenseScriptWarnings` (Gemini Flash) prosi o
+  zostawienie jednego — w `generateVideoScript` (także z panelu i MCP) i w produkcji po bramce,
+- odchudzona wersja wchodzi tylko, gdy zastrzeżeń ubyło, jedno zostało (ze słowem „ryzyko”),
+  hasło CTA i długość się zgadzają, a reguły twarde nie zgłaszają nowych blokad
+  (`acceptCondensedScript`); inaczej zostaje oryginał. Dziennik: `reel_warnings_condensed`,
+- recenzent bramki nie żąda rozszerzania zdania o ryzyku ani formułek, a język marki i formaty
+  serii nie są naruszeniem; autor poprawek usuwa obietnicę zamiast dokładać ostrzeżenie; poprawka
+  „z urzędu” (ryzyko > 40 bez uwag) dokłada linię o ryzyku tylko, gdy jej nie ma.
 
 ## Zadanie jednorazowe dla właściciela: profil Instagram
 

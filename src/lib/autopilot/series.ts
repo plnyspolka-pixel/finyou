@@ -31,7 +31,8 @@ export interface SeriesDef {
   weekly?: boolean;
 }
 
-const RISK_BEAT = "ale: jedno zdanie o ryzyku (alert)";
+// Jedyne zastrzeżenie w rolce (decyzja właściciela 26.10.2026) — reszta w opisie.
+const RISK_BEAT = "ale: jedno krótkie zdanie o ryzyku (alert) — jedyne zastrzeżenie w rolce";
 const LOOP_BEAT = "puenta zapętlająca do hooka + CTA: obserwuj i skomentuj HASŁO";
 
 export const SERIES: SeriesDef[] = [

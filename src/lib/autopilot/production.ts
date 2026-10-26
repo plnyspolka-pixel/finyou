@@ -128,8 +128,10 @@ export function buildReelBrief(input: ReelBriefInput): string {
   } else {
     lines.push("Zakończ zachętą do obserwowania profilu (bez obietnic).");
   }
+  // Decyzja właściciela 26.10.2026: w rolce DOKŁADNIE jedno zdanie o ryzyku —
+  // formułki prawne („nie stanowi oferty”, „wynik szacunkowy”…) ma stopka opisu.
   lines.push(
-    "Jedno uczciwe zdanie o ryzyku w naturalnym miejscu (przed CTA). Bez liczb o zwrocie w procentach, bez gwarancji i bez obiecywania, że ryzyka nie ma. Nie używaj frazy „dla każdego” w żadnej formie (także zaprzeczonej); nie obiecuj, że weryfikacji nie będzie, i nie sugeruj przeznaczenia prywatnego.",
+    "Zastrzeżenia: DOKŁADNIE jedno krótkie zdanie o ryzyku w naturalnym miejscu (przed CTA) — i ani jednego więcej. Nie dopisuj formułek „nie stanowi oferty/porady”, „wynik szacunkowy”, „materiał poglądowy” ani zastrzeżeń przy CTA; te są w opisie publikacji, nie w tekście mówionym. Bez liczb o zwrocie w procentach, bez gwarancji i bez obiecywania, że ryzyka nie ma. Nie używaj frazy „dla każdego” w żadnej formie (także zaprzeczonej); nie obiecuj, że weryfikacji nie będzie, i nie sugeruj przeznaczenia prywatnego.",
   );
   const examples = TRACK_HOOK_EXAMPLES[track];
   if (examples.length)
