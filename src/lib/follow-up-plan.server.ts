@@ -898,7 +898,7 @@ export async function processDueFollowUps(): Promise<{
           leadId: row.lead_id,
           firstName: lead.first_name ?? "",
           amount: lead.application_data?.lead_amount ?? "",
-          createdAt: row.metadata?.created_at ?? null,
+          createdAt: (row.metadata as { created_at?: string } | null)?.created_at ?? null,
         });
         if (r.reason === "quiet_hours" || r.reason === "sunday") {
           skipped++;
