@@ -1,0 +1,7 @@
+export const PORTFOLIO_STORIES = [
+  { title: "Spłacona po 49 dniach", amount: "55 000 zł", outcome: "49 dni", text: "Firma z zachodniej Polski, 55 000 zł na 12 miesięcy pod hipotekę do 150 000 zł na mieszkaniu. Klientka rozliczyła całość po 49 dniach od umowy." },
+  { title: "Klientka przestała płacić. Hipoteka zadziałała.", amount: "50 000 zł", outcome: "19 miesięcy", text: "50 000 zł dla firmy, zabezpieczone mieszkaniem poręczycielki (hipoteka do 150 000 zł). Po kilku miesiącach raty przestały przychodzić. Wezwania, negocjacje, promesa dla notariusza — i spłata całej wierzytelności przy sprzedaży mieszkania, 19 miesięcy od umowy. Spłatę potwierdził bank i kancelaria notarialna." },
+  { title: "Mieszkanie bez księgi wieczystej", amount: "ok. 35 000 zł", outcome: "9 miesięcy", text: "Lokal nie miał założonej KW — dla banku sprawa zamknięta. Założyliśmy księgę, wpisaliśmy hipotekę do 150 000 zł i sfinansowaliśmy ok. 35 000 zł na trzy lata, z kosztami notariusza w wypłacie. Klientka rozliczyła całość po dziewięciu miesiącach." },
+  { title: "80 000 zł, spłacone po 100 dniach", amount: "80 000 zł", outcome: "100 dni", text: "Przedsiębiorczyni ze Śląska, 80 000 zł na bieżącą działalność, hipoteka do 190 000 zł. Trzy raty w terminie, potem jednorazowe rozliczenie przed terminem z promesy." },
+  { title: "Pół roku planu, 118 dni spłaty", amount: "ok. 30 000 zł", outcome: "118 dni", text: "Przedsiębiorca ze Śląska, ok. 30 000 zł, hipoteka do 90 000 zł. Harmonogram na sześć miesięcy; rozliczenie jednorazową wpłatą po 118 dniach." },
+] as const;

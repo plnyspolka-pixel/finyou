@@ -17,6 +17,7 @@ import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as DlaInwestoraRouteImport } from './routes/dla-inwestora'
 import { Route as DlaKlientaRouteImport } from './routes/dla-klienta'
 import { Route as DlaPosrednikaRouteImport } from './routes/dla-posrednika'
+import { Route as HistorieRouteImport } from './routes/historie'
 import { Route as InwestorRouteImport } from './routes/inwestor'
 import { Route as KalkulatorLtvRouteImport } from './routes/kalkulator-ltv'
 import { Route as KalkulatorPozyczkiRouteImport } from './routes/kalkulator-pozyczki'
@@ -25,6 +26,7 @@ import { Route as LogowanieRouteImport } from './routes/logowanie'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as NegocjujRouteImport } from './routes/negocjuj'
 import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
+import { Route as ONasRouteImport } from './routes/o-nas'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
@@ -357,6 +359,11 @@ const DlaPosrednikaRoute = DlaPosrednikaRouteImport.update({
   path: '/dla-posrednika',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistorieRoute = HistorieRouteImport.update({
+  id: '/historie',
+  path: '/historie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InwestorRoute = InwestorRouteImport.update({
   id: '/inwestor',
   path: '/inwestor',
@@ -395,6 +402,11 @@ const NegocjujRoute = NegocjujRouteImport.update({
 const NoweHasloRoute = NoweHasloRouteImport.update({
   id: '/nowe-haslo',
   path: '/nowe-haslo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ONasRoute = ONasRouteImport.update({
+  id: '/o-nas',
+  path: '/o-nas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfertyRoute = OfertyRouteImport.update({
@@ -1950,6 +1962,7 @@ export interface FileRoutesByFullPath {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/historie': typeof HistorieRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
@@ -1958,6 +1971,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/o-nas': typeof ONasRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
@@ -2258,12 +2272,14 @@ export interface FileRoutesByTo {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/historie': typeof HistorieRoute
   '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
   '/logowanie': typeof LogowanieRoute
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/o-nas': typeof ONasRoute
   '/oferty': typeof OfertyRoute
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
   '/polityka-cookies': typeof PolitykaCookiesRoute
@@ -2559,6 +2575,7 @@ export interface FileRoutesById {
   '/dla-inwestora': typeof DlaInwestoraRoute
   '/dla-klienta': typeof DlaKlientaRoute
   '/dla-posrednika': typeof DlaPosrednikaRoute
+  '/historie': typeof HistorieRoute
   '/inwestor': typeof InwestorRouteWithChildren
   '/kalkulator-ltv': typeof KalkulatorLtvRoute
   '/kalkulator-pozyczki': typeof KalkulatorPozyczkiRoute
@@ -2567,6 +2584,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/negocjuj': typeof NegocjujRoute
   '/nowe-haslo': typeof NoweHasloRoute
+  '/o-nas': typeof ONasRoute
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
@@ -2870,6 +2888,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/historie'
     | '/inwestor'
     | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
@@ -2878,6 +2897,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/negocjuj'
     | '/nowe-haslo'
+    | '/o-nas'
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
@@ -3178,12 +3198,14 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/historie'
     | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
     | '/logowanie'
     | '/mcp'
     | '/negocjuj'
     | '/nowe-haslo'
+    | '/o-nas'
     | '/oferty'
     | '/operator-rejestracja'
     | '/polityka-cookies'
@@ -3478,6 +3500,7 @@ export interface FileRouteTypes {
     | '/dla-inwestora'
     | '/dla-klienta'
     | '/dla-posrednika'
+    | '/historie'
     | '/inwestor'
     | '/kalkulator-ltv'
     | '/kalkulator-pozyczki'
@@ -3486,6 +3509,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/negocjuj'
     | '/nowe-haslo'
+    | '/o-nas'
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
@@ -3788,6 +3812,7 @@ export interface RootRouteChildren {
   DlaInwestoraRoute: typeof DlaInwestoraRoute
   DlaKlientaRoute: typeof DlaKlientaRoute
   DlaPosrednikaRoute: typeof DlaPosrednikaRoute
+  HistorieRoute: typeof HistorieRoute
   InwestorRoute: typeof InwestorRouteWithChildren
   KalkulatorLtvRoute: typeof KalkulatorLtvRoute
   KalkulatorPozyczkiRoute: typeof KalkulatorPozyczkiRoute
@@ -3796,6 +3821,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   NegocjujRoute: typeof NegocjujRoute
   NoweHasloRoute: typeof NoweHasloRoute
+  ONasRoute: typeof ONasRoute
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
@@ -3981,6 +4007,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DlaPosrednikaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/historie': {
+      id: '/historie'
+      path: '/historie'
+      fullPath: '/historie'
+      preLoaderRoute: typeof HistorieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inwestor': {
       id: '/inwestor'
       path: '/inwestor'
@@ -4035,6 +4068,13 @@ declare module '@tanstack/react-router' {
       path: '/nowe-haslo'
       fullPath: '/nowe-haslo'
       preLoaderRoute: typeof NoweHasloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/o-nas': {
+      id: '/o-nas'
+      path: '/o-nas'
+      fullPath: '/o-nas'
+      preLoaderRoute: typeof ONasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oferty': {
@@ -6548,6 +6588,7 @@ const rootRouteChildren: RootRouteChildren = {
   DlaInwestoraRoute: DlaInwestoraRoute,
   DlaKlientaRoute: DlaKlientaRoute,
   DlaPosrednikaRoute: DlaPosrednikaRoute,
+  HistorieRoute: HistorieRoute,
   InwestorRoute: InwestorRouteWithChildren,
   KalkulatorLtvRoute: KalkulatorLtvRoute,
   KalkulatorPozyczkiRoute: KalkulatorPozyczkiRoute,
@@ -6556,6 +6597,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   NegocjujRoute: NegocjujRoute,
   NoweHasloRoute: NoweHasloRoute,
+  ONasRoute: ONasRoute,
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,

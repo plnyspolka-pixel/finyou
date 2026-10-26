@@ -44,7 +44,7 @@ const YT_MAX_REPLIES_PER_TICK = 15;
 
 /** Pola strony publicznej /pobierz/<slug>. */
 export const PUBLIC_LEAD_MAGNET_COLUMNS =
-  "id,slug,title,audience,headline,subheadline,benefits,cta_text,cover_image_url,og_image_url,meta_description,thank_you_message,instant_download,file_name,published";
+  "id,slug,title,audience,headline,subheadline,benefits,cta_text,cover_image_url,og_image_url,meta_description,thank_you_message,instant_download,file_name,published,material_type";
 
 export async function getPublicLeadMagnet(slug: string): Promise<PublicLeadMagnet | null> {
   const { data, error } = await supabaseAdmin
@@ -218,12 +218,22 @@ export async function registerLeadMagnetSignup(
     }
   }
 
+  const videoMaterial = magnet.material_type === "video" && magnet.slug === "darmowa-lekcja";
+  if (videoMaterial) {
+    const { videoTokenHash, VIDEO_TOKEN_TTL_DAYS } = await import("@/lib/free-lesson");
+    const { error } = await supabaseAdmin.from("lead_magnet_signups").update({
+      video_token_hash: await videoTokenHash(token),
+      video_expires_at: new Date(Date.now() + VIDEO_TOKEN_TTL_DAYS * 86400000).toISOString(),
+    }).eq("id", signupId);
+    if (error) throw new Error("Nie udało się udostępnić lekcji.");
+  }
+
   // 4) Mail z linkiem. Pierwszy zapis na dany materiał dostaje ukrytą kopię
   // do AFS Trustpilot (gdy włączone w /admin/integracje) — Trustpilot sam
   // wyśle tej osobie zaproszenie do opinii. Ponowna wysyłka tego samego pliku
   // już nie, żeby nie mnożyć zaproszeń.
   const bcc = existing ? [] : await trustpilotLeadMagnetBccAddresses();
-  const link = input.emailOverride?.link ? input.emailOverride.link(token) : downloadUrl(token);
+  const link = videoMaterial ? `https://financeyou.pl/pobierz/darmowa-lekcja?t=${token}` : input.emailOverride?.link ? input.emailOverride.link(token) : downloadUrl(token);
   const sent = input.emailOverride
     ? await sendResendEmail({
         to: email,

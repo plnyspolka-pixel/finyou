@@ -25,13 +25,12 @@ import {
 } from "@/components/marketing/investor-modules";
 import {
   plnLabel,
-  SUBSCRIPTION_MONTHLY_PLN,
   SUBSCRIPTION_YEARLY_PLN,
 } from "@/lib/investor-plan/plans";
 import { breadcrumbLd, SITE_URL } from "@/lib/seo/company";
 
-const PRICING = "/dla-inwestora#cennik";
-const ALL_MODULES = "/dla-inwestora#moduly";
+const PRICING = "/#cennik";
+const ALL_MODULES = "/#moduly";
 
 export const Route = createFileRoute("/dla-inwestora_/$modul")({
   loader: ({ params }) => {
@@ -53,6 +52,9 @@ export const Route = createFileRoute("/dla-inwestora_/$modul")({
         { property: "og:locale", content: "pl_PL" },
         { property: "og:image", content: SITE_URL + m.image },
         { property: "og:image:alt", content: m.imageAlt },
+        { name: "twitter:image", content: SITE_URL + m.image },
+        { name: "twitter:description", content: m.metaDescription },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
       links: [{ rel: "canonical", href: url }],
       scripts: [
@@ -126,7 +128,7 @@ function InvestorModulePage() {
       <CTASection
         single
         title="Szkolenie i wszystkie narzędzia w jednym abonamencie"
-        sub={`${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — bez opłat za Projekt i bez prowizji od Twojego zysku. BONUS: abonament kupisz w ratach, także jako firma.`}
+        sub={`${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za 12 miesięcy — bez prowizji od Twojego zysku. abonament kupisz w ratach, także jako firma.`}
         buttons={[{ label: "Zostań partnerem", href: PRICING }]}
       />
     </MarketingShell>

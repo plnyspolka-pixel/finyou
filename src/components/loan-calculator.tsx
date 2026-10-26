@@ -264,7 +264,7 @@ export function LoanCalculator({
 
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
-  const [commissionPct, setCommissionPct] = useState(initialCommissionPct);
+  const [commissionPct, setCommissionPct] = useState(marketingPreview ? 3 : initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
   const [operatorCommissionPct, setOperatorCommissionPct] = useState(3);
 
@@ -520,13 +520,13 @@ export function LoanCalculator({
   }, [MAX_INTEREST_RATE, annualRate]);
 
   useEffect(() => {
-    if (!commissionTouched.current) {
+    if (!commissionTouched.current && !marketingPreview) {
       // Maksymalna prowizja bez wątpliwości prawnych = wartość referencyjna (MPKK);
       // suwak pozwala ręcznie do 50%.
       if (Math.abs(commissionPct - referenceInvestorPct) > 1e-9)
         setCommissionPct(referenceInvestorPct);
     }
-  }, [commissionPct, referenceInvestorPct]);
+  }, [commissionPct, referenceInvestorPct, marketingPreview]);
 
   useEffect(() => {
     onChange?.({
@@ -903,7 +903,7 @@ export function LoanCalculator({
                   zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI{" "}
                   <b className="text-white">{investorRoiPct.toFixed(1)}%</b> (
                   {investorRoiAnnualPct.toFixed(1)}% / rok)
-                  {investorGuidance && realAnnualRoiPct != null && (
+                  {investorGuidance && !marketingPreview && realAnnualRoiPct != null && (
                     <>
                       {" "}
                       · realnie ponad inflację{" "}
@@ -995,7 +995,7 @@ export function LoanCalculator({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                 {marketingPreview ? "Kwota pożyczki" : "Kwota pożyczki (z umowy)"}{" "}
-                {investorGuidance && (
+                {investorGuidance && !marketingPreview && (
                   <InfoTip text="Kwota Udzielona z umowy — od niej liczone są odsetki i raty. Prowizja Finance You jest potrącana z wypłaty (klient dostaje kwotę pomniejszoną o nią), a prowizja inwestora jest rozłożona na raty." />
                 )}
               </Label>
@@ -1056,7 +1056,7 @@ export function LoanCalculator({
               <span>{internalOperatorMode ? "12 mies." : "3 mies."}</span>
               <span>72 mies.</span>
             </div>
-            {investorGuidance && periodWarn && (
+            {investorGuidance && !marketingPreview && periodWarn && (
               <Alert className="py-2 border-amber-300 bg-amber-50 text-amber-900">
                 <Info className="h-4 w-4 !text-amber-600" />
                 <AlertDescription className="text-xs">
@@ -1072,7 +1072,7 @@ export function LoanCalculator({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                 {marketingPreview ? "Oprocentowanie roczne" : "Roczne oprocentowanie (odsetki)"}{" "}
-                {investorGuidance && (
+                {investorGuidance && !marketingPreview && (
                   <InfoTip text="Górny limit z art. 359 §2¹ KC = 2 × (stopa ref. NBP + 3,5 p.p.). Odsetki ponad limit są nienależne i podlegają zwrotowi." />
                 )}
               </Label>
@@ -1098,7 +1098,7 @@ export function LoanCalculator({
               <span className={interestExceeds ? "text-destructive font-medium" : ""}>
                 {marketingPreview
                   ? interestExceeds
-                    ? `powyżej odsetek maksymalnych (${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}%) — art. 359 § 2¹ KC`
+                    ? `powyżej odsetek maksymalnych (${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}%)`
                     : `maks. ${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}% — odsetki maksymalne`
                   : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
               </span>
@@ -1109,9 +1109,9 @@ export function LoanCalculator({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                 {marketingPreview
-                  ? "Twoja prowizja"
+                  ? "Twoja prowizja — firma spłaca ją w ratach"
                   : "Prowizja dla inwestora (jednorazowa, pozaodsetkowa)"}{" "}
-                {investorGuidance && (
+                {investorGuidance && !marketingPreview && (
                   <InfoTip text="Jedyny koszt pozaodsetkowy po stronie inwestora, rozłożony na raty. Domyślnie ustawiona na wartość referencyjną ze wzoru MPKK — pożyczek B2B ten limit nie obejmuje, ale prowizja nie może naruszać zasad współżycia społecznego." />
                 )}
               </Label>
@@ -1135,39 +1135,7 @@ export function LoanCalculator({
               onValueChange={(v) => setCommissionPctTouched(v[0])}
             />
             {marketingPreview ? (
-              // Podgląd na landingu: statusy prowizji i krotności jako krótki kontekst
-              // pod suwakiem — tylko wskazanie przepisu, bez wyjaśnień.
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <p>
-                  {`${commissionPct.toFixed(1).replace(".", ",")}% (${plnLabel(commissionPln)}) · klient spłaca ją w ratach · wartość referencyjna ${referenceInvestorPct.toFixed(1).replace(".", ",")}%`}
-                </p>
-                <p
-                  className={
-                    commissionOver45
-                      ? "text-destructive font-medium"
-                      : commissionAboveReference
-                        ? "text-amber-400 font-medium"
-                        : ""
-                  }
-                >
-                  {commissionOver45
-                    ? "powyżej 45% kwoty — ryzyko rażącej dysproporcji (art. 388 KC)"
-                    : commissionAboveReference
-                      ? "powyżej wartości referencyjnej — zasady współżycia społecznego (art. 5 i 58 § 2 KC)"
-                      : "w wartości referencyjnej (wzór MPKK, art. 36a UoKK)"}
-                </p>
-                <p
-                  className={
-                    krotnoscDanger
-                      ? "text-destructive font-medium"
-                      : krotnoscWarn
-                        ? "text-amber-400 font-medium"
-                        : ""
-                  }
-                >
-                  {`krotność spłaty ${krotnoscLabel} — ${krotnoscDanger ? "powyżej" : krotnoscWarn ? "blisko" : "poniżej"} progu ${KROTNOSC_PROG_LABEL} (wyzysk: art. 388 KC, art. 304 KK)`}
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">{commissionPct.toFixed(1).replace(".", ",")}% ({plnLabel(commissionPln)}) — firma spłaca ją w ratach</p>
             ) : (
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
@@ -1271,7 +1239,7 @@ export function LoanCalculator({
                 <span className="text-muted-foreground flex items-center gap-1">
                   Prowizja Finance You ({financeYouFeePct}%, min 5 000 zł, bez VAT — potrącana z
                   wypłaty)
-                  {investorGuidance && (
+                  {investorGuidance && !marketingPreview && (
                     <InfoTip text="Wynagrodzenie Finance You — koszt klienta. Przy wypłacie inwestor przelewa ją z kwoty pożyczki na rachunek Finance You, a resztę klientowi. Nie wchodzi do rat i nie zmienia wkładu ani zysku inwestora. Wlicza się do limitu MPKK." />
                   )}
                 </span>
@@ -1317,7 +1285,7 @@ export function LoanCalculator({
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground flex items-center gap-1">
                     Rata nominalna (annuitet)
-                    {investorGuidance && (
+                    {investorGuidance && !marketingPreview && (
                       <InfoTip text="Pełna rata annuitetowa wyliczona od kwoty pożyczki i oprocentowania." />
                     )}
                   </span>
@@ -1328,7 +1296,7 @@ export function LoanCalculator({
                 <div className="flex justify-between gap-3">
                   <span className="text-muted-foreground flex items-center gap-1">
                     Rata balonowa (ostatnia nadwyżka)
-                    {investorGuidance && (
+                    {investorGuidance && !marketingPreview && (
                       <InfoTip text="Jednorazowa spłata nadwyżki kapitału na koniec umowy, gdy rata miesięczna jest ograniczona limitem." />
                     )}
                   </span>
@@ -1369,7 +1337,7 @@ export function LoanCalculator({
               <span className="text-white/80">
                 Referencyjna:{" "}
                 <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>
-                {investorGuidance && nbpOverride != null && (
+                {investorGuidance && !marketingPreview && nbpOverride != null && (
                   <span className="text-xs text-amber-300"> (ręcznie)</span>
                 )}
               </span>
@@ -1406,6 +1374,8 @@ export function LoanCalculator({
         <>
           {resultBlock}
           {paramsBlock}
+          <p className="text-sm text-muted-foreground">Prowizja Finance You — płaci firma z kwoty wypłaty</p>
+          <p className="text-sm text-muted-foreground">Kalkulator pilnuje za Ciebie limitu odsetek i kosztów.</p>
         </>
       ) : (
         <>
@@ -1431,7 +1401,7 @@ export function LoanCalculator({
           </>
         );
         // Podgląd na landingu: statusy są krótkim kontekstem pod suwakami.
-        if (marketingPreview && !investorGuidance) return null;
+        if (marketingPreview) return null;
         return (
           <div className="space-y-3">
             {/* 1) Odsetki maksymalne (art. 359 §2¹ KC); w podglądzie bez zielonego „w limicie" */}
@@ -1462,7 +1432,7 @@ export function LoanCalculator({
             {/* 2) Prowizja inwestora: wartość referencyjna (wzór MPKK), nie limit ustawowy —
                 pożyczki są B2B; ocena według zasad współżycia społecznego (art. 5 i 58 §2 KC)
                 oraz wyzysku (art. 388 KC). */}
-            {investorGuidance && (
+            {investorGuidance && !marketingPreview && (
               <Alert className={commissionOver45 ? dangerCls : okCls}>
                 {commissionOver45 ? (
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
@@ -1508,7 +1478,7 @@ export function LoanCalculator({
 
             {/* 3) Krotność spłaty — orientacyjny próg z praktyki, nie granica z ustawy;
                 o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności umowy. */}
-            {investorGuidance &&
+            {investorGuidance && !marketingPreview &&
               (krotnoscDanger ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
@@ -1552,7 +1522,7 @@ export function LoanCalculator({
             {/* 4) AML — rejestr transakcji ponadprogowych (art. 72 ustawy AML): wypłata
                 POWYŻEJ 15 000 EUR, jak w module AML. Ostrożne brzmienie — status instytucji
                 obowiązanej zależy od tego, czy pożyczki są udzielane w ramach działalności. */}
-            {investorGuidance &&
+            {investorGuidance && !marketingPreview &&
               (amlAboveThreshold ? (
                 <Alert className={warnCls}>
                   <ShieldAlert className="h-4 w-4 !text-amber-300" />
@@ -1614,7 +1584,7 @@ export function LoanCalculator({
       {!marketingPreview && (
         <FancyShell>
           <Card
-            className={`${FANCY_CARD_CLS} ${investorGuidance && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}
+            className={`${FANCY_CARD_CLS} ${investorGuidance && !marketingPreview && krotnoscDanger ? "ring-2 ring-rose-400/60" : ""}`}
           >
             <CardHeader>
               <CardTitle className="text-white">Podsumowanie</CardTitle>
@@ -1682,7 +1652,7 @@ export function LoanCalculator({
                 </div>
               )}
 
-              {investorGuidance && (
+              {investorGuidance && !marketingPreview && (
                 <div className="flex justify-between gap-3">
                   <span className="flex items-center gap-1">
                     Krotność spłaty{" "}
@@ -1739,7 +1709,7 @@ export function LoanCalculator({
         </FancyShell>
       )}
 
-      {investorGuidance && (
+      {investorGuidance && !marketingPreview && (
         <FancyShell>
           <Card className={FANCY_CARD_CLS}>
             <CardHeader>
@@ -1870,7 +1840,7 @@ export function LoanCalculator({
         </FancyShell>
       )}
 
-      {investorGuidance && schedule.rows.length > 0 && (
+      {investorGuidance && !marketingPreview && schedule.rows.length > 0 && (
         <FancyShell>
           <Card className={FANCY_CARD_CLS}>
             <CardHeader>
@@ -2050,7 +2020,7 @@ export function LoanCalculator({
           <Card className={FANCY_CARD_CLS}>
             <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-white">Harmonogram spłat</CardTitle>
-              {investorGuidance && schedule.rows.length > 0 && (
+              {investorGuidance && !marketingPreview && schedule.rows.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
                   {!hideAccountActions && (
                     <Button
@@ -2283,7 +2253,7 @@ export function LoanCalculator({
         </FancyShell>
       )}
 
-      {investorGuidance && (
+      {investorGuidance && !marketingPreview && (
         <p className="text-xs text-muted-foreground leading-relaxed">
           Kalkulator ma charakter informacyjny. Nie stanowi porady prawnej ani finansowej. Limity
           odsetek zmieniają się z decyzjami RPP — weryfikuj je przed każdym podpisaniem umowy.

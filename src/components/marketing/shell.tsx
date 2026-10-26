@@ -6,6 +6,8 @@ import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions"
 import { freeMaterialHref } from "@/lib/lead-magnets/free-materials";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
+import { Button } from "@/components/ui/button";
+import { Menu, Phone } from "lucide-react";
 import { MktButton } from "./primitives";
 import { TRUSTPILOT_PROFILE_URL } from "@/lib/trustpilot";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
@@ -62,8 +64,8 @@ function SocialIcon({ name, size = 18 }: { name: SocialKey; size?: number }) {
 const PAGE_PATH: Record<MarketingPage, string> = {
   home: "/",
   klient: "/dla-klienta",
-  inwestor: "/dla-inwestora",
-  inwestorModul: "/dla-inwestora",
+  inwestor: "/",
+  inwestorModul: "/",
   posrednik: "/dla-posrednika",
   blog: "/blog",
   kalkulator: "/kalkulator-ltv",
@@ -136,236 +138,12 @@ function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
 }
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
-  const { data: freeClient } = useQuery({ queryKey: ["free-material-menu", "klient"], queryFn: () => getFreeMaterialsFn({ data: { audience: "klient" } }), staleTime: 60_000 });
-  const freeLinks = [
-    ...(freeClient?.materials ?? []).map((m) => ({ label: m.title, href: freeMaterialHref("klient", m.slug) })),
-    ...(freeClient?.tools ?? []).map((t) => ({ label: t.title, href: t.url })),
-  ];
-  const clientMenuGroups = [...CLIENT_MENU_GROUPS, ...(freeLinks.length ? [{ label: "Bezpłatnie", links: freeLinks }] : [])];
-  const [open, setOpen] = useState(false);
-  const active = NAV_KEY[page] ?? page;
-  const nav = [
-    { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
-    { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
-    { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
-    { label: "Blog", href: "/blog", key: "blog" },
-    {
-      label: "FAQ",
-      href:
-        page === "blog"
-          ? "/dla-klienta#faq"
-          : page === "inwestorModul"
-            ? "/dla-inwestora#faq"
-            : "#faq",
-      key: "faq",
-    },
-  ];
-  const investorLinks = investorMenuLinks(page);
-  const cta = HEADER_CTA[page];
-  return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-        borderBottom: "1px solid rgba(84,124,214,0.25)",
-        background: "rgba(9,14,38,0.8)",
-        backdropFilter: "blur(14px)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "80rem",
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          padding: "0.7rem 1.5rem",
-        }}
-      >
-        <a
-          href="/"
-          style={{ display: "flex", alignItems: "center" }}
-          aria-label="Finance You — strona główna"
-        >
-          <FinanceYouLogo variant="dark" size="lg" />
-        </a>
-        <nav className="fy-nav-desktop" style={{ display: "flex", gap: "1.4rem" }}>
-          {nav.map((n) => {
-            const link = (
-              <a
-                key={n.key}
-                href={n.href}
-                style={{
-                  fontSize: "0.85rem",
-                  fontWeight: active === n.key ? 700 : 500,
-                  color: active === n.key ? "var(--accent)" : "var(--muted-foreground)",
-                  textDecoration: "none",
-                }}
-              >
-                {n.label}
-              </a>
-            );
-            if (n.key === "klient") {
-              return (
-                <div key={n.key} className="fy-nav-drop">
-                  {link}
-                  <div className="fy-nav-drop-panel fy-nav-drop-panel--groups">
-                    <div className="fy-nav-drop-groups">
-                      {clientMenuGroups.map((g) => (
-                        <div key={g.label}>
-                          <div className="fy-nav-drop-label">{g.label}</div>
-                          {g.links.map((l) => (
-                            <a key={l.href} href={l.href}>
-                              {l.label}
-                            </a>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            if (n.key !== "inwestor") return link;
-            return (
-              <div key={n.key} className="fy-nav-drop">
-                {link}
-                <div className="fy-nav-drop-panel">
-                  {investorLinks.map((l) => (
-                    <a
-                      key={l.label}
-                      href={l.href}
-                      className={l.sep ? "fy-nav-drop-sep" : undefined}
-                    >
-                      {l.label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </nav>
-        <div
-          className="fy-nav-desktop"
-          style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-        >
-          <MktButton size="sm" variant="ghost" href="/logowanie">
-            Zaloguj
-          </MktButton>
-          <MktButton size="sm" variant="cta" href={cta.href}>
-            {cta.label}
-          </MktButton>
-        </div>
-        <div
-          className="fy-nav-mobile"
-          style={{ display: "none", gap: "0.5rem", alignItems: "center" }}
-        >
-          <MktButton size="sm" variant="ghost" href="/logowanie">
-            Panel
-          </MktButton>
-          <button
-            className="fy-burger"
-            onClick={() => setOpen(!open)}
-            aria-label="Menu"
-            style={{
-              display: "inline-flex",
-              background: "none",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              padding: "0.4rem 0.55rem",
-              cursor: "pointer",
-            }}
-          >
-            <span
-              style={{
-                display: "block",
-                width: 18,
-                height: 2,
-                background: "var(--foreground)",
-                boxShadow: "0 6px 0 var(--foreground), 0 -6px 0 var(--foreground)",
-              }}
-            />
-          </button>
-        </div>
-      </div>
-      {open && (
-        <div
-          style={{
-            borderTop: "1px solid var(--border)",
-            background: "var(--card)",
-            padding: "0.75rem 1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          {nav.flatMap((n) => [
-            <a
-              key={n.key}
-              href={n.href}
-              onClick={() => setOpen(false)}
-              style={{
-                padding: "0.6rem 0",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                color: "var(--foreground)",
-                textDecoration: "none",
-                borderBottom: "1px solid var(--border)",
-              }}
-            >
-              {n.label}
-            </a>,
-            ...(n.key === "klient"
-              ? [
-                  <details key="klient-sub" className="fy-nav-mobile-sub">
-                    <summary>Rodzaje pożyczek</summary>
-                    {clientMenuGroups.flatMap((g) => g.links).map((l) => (
-                      <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
-                        {l.label}
-                      </a>
-                    ))}
-                  </details>,
-                ]
-              : []),
-            ...(n.key === "inwestor"
-              ? investorLinks.map((l) => (
-                  <a
-                    key={l.label}
-                    href={l.href}
-                    onClick={() => setOpen(false)}
-                    style={{
-                      padding: "0.55rem 0 0.55rem 1.1rem",
-                      fontSize: "0.85rem",
-                      fontWeight: 500,
-                      color: "var(--muted-foreground)",
-                      textDecoration: "none",
-                      borderBottom: "1px solid var(--border)",
-                    }}
-                  >
-                    {l.label}
-                  </a>
-                ))
-              : []),
-          ])}
-          <MktButton variant="ghost" href="/logowanie" style={{ marginTop: 8 }}>
-            Zaloguj się do panelu
-          </MktButton>
-          {/* CTA inwestora to kotwica na tej samej stronie (#cennik) — menu musi
-              się zamknąć, inaczej zasłoni cennik. */}
-          <MktButton
-            variant="cta"
-            href={cta.href}
-            onClick={() => setOpen(false)}
-            style={{ marginTop: 8 }}
-          >
-            {cta.label}
-          </MktButton>
-        </div>
-      )}
-    </header>
-  );
+ const client = page === "klient" || page === "kalkulator";
+ const [open, setOpen] = useState(false);
+ const { data: free } = useQuery({ queryKey: ["free-material-menu", client ? "klient" : "inwestor"], queryFn: () => getFreeMaterialsFn({data:{audience:client ? "klient" : "inwestor"}}), staleTime:60000 });
+ const nav = [{label:"Szkolenie",href:"/#szkolenie"},{label:"Sprawy",href:"/#sprawy"},{label:"Cennik",href:"/#cennik"},{label:"O nas",href:"/o-nas"},{label:"Blog",href:"/blog"},{label:"FAQ",href:"/#faq"}];
+ const freeLinks = [...(free?.materials ?? []).map(m=>({label:m.title,href:freeMaterialHref(client ? "klient" : "inwestor",m.slug)})),...(free?.tools??[]).map(t=>({label:t.title,href:t.url}))];
+ return <header className="fy-sales-header">{page === "home" && <div className="fy-sales-topbar"><a href="/dla-klienta">Szukasz finansowania dla firmy pod zastaw nieruchomości? Przejdź do wniosku →</a></div>}<div className="fy-sales-nav"><a href="/" aria-label="Finance You — strona główna"><FinanceYouLogo variant="dark" size="md"/></a>{client ? <div className="fy-sales-client-nav"><a href={`tel:${COMPANY_DATA.phone.e164}`}><Phone size={16}/><span>{CONTACT.phone}</span></a><MktButton size="sm" variant="gold" href="/dla-klienta#wniosek">Złóż wniosek</MktButton></div> : <><nav className="fy-sales-nav-desktop" aria-label="Menu inwestora"><a href={nav[0].href}>Szkolenie</a><details className="fy-sales-dropdown"><summary>Narzędzia</summary><div>{INVESTOR_MODULES.filter(m=>!m.bonus).map(m=><a href={investorModulePath(m.slug)} key={m.slug}>{m.menuLabel}</a>)}<strong>Bezpłatnie</strong>{freeLinks.map(l=><a key={l.href} href={l.href}>{l.label}</a>)}</div></details>{nav.slice(1).map(n=><a key={n.href} href={n.href}>{n.label}</a>)}<a href="/logowanie">Zaloguj</a></nav><MktButton size="sm" variant="gold" href="/#cennik">Zostań partnerem</MktButton><Button className="fy-sales-menu-toggle" variant="outline" size="icon" aria-label="Menu" onClick={()=>setOpen(!open)}><Menu size={20}/></Button></>}</div>{!client && open && <nav className="fy-sales-mobile-nav" aria-label="Menu mobilne">{nav.map(n=><a href={n.href} key={n.href} onClick={()=>setOpen(false)}>{n.label}</a>)}<details><summary>Narzędzia i bezpłatne materiały</summary>{INVESTOR_MODULES.map(m=><a key={m.slug} href={investorModulePath(m.slug)}>{m.menuLabel}</a>)}{freeLinks.map(l=><a key={l.href} href={l.href}>{l.label}</a>)}</details><a href="/logowanie">Zaloguj</a></nav>}</header>;
 }
 
 export function StickyCTA({ label, href }: { label: string; href: string }) {
@@ -398,7 +176,7 @@ export function SiteFooter() {
       h: "Ścieżki",
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
-        { t: "Inwestor", href: PAGE_PATH.inwestor },
+        { t: "Jesteś inwestorem? →", href: PAGE_PATH.inwestor },
       ],
     },
     {
@@ -409,6 +187,8 @@ export function SiteFooter() {
       h: "Finance You",
       links: [
         { t: "Jak działa", href: "/#jak-dziala" },
+        { t: "O nas", href: "/o-nas" },
+        { t: "Historie", href: "/historie" },
         { t: "Blog", href: "/blog" },
         { t: "FAQ", href: PAGE_PATH.klient + "#faq" },
         { t: "Opinie na Trustpilot", href: TRUSTPILOT_PROFILE_URL },

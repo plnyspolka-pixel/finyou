@@ -99,19 +99,9 @@ export function needsUnlockPayment(_tier: InvestorTier): boolean {
 // ── Abonament: cennik (jedno źródło prawdy dla strony, panelu i botów) ──────
 
 /** Okres rozliczenia — przełącznik w cenniku. */
-export type BillingPeriod = "miesiecznie" | "rocznie";
+export type BillingPeriod = "rocznie";
 
-export const SUBSCRIPTION_MONTHLY_PLN = 1_500;
 export const SUBSCRIPTION_YEARLY_PLN = 7_000;
-/** Koszt roku przy płatności co miesiąc (12 × cena miesięczna). */
-export const SUBSCRIPTION_YEAR_AT_MONTHLY_PLN = SUBSCRIPTION_MONTHLY_PLN * 12;
-/** Oszczędność przy płatności rocznej względem 12 płatności miesięcznych. */
-export const SUBSCRIPTION_YEARLY_SAVINGS_PLN =
-  SUBSCRIPTION_YEAR_AT_MONTHLY_PLN - SUBSCRIPTION_YEARLY_PLN;
-/** Rabat za płatność roczną w %, zaokrąglony W DÓŁ — nigdy nie zawyżamy. */
-export const SUBSCRIPTION_YEARLY_DISCOUNT_PCT = Math.floor(
-  (SUBSCRIPTION_YEARLY_SAVINGS_PLN / SUBSCRIPTION_YEAR_AT_MONTHLY_PLN) * 100,
-);
 /** Miesięczna równowartość abonamentu rocznego, do pełnej złotówki (w tekstach „ok."). */
 export const SUBSCRIPTION_YEARLY_PER_MONTH_PLN = Math.round(SUBSCRIPTION_YEARLY_PLN / 12);
 
@@ -136,30 +126,20 @@ export interface SubscriptionOption {
 }
 
 export const SUBSCRIPTION_OPTIONS: Record<BillingPeriod, SubscriptionOption> = {
-  miesiecznie: {
-    period: "miesiecznie",
-    label: "Miesięcznie",
-    pricePln: SUBSCRIPTION_MONTHLY_PLN,
-    priceLabel: plnLabel(SUBSCRIPTION_MONTHLY_PLN),
-    periodLabel: "/ miesiąc",
-    days: 30,
-    productCode: "investor_access_30d",
-    hint: `Płacisz za kolejny miesiąc, kiedy chcesz — bez zobowiązania na dłużej. Rok w tym trybie to ${plnLabel(SUBSCRIPTION_YEAR_AT_MONTHLY_PLN)}; przy płatności rocznej oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)} (${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu).`,
-  },
   rocznie: {
     period: "rocznie",
     label: "Rocznie",
     pricePln: SUBSCRIPTION_YEARLY_PLN,
     priceLabel: plnLabel(SUBSCRIPTION_YEARLY_PLN),
-    periodLabel: "/ rok",
+    periodLabel: "/ 12 miesięcy",
     days: 365,
     productCode: "investor_access_365d",
-    hint: `To ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie. Oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)} względem płatności co miesiąc (${plnLabel(SUBSCRIPTION_YEAR_AT_MONTHLY_PLN)}) — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% rabatu.`,
+    hint: `Ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie w 12 ratach.`,
   },
 };
 
 /** Jedno zdanie o cenie — do opisów, FAQ, meta i promptów botów. */
-export const SUBSCRIPTION_PRICE_SENTENCE = `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} miesięcznie albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za rok — przy płatności rocznej ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej (oszczędzasz ${plnLabel(SUBSCRIPTION_YEARLY_SAVINGS_PLN)})`;
+export const SUBSCRIPTION_PRICE_SENTENCE = `Abonament inwestora — 12 miesięcy, ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}`;
 
 /** Jak się płaci — to samo zdanie wszędzie. */
 export const SUBSCRIPTION_PAYMENT_SENTENCE =
@@ -221,10 +201,10 @@ export interface BenefitBullet {
 export const ACCESS_PRESENTATION: TierPresentation = {
   tier: "podstawowy",
   name: "Abonament inwestora",
-  priceLabel: `${plnLabel(SUBSCRIPTION_MONTHLY_PLN)} / mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / rok`,
-  periodLabel: `rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej · bez karty kredytowej`,
+  priceLabel: `${plnLabel(SUBSCRIPTION_YEARLY_PLN)} / 12 miesięcy`,
+  periodLabel: "12 miesięcy · bez karty kredytowej",
   tagline:
-    "Jeden abonament otwiera szkolenie i wszystkie narzędzia, a w bonusie — Projekty z ogólnopolskiej sieci sprzedaży. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości zostają u Ciebie.",
+    "Jeden abonament otwiera szkolenie i wszystkie narzędzia, a po bezpłatnej umowie ramowej — sprawy z ogólnopolskiej sieci sprzedaży. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości zostają u Ciebie.",
   // Kolejność: Szkolenie (produkt główny), narzędzia w cyklu pożyczki, a na
   // końcu sieć sprzedaży — BONUS (plakietka w cenniku, patrz investor-modules.ts).
   bullets: [
@@ -266,7 +246,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
     {
       cecha: "Ogólnopolska sieć sprzedaży",
       zaleta:
-        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz Projekty z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia.",
+        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz sprawy z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia kwoty.",
       korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
     },
   ],
@@ -277,3 +257,5 @@ export const ACCESS_PRESENTATION: TierPresentation = {
 export const TIER_PRESENTATION: Record<InvestorTier, TierPresentation> = {
   podstawowy: ACCESS_PRESENTATION,
 };
+
+export const FOUNDATION_SALES_EXPLANATION = "Dlaczego płacę Fundacji? Szkolenie i licencję na nasze systemy sprzedaje Fundacja Krzewienia Edukacji Finansowej im. Pieczaka — to jej działalność statutowa. Dochód z tej sprzedaży przeznaczamy na cele charytatywne (zbiórki na Siepomaga.pl).";

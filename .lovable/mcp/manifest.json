@@ -11290,6 +11290,14 @@
                 "inwestor"
               ]
             },
+            "material_type": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "video"
+              ],
+              "default": "pdf"
+            },
             "headline": {
               "type": "string",
               "minLength": 1,
@@ -11568,6 +11576,14 @@
                 "klient",
                 "inwestor"
               ]
+            },
+            "material_type": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "video"
+              ],
+              "default": "pdf"
             },
             "headline": {
               "type": "string",

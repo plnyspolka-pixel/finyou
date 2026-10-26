@@ -1,3 +1,13 @@
+# Wdrożenie inwestorskie A–H
+- [ ] A: roczny cennik, checkout i kody; testy.
+- [ ] B: publiczny kalkulator zysku; testy.
+- [ ] C: strona główna inwestora, menu, licznik i anonimowe sprawy; testy.
+- [ ] D: O nas i Historie, wspólne dane i miejsca na zdjęcia; testy.
+- [ ] E: jedna darmowa lekcja, token, mailing i pomiar; testy.
+- [ ] F: rejestracja i hub klienta, kwota z kalkulatora; testy.
+- [ ] G: Ania, plakietka, Instagram i opisy stron; testy.
+- [ ] H: kontrola całości desktop/mobile i zatwierdzona publikacja.
+
 # Darmowe materiały i narzędzia
 - [x] Wycofać kalkulator raty i filtrować wszystkie publiczne listy publikacją.
 - [x] Wspólna szata stron PDF/narzędzi; wyniki klienta bez e-maila, inwestor z bramką. Istniejący formularz klienta nie przyjmuje kwoty z URL; CTA prowadzi do /dla-klienta bez nieobsługiwanego parametru.

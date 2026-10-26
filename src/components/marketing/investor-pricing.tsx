@@ -6,13 +6,12 @@
 // Karta od góry: nazwa → suwak okresu → cena i podpowiedź → chip „bez karty"
 // → tagline → punkty oferty → drobny druk (płatność, sprzedawca, regulamin)
 // → przycisk do płatności.
-import { useState } from "react";
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
+  FOUNDATION_SALES_EXPLANATION,
   SUBSCRIPTION_INSTALLMENT_NOTE,
   SUBSCRIPTION_OPTIONS,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   installmentEstimatePln,
   plnLabel,
   type BenefitBullet,
@@ -26,11 +25,7 @@ import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 // Przycisk prowadzi do płatności Tpay; konto inwestora powstaje z danych
 // płatności po jej zaksięgowaniu (lib/access/guest-checkout.functions.ts).
 const CHECKOUT = "/abonament-inwestora";
-const PERIODS: BillingPeriod[] = ["miesiecznie", "rocznie"];
-
-// BONUS — raty w bramce Tpay. Rok rozkładamy na 12 rat, miesiąc na 3
-// (najkrótszy wariant PragmaPay). Kwota orientacyjna, patrz plans.ts.
-const BONUS_INSTALLMENTS: Record<BillingPeriod, number> = { miesiecznie: 3, rocznie: 12 };
+const BONUS_INSTALLMENTS: Record<BillingPeriod, number> = { rocznie: 12 };
 
 /** Złota plakietka „BONUS: w ratach” z orientacyjną ratą dla wybranego okresu. */
 export function InstallmentBonus({
@@ -72,7 +67,7 @@ export function InstallmentBonus({
           color: "#101430",
         }}
       >
-        BONUS
+        RATY
       </span>
       <div style={{ lineHeight: 1.45 }}>
         <div style={{ fontWeight: 800, fontSize: "0.98rem" }}>
@@ -103,7 +98,7 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
       <BrandIcon name="check" size={18} />
       <div style={{ lineHeight: 1.45 }}>
         <div style={{ fontWeight: 700, color: "var(--foreground)" }}>
-          {m?.bonus && <span style={{ color: "#d4a03a", fontWeight: 900 }}>BONUS: </span>}
+          
           {href ? (
             <a href={href} style={{ color: "inherit", textDecoration: "underline" }}>
               {b.cecha}
@@ -121,107 +116,10 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
   );
 }
 
-// Suwak okresu: pigułka z przesuwanym „kciukiem". Semantyka radiogroup —
-// strzałki w lewo/prawo przełączają okres jak w natywnych radio.
-export function PeriodSlider({
-  value,
-  onChange,
-}: {
-  value: BillingPeriod;
-  onChange: (p: BillingPeriod) => void;
-}) {
-  const idx = PERIODS.indexOf(value);
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Okres rozliczenia abonamentu"
-      onKeyDown={(e) => {
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") onChange("rocznie");
-        if (e.key === "ArrowLeft" || e.key === "ArrowUp") onChange("miesiecznie");
-      }}
-      style={{
-        position: "relative",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        width: "100%",
-        maxWidth: "22rem",
-        margin: "0 auto",
-        padding: 4,
-        borderRadius: 999,
-        background: "rgba(255,255,255,0.14)",
-        border: "1px solid rgba(255,255,255,0.28)",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          position: "absolute",
-          top: 4,
-          bottom: 4,
-          left: 4,
-          width: "calc(50% - 4px)",
-          borderRadius: 999,
-          background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
-          boxShadow: "0 8px 24px -10px rgba(240,198,103,0.7)",
-          transform: `translateX(${idx * 100}%)`,
-          transition: "transform .25s var(--ease-out, ease)",
-        }}
-      />
-      {PERIODS.map((p) => {
-        const active = p === value;
-        return (
-          <button
-            key={p}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            tabIndex={active ? 0 : -1}
-            onClick={() => onChange(p)}
-            style={{
-              position: "relative",
-              zIndex: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "0.55rem 0.5rem",
-              border: 0,
-              borderRadius: 999,
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: "0.88rem",
-              fontWeight: 800,
-              color: active ? "#101430" : "rgba(255,255,255,.9)",
-              transition: "color .2s ease",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {SUBSCRIPTION_OPTIONS[p].label}
-            {p === "rocznie" && (
-              <span
-                style={{
-                  borderRadius: 999,
-                  padding: "0.05rem 0.45rem",
-                  fontSize: "0.7rem",
-                  fontWeight: 900,
-                  background: active ? "#101430" : "oklch(0.82 0.14 88)",
-                  color: active ? "#f6dc9c" : "#1a1400",
-                }}
-              >
-                −{SUBSCRIPTION_YEARLY_DISCOUNT_PCT}%
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function InvestorPricing(_props: { products?: AccessProduct[] }) {
   const t = ACCESS_PRESENTATION;
   // Domyślnie roczny — od razu widać rabat.
-  const [period, setPeriod] = useState<BillingPeriod>("rocznie");
+  const period: BillingPeriod = "rocznie";
   const opt = SUBSCRIPTION_OPTIONS[period];
   return (
     <div
@@ -261,7 +159,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
           </div>
 
           <div style={{ marginTop: "1rem" }}>
-            <PeriodSlider value={period} onChange={setPeriod} />
+            <span>12 miesięcy</span>
           </div>
 
           <div
@@ -345,8 +243,10 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             </a>
             .
           </p>
+          <p className="text-sm text-muted-foreground">{FOUNDATION_SALES_EXPLANATION}</p>
+          <a href="/abonament-inwestora?okres=rocznie&kod=" className="mt-4 underline">Mam kod rabatowy</a>
           <MktButton
-            variant="cta"
+            variant="gold"
             href={`${CHECKOUT}?okres=${period}`}
             style={{ width: "100%", marginTop: "1rem" }}
           >

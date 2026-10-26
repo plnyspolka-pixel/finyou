@@ -33,9 +33,10 @@ interface Props {
   /** Zakup abonamentu inwestora BEZ konta (strona publiczna) — konto zakłada
    *  webhook Tpay po wpłacie, z danych tego formularza. */
   guestPeriod?: BillingPeriod;
+  initialDiscountCode?: string;
 }
 
-export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props) {
+export function TpayAccessCheckoutForm({ product, matchId, guestPeriod, initialDiscountCode }: Props) {
   const checkoutFn = useServerFn(createAccessCheckout);
   const guestCheckoutFn = useServerFn(createGuestInvestorCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
@@ -61,7 +62,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
   const [buyerPhone, setBuyerPhone] = useState("");
   const [tubapayConsent, setTubapayConsent] = useState(false);
   const isTubapay = paymentMethod === "tubapay";
-  const [discountInput, setDiscountInput] = useState("");
+  const [discountInput, setDiscountInput] = useState(initialDiscountCode ?? "");
   const [discount, setDiscount] = useState<{
     code: string;
     pct: number;
@@ -93,6 +94,17 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod }: Props)
       setDiscountChecking(false);
     }
   };
+
+  useEffect(() => {
+    if (!initialDiscountCode?.trim()) return;
+    let cancelled = false;
+    void discountFn({ data: { code: initialDiscountCode.trim() } }).then((res) => {
+      if (cancelled) return;
+      if (res.ok) setDiscount({ code: res.code, pct: res.pct, validUntil: res.validUntil });
+      else toast.error(res.error);
+    }).catch(() => { if (!cancelled) toast.error("Nie udało się sprawdzić kodu"); });
+    return () => { cancelled = true; };
+  }, [initialDiscountCode, discountFn]);
 
   const removeDiscount = () => {
     setDiscount(null);

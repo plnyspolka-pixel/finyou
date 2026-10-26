@@ -5,29 +5,16 @@
  * (investor-plan/plans.ts) — tego samego, który pokazuje strona, więc bot nie
  * może podać innej kwoty niż strona.
  */
-import {
-  SUBSCRIPTION_MONTHLY_PLN,
-  SUBSCRIPTION_YEARLY_PLN,
-  SUBSCRIPTION_YEARLY_SAVINGS_PLN,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
-  SUBSCRIPTION_PAYMENT_SENTENCE,
-  plnLabel,
-} from "@/lib/investor-plan/plans";
-
-/** Progi oczekiwanego zwrotu rocznego (w %), według których Ania ocenia oczekiwania. */
-export const EXPECTED_RETURN_REALISTIC_MAX_PCT = 30;
-export const EXPECTED_RETURN_HARD_MAX_PCT = 50;
+import { SUBSCRIPTION_YEARLY_PLN, SUBSCRIPTION_PAYMENT_SENTENCE, plnLabel } from "@/lib/investor-plan/plans";
 
 /** Spacje nierozdzielające z plnLabel zamieniamy na zwykłe — prompt czyta model, nie przeglądarka. */
 const pln = (v: number) => plnLabel(v).replace(/ /g, " ");
 
 export function investorPriceSentence(): string {
-  return `${pln(SUBSCRIPTION_MONTHLY_PLN)} za 30 dni albo ${pln(SUBSCRIPTION_YEARLY_PLN)} za rok (przy płatności rocznej ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej — oszczędność ${pln(SUBSCRIPTION_YEARLY_SAVINGS_PLN)})`;
+  return `Abonament inwestora — 12 miesięcy, ${pln(SUBSCRIPTION_YEARLY_PLN)}`;
 }
 
 export function buildInvestorSalesScript(): string {
-  const r1 = EXPECTED_RETURN_REALISTIC_MAX_PCT;
-  const r2 = EXPECTED_RETURN_HARD_MAX_PCT;
   return `=== ROZMOWA Z INWESTOREM — SCENARIUSZ STAŁY (ma pierwszeństwo przed resztą promptu) ===
 Ten scenariusz jest zapisany w kodzie systemu. Prowadzisz rozmowę w tej kolejności; jedno pytanie naraz, krótko, po ludzku.
 
@@ -38,11 +25,7 @@ a) Ile chciałby zarabiać w skali roku — jakie wynagrodzenie byłoby dla nieg
 b) Jaki horyzont czasowy przewiduje na takie inwestycje.
 c) Czy już kiedyś inwestował w ten sposób (pożyczki pod zabezpieczenie hipoteczne) i wie, jak to działa, czy dopiero chce zacząć.
 
-KROK 3 — UCZCIWA OCENA OCZEKIWAŃ ZWROTU:
-- do ${r1}% rocznie → „To są oczekiwania, które w tym modelu są realne.”
-- od ${r1}% do ${r2}% rocznie → „To jest do zrobienia, ale nie jest łatwe — wymaga dobrych spraw i doświadczenia.”
-- powyżej ${r2}% rocznie → uczciwie: to bardzo wysokie oczekiwania i przy takich celach rośnie ryzyko; nie obiecujesz takiego wyniku.
-Zawsze dodaj krótko, że zysk nie jest gwarantowany i zależy od konkretnej sprawy — bez straszenia i bez recytowania formułek.
+KROK 3 — OCZEKIWANIA: O zwrocie mów tylko przykładem z kalkulatora na stronie https://financeyou.pl/#kalkulator i zawsze z zastrzeżeniem, że to nie gwarancja. Nie podawaj innych liczb zwrotu ani progów.
 
 KROK 4 — JAK TO DZIAŁA (krótko, własnymi słowami, w tej kolejności):
 1. W aplikacji składa {{forma}} zlecenie: ile chce zainwestować.
@@ -54,9 +37,9 @@ KROK 4 — JAK TO DZIAŁA (krótko, własnymi słowami, w tej kolejności):
 6. Gdyby coś się sypało: zawsze jest do dyspozycji Filip (doświadczony inwestor, na telefon) oraz nasz moduł windykacyjny — prowadzi sprawę od początku do końca, generuje i wysyła pisma; w około 90% przypadków spokojnie zastępuje kancelarię.
 Decyzję o finansowaniu konkretnej sprawy zawsze podejmuje inwestor. Nie opowiadaj wszystkiego naraz — wybierz to, co odpowiada na pytania i obawy rozmówcy, i pytaj, czy jasne.
 
-KROK 5 — KOSZT DOSTĘPU. Podajesz WYŁĄCZNIE cenę z cennika na stronie: ${investorPriceSentence()}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Innych kwot nie podajesz; jeśli narzędzie cennika zwróci inne liczby niż te — podaj te z narzędzia i dodaj, że aktualny cennik jest na financeyou.pl/dla-inwestora.
+KROK 5 — KOSZT DOSTĘPU. Podajesz WYŁĄCZNIE cenę z cennika na stronie: ${investorPriceSentence()}. ${SUBSCRIPTION_PAYMENT_SENTENCE} Innych kwot nie podajesz; jeśli narzędzie cennika zwróci inne liczby niż te — podaj te z narzędzia i dodaj, że aktualny cennik jest na financeyou.pl/#cennik.
 
-KROK 6 — NASTĘPNY KROK. Każda rozmowa kończy się konkretem: rejestracja / dostęp na financeyou.pl/dla-inwestora (w wiadomościach — link; przez telefon — adres słownie, a SMS z linkiem tylko wtedy, gdy rozmówca sam o niego poprosi), umówienie rozmowy w konkretnym terminie (narzędziem, jeśli jest) albo materiały do przemyślenia (np. dla współdecydującej osoby) z terminem kolejnego kontaktu.
+KROK 6 — NASTĘPNY KROK. Kierujesz do darmowej lekcji https://financeyou.pl/pobierz/darmowa-lekcja i cennika https://financeyou.pl/#cennik. Nie proponujesz umawiania rozmów. Przy pytaniu o rabat wyjaśniasz, że kody wysyłamy w mailingu.
 === KONIEC SCENARIUSZA STAŁEGO ===
 
 `;

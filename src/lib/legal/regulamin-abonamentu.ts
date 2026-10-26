@@ -17,12 +17,12 @@
  * potwierdzenie z treścią Regulaminu idzie e-mailem po zaksięgowaniu.
  */
 import {
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
+  SUBSCRIPTION_YEARLY_PLN,
 } from "@/lib/investor-plan/plans";
 
 /** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (dokumenty-1-0.ts). */
-export const CENA_ABONAMENTU = "1 500,00 zł brutto za 30 dni albo 7 000,00 zł brutto za 365 dni";
+export const CENA_ABONAMENTU = `${SUBSCRIPTION_YEARLY_PLN.toLocaleString("pl-PL", {minimumFractionDigits: 2})} zł brutto za 365 dni`;
 
 export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.0";
 export const REGULAMIN_ABONAMENTU_DATA_PL = "19 października 2026 r.";
@@ -55,7 +55,7 @@ export function regulaminAbonamentuInwestora(): string {
 1. **Abonament** — odpłatny dostęp Inwestora do panelu inwestora w systemie Finance You przez Okres Abonamentowy.
 2. **Inwestor** — osoba fizyczna, osoba prawna albo jednostka organizacyjna mająca konto inwestora w systemie Finance You.
 3. **Konsument** — Inwestor będący osobą fizyczną, który kupuje Abonament w celu niezwiązanym bezpośrednio z jego działalnością gospodarczą lub zawodową; przepisy o Konsumencie stosuje się także do przedsiębiorcy na prawach konsumenta w zakresie przewidzianym prawem.
-4. **Okres Abonamentowy** — opłacony okres Abonamentu: 30 albo 365 dni.
+4. **Okres Abonamentowy** — opłacony okres Abonamentu: 365 dni (12 miesięcy).
 5. **Opłata Abonamentowa** — cena Abonamentu.
 6. **Umowy o dostęp do Klientów** — Ramowa umowa pośrednictwa finansowego świadczonego na odległość, umowa o zachowaniu poufności i zakazie obchodzenia (NDA) oraz umowa udostępniania i powierzenia danych osobowych (RODO), zawierane przez Inwestora z Finance You.
 
@@ -68,7 +68,7 @@ export function regulaminAbonamentuInwestora(): string {
 
 ## § 4. Cena i płatność
 
-1. Opłata Abonamentowa wynosi ${CENA_ABONAMENTU}, według wyboru Inwestora. W wariancie rocznym odpowiada to ok. ${SUBSCRIPTION_YEARLY_PER_MONTH_PLN} zł miesięcznie — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% mniej niż za dwanaście okresów 30-dniowych.
+1. Opłata Abonamentowa wynosi ${CENA_ABONAMENTU}. Orientacyjnie ok. ${SUBSCRIPTION_YEARLY_PER_MONTH_PLN} zł miesięcznie w 12 ratach; warunki finansowania określa dostawca przed zakupem.
 2. Fundacja korzysta ze zwolnienia z VAT (art. 113 ust. 1 ustawy o podatku od towarów i usług) — cena netto jest równa cenie brutto.
 3. Opłata Abonamentowa jest płatna z góry, jednorazowo za wybrany Okres Abonamentowy, za pośrednictwem operatora płatności Tpay — przelewem albo BLIK-iem, bez konieczności podawania danych karty płatniczej. Abonament nie odnawia się automatycznie.
 4. Okres Abonamentowy biegnie od zaksięgowania płatności, a jeżeli poprzedni opłacony okres jeszcze trwa — od jego końca.
