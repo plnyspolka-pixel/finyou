@@ -16,10 +16,8 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { TwoColSlider, SmartOfferSlider, type TwoColSlide } from "@/components/marketing/sliders";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import {
-  SUBSCRIPTION_MONTHLY_PLN,
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PLN,
   SUBSCRIPTION_INSTALLMENT_NOTE,
   SUBSCRIPTION_MAX_INSTALLMENTS,
@@ -195,7 +193,7 @@ export const Route = createFileRoute("/dla-inwestora")({
       },
       {
         name: "description",
-        content: `Zostań partnerem Finance You: szkolenie inwestora i narzędzia w abonamencie ${plnLabel(SUBSCRIPTION_MONTHLY_PLN)}/mies. albo ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok (rocznie ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej), także w ratach. Pożyczki dla firm zabezpieczone hipoteką (LTV do 60%).`,
+        content: `Zostań partnerem Finance You: szkolenie inwestora i narzędzia w abonamencie ${plnLabel(SUBSCRIPTION_YEARLY_PLN)}/rok, także w ratach. Pożyczki dla firm zabezpieczone hipoteką (LTV do 60%).`,
       },
       { property: "og:title", content: "Zostań partnerem Finance You" },
       {

@@ -2,7 +2,7 @@
 // inwestora". Klient wybiera okres, podaje dane nabywcy i płaci w Tpay;
 // konto inwestora zakłada webhook Tpay z tych danych po zaksięgowaniu wpłaty
 // i wysyła na podany e-mail link do logowania.
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
@@ -10,7 +10,6 @@ import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { SiteHeader, SiteFooter } from "@/components/marketing/shell";
 import { MktBadge } from "@/components/marketing/primitives";
-import { PeriodSlider } from "@/components/marketing/investor-pricing";
 import { TpayAccessCheckoutForm } from "@/components/access/TpayAccessCheckoutForm";
 import { listAccessProducts } from "@/lib/access/state.functions";
 import { getGuestPaymentStatus } from "@/lib/access/guest-checkout.functions";
@@ -22,9 +21,10 @@ import {
 } from "@/lib/investor-plan/plans";
 
 const searchSchema = z.object({
-  okres: z.enum(["miesiecznie", "rocznie"]).optional().catch(undefined),
-  tpay: z.enum(["success", "error"]).optional().catch(undefined),
-  payment: z.string().uuid().optional().catch(undefined),
+  okres: z.string().optional(),
+  kod: z.string().optional(),
+  tpay: z.string().optional(),
+  payment: z.string().optional(),
 });
 
 async function loadInvestorProducts(): Promise<AccessProduct[]> {
@@ -59,6 +59,9 @@ function fallbackProduct(period: BillingPeriod): AccessProduct {
 
 export const Route = createFileRoute("/abonament-inwestora")({
   validateSearch: (s) => searchSchema.parse(s),
+  beforeLoad: ({ search }) => {
+    if (search.okres === "miesiecznie") throw redirect({ to: "/abonament-inwestora", search: { ...search, okres: "rocznie" }, replace: true });
+  },
   loader: async () => ({ products: await loadInvestorProducts() }),
   head: () => ({
     meta: [
@@ -68,6 +71,11 @@ export const Route = createFileRoute("/abonament-inwestora")({
         content:
           "Opłać abonament inwestora przez Tpay — konto inwestora założymy automatycznie na podstawie danych płatności.",
       },
+      { property: "og:title", content: "Abonament inwestora — 12 miesięcy | Finance You" },
+      { property: "og:description", content: "Szkolenie i narzędzia na 12 miesięcy. Tpay, BLIK lub raty, także na firmę." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:description", content: "Kup roczny program szkoleniowy i licencję na systemy Finance You." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -77,18 +85,9 @@ export const Route = createFileRoute("/abonament-inwestora")({
 function InvestorCheckoutPage() {
   const search = Route.useSearch();
   const { products } = Route.useLoaderData();
-  const navigate = useNavigate({ from: "/abonament-inwestora" });
-  const [period, setPeriod] = useState<BillingPeriod>(search.okres ?? "rocznie");
-  const product =
-    (products as AccessProduct[]).find(
-      (p) => p.code === SUBSCRIPTION_OPTIONS[period].productCode,
-    ) ?? fallbackProduct(period);
+  const period: BillingPeriod = "rocznie";
+  const product = products.find((p) => p.active && p.code === SUBSCRIPTION_OPTIONS.rocznie.productCode) ?? fallbackProduct(period);
   const returned = Boolean(search.tpay && search.payment);
-
-  const changePeriod = (p: BillingPeriod) => {
-    setPeriod(p);
-    void navigate({ search: { okres: p }, replace: true });
-  };
 
   return (
     <div className="fy-marketing">
@@ -125,14 +124,10 @@ function InvestorCheckoutPage() {
               marginInline: "auto",
             }}
           >
-            Wybierz okres abonamentu i zapłać przez Tpay. Konto inwestora założymy automatycznie na
+            Abonament inwestora — 12 miesięcy. Zapłać przez Tpay. Konto inwestora założymy automatycznie na
             podstawie danych płatności — link do logowania wyślemy na podany e-mail.
           </p>
-          {!returned && (
-            <div style={{ marginTop: "1.2rem" }}>
-              <PeriodSlider value={period} onChange={changePeriod} />
-            </div>
-          )}
+
         </div>
       </section>
 
@@ -147,12 +142,12 @@ function InvestorCheckoutPage() {
       >
         <Card className="border-border shadow-2xl">
           <CardContent className="space-y-6 p-6 md:p-8">
-            {returned ? (
-              <GuestReturnStatus paymentId={search.payment!} tpayParam={search.tpay!} />
+            {returned && search.payment && search.tpay ? (
+              <GuestReturnStatus paymentId={search.payment} tpayParam={search.tpay} />
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">{SUBSCRIPTION_PAYMENT_SENTENCE}</p>
-                <TpayAccessCheckoutForm key={product.code} product={product} guestPeriod={period} />
+                <TpayAccessCheckoutForm key={product.code} product={product} guestPeriod={period} initialDiscountCode={search.kod?.slice(0, 40)} />
               </>
             )}
             <p className="text-center text-sm text-muted-foreground">
