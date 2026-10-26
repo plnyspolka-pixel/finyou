@@ -4,7 +4,11 @@ import { sendSmsInternal } from "@/lib/voicebot.functions";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const BodySchema = z.object({
-  phone: z.string().min(6).max(20),
+  phone: z.string().min(6).max(20).optional(),
+  // ID rozmowy ElevenLabs — gdy jest, numer klienta bierzemy z metadanych
+  // połączenia (external_number), a nie z `phone`. Przy połączeniach
+  // WYCHODZĄCYCH `system__caller_id` to nasz numer, nie klienta.
+  conversation_id: z.string().min(4).max(200).optional(),
   message: z.string().min(1).max(500).optional(),
   application_url: z.string().url().max(500).optional(),
   // Opcjonalne — gdy podane, wygenerujemy magic link i wyślemy go SMS-em.
@@ -165,7 +169,22 @@ export const Route = createFileRoute("/api/public/elevenlabs-send-sms")({
           );
         }
 
-        const { phone, message } = parsed.data;
+        const { message } = parsed.data;
+        let phone = parsed.data.phone ?? "";
+        if (parsed.data.conversation_id) {
+          try {
+            const { getConversation } = await import("@/lib/elevenlabs-api.server");
+            const { verifiedCallerPhone } = await import("@/lib/ania-loan-purpose.server");
+            const conv = await getConversation(parsed.data.conversation_id);
+            const fromCall = verifiedCallerPhone(conv);
+            if (fromCall) phone = fromCall;
+          } catch (e) {
+            console.error("[elevenlabs-send-sms] conversation lookup failed", e);
+          }
+        }
+        if (!phone || phone.replace(/\D/g, "").length < 6) {
+          return json({ ok: false, error: "Brak numeru klienta (phone ani conversation_id)" }, 400);
+        }
         let { email, first_name, last_name } = parsed.data;
         void email;
         void last_name;

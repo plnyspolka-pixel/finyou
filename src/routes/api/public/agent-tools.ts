@@ -107,6 +107,21 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         const tool = String(body?.tool ?? "");
         const args = body?.args ?? {};
 
+        // Połączenie telefoniczne: numer KLIENTA bierzemy z metadanych rozmowy
+        // (external_number), bo przy połączeniach wychodzących system__caller_id
+        // to nasz numer — SMS z linkiem trafiałby do nas zamiast do klienta.
+        const convId = typeof body?.conversation_id === "string" ? body.conversation_id : null;
+        if (convId) {
+          try {
+            const { getConversation } = await import("@/lib/elevenlabs-api.server");
+            const { verifiedCallerPhone } = await import("@/lib/ania-loan-purpose.server");
+            const fromCall = verifiedCallerPhone(await getConversation(convId));
+            if (fromCall) body.phone = fromCall;
+          } catch (e) {
+            console.error("[agent-tools] conversation phone lookup failed", e);
+          }
+        }
+
         try {
           if (tool === "save_loan_purpose" || tool === "save_needs") {
             const { saveLoanPurpose } = await import("@/lib/ania-loan-purpose.server");
