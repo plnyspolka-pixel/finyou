@@ -105,6 +105,14 @@ Obraz instaluje `ffmpeg`, `fontconfig` i czcionki **Inter**, DejaVu
 i Liberation. Presety w `caption-style.ts` używają Inter (Bold); libass
 podstawi DejaVu Sans, gdyby Inter brakowało.
 
+### Automatyczny redeploy (GitHub Actions)
+
+`.github/workflows/caption-burner-deploy.yml` wdraża usługę po każdej zmianie
+w `services/caption-burner` na `main` (lub ręcznie z zakładki Actions), a potem
+czeka, aż `/health` zwróci `transcode: true`. Ustaw sekret `FLY_API_TOKEN`
+(Fly.io) albo `RENDER_DEPLOY_HOOK_URL` (Render → Settings → Deploy Hook) oraz
+zmienną repo `CAPTION_BURNER_URL` (adres usługi, do weryfikacji).
+
 ### Po stronie Finance You
 
 Sekrety środowiska aplikacji (Lovable → ustawienia → sekrety):

@@ -1,0 +1,73 @@
+# Redeploy usługi caption-burner po każdej zmianie w services/caption-burner
+# (albo ręcznie: Actions → caption-burner deploy → Run workflow) i sprawdzenie,
+# że działa wersja z kompresją (/health → transcode: true).
+#
+# Skonfiguruj JEDEN host (kroki innych są pomijane, gdy brak sekretu):
+#   Fly.io:  sekret FLY_API_TOKEN  (`fly tokens create deploy`)
+#   Render:  sekret RENDER_DEPLOY_HOOK_URL  (Render → serwis → Settings → Deploy Hook)
+# Weryfikacja (opcjonalna): zmienna repo CAPTION_BURNER_URL, np.
+#   https://finyou-caption-burner.fly.dev
+name: caption-burner deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/caption-burner/**"
+      - "render.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: caption-burner-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test services/caption-burner/transcode-plan.test.mjs
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      CAPTION_BURNER_URL: ${{ vars.CAPTION_BURNER_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fly.io — flyctl
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Fly.io — deploy
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        working-directory: services/caption-burner
+        run: flyctl deploy --remote-only
+
+      - name: Render — deploy hook
+        if: ${{ env.RENDER_DEPLOY_HOOK_URL != '' }}
+        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
+
+      - name: Brak skonfigurowanego hosta
+        if: ${{ env.FLY_API_TOKEN == '' && env.RENDER_DEPLOY_HOOK_URL == '' }}
+        run: |
+          echo "::warning::Ustaw FLY_API_TOKEN albo RENDER_DEPLOY_HOOK_URL — nic nie wdrożono."
+
+      - name: "Sprawdź /health (transcode: true)"
+        if: ${{ env.CAPTION_BURNER_URL != '' }}
+        run: |
+          # Render buduje obraz kilka minut, a plan free budzi się ~1 min.
+          for i in $(seq 1 40); do
+            out=$(curl -fsS --max-time 30 "$CAPTION_BURNER_URL/health" || true)
+            echo "próba $i: $out"
+            if echo "$out" | grep -Eq '"transcode" *: *true'; then
+              echo "OK: działa wersja z kompresją"; exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::/health nie zgłasza transcode:true — nadal stara wersja?"; exit 1
