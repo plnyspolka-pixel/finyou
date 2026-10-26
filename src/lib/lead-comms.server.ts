@@ -222,7 +222,8 @@ export async function upsertLeadFromSource(opts: {
     return null;
   }
   const leadId = data?.id ?? null;
-  if (leadId) {
+  // Lead inwestorski nie dostaje wniosku pożyczkowego (stubu loan_applications).
+  if (leadId && payload.type !== "inwestorski") {
     try {
       await ensureLoanApplicationForLead(leadId);
     } catch (e) {

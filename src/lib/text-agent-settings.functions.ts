@@ -46,13 +46,16 @@ export const saveTextAgentSettings = createServerFn({ method: "POST" })
     const isAdmin = (roles ?? []).some((r) => r.role === "administrator");
     if (!isAdmin) throw new Error("Brak uprawnień");
 
-    const { error } = await supabaseAdmin.from("text_agent_settings").upsert({
+    // Brak firstMessage w żądaniu = zostaw zapisane powitanie bez zmian
+    // (wcześniej null powodował wysłanie domyślnego powitania do ElevenLabs).
+    const row: Record<string, unknown> = {
       id: variantId(data.variant),
       system_prompt: data.systemPrompt ?? "",
-      first_message: data.firstMessage ?? null,
       updated_at: new Date().toISOString(),
       updated_by: context.userId,
-    });
+    };
+    if (typeof data.firstMessage === "string") row.first_message = data.firstMessage;
+    const { error } = await supabaseAdmin.from("text_agent_settings").upsert(row as any);
     if (error) throw new Error(error.message);
 
     // Zapis promptu = natychmiastowa wysyłka do agentów ElevenLabs. Bez tego

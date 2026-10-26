@@ -33,6 +33,14 @@ import {
 import type { AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 
 export const Route = createFileRoute("/admin/text-agent")({
+  head: () => ({ meta: [
+    { title: "Prompty Ani — panel Finance You" },
+    { name: "description", content: "Zarządzanie promptami i wiedzą asystentki Ani w Finance You." },
+    { property: "og:title", content: "Prompty Ani — Finance You" },
+    { property: "og:description", content: "Panel zarządzania asystentką Anią Finance You." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: TextAgentSettingsPage,
 });
 
@@ -139,7 +147,8 @@ function ElevenLabsAgentsCard() {
                     );
                   if (res.errors?.length)
                     toast.error(res.errors.map((e: any) => `${e.surface}: ${e.error}`).join("; "));
-                  if (res.phoneAgentOutOfSync)
+                  const { phoneAgentSyncStatus } = await import("@/lib/phone-agent-managed");
+                  if (phoneAgentSyncStatus(res.phoneAgentOutOfSync, null).outOfSync)
                     toast.warning(
                       `Telefon dzwoni innym agentem (${res.phoneAgentOutOfSync}) — jego prompt zmienisz w konsoli ElevenLabs albo wpisz tu ID agenta A1.`,
                     );

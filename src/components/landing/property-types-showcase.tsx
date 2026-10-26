@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BlurFade } from "@/components/ui/blur-fade";
+import { INTAKE_PROPERTY_TYPES } from "@/lib/property-intake-checklist";
 
 type PropType = {
   key: string;
@@ -19,48 +20,22 @@ type PropType = {
   docs: string[];
 };
 
-const TYPES: PropType[] = [
-  {
-    key: "mieszkanie",
-    title: "Mieszkanie",
-    Icon: Building2,
-    docs: ["Numer księgi wieczystej", "Zdjęcia każdego pomieszczenia", "Zdjęcia z zewnątrz"],
-  },
-  {
-    key: "dom",
-    title: "Dom / dom w budowie",
-    Icon: Home,
-    docs: [
-      "Numer księgi wieczystej",
-      "Zdjęcia z zewnątrz całego budynku",
-      "Zdjęcia każdego pomieszczenia (z wyjątkiem piwnicy i strychu)",
-      "Powierzchnia użytkowa",
-    ],
-  },
-  {
-    key: "lokal",
-    title: "Lokal użytkowy / usługowy",
-    Icon: Store,
-    docs: [
-      "Numer księgi wieczystej",
-      "Zdjęcia każdego pomieszczenia",
-      "Zdjęcia z zewnątrz",
-      "Powierzchnia użytkowa (jeżeli lokal nie jest w bloku)",
-    ],
-  },
-  {
-    key: "rolna",
-    title: "Grunt rolny",
-    Icon: Trees,
-    docs: ["Wypis z rejestru gruntów", "Numer księgi wieczystej (jeżeli nie ma go na wypisie)"],
-  },
-  {
-    key: "budowlana",
-    title: "Działka budowlana",
-    Icon: Map,
-    docs: ["Numer księgi wieczystej", "MPZP albo warunki zabudowy"],
-  },
-];
+const ICONS: Record<string, LucideIcon> = {
+  mieszkanie: Building2,
+  dom: Home,
+  lokal: Store,
+  rolna: Trees,
+  budowlana: Map,
+};
+
+// Lista dokumentów pochodzi z jednego źródła (property-intake-checklist) —
+// tej samej, z której korzysta Ania przyjmująca zgłoszenia.
+const TYPES: PropType[] = INTAKE_PROPERTY_TYPES.filter((t) => t.key in ICONS).map((t) => ({
+  key: t.key,
+  title: t.title,
+  Icon: ICONS[t.key],
+  docs: t.docs,
+}));
 
 export function PropertyTypesShowcase({
   onSelect,

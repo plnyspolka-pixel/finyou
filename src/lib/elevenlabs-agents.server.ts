@@ -12,9 +12,12 @@
 // które edytuje /admin/text-agent; do promptu doklejane są twarde zasady
 // rozmowy (bez obietnic kontaktu analityka).
 import { createClient } from "@supabase/supabase-js";
+import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
+import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 import {
   AGENT_DYNAMIC_VARIABLE_DEFAULTS,
+  ANIA_IDENTITY_RULES,
   INTAKE_PROCESS_RULES,
   NO_INVENTED_CONTACT_RULES,
   RAPPORT_RULES,
@@ -22,6 +25,7 @@ import {
 } from "@/lib/agent-channel-rules";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
+import { mergeAgentPlaceholders } from "./agent-placeholders";
 
 export type AgentSurface = "intake" | "investor_info" | "investor_panel";
 
@@ -50,12 +54,13 @@ const SURFACE_NAME: Record<AgentSurface, string> = {
 };
 
 const SURFACE_FIRST_MESSAGE: Record<AgentSurface, string> = {
-  intake:
-    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Pomogę złożyć wniosek o finansowanie dla firmy pod zabezpieczenie nieruchomości. W czym mogę pomóc?",
+  // Wszyscy agenci to „Ania z Finance You” — bez recytowania formułek o AI/nagrywaniu
+  // (informacja jest w dopisku widgetu; na pytanie wprost agent odpowiada zgodnie z prawdą).
+  intake: "",
   investor_info:
-    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Chętnie opowiem, jak działa finansowanie projektów na Finance You. W czym mogę pomóc?",
+    "Dzień dobry, tu Ania z Finance You. Chętnie opowiem, jak działa finansowanie projektów na Finance You. W czym mogę pomóc?",
   investor_panel:
-    "Dzień dobry, tu asystent AI Finance You — rozmowa jest nagrywana. Pomogę w korzystaniu z panelu inwestora. O co chcesz zapytać?",
+    "Dzień dobry, tu Ania z Finance You. Pomogę w korzystaniu z panelu inwestora. W czym mogę pomóc?",
 };
 
 /** Twarde zasady rozmowy A1 (decyzja właściciela) — doklejane do promptu. */
@@ -70,10 +75,16 @@ const INTAKE_HARD_RULES =
  * stronie, widget głosowy i wiadomości, więc zasady kanałów dostaje wszystkie
  * i wybiera po zmiennej {{channel}}) + twarde zasady A1.
  */
-function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
+export function buildAgentPrompt(surface: AgentSurface, basePrompt: string): string {
   // Zakaz zmyślania danych kontaktowych dotyczy każdego agenta.
-  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES;
+  // Inwestor: stały scenariusz rozmowy (z ceną z cennika w kodzie) NA SAMEJ GÓRZE.
+  if (surface === "investor_info")
+    return buildInvestorSalesScript() + basePrompt + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
+  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
+  // Procedura przyjmowania zgłoszenia (lista per rodzaj zabezpieczenia, jak we
+  // wniosku na stronie) idzie NA SAMĄ GÓRĘ — ma pierwszeństwo przed promptem z panelu.
   return (
+    buildIntakeChecklistRules() +
     basePrompt +
     RAPPORT_RULES +
     buildChannelRulesSection() +
@@ -107,15 +118,16 @@ async function elRequestWithPlaceholderFallback(
     return { res, json };
   };
 
-  const withPlaceholders = await post({
-    dynamic_variables: { dynamic_variable_placeholders: AGENT_DYNAMIC_VARIABLE_DEFAULTS },
+  let existing = {};
+  if (method === "PATCH") {
+    const current = await fetch(url, { headers: { "xi-api-key": apiKey } });
+    if (!current.ok) throw new Error(`ElevenLabs GET ${current.status}: ${await current.text()}`);
+    const config: any = await current.json();
+    existing = config?.conversation_config?.agent?.dynamic_variables?.dynamic_variable_placeholders ?? {};
+  }
+  return post({
+    dynamic_variables: { dynamic_variable_placeholders: mergeAgentPlaceholders(existing) },
   });
-  if (withPlaceholders.res.ok) return withPlaceholders;
-  console.warn(
-    "[el-agents] próba bez dynamic_variable_placeholders — API odrzuciło pole",
-    withPlaceholders.res.status,
-  );
-  return post({});
 }
 
 /** ID agenta dla powierzchni: env ma pierwszeństwo, potem voicebot_settings. */
@@ -255,6 +267,8 @@ export interface SyncPromptsResult {
   errors: Array<{ surface: AgentSurface; error: string }>;
   /** Agent telefoniczny (voicebot_settings.agent_id) inny niż A1 — jego prompt żyje w konsoli ElevenLabs. */
   phoneAgentOutOfSync: string | null;
+  /** Agent telefonu zarządzany osobno w ElevenLabs (np. 7201) — świadomie nie synchronizowany. */
+  phoneAgentManagedSeparately: string | null;
 }
 
 /**
@@ -270,6 +284,7 @@ export async function syncElevenLabsAgentPrompts(
     skipped: [],
     errors: [],
     phoneAgentOutOfSync: null,
+    phoneAgentManagedSeparately: null,
   };
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
@@ -288,10 +303,26 @@ export async function syncElevenLabsAgentPrompts(
       result.skipped.push({ surface, reason: "brak agenta — najpierw go utwórz" });
       continue;
     }
+    const { isSeparatelyManagedAgent } = await import("./phone-agent-managed");
+    if (isSeparatelyManagedAgent(agentId)) {
+      result.skipped.push({ surface, reason: "agent zarządzany osobno w ElevenLabs — bez zmian" });
+      continue;
+    }
     try {
-      const fetched = await fetchAgentPrompt(SURFACE_VARIANT[surface]);
-      const prompt = buildAgentPrompt(surface, fetched.prompt);
-      const firstMessage = fetched.firstMessage ?? SURFACE_FIRST_MESSAGE[surface];
+      // Synchronizacja nigdy nie wysyła zaszytego fallbacku do ElevenLabs.
+      const settingsId = { intake: 1, investor_info: 2, investor_panel: 3 }[surface];
+      const { data: stored, error: settingsError } = await s
+        .from("text_agent_settings")
+        .select("system_prompt, first_message")
+        .eq("id", settingsId)
+        .maybeSingle();
+      if (settingsError) throw new Error(settingsError.message);
+      if (!stored?.system_prompt?.trim()) {
+        result.skipped.push({ surface, reason: "brak zapisanego promptu — agent pozostaje bez zmian" });
+        continue;
+      }
+      const prompt = buildAgentPrompt(surface, stored.system_prompt);
+      const firstMessage = stored.first_message ?? SURFACE_FIRST_MESSAGE[surface];
       const fingerprint = await promptFingerprint(prompt, firstMessage);
 
       // Tryb automatyczny: wysyłamy tylko wtedy, gdy prompt różni się od tego,
@@ -350,7 +381,10 @@ export async function syncElevenLabsAgentPrompts(
       .eq("id", 1)
       .maybeSingle();
     const phoneAgentId = (data?.agent_id as string | null) ?? null;
-    if (phoneAgentId && phoneAgentId !== intakeId) result.phoneAgentOutOfSync = phoneAgentId;
+    const { phoneAgentSyncStatus } = await import("./phone-agent-managed");
+    const st = phoneAgentSyncStatus(phoneAgentId, intakeId);
+    result.phoneAgentOutOfSync = st.outOfSync;
+    result.phoneAgentManagedSeparately = st.managedSeparately;
   } catch {
     /* informacja poglądowa — brak nie jest błędem synchronizacji */
   }

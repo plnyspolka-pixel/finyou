@@ -452,8 +452,20 @@ async function buildProject(
 export const getMyOrderProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MyOrderProjectsResult> => {
-    const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return loadMyOrderProjects(supabaseAdmin, context.userId, false);
+  });
+
+/**
+ * Ta sama widoczność Projektów co w panelu inwestora. `readOnly` pomija
+ * wygaszanie przeterminowanych dopasowań — używa tego odczyt stanu konta przez Anię.
+ */
+export async function loadMyOrderProjects(
+  supabaseAdmin: any,
+  userId: string,
+  readOnly: boolean,
+): Promise<MyOrderProjectsResult> {
+  {
     const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
 
     const [{ data: orders }, { data: investor }] = await Promise.all([
@@ -479,7 +491,7 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       for (const o of orders ?? []) (o as any).fy_commission_enabled = false;
     }
     // Przeterminowane teasery/rezerwacje (także u innych) — zanim policzymy zajętość.
-    await (await srv()).expireStaleMatches(supabaseAdmin);
+    if (!readOnly) await (await srv()).expireStaleMatches(supabaseAdmin);
     const now = Date.now();
     const accepted = (orders ?? []).filter(
       (o: any) =>
@@ -634,7 +646,8 @@ export const getMyOrderProjects = createServerFn({ method: "GET" })
       });
     }
     return { orders: result, isConsumer: Boolean(investor?.is_consumer), limits };
-  });
+  }
+}
 
 async function eligibleApp(db: any, order: any, applicationId: string) {
   const { data: app } = await loose(db)

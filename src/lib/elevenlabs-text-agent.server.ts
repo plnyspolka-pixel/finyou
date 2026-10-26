@@ -21,6 +21,8 @@
 //                  (investor-assistant.functions.ts), nie przez runAgentTurn.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
+import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { normalizeKwNumber } from "./kw";
 import {
   INTAKE_PROCESS_RULES,
@@ -30,6 +32,7 @@ import {
   channelRules,
 } from "./agent-channel-rules";
 import { guardOutboundContactDetails } from "./bot-contact-guard";
+import { leadDynamicVariables } from "./ania-lead-context";
 import { SUBSCRIPTION_PAYMENT_SENTENCE, SUBSCRIPTION_PRICE_SENTENCE } from "./investor-plan/plans";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
@@ -355,6 +358,8 @@ export async function runAgentTurn(opts: {
   userMessage: string;
   attachmentsSummary?: string | null;
   variant?: AgentVariant;
+  /** Konkretny agent ElevenLabs (np. A0/A2P na Messengerze) zamiast agenta powierzchni. */
+  agentIdOverride?: string | null;
 }): Promise<AgentReply> {
   const variant: AgentVariant = opts.variant ?? "klient";
   const s = admin();
@@ -388,12 +393,15 @@ export async function runAgentTurn(opts: {
         : variant === "inwestor_prywatny"
           ? ("investor_panel" as const)
           : ("intake" as const);
-    const elAgentId = await getAgentIdForSurface(surface);
+    const { A2P_TEXT_AGENT_ID } = await import("./ania-lead-context");
+    const elAgentId = opts.agentIdOverride || (lead.type === "inwestorski" && ["sms", "messenger"].includes(opts.channel)
+      ? A2P_TEXT_AGENT_ID : await getAgentIdForSurface(surface));
     if (elAgentId) {
       // Prompt zapisany w panelu ma trafić do agenta bez klikania czegokolwiek.
       // Sprawdzenie jest dławione w czasie i dotyczy tylko tej powierzchni;
-      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs.
-      await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
+      // bez zmiany promptu nie leci żadne zapytanie do ElevenLabs. Jawnie
+      // wskazanych agentów (A0/A2P) nie synchronizujemy.
+      if (!opts.agentIdOverride) await ensureAgentPromptsFresh(false, [surface]).catch(() => {});
       const recent = (history ?? []).slice(-16);
       const historyBlock =
         recent.length > 0
@@ -413,11 +421,22 @@ export async function runAgentTurn(opts: {
         `[NOWA WIADOMOŚĆ KLIENTA — odpowiedz na nią]\n${opts.userMessage}`;
 
       const { elevenLabsTextTurn } = await import("./elevenlabs-text-turn.server");
+      const { investorFirstMessage } = await import("./ania-text-policy");
+      const firstMessage = elAgentId === A2P_TEXT_AGENT_ID && !(history ?? []).some(h => h.direction === "outbound" && h.channel === opts.channel)
+        ? investorFirstMessage(leadDynamicVariables({ firstName: lead.first_name, source: lead.source, role: "inwestor", amount: (lead.application_data as any)?.lead_amount ?? "", createdAt: lead.created_at })) : elAgentId === A2P_TEXT_AGENT_ID ? "" : undefined;
       const turn = await elevenLabsTextTurn({
         agentId: elAgentId,
         userMessage: elMessage,
+        firstMessage,
         dynamicVariables: {
           ...channelDynamicVariables(opts.channel),
+          ...leadDynamicVariables({
+            firstName: lead.first_name,
+            source: lead.source,
+            role: lead.type === "inwestorski" ? "inwestor" : lead.type ? "klient" : null,
+            amount: (lead.application_data as any)?.lead_amount ?? (lead.application_data as any)?.loan_amount ?? "",
+            createdAt: lead.created_at,
+          }),
           lead_id: lead.id,
           first_name: lead.first_name ?? "",
           last_name: lead.last_name ?? "",
@@ -454,12 +473,15 @@ export async function runAgentTurn(opts: {
   // odpowiada bez nich i to on zmyśla.
   const systemPrompt =
     variant === "klient"
-      ? basePrompt +
+      ? buildIntakeChecklistRules() +
+        basePrompt +
         RAPPORT_RULES +
         channelRules(opts.channel) +
         INTAKE_PROCESS_RULES +
         NO_INVENTED_CONTACT_RULES
-      : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
+      : variant === "inwestor"
+        ? buildInvestorSalesScript() + basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES
+        : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
 
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
   // gdy znamy email leada; inaczej publiczny fallback. Prompt z DB używa

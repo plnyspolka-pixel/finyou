@@ -45,7 +45,7 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
 
     const { data: investor } = await supabaseAdmin
       .from("investors")
-      .select("first_name, last_name, investor_type")
+      .select("id, first_name, last_name, investor_type")
       .eq("user_id", context.userId)
       .maybeSingle();
 
@@ -106,6 +106,14 @@ export const sendInvestorAssistantMessage = createServerFn({ method: "POST" })
             `[NOWA WIADOMOŚĆ — odpowiedz na nią]\n${data.message}`,
           dynamicVariables: {
             ...channelDynamicVariables("chat_inwestor"),
+            // Zalogowana sesja = tożsamość potwierdzona; token pozwala A3 odczytać
+            // wyłącznie własne konto bez kodu SMS.
+            investor_id: investor?.id ?? "",
+            investor_access_token: investor?.id
+              ? await (
+                  await import("@/lib/ania-investor-tools.server")
+                ).issuePanelCapability(context.userId, investor.id)
+              : "",
             lead_id: "",
             first_name: investor?.first_name ?? "",
             last_name: investor?.last_name ?? "",

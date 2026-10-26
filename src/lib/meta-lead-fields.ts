@@ -55,3 +55,18 @@ export function cleanName(full: string | null | undefined): string | null {
     .trim();
   return t || (full ?? null);
 }
+
+// Kwota z formularza (pożyczka albo planowana inwestycja) — jako tekst odpowiedzi,
+// bo formularze inwestorskie mają przedziały („100 000 – 300 000 zł”).
+export function extractLeadAmount(fd: PoleFormularza[]): string {
+  if (!Array.isArray(fd)) return "";
+  for (const f of fd) {
+    const name = String(f?.name ?? "").toLowerCase();
+    if (/kwot|amount|kapita|budż|budz|zainwest|inwestycj|ile_/.test(name)) {
+      const v = Array.isArray(f.values) ? f.values[0] : f.values;
+      const t = String(v ?? "").replace(/_/g, " ").replace(/\s+/g, " ").trim();
+      if (t) return t;
+    }
+  }
+  return "";
+}

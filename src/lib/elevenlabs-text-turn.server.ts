@@ -7,6 +7,7 @@
 // inna wersja protokołu) zwraca ok:false, a wywołujący (runAgentTurn) wraca
 // do dotychczasowego silnika — kanał nigdy nie milknie przez migrację.
 const EL_BASE = "https://api.elevenlabs.io/v1";
+import { isTextFiller } from "./ania-text-policy";
 const DEFAULT_TIMEOUT_MS = 25_000;
 
 export interface ElTextTurnResult {
@@ -35,6 +36,7 @@ export async function elevenLabsTextTurn(opts: {
   userMessage: string;
   dynamicVariables?: Record<string, string | number | boolean>;
   timeoutMs?: number;
+  firstMessage?: string;
 }): Promise<ElTextTurnResult> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, error: "Brak ELEVENLABS_API_KEY" };
@@ -79,12 +81,14 @@ export async function elevenLabsTextTurn(opts: {
 
     ws.addEventListener("open", () => {
       try {
-        ws!.send(
+        if (!ws) return;
+        ws.send(
           JSON.stringify({
             type: "conversation_initiation_client_data",
             dynamic_variables: opts.dynamicVariables ?? {},
             conversation_config_override: {
               conversation: { text_only: true },
+              ...(opts.firstMessage !== undefined ? { agent: { first_message: opts.firstMessage } } : {}),
             },
           }),
         );
@@ -106,7 +110,7 @@ export async function elevenLabsTextTurn(opts: {
       if (type === "ping") {
         // Protokół wymaga odbicia pinga, inaczej sesja pada.
         try {
-          ws!.send(JSON.stringify({ type: "pong", event_id: msg?.ping_event?.event_id }));
+          ws?.send(JSON.stringify({ type: "pong", event_id: msg?.ping_event?.event_id }));
         } catch {
           /* ignore */
         }
@@ -115,7 +119,7 @@ export async function elevenLabsTextTurn(opts: {
       if (type === "conversation_initiation_metadata" && initSent && !userSent) {
         userSent = true;
         try {
-          ws!.send(JSON.stringify({ type: "user_message", text: opts.userMessage }));
+          ws?.send(JSON.stringify({ type: "user_message", text: opts.userMessage }));
         } catch (e: any) {
           finish({ ok: false, error: e?.message ?? "user send failed" });
         }
@@ -123,6 +127,7 @@ export async function elevenLabsTextTurn(opts: {
       }
       if (type === "agent_response") {
         const text = msg?.agent_response_event?.agent_response;
+        if (typeof text === "string" && isTextFiller(text)) return;
         if (typeof text === "string" && text.trim()) replyParts.push(text.trim());
         // Odpowiedź agenta kończy turę tekstową.
         finish(
