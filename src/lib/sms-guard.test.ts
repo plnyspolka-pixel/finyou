@@ -51,8 +51,8 @@ describe("classifySmsSource", () => {
     expect(classifySmsSource("sms_agent_reply")).toBe("conversational");
   });
 
-  it("link wysyłany przez Anię w rozmowie podlega limitom (na wejściu wystarczy SMS powitalny)", () => {
-    expect(classifySmsSource("elevenlabs_agent")).toBe("automated");
+  it("link wysyłany przez Anię na prośbę klienta w rozmowie to kanał konwersacyjny", () => {
+    expect(classifySmsSource("elevenlabs_agent")).toBe("conversational");
   });
 
   it("wszystko inne (kadencja, callbacki, meta_lead) jest automatyczne", () => {
@@ -256,5 +256,22 @@ describe("numer właściciela poza hamulcem", () => {
     } finally {
       if (prev !== undefined) process.env.OWNER_ALERT_PHONE = prev;
     }
+  });
+});
+
+describe("SMS automatyczne wyłączone (decyzja 2026-10-26)", () => {
+  it("blokuje automatyczne, gdy automatedEnabled=false", () => {
+    const d = decide({ limits: { ...LIMITS, automatedEnabled: false } });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toBe("disabled");
+  });
+  it("przepuszcza SMS z linkiem, o który klient poprosił w rozmowie z Anią", () => {
+    expect(classifySmsSource("elevenlabs_agent")).toBe("conversational");
+    const d = decide({ category: "conversational", limits: { ...LIMITS, automatedEnabled: false } });
+    expect(d.allowed).toBe(true);
+  });
+  it("OTP inwestora i e-podpisu są krytyczne", () => {
+    expect(classifySmsSource("ania_investor_otp")).toBe("critical");
+    expect(classifySmsSource("esign_otp")).toBe("critical");
   });
 });

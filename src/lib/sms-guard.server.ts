@@ -41,6 +41,15 @@ export interface SmsLimits {
   /** Okno wysyłki SMS automatycznych — godziny Europe/Warsaw [start, end). */
   windowStartHour: number;
   windowEndHour: number;
+  /**
+   * Czy wolno wysyłać SMS-y automatyczne (powitalne, kadencje, przypomnienia,
+   * zapowiedzi telefonu). Decyzja właściciela 2026-10-26: SMS-y są drogie i mało
+   * skuteczne — automatyczne WYŁĄCZONE. Zostaje SMS, o który klient poprosi
+   * w trakcie rozmowy z Anią (źródło elevenlabs_agent), odpowiedź na SMS klienta
+   * i wysyłki krytyczne (OTP, panel, windykacja, alarmy). Włączenie: env
+   * SMS_AUTOMATED_ENABLED=1.
+   */
+  automatedEnabled?: boolean;
 }
 
 function envInt(name: string, fallback: number): number {
@@ -59,12 +68,15 @@ export function defaultSmsLimits(): SmsLimits {
     duplicateWindowDays: envInt("SMS_DUPLICATE_WINDOW_DAYS", 14),
     windowStartHour: envInt("SMS_WINDOW_START_HOUR", 8),
     windowEndHour: envInt("SMS_WINDOW_END_HOUR", 20),
+    automatedEnabled: process.env.SMS_AUTOMATED_ENABLED === "1",
   };
 }
 
 /** Źródła, które NIGDY nie podlegają limitom (człowiek, akcja klienta albo alarm do właściciela). */
 const CRITICAL_SOURCES = new Set([
   "phone_verification",
+  "ania_investor_otp",
+  "esign_otp",
   "panel_manual",
   "windykacja",
   "test",
@@ -98,7 +110,9 @@ export function isOwnerAlertPhone(
  * `elevenlabs_agent` (link wysyłany przez Anię w trakcie rozmowy) świadomie tu
  * NIE jest: na wejściu leada wystarczy jeden SMS powitalny z tym samym linkiem.
  */
-const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply"]);
+// `elevenlabs_agent` = SMS z linkiem, o który klient poprosił w trakcie rozmowy
+// z Anią — jedyny SMS „sprzedażowy”, który zostaje (decyzja właściciela 2026-10-26).
+const CONVERSATIONAL_SOURCES = new Set(["sms_agent_reply", "elevenlabs_agent"]);
 
 export function classifySmsSource(source: string | null | undefined): SmsCategory {
   const s = String(source ?? "").trim();
@@ -145,7 +159,8 @@ export type SmsBlockReason =
   | "duplicate"
   | "rate_limit_24h"
   | "rate_limit_7d"
-  | "loop_guard";
+  | "loop_guard"
+  | "disabled";
 
 export interface SmsDecision {
   allowed: boolean;
@@ -247,6 +262,13 @@ export function decideSms(input: SmsDecisionInput): SmsDecision {
   }
 
   // --- automated ---
+  if (limits.automatedEnabled === false) {
+    return {
+      allowed: false,
+      reason: "disabled",
+      detail: "SMS-y automatyczne wyłączone (decyzja właściciela) — SMS tylko na prośbę klienta w rozmowie",
+    };
+  }
   const { hour, weekday } = warsawHourAndWeekday(input.now);
   if (weekday === "Sun") {
     return { allowed: false, reason: "sunday", detail: "Niedziela — SMS-ów nie wysyłamy" };
