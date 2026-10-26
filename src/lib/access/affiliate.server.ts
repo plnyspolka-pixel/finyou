@@ -17,7 +17,7 @@ export async function createAffiliateEventForAccessPayment(
 ): Promise<{ ok: boolean; eventId?: string; skipped?: string }> {
   const { data: payment } = await (db.from("access_payments") as any)
     .select(
-      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider,provider_transaction_id,product_id,processed_at,created_at,affiliate_event_id,currency",
+      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider,provider_transaction_id,product_id,unlock_match_id,processed_at,created_at,affiliate_event_id,currency",
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -25,6 +25,10 @@ export async function createAffiliateEventForAccessPayment(
   if (payment.status !== "paid") return { ok: false, skipped: "payment_not_paid" };
   if (payment.affiliate_event_id)
     return { ok: true, eventId: payment.affiliate_event_id, skipped: "already_linked" };
+  // Partner zarabia wyłącznie na abonamencie inwestora — nie na kontach
+  // pośredników ani zakupach pojedynczych okazji.
+  if (payment.audience !== "investor") return { ok: true, skipped: "not_investor_subscription" };
+  if (payment.unlock_match_id) return { ok: true, skipped: "not_investor_subscription" };
 
   const { data: profile } = await (db.from("profiles") as any)
     .select("referred_by_partner_id")
@@ -41,7 +45,7 @@ export async function createAffiliateEventForAccessPayment(
 
   // Prowizja za inwestora tylko za NOWEGO inwestora — przy jego pierwszym
   // opłaconym dostępie. Odnowienia i kolejne zakupy nie dają prowizji.
-  if (payment.audience === "investor" && !(await isFirstInvestorPurchase(payment))) {
+  if (!(await isFirstInvestorPurchase(payment))) {
     return { ok: true, skipped: "not_first_investor_purchase" };
   }
 
@@ -52,8 +56,7 @@ export async function createAffiliateEventForAccessPayment(
   const externalRef = payment.provider_transaction_id
     ? `${payment.provider ?? "tpay"}:${payment.provider_transaction_id}`
     : `access:${payment.id}`;
-  const eventType =
-    payment.audience === "investor" ? "investor_account_paid" : "broker_account_paid";
+  const eventType = "investor_account_paid";
 
   try {
     const { createCommissionEvent } = await import("@/lib/affiliate/engine");
@@ -101,12 +104,13 @@ async function isFirstInvestorPurchase(payment: {
   user_id: string;
   created_at: string | null;
 }): Promise<boolean> {
-  // Wcześniejsza opłacona płatność za dostęp inwestora (zwroty się nie liczą).
+  // Wcześniejszy opłacony abonament inwestora (zwroty i okazje się nie liczą).
   let earlier = (db.from("access_payments") as any)
     .select("id")
     .eq("user_id", payment.user_id)
     .eq("audience", "investor")
     .eq("status", "paid")
+    .is("unlock_match_id", null)
     .neq("id", payment.id);
   if (payment.created_at) earlier = earlier.lt("created_at", payment.created_at);
   const { data: prev } = await earlier.limit(1);

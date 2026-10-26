@@ -23,13 +23,13 @@ export const Route = createFileRoute("/posrednicy/")({
       {
         name: "description",
         content:
-          "Polecaj inwestorów Finance You. Za każdego nowego inwestora, który kupi dostęp, płacimy 1000 zł prowizji. Rejestracja bezpłatna, rozliczenie B2B lub działalność nierejestrowana.",
+          "Polecaj inwestorów Finance You. Za każdego nowego inwestora, który kupi abonament, płacimy 1000 zł prowizji. Rejestracja bezpłatna, rozliczenie B2B lub działalność nierejestrowana.",
       },
       { property: "og:title", content: "Program partnerski Finance You — 1000 zł za inwestora" },
       {
         property: "og:description",
         content:
-          "Za każdego nowego inwestora, który kupi dostęp do Finance You, płacimy 1000 zł prowizji.",
+          "Za każdego nowego inwestora, który kupi abonament Finance You, płacimy 1000 zł prowizji.",
       },
       { property: "og:url", content: "https://financeyou.pl/posrednicy" },
       { property: "og:type", content: "website" },
@@ -55,7 +55,7 @@ const steps = [
   {
     icon: HandCoins,
     title: `3. Otrzymujesz ${COMMISSION}`,
-    desc: "Gdy polecony nowy inwestor kupi dostęp do Finance You, naliczamy Ci prowizję.",
+    desc: "Gdy polecony nowy inwestor kupi abonament Finance You, naliczamy Ci prowizję.",
   },
 ];
 
@@ -91,7 +91,7 @@ function PosrednicyLanding() {
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
             Polecaj inwestorów zainteresowanych pożyczkami zabezpieczonymi na nieruchomościach. Za
-            każdego nowego inwestora, który kupi dostęp do Finance You, płacimy {COMMISSION}{" "}
+            każdego nowego inwestora, który kupi abonament Finance You, płacimy {COMMISSION}{" "}
             prowizji. Rozliczasz się jako B2B lub w ramach działalności nierejestrowanej.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -128,7 +128,7 @@ function PosrednicyLanding() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Za nowego inwestora (pierwszy zakup dostępu, bez odnowień), gdy płatność jest
+              Wyłącznie za abonament nowego inwestora (pierwszy, bez odnowień), gdy płatność jest
               zaksięgowana i nie została zwrócona. Prowizję zatwierdza Finance You.
             </CardContent>
           </Card>
@@ -168,7 +168,7 @@ function PosrednicyLanding() {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Sama rejestracja poleconej osoby nie daje prowizji. {COMMISSION} należy się, gdy
-                    nowy inwestor faktycznie kupi dostęp do Finance You.
+                    nowy inwestor faktycznie kupi abonament Finance You.
                   </p>
                 </div>
               </div>

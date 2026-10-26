@@ -54,10 +54,10 @@ function ProwizjePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Coins className="h-6 w-6" /> Prowizje sieciowe
+          <Coins className="h-6 w-6" /> Prowizje
         </h1>
         <p className="text-sm text-muted-foreground">
-          Prowizje naliczone od realnych zdarzeń gospodarczych w Twojej sieci (do 3 poziomów).
+          Prowizje za abonamenty kupione przez poleconych nowych inwestorów.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ function ProwizjePage() {
             <p className="p-4 text-muted-foreground">Ładowanie…</p>
           ) : items.length === 0 ? (
             <p className="p-4 text-muted-foreground">
-              Brak prowizji. Pojawią się tu po realnych zdarzeniach gospodarczych w Twojej sieci.
+              Brak prowizji. Pojawią się tu, gdy polecony inwestor kupi abonament.
             </p>
           ) : (
             <div className="overflow-x-auto">

@@ -104,7 +104,7 @@ function ProgramDashboard() {
             <Network className="h-6 w-6" /> Program pośredników
           </h1>
           <p className="text-sm text-muted-foreground">
-            {formatPLN(INVESTOR_COMMISSION_PLN)} za każdego nowego inwestora, który kupi dostęp.
+            {formatPLN(INVESTOR_COMMISSION_PLN)} za każdego nowego inwestora, który kupi abonament.
           </p>
         </div>
         <Badge className={partnerStatusColors[me.status] ?? "bg-slate-100"} variant="secondary">
@@ -135,7 +135,7 @@ function ProgramDashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Twój link polecający dla inwestorów</CardTitle>
           <CardDescription>
-            Wyślij go inwestorowi. Gdy założy konto z tego linku i kupi dostęp, otrzymasz{" "}
+            Wyślij go inwestorowi. Gdy założy konto z tego linku i kupi abonament, otrzymasz{" "}
             {formatPLN(INVESTOR_COMMISSION_PLN)} prowizji. Kod: <b>{me.referral_code}</b>
           </CardDescription>
         </CardHeader>

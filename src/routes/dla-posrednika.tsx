@@ -59,11 +59,6 @@ const GET: FeatureItemData[] = [
     d: "Przygotowujemy umowę, organizujemy notariusza, koordynujemy dokumenty i pomagamy doprowadzić sprawę do wypłaty środków.",
   },
   {
-    icon: "shieldcheck",
-    t: "Zabezpieczenie wypłaty Twojej prowizji",
-    d: "Zasady rozliczenia są ustalane z góry, a status prowizji możesz śledzić w systemie.",
-  },
-  {
     icon: "crm",
     t: "CRM z reakcjami inwestorów",
     d: "Widzisz, którzy inwestorzy otworzyli ofertę, odpowiedzieli, są zainteresowani albo złożyli propozycję finansowania.",
@@ -103,7 +98,10 @@ const EARN = [
     t: "Finance You prowadzi formalności",
     d: "Umowa, notariusz i koordynacja aż do wypłaty środków.",
   },
-  { t: "Rozliczenie", d: "Prowizje i ich status widzisz w panelu, wypłaty na podane konto." },
+  {
+    t: "Polecasz inwestorów",
+    d: `Za każdego nowego inwestora, który kupi abonament — ${COMMISSION}.`,
+  },
 ];
 
 const CRM: { icon: Icon3DName; t: string }[] = [
@@ -130,7 +128,11 @@ const FAQS = [
   },
   {
     q: "Ile zarabiam za poleconego inwestora?",
-    a: `${COMMISSION} za każdego nowego inwestora, który założy konto z Twojego linku i kupi dostęp do Finance You. Prowizję zatwierdza Finance You po zaksięgowaniu płatności.`,
+    a: `${COMMISSION} za każdego nowego inwestora, który założy konto z Twojego linku i kupi abonament. Prowizję zatwierdza Finance You po zaksięgowaniu płatności.`,
+  },
+  {
+    q: "Czy dostaję prowizję za zrealizowany temat klienta?",
+    a: "Nie. Prowizja jest naliczana wyłącznie od abonamentu kupionego przez poleconego nowego inwestora.",
   },
   {
     q: "Jak dostaję wypłatę?",
@@ -166,7 +168,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Zarabiaj jako{" "}
+            Przedstaw klientów jako{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
@@ -188,7 +190,7 @@ function Hero() {
             }}
           >
             Wprowadzaj wnioski klientów, przedstawiaj je inwestorom i śledź w CRM, jak reagują. Bez
-            opłat. Dodatkowo {COMMISSION} za każdego nowego inwestora, którego polecisz.
+            opłat. Zarabiasz {COMMISSION} za każdego nowego inwestora, który kupi abonament.
           </p>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <MktButton variant="cta" href={JOIN}>
@@ -222,7 +224,7 @@ function Hero() {
           >
             {[
               ["Zarejestruj się", "Załóż konto i zaakceptuj umowę."],
-              ["Podaj konto do wypłaty", "Tam trafiają Twoje prowizje."],
+              ["Podaj konto do wypłaty", "Tam trafiają prowizje za inwestorów."],
               ["Wprowadzaj klientów", "I patrz, jak reagują inwestorzy."],
             ].map(([t, d], i) => (
               <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -266,7 +268,7 @@ function BrokerLanding() {
       </Section>
 
       <Section tint>
-        <SectionHead eyebrow="Jak to działa" title="Od rejestracji do rozliczonej prowizji" />
+        <SectionHead eyebrow="Jak to działa" title="Od rejestracji do finansowania klienta" />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={EARN.map((e) => ({ icon: "check", t: e.t, d: e.d }))} />
         </div>
@@ -316,7 +318,7 @@ function BrokerLanding() {
           center
           eyebrow="Program partnerski"
           title={`${COMMISSION} za każdego nowego inwestora`}
-          sub="W panelu dostajesz link polecający. Gdy inwestor założy konto z Twojego linku i kupi dostęp do Finance You, naliczamy Ci prowizję."
+          sub="Zarabiasz wyłącznie na abonamentach inwestorów: w panelu dostajesz link polecający, a gdy nowy inwestor założy konto z Twojego linku i kupi abonament, naliczamy Ci prowizję. Za zrealizowane tematy klientów prowizji nie ma."
         />
         <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
           <MktButton variant="cta" href="/posrednicy">

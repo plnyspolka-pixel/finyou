@@ -1,7 +1,10 @@
 -- Program partnerski przywrócony (decyzja właściciela 26.10.2026):
---  1) 1000 zł za każdego nowego inwestora, który kupi dostęp — jedna stawka,
---     bez prowizji sieciowej (poziomy 2 i 3 dla inwestora wyłączone).
---     „Nowy” egzekwuje kod (pierwszy opłacony dostęp danej osoby).
+--  1) Partner zarabia WYŁĄCZNIE na abonamencie poleconego inwestora:
+--     1000 zł za każdego nowego inwestora, który kupi abonament — jedna
+--     stawka, bez prowizji sieciowej (poziomy 2 i 3 wyłączone). „Nowy”
+--     i „tylko abonament” egzekwuje kod (pierwszy opłacony abonament).
+--     Prowizje za zrealizowane tematy (wypłata środków klientowi) i za konta
+--     pośredników są wycofane: reguły nieaktywne, trigger od wypłat zdjęty.
 --  2) Pośrednik bez bramki płatności — znika limit 5 ofert darmowego konta.
 
 update public.affiliate_commission_rules
@@ -34,6 +37,13 @@ set active = false,
     updated_at = now()
 where event_type = 'investor_account_paid'
   and network_level in (2, 3);
+
+update public.affiliate_commission_rules
+set active = false,
+    updated_at = now()
+where event_type in ('client_funds_disbursed', 'broker_account_paid');
+
+drop trigger if exists trg_affiliate_loan_disbursed on public.loan_applications;
 
 drop trigger if exists trg_broker_offer_limit_insert on public.loan_applications;
 drop trigger if exists trg_broker_offer_limit_undelete on public.loan_applications;

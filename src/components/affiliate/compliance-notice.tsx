@@ -7,8 +7,9 @@ export function ComplianceNotice({ className }: { className?: string }) {
     <Alert className={className}>
       <ShieldCheck className="h-4 w-4" />
       <AlertDescription className="text-xs leading-relaxed">
-        Program nie przewiduje prowizji za samo zapraszanie osób. Prowizje są naliczane wyłącznie od
-        realnych zdarzeń gospodarczych: opłaconych kont lub skutecznie rozliczonych klientów.
+        Program nie przewiduje prowizji za samo zapraszanie osób ani za zrealizowane tematy
+        klientów. Prowizja jest naliczana wyłącznie od abonamentu kupionego przez poleconego nowego
+        inwestora.
       </AlertDescription>
     </Alert>
   );
@@ -33,9 +34,8 @@ export function BrokerAccountComplianceNotice({ className }: { className?: strin
     <Alert className={className}>
       <Info className="h-4 w-4" />
       <AlertDescription className="text-xs leading-relaxed">
-        Opłacone konto pośrednika jest usługą/narzędziem Finance You. Prowizja może zostać naliczona
-        wyłącznie od realnie opłaconego i nieanulowanego konta, nie za samą rejestrację osoby w
-        programie.
+        Prowizja może zostać naliczona wyłącznie od realnie opłaconego i niezwróconego abonamentu
+        poleconego inwestora, nie za samą rejestrację osoby w programie.
       </AlertDescription>
     </Alert>
   );

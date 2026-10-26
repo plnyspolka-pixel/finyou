@@ -460,6 +460,25 @@ describe("webhook Tpay — program partnerski", () => {
     expect((db().tables.affiliate_commissions ?? []).length).toBe(1);
   });
 
+  it("zakup okazji i konto pośrednika nie dają prowizji — tylko abonament inwestora", async () => {
+    seedAffiliate();
+    const unlock = seedPayment({
+      provider_transaction_id: "tr_unl",
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: "22222222-2222-4222-8222-222222222222",
+    });
+    tpayCorrect("tr_unl", unlock, 1500);
+    await handleTpayNotification({ tr_id: "tr_unl" });
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+
+    const { createAffiliateEventForAccessPayment } = await import("./affiliate.server");
+    const broker = seedPayment({ audience: "broker", status: "paid" });
+    const res = await createAffiliateEventForAccessPayment(broker);
+    expect(res.skipped).toBe("not_investor_subscription");
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+  });
+
   it("bez zapisanego partnera polecającego zdarzenie nie powstaje", async () => {
     const paymentId = seedPayment({ provider_transaction_id: "tr_noaff" });
     tpayCorrect("tr_noaff", paymentId, 999);
