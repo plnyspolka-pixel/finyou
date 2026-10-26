@@ -74,7 +74,7 @@ export type LandingWizardPreset = {
 const DEFAULT_PURPOSE_LABEL =
   "Finansowanie przeznaczam na cel związany z działalnością gospodarczą (nie na cele konsumpcyjne ani prywatne potrzeby mieszkaniowe).";
 
-export function LandingWizardForm({ preset }: { preset?: LandingWizardPreset } = {}) {
+export function LandingWizardForm({ preset, initialAmount }: { preset?: LandingWizardPreset; initialAmount?: number } = {}) {
   const submitFn = useServerFn(submitLandingLoanApplication);
   const navigate = useNavigate();
 
@@ -103,7 +103,8 @@ export function LandingWizardForm({ preset }: { preset?: LandingWizardPreset } =
   const deedRef = useRef<HTMLInputElement>(null);
 
   // Calculator state (defaults submitted with the application)
-  const [amount] = useState(200_000);
+  const [amount, setAmount] = useState(initialAmount ?? 200_000);
+  useEffect(() => { if (initialAmount !== undefined) setAmount(initialAmount); }, [initialAmount]);
   const [months, setMonths] = useState(36);
   const [maxPayment] = useState(0);
   const [annualRate, setAnnualRate] = useState(30);

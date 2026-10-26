@@ -124,7 +124,7 @@ function ToolCalculator({ cfg, initialUnlocked, signupOpen }: { cfg: CalculatorC
                 {run.gated.map((r) => <div key={r.key} className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-sm text-muted-foreground">{r.label}</dt><dd className="flex items-center gap-1 text-sm text-muted-foreground"><Lock size={14} /> po zapisie</dd></div>)}
               </dl>
               {borrower ? <div className="mt-6 grid gap-3">
-                <MktButton href="/dla-klienta" variant="gold" style={{ whiteSpace: "normal", height: "auto", minHeight: "3rem", padding: "0.8rem 1rem", textAlign: "center", lineHeight: 1.4 }}>Złóż bezpłatny wniosek na tę kwotę</MktButton>
+                <MktButton href={`/dla-klienta?kwota=${encodeURIComponent(mainResult.value.replace(/[^0-9]/g, ""))}#wniosek`} variant="gold" style={{ whiteSpace: "normal", height: "auto", minHeight: "3rem", padding: "0.8rem 1rem", textAlign: "center", lineHeight: 1.4 }}>Złóż bezpłatny wniosek na tę kwotę</MktButton>
                 <MktButton href="tel:+48732059898" variant="outline" style={{ whiteSpace: "normal", height: "auto", minHeight: "3rem", padding: "0.8rem 0.5rem", lineHeight: 1.4, textAlign: "center" }}><Phone size={16} />Zadzwoń: +48 732 059 898</MktButton>
               </div> : run.gated.length > 0 && signupOpen ? <UnlockForm cfg={cfg} values={values} onUnlocked={() => setUnlocked(true)} /> : null}
             </div> : null}

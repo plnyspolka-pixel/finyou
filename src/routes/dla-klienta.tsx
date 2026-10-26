@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { applicationAmountFromSearch } from "@/lib/application-amount";
 import { LandingWizardForm } from "@/components/landing/landing-wizard-form";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -19,9 +20,10 @@ import { LOAN_PRODUCTS } from "@/lib/loan-products";
 import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
 import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 
-const APPLY = "/rejestracja?role=klient";
+const APPLY = "#wniosek";
 
 export const Route = createFileRoute("/dla-klienta")({
+  validateSearch: (s: Record<string, unknown>) => ({ kwota: typeof s.kwota === "string" || typeof s.kwota === "number" ? String(s.kwota) : undefined }),
   // Dział „Darmowe materiały” – opublikowane lead magnety klienta. Odporne na
   // brak bazy w SSR: wtedy sekcja się nie renderuje, reszta strony bez zmian.
   loader: async () => ({
@@ -32,11 +34,11 @@ export const Route = createFileRoute("/dla-klienta")({
   }),
   head: () => ({
     meta: [
-      { title: "Pożyczka pod zabezpieczenie nieruchomości — sprawdź bezpłatnie | Finance You" },
+      { title: "Pożyczka pod zastaw nieruchomości — do 1 mln zł, decyzja w 24 h | Finance You" },
       {
         name: "description",
         content:
-          "Złóż bezpłatny wniosek o pożyczkę pod zabezpieczenie nieruchomości. Jeden wniosek trafia do wielu prywatnych inwestorów i partnerów finansowych. Bez zobowiązań.",
+          "Pożyczka pod zastaw nieruchomości dla firmy do 1 000 000 zł. Decyzja zwykle w 24 h, bez scoringu BIK. Jeden bezpłatny wniosek do wielu inwestorów.",
       },
       { property: "og:title", content: "Dla klientów — Finance You" },
       {
@@ -45,6 +47,8 @@ export const Route = createFileRoute("/dla-klienta")({
       },
       { property: "og:url", content: "https://financeyou.pl/dla-klienta" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:description", content: "Finansowanie firmy pod zastaw nieruchomości. Bezpłatny wniosek, bez BIK i zobowiązań." },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/dla-klienta" }],
   }),
@@ -52,36 +56,12 @@ export const Route = createFileRoute("/dla-klienta")({
 });
 
 const FORWHOM: FeatureItemData[] = [
-  {
-    icon: "house",
-    t: "Masz nieruchomość",
-    d: "Mieszkanie, dom, lokal lub działkę, która może być zabezpieczeniem.",
-  },
-  {
-    icon: "kalkulator",
-    t: "Potrzebujesz finansowania",
-    d: "Chcesz sprawdzić, jakie masz realne możliwości.",
-  },
-  {
-    icon: "shield",
-    t: "Bank odmówił",
-    d: "Liczy się wartość zabezpieczenia, nie sam scoring bankowy.",
-  },
-  {
-    icon: "automation",
-    t: "Masz pilny temat",
-    d: "Zależy Ci na sprawnym, uporządkowanym procesie.",
-  },
-  {
-    icon: "growth",
-    t: "Chcesz sprawdzić opcje",
-    d: "Bez zobowiązań — zgłoszenie sprawy jest bezpłatne.",
-  },
-  {
-    icon: "loan",
-    t: "Finansowanie pomostowe",
-    d: "Potrzebujesz środków na czas, zanim domkniesz inną transakcję.",
-  },
+ {icon:"house",t:"Zaległości w ZUS lub US",d:"Środki na uporządkowanie zobowiązań firmy."},
+ {icon:"kalkulator",t:"Kontrakt do sfinansowania",d:"Kapitał na realizację zamówienia."},
+ {icon:"shield",t:"Zatowarowanie",d:"Środki na zakup towaru do firmy."},
+ {icon:"automation",t:"Spłata drogich zobowiązań",d:"Finansowanie dopasowane do sytuacji firmy."},
+ {icon:"growth",t:"Zakup nieruchomości",d:"Nieruchomość na cel gospodarczy."},
+ {icon:"loan",t:"Finansowanie pomostowe",d:"Kapitał do czasu domknięcia transakcji."},
 ];
 
 const HOW = [
@@ -92,7 +72,7 @@ const HOW = [
     t: "Sprawa trafia do finansujących",
     d: "Może zostać pokazana inwestorom i partnerom finansowym.",
   },
-  { t: "Otrzymujesz informację", d: "Dostajesz informację o możliwych opcjach." },
+  { t: "Pieniądze na Twoim koncie", d: "Po podpisie u notariusza i ustanowieniu zabezpieczeń inwestor przelewa środki." },
 ];
 
 const PROPS: { icon: Icon3DName; sec: keyof typeof PROPERTY_DOCS_BY_SECURITY }[] = [
@@ -142,10 +122,6 @@ const FAQS = [
     a: "Finansowanie wyłącznie na cel związany z działalnością gospodarczą (B2B). We wniosku składasz oświadczenie o celu gospodarczym; nie finansujemy celów konsumpcyjnych ani prywatnych potrzeb mieszkaniowych.",
   },
   {
-    q: "Czy Finance You gwarantuje pożyczkę?",
-    a: "Nie. Finance You nie gwarantuje finansowania. Porządkujemy sprawę i może pokazać ją inwestorom oraz partnerom finansowym — decyzja należy do finansujących.",
-  },
-  {
     q: "Do kogo trafia mój wniosek?",
     a: "Do prywatnych inwestorów i partnerów finansowych współpracujących z Finance You, którzy analizują możliwość finansowania.",
   },
@@ -158,8 +134,8 @@ const FAQS = [
     a: "Mieszkanie, dom, lokal użytkowy, działkę budowlaną lub grunt rolny na terenie Polski.",
   },
   {
-    q: "Czy kalkulator pokazuje ostateczne koszty?",
-    a: "Nie. Kalkulacja ma charakter wyłącznie orientacyjny i nie stanowi oferty finansowania.",
+    q: "Gdzie mogę oszacować kwotę finansowania?",
+    a: "Sprawdź narzędzie /narzedzie/ile-pod-nieruchomosc. Wynik jest orientacyjny; ostateczne warunki ustalasz z inwestorem.",
   },
   {
     q: "Ile trwa analiza?",
@@ -171,7 +147,7 @@ const FAQS = [
   },
 ];
 
-function Hero() {
+function Hero({ amount }: { amount?: number }) {
   return (
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
       <div aria-hidden className="fy-hero-fx" />
@@ -196,17 +172,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Pożyczka pod zabezpieczenie nieruchomości?{" "}
-            <span
-              style={{
-                background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              Sprawdź możliwości bezpłatnie.
-            </span>
+            Do 1 000 000 zł pod zastaw nieruchomości dla Twojej firmy. Decyzja zwykle w 24 h, bez scoringu BIK.
           </h1>
           <p
             style={{
@@ -217,12 +183,11 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Wypełnij prosty wniosek, dodaj informacje o nieruchomości i pokaż swoją sprawę
-            inwestorom oraz partnerom finansowym współpracującym z Finance You.
+            Jeden bezpłatny wniosek trafia do wielu prywatnych inwestorów. Pieniądze na koncie nawet 2–3 dni po podpisie u notariusza.
           </p>
         </div>
         <div style={{ position: "relative" }}>
-          <LandingWizardForm />
+          <div id="wniosek"><p className="mb-3 text-sm">Bez sprawdzania BIK · Bez zobowiązań</p><LandingWizardForm initialAmount={amount}/><p className="mt-4 text-sm">Wolisz zadzwonić? <a href="tel:+48732059898">+48 732 059 898</a></p></div>
         </div>
       </div>
     </section>
@@ -231,9 +196,10 @@ function Hero() {
 
 function ClientLanding() {
   const { materials } = Route.useLoaderData();
+  const { kwota } = Route.useSearch();
   return (
     <MarketingShell page="klient" sticky={{ label: "Złóż bezpłatny wniosek", href: APPLY }}>
-      <Hero />
+      <Hero amount={applicationAmountFromSearch(kwota)}/>
 
       <Section id="rodzaje-pozyczek">
         <SectionHead
@@ -284,10 +250,7 @@ function ClientLanding() {
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={FORWHOM} icon3d />
         </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Zgłoszenie sprawy nie jest równoznaczne z przyznaniem finansowania. Finance You nie
-          gwarantuje pożyczki.
-        </ComplianceNote>
+
       </Section>
 
       <Section tint>
@@ -411,9 +374,10 @@ function ClientLanding() {
       <CTASection
         single
         title="Sprawdź, jakie masz możliwości."
-        sub="Wniosek jest bezpłatny. Kalkulacja jest orientacyjna i nie stanowi oferty."
+        sub="Wniosek jest bezpłatny i bez zobowiązań."
         buttons={[{ label: "Złóż bezpłatny wniosek", href: APPLY }]}
       />
+      <details className="fy-sales-legal mx-auto mb-12 max-w-5xl px-6"><summary>Ważne informacje</summary><p>Finance You nie gwarantuje pożyczki. Zgłoszenie sprawy nie jest równoznaczne z przyznaniem finansowania. Decyzja, warunki i termin wypłaty zależą od inwestora, dokumentów i ustanowienia zabezpieczeń.</p></details>
     </MarketingShell>
   );
 }
