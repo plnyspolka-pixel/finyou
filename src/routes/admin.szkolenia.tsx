@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Switch } from "@/components/ui/switch";
+import { setFreeTrainingLesson } from "@/lib/free-lesson.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,7 @@ export const Route = createFileRoute("/admin/szkolenia")({
 type TrainingVideo = Database["public"]["Tables"]["training_videos"]["Row"];
 
 function SzkoleniaAdmin() {
+  const setFree = useServerFn(setFreeTrainingLesson);
   const [videos, setVideos] = useState<TrainingVideo[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -135,6 +139,7 @@ function SzkoleniaAdmin() {
                 {v.description && (
                   <div className="text-sm text-muted-foreground">{v.description}</div>
                 )}
+                <label className="mt-2 flex items-center gap-2 text-sm"><Switch checked={v.free_lesson} onCheckedChange={(free) => { if (free && videos.some(other => other.free_lesson && other.id !== v.id)) { toast.error("Najpierw wyłącz obecną darmową lekcję."); return; } void setFree({data:{id:v.id,free}}).then(() => load()).catch(e => toast.error(e.message)); }} />Darmowa lekcja</label>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {v.file_path && <Badge variant="secondary">Plik</Badge>}
                   {v.external_url && <Badge variant="secondary">Link</Badge>}

@@ -15,7 +15,7 @@ export async function listFreeMaterials(audience: LeadMagnetAudience): Promise<F
   try {
     const { data, error } = await supabaseAdmin
       .from("lead_magnets")
-      .select("slug,title,headline,subheadline,benefits,cta_text,file_name,audience,signup_count")
+      .select("slug,title,headline,subheadline,benefits,cta_text,file_name,audience,signup_count,material_type")
       .eq("published", true)
       .eq("audience", audience)
       .order("signup_count", { ascending: false })

@@ -337,6 +337,7 @@ export function isValidDownloadToken(token: string): boolean {
 
 /** Pola strony publicznej /pobierz/<slug> (bez danych wewnętrznych: pliku, haseł, szablonów). */
 export type PublicLeadMagnet = {
+  material_type?: string;
   id: string;
   slug: string;
   title: string;
