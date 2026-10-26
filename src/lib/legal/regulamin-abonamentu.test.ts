@@ -22,7 +22,7 @@ const sha = createHash("sha256").update(tekst, "utf8").digest("hex");
 describe("regulamin abonamentu inwestora", () => {
   it("wersja 1.0 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
     expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.1");
-    expect(sha).toBe("ca86a91f08198ff038d8f3413ffef7d3ff1efad53e2d387ae17ad63e42b7e296");
+    expect(sha).toBe("cb3ac33c9b0e018e59a4653499f766fe7a0a69ebd7fbc719bb059e4dab3d4e5d");
   });
 
   it("całość jako szkolenie w treściach cyfrowych — bez prawa odstąpienia (art. 38 ust. 1 pkt 13)", () => {

@@ -28,7 +28,7 @@
 
 ## § 4. Cena i płatność
 
-1. Opłata Abonamentowa wynosi 7000,00 zł brutto za 365 dni. Orientacyjnie ok. 583 zł miesięcznie w 12 ratach; warunki finansowania określa dostawca przed zakupem.
+1. Opłata Abonamentowa wynosi 7 000,00 zł brutto za 365 dni. Orientacyjnie ok. 583 zł miesięcznie w 12 ratach; warunki finansowania określa dostawca przed zakupem.
 2. Fundacja korzysta ze zwolnienia z VAT (art. 113 ust. 1 ustawy o podatku od towarów i usług) — cena netto jest równa cenie brutto.
 3. Opłata Abonamentowa jest płatna z góry, jednorazowo za wybrany Okres Abonamentowy, za pośrednictwem operatora płatności Tpay — przelewem albo BLIK-iem, bez konieczności podawania danych karty płatniczej. Abonament nie odnawia się automatycznie.
 4. Okres Abonamentowy biegnie od zaksięgowania płatności, a jeżeli poprzedni opłacony okres jeszcze trwa — od jego końca.
