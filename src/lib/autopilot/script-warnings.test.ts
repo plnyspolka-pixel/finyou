@@ -69,6 +69,38 @@ describe("zastrzeżenia w scenariuszu — liczenie", () => {
     expect(scriptKeyword(OVERWARNED)).toBe("UMOWA");
     expect(scriptKeyword("Obserwuj profil, żeby nie przegapić.")).toBeNull();
   });
+
+  it("łapie ostrzeżenia o koszcie, braku spłaty i „zależy od weryfikacji” (rolka z kolejki na 29.10)", () => {
+    const s =
+      "Krok po kroku: ile trwa droga od wniosku do wypłaty? " +
+      "Najpierw następuje weryfikacja stanu prawnego oraz wartości nieruchomości. " +
+      "Pamiętaj jednak, że koszt takiego kapitału jest wyższy niż w banku. " +
+      "Jeśli zobowiązania nie uda się spłacić, zabezpieczenie może zostać zaspokojone z nieruchomości, więc skalkuluj to przed decyzją. " +
+      "Finansowanie zależy od pozytywnej weryfikacji wniosku i nieruchomości. " +
+      "Skomentuj PROCES, a wyślę Ci mapę procesu.";
+    expect(countWarnings(s)).toBe(3);
+    expect(countWarnings("Pozabankowe finansowanie bywa droższe niż bankowe.")).toBe(1);
+    expect(countWarnings("Taka pożyczka wiąże się z wyższym kosztem niż kredyt bankowy.")).toBe(1);
+  });
+
+  it("nie łapie treści: hook o utracie majątku, egzekucja bez braku spłaty, kolejność wpisów", () => {
+    expect(
+      countWarnings(
+        "Czy finansowanie pod nieruchomość oznacza natychmiastową utratę majątku? " +
+          "Do czasu ewentualnej egzekucji nieruchomość pozostaje Twoją własnością. " +
+          "Trzeci błąd to brak weryfikacji pierwszeństwa wpisu, co decyduje o kolejności zaspokojenia roszczeń. " +
+          "Czas zależy od stanu prawnego nieruchomości i kompletności dokumentów.",
+      ),
+    ).toBe(0);
+  });
+
+  it("nazwa materiału w cudzysłowie („…szanse i ryzyka”) nie jest zastrzeżeniem", () => {
+    expect(
+      countWarnings(
+        "Skomentuj START, a prześlę Ci materiał „Przewodnik startowy dla inwestora (szanse i ryzyka)”.",
+      ),
+    ).toBe(0);
+  });
 });
 
 describe("zastrzeżenia w scenariuszu — przyjęcie odchudzonej wersji", () => {

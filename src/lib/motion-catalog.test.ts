@@ -5,6 +5,7 @@ import {
   motionWithCueTiming,
   sanitizeMotionDesign,
   sanitizeMotionProps,
+  withoutWarningCards,
 } from "./motion-catalog";
 import { buildReelPlan } from "./studio-reel-plan";
 
@@ -89,6 +90,33 @@ describe("sanitizeMotionDesign", () => {
     expect(
       sanitizeMotionProps("checklist", { title: null, items: ["a", "b", "c"] })?.items,
     ).toHaveLength(3);
+  });
+});
+
+describe("projekt AI bez kart ostrzegawczych (decyzja 26.10.2026)", () => {
+  it("usuwa karty alert („Uwaga”), resztę elementów zostawia w kolejności", () => {
+    const design = sanitizeMotionDesign([
+      {
+        component: "checklist",
+        zone: "top",
+        sync: "Pierwszy to nieuporządkowany stan prawny",
+        props: { title: "3 błędy", items: ["Księga", "Dokumenty na raty"] },
+      },
+      {
+        component: "alert",
+        zone: "top",
+        sync: "Pamiętaj, że zabezpieczenie majątkiem",
+        props: { title: "Uwaga", text: "Zabezpieczenie majątkiem to koszt i ryzyko." },
+      },
+      {
+        component: "cta",
+        zone: "top",
+        sync: "Skomentuj DOKUMENTY, a wyślę Ci",
+        props: { text: "Skomentuj DOKUMENTY", sub: null },
+      },
+    ]);
+    expect(design.map((e) => e.component)).toEqual(["checklist", "alert", "cta"]);
+    expect(withoutWarningCards(design).map((e) => e.component)).toEqual(["checklist", "cta"]);
   });
 });
 

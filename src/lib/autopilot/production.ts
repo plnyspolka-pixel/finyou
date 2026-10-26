@@ -21,14 +21,31 @@ export const PRODUCTION_COST_PLN = 0.6;
 /** Prefiks promptu joba z produkcji — po nim raport i panel rozpoznają źródło. */
 export const PRODUCTION_PROMPT_TAG = "[autopilot]";
 
+/**
+ * Horyzont zapasu w dniach: rolki zaplanowane w kolejkach na najbliższe tyle
+ * dni liczą się do zapasu. Bez tego zaplanowana rolka znikała z licznika,
+ * produkcja dorabiała 2 dziennie przy 1 slocie dziennie i kolejka rosła
+ * (26.10.2026: 12 rolek na 8 dni naprzód — każda zmiana scenariuszy docierała
+ * do widzów dopiero po tygodniu). Rolki zaplanowane dalej nie blokują
+ * produkcji, więc dziury w kolejce się wypełniają.
+ */
+export const SCHEDULED_HORIZON_DAYS = REEL_BUFFER_PER_TRACK;
+
 export interface TrackPipeline {
   track: Track;
   /** Gotowe, nieopublikowane, nieodrzucone rolki z torem. */
   ready: number;
   /** Rolki w produkcji (queued … captioning). */
   inProgress: number;
+  /** Rolki toru czekające w kolejkach publikacji w horyzoncie SCHEDULED_HORIZON_DAYS. */
+  scheduledSoon?: number;
   /** Rolki toru założone przez produkcję dziś. */
   producedToday: number;
+}
+
+/** Zapas toru: gotowe + w produkcji + zaplanowane na najbliższe dni. */
+export function pipelineStock(p: TrackPipeline): number {
+  return p.ready + p.inProgress + (p.scheduledSoon ?? 0);
 }
 
 export interface ProductionDecision {
@@ -38,7 +55,7 @@ export interface ProductionDecision {
 
 /** Czy tor potrzebuje nowej rolki (bufor + limit dzienny). */
 export function decideProduction(p: TrackPipeline): ProductionDecision {
-  const pipeline = p.ready + p.inProgress;
+  const pipeline = pipelineStock(p);
   if (p.producedToday >= MAX_PRODUCED_PER_TRACK_PER_DAY) {
     return {
       produce: false,
@@ -48,7 +65,7 @@ export function decideProduction(p: TrackPipeline): ProductionDecision {
   if (pipeline >= REEL_BUFFER_PER_TRACK) {
     return {
       produce: false,
-      reason: `zapas pełny (${p.ready} gotowych + ${p.inProgress} w produkcji ≥ ${REEL_BUFFER_PER_TRACK})`,
+      reason: `zapas pełny (${p.ready} gotowych + ${p.inProgress} w produkcji + ${p.scheduledSoon ?? 0} zaplanowanych na ${SCHEDULED_HORIZON_DAYS} dni ≥ ${REEL_BUFFER_PER_TRACK})`,
     };
   }
   return {
