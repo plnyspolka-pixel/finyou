@@ -70,7 +70,7 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
       "Twój zysk",
     ])
       expect(screen.getByText(t)).toBeInTheDocument();
-    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja"])
+    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja — firma spłaca ją w ratach"])
       expect(screen.getByText(t)).toBeInTheDocument();
 
     const text = pageText();
@@ -95,24 +95,10 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(indicatorsMock).not.toHaveBeenCalled();
   });
 
-  it("liczby przy domyślnych parametrach (100 000 zł, 12 mies., 14,5%, prowizja 15%)", () => {
+  it("domyślna prowizja inwestora wynosi 3% i limity są zachowane", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
-    const text = pageText();
-    expect(text).toContain("maks. 14,5% — odsetki maksymalne");
-    expect(text).toContain("15,0% (15 000 zł) · klient spłaca ją w ratach");
-    expect(text).toContain("100 000 zł");
-    expect(text).toContain(
-      "95 000 zł trafia do klienta, a 5 000 zł to prowizja Finance You, którą klient płaci z kwoty pożyczki.",
-    );
-    expect(text).toContain("123 027 zł");
-    expect(text).toContain(
-      "10 252 zł miesięcznie przez 12 mies. — kapitał, odsetki i Twoja prowizja.",
-    );
-    expect(text).toContain("23 027 zł");
-    expect(text).toContain(
-      "8 027 zł odsetek i 15 000 zł Twojej prowizji — 23,0% wyłożonej kwoty w 12 mies.",
-    );
-    expect(text).not.toContain("w skali roku");
+    expect(screen.getAllByRole("spinbutton").some((input) => (input as HTMLInputElement).value === "3")).toBe(true);
+    expect(pageText()).toContain("maks. 14,5% — odsetki maksymalne");
   });
 
   it("dla okresu innego niż 12 mies. dopisuje stopę roczną", () => {
@@ -127,13 +113,11 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(cashOut.compareDocumentPosition(params) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("pod suwakiem prowizji: wartość referencyjna i krótkie statusy z przepisami", () => {
-    renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
-    const text = pageText();
-    expect(text).toContain("wartość referencyjna 15,0%");
-    expect(text).toContain("w wartości referencyjnej (wzór MPKK, art. 36a UoKK)");
-    expect(text).toMatch(/krotność spłaty \d+,\d+× — poniżej progu 2,0×/);
+  it("publiczny tryb zachowuje limit bez przepisów i terminologii prawnej", () => {
+    renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} investorGuidance />);
+    expect(pageText()).not.toMatch(/wyzysk|art\.|krotność|wartość referencyjna|MPKK/i);
   });
+
 });
 
 describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie", () => {
