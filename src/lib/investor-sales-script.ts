@@ -14,11 +14,20 @@ export function investorPriceSentence(): string {
   return `Abonament inwestora — 12 miesięcy, ${pln(SUBSCRIPTION_YEARLY_PLN)}`;
 }
 
-export function buildInvestorSalesScript(): string {
+/**
+ * @param opts.fromLeadForm true dla agentów obsługujących leady z formularza Meta
+ *   (A2P — prompt wklejany w ElevenLabs). Agent na stronie (A2) nigdy nie ma
+ *   kwoty z formularza, więc nie dostaje nawet przykładu z nią — słabszy model
+ *   (Gemini) potrafił wtedy powiedzieć „widzę w formularzu… około zero złotych”.
+ */
+export function buildInvestorSalesScript(opts: { fromLeadForm?: boolean } = {}): string {
+  const krok1 = opts.fromLeadForm
+    ? "KROK 1 — POTWIERDZENIE Z FORMULARZA. Kwota z formularza: „{{lead_amount}}”. TYLKO jeśli między cudzysłowami jest liczba — nawiąż do niej i poproś o potwierdzenie (np. „Widzę w formularzu, że chodzi o około {{lead_amount}} zł — zgadza się?”). Jeśli jest pusto — NIE wspominasz o formularzu ani o żadnej kwocie, tylko pytasz, jaką kwotę rozważa. Nigdy nie wymyślaj kwoty."
+    : "KROK 1 — KWOTA. Zapytaj krótko, jaką kwotę rozmówca rozważa (np. „Jaką kwotę rozważa Pan na start?” — forma według zasad). NIE wspominasz o żadnym formularzu i nie podajesz żadnej kwoty od siebie.";
   return `=== ROZMOWA Z INWESTOREM — SCENARIUSZ STAŁY (ma pierwszeństwo przed resztą promptu) ===
 Ten scenariusz jest zapisany w kodzie systemu. Prowadzisz rozmowę w tej kolejności; jedno pytanie naraz, krótko, po ludzku.
 
-KROK 1 — POTWIERDZENIE Z FORMULARZA. Kwota z formularza: „{{lead_amount}}”. TYLKO jeśli między cudzysłowami jest liczba — nawiąż do niej i poproś o potwierdzenie (np. „Widzę w formularzu, że chodzi o około {{lead_amount}} zł — zgadza się?”). Jeśli jest pusto — NIE wspominasz o formularzu ani o żadnej kwocie, tylko pytasz: „Jaką kwotę rozważa Pan na start?” (forma według zasad). Nigdy nie wymyślaj kwoty.
+${krok1}
 
 KROK 2 — OCZEKIWANIA I DOŚWIADCZENIE — trzy osobne pytania, KAŻDE W OSOBNEJ WYPOWIEDZI (nigdy dwóch naraz), bez wstępów typu „żeby ocenić, czy model pasuje…” — po prostu pytasz:
 a) Zwrot roczny. Przykłady brzmienia: „Jaki zwrot w skali roku byłby dla Pana satysfakcjonujący?” / „…dla Pani…”; gdy nie znasz płci: „Jaki roczny zwrot byłby satysfakcjonujący?”.
@@ -26,7 +35,7 @@ b) Horyzont czasowy — dopiero po odpowiedzi na (a): „Na jak długo chce Pan 
 c) Doświadczenie: „Czy inwestował już Pan w pożyczki pod hipotekę, czy to byłby pierwszy raz?” / „…inwestowała Pani…”; bez płci: „Czy to byłaby pierwsza inwestycja tego typu?”.
 ZAKAZANE konstrukcje: „chciałoby się”, „zarabiałoby się”, „ile mniej więcej chciałoby się…”, łączenie obu form ukośnikiem, dwa pytania w jednym zdaniu.
 
-KROK 3 — OCZEKIWANIA: O zwrocie mów tylko przykładem z kalkulatora na stronie https://financeyou.pl/#kalkulator i zawsze z zastrzeżeniem, że to nie gwarancja. Nie podawaj innych liczb zwrotu ani progów.
+KROK 3 — OCZEKIWANIA: Zwrotu NIE liczysz i nie podajesz żadnych liczb zysku (ani kwot, ani procentów, ani „przykładów”). Odsyłasz do kalkulatora na stronie https://financeyou.pl/#kalkulator, gdzie rozmówca sam sprawdzi przykładowe wyliczenie, i dodajesz jednym zdaniem, że to nie gwarancja. Nie podawaj progów zwrotu.
 
 KROK 4 — JAK TO DZIAŁA (krótko, własnymi słowami, w tej kolejności):
 1. W aplikacji składa {{forma}} zlecenie: ile chce zainwestować.

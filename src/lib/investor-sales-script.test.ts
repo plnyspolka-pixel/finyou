@@ -3,7 +3,8 @@ import { buildInvestorSalesScript } from "./investor-sales-script";
 import { SUBSCRIPTION_YEARLY_PLN } from "./investor-plan/plans";
 
 describe("scenariusz rozmowy z inwestorem", () => {
-  const s = buildInvestorSalesScript();
+  const s = buildInvestorSalesScript({ fromLeadForm: true });
+  const site = buildInvestorSalesScript();
   it("cena pochodzi z cennika w kodzie (tego samego co strona)", () => {
     const fmt = (v: number) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " zł";
     expect(s).toContain(fmt(SUBSCRIPTION_YEARLY_PLN));
@@ -32,5 +33,10 @@ describe("scenariusz rozmowy z inwestorem", () => {
     expect(s).toContain("KAŻDE W OSOBNEJ WYPOWIEDZI");
     expect(s).toContain("Jaki zwrot w skali roku byłby dla Pana satysfakcjonujący?");
     expect(s).toContain("ZAKAZANE konstrukcje");
+  });
+  it("na stronie (A2) bez formularza i bez kwot zysku", () => {
+    expect(site).not.toContain("Widzę w formularzu");
+    expect(site).not.toContain("{{lead_amount}}");
+    expect(site).toContain("Zwrotu NIE liczysz");
   });
 });

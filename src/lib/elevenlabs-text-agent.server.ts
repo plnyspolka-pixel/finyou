@@ -352,6 +352,13 @@ async function guardReply(
   return guarded.text;
 }
 
+/** Lead z formularza Meta z kwotą → scenariusz z potwierdzeniem kwoty (wstawionej od razu); inaczej bez wzmianki o formularzu. */
+function investorScriptFor(leadAmount: string): string {
+  return leadAmount
+    ? buildInvestorSalesScript({ fromLeadForm: true }).replaceAll("{{lead_amount}}", leadAmount)
+    : buildInvestorSalesScript();
+}
+
 export async function runAgentTurn(opts: {
   leadId: string;
   channel: "messenger" | "instagram" | "email" | "chat" | "chat_inwestor" | "sms";
@@ -480,7 +487,10 @@ export async function runAgentTurn(opts: {
         INTAKE_PROCESS_RULES +
         NO_INVENTED_CONTACT_RULES
       : variant === "inwestor"
-        ? buildInvestorSalesScript() + basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES
+        ? investorScriptFor(String((lead.application_data as any)?.lead_amount ?? "").trim()) +
+          basePrompt +
+          channelRules(opts.channel) +
+          NO_INVENTED_CONTACT_RULES
         : basePrompt + channelRules(opts.channel) + NO_INVENTED_CONTACT_RULES;
 
   // Spersonalizowany link do formularza: świeży magic link (auto-login do /klient),
