@@ -755,7 +755,6 @@ function EditorDialog({
       title: form.title || "nasz materiał",
       keyword: keywords[0] ?? null,
       audience: form.audience,
-    material_type: form.slug === "darmowa-lekcja" ? "video" : "pdf",
       platform: "facebook",
     });
 

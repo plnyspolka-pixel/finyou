@@ -38,9 +38,8 @@ export function FreeLessonExperience({ magnet, token: initialToken }: { magnet: 
       const nextToken = result.download_url ? new URL(result.download_url).searchParams.get("t") : null;
       if (!nextToken) throw new Error("Nie udało się otworzyć lekcji.");
       setToken(nextToken);
-      const url = new URL(window.location.href); url.searchParams.set("t", nextToken); window.history.replaceState(null, "", url);
-      const { trackEvent } = await import("@/lib/fb-pixel");
-      await trackEvent("Lead", { content_category: "investor", content_name: "darmowa-lekcja" });
+      if (hasConsent("marketing")) (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq?.("track", "Lead", { content_category: "investor", content_name: "darmowa-lekcja" });
+      if (hasConsent("analytics")) window.gtag?.("event", "generate_lead", { content_category: "investor", content_name: "darmowa-lekcja" });
     } catch (e) { setError(e instanceof Error ? e.message : "Nie udało się zapisać."); } finally { setBusy(false); }
   };
   const progress = (percent: number) => {
