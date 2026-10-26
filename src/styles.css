@@ -359,7 +359,7 @@
 .fy-marketing ::selection { background: rgba(79, 139, 240, 0.35); }
 .fy-marketing select option { background: #0a1030; color: #e8eefc; }
 
-.fy-tool-layout { max-width: 72rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2.5rem; row-gap: 1.6rem; align-items: start; }
+.fy-tool-layout { max-width: 72rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: max-content 1fr; column-gap: 2.5rem; row-gap: 1.6rem; align-items: start; }
 .fy-tool-intro { grid-column: 1; grid-row: 1; }
 .fy-tool-assumptions { grid-column: 1; grid-row: 2; list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; line-height: 1.6; }
 .fy-tool-panel { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
