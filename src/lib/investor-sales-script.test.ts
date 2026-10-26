@@ -11,7 +11,7 @@ describe("scenariusz rozmowy z inwestorem", () => {
   it("potwierdza kwotę z formularza i bada oczekiwania, horyzont i doświadczenie", () => {
     expect(s).toContain("{{lead_amount}}");
     expect(s).toMatch(/skali roku/);
-    expect(s).toMatch(/horyzont/);
+    expect(s).toMatch(/[Hh]oryzont/);
     expect(s).toMatch(/inwestował/);
   });
   it("zwrot tylko z kalkulatora, zamiast progów", () => {
@@ -27,5 +27,10 @@ describe("scenariusz rozmowy z inwestorem", () => {
     expect(s).toContain("nigdy nie dotykamy pieniędzy inwestora");
     expect(s).toContain("moduł windykacyjny");
     expect(s).toContain("Filip");
+  });
+  it("pytania KROKU 2 brzmią naturalnie: osobno, bez bezosobowych konstrukcji", () => {
+    expect(s).toContain("KAŻDE W OSOBNEJ WYPOWIEDZI");
+    expect(s).toContain("Jaki zwrot w skali roku byłby dla Pana satysfakcjonujący?");
+    expect(s).toContain("ZAKAZANE konstrukcje");
   });
 });
