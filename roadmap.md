@@ -1,6 +1,6 @@
 # Darmowe materiały i narzędzia
-- [ ] Wycofać kalkulator raty i filtrować wszystkie publiczne listy publikacją.
-- [ ] Wspólna szata stron PDF/narzędzi; wyniki klienta bez e-maila, inwestor z bramką.
+- [x] Wycofać kalkulator raty i filtrować wszystkie publiczne listy publikacją.
+- [x] Wspólna szata stron PDF/narzędzi; wyniki klienta bez e-maila, inwestor z bramką. Istniejący formularz klienta nie przyjmuje kwoty z URL; CTA prowadzi do /dla-klienta bez nieobsługiwanego parametru.
 - [ ] Testy, kontrola desktop/mobile i zatwierdzona publikacja.
 
 # Public Ania conversations
