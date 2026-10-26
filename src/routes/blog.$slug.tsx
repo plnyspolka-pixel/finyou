@@ -35,7 +35,7 @@ function normalizeHref(raw?: string): { href: string; external: boolean } {
   let href = raw.trim();
   if (href.startsWith("https://app.financeyou.pl/embed/wniosek")) href = "/dla-klienta";
   href = href.replace(/^https?:\/\/(www\.)?financeyou\.pl/, "") || "/";
-  if (/^\/inwestor(?:[/?#]|$)/.test(href)) href = "/dla-inwestora";
+  if (/^\/inwestor(?:[/?#]|$)/.test(href)) href = "/";
   if (/^\/klient(?:[/?#]|$)/.test(href)) href = "/dla-klienta";
   return { href, external: /^https?:\/\//.test(href) };
 }
@@ -168,7 +168,7 @@ export const Route = createFileRoute("/blog/$slug")({
     const url = `https://financeyou.pl/blog/${params.slug}`;
     const isInvestor = a.audience === "investor";
     const ctaUrl = isInvestor
-      ? "https://financeyou.pl/dla-inwestora"
+      ? "https://financeyou.pl/"
       : "https://financeyou.pl/dla-klienta";
     const audienceType = isInvestor ? "Investor" : "Borrower";
     const section = isInvestor ? "Inwestowanie" : "Pożyczki pod zastaw";
@@ -378,7 +378,7 @@ function ArticlePage() {
   const { article, related } = Route.useLoaderData();
   const shareUrl = `https://financeyou.pl/blog/${article.slug}`;
   const isInvestor = article.audience === "investor";
-  const ctaHref = isInvestor ? "/dla-inwestora" : "/dla-klienta";
+  const ctaHref = isInvestor ? "/" : "/dla-klienta";
   const ctaHeading = isInvestor
     ? "Inwestuj w pożyczki zabezpieczone nieruchomościami"
     : "Szukasz finansowania pod zabezpieczenie nieruchomości?";

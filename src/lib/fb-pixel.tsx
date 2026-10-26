@@ -1,3 +1,4 @@
+import { analyticsPageUrl } from "@/lib/analytics-url";
 import { useEffect, useRef } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -141,7 +142,7 @@ export async function trackEvent(
         event,
         area,
         eventId,
-        sourceUrl: window.location.href,
+        sourceUrl: analyticsPageUrl(window.location.href),
         fbp: readCookie("_fbp"),
         fbc: readCookie("_fbc"),
         email: user?.email,
@@ -159,7 +160,7 @@ export async function trackEvent(
 }
 
 function pixelForPath(path: string, s: Settings): string | null {
-  if (path.startsWith("/inwestor")) return s.investor_pixel_id;
+  if (path === "/" || path.startsWith("/inwestor") || path.startsWith("/dla-inwestora") || path === "/pobierz/darmowa-lekcja" || path === "/o-nas" || path === "/historie") return s.investor_pixel_id;
   return s.client_pixel_id;
 }
 

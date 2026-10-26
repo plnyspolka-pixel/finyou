@@ -64,6 +64,8 @@ export const Route = createFileRoute("/pobierz/$slug")({
       { property: "og:title", content: title },
       { property: "og:description", content: desc },
       { name: "twitter:description", content: desc },
+      { name: "twitter:title", content: title },
+      { name: "referrer", content: "no-referrer" },
       { property: "og:url", content: url },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pl_PL" },
@@ -105,10 +107,11 @@ export const Route = createFileRoute("/pobierz/$slug")({
 
 function LeadMagnetPage() {
   const { slug } = Route.useParams();
+  const search = Route.useSearch();
   const { data } = useSuspenseQuery(magnetQuery(slug));
   const magnet = data.magnet as PublicLeadMagnet;
 
-  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={Route.useSearch().t}/></Shell>;
+  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={search.t}/></Shell>;
 
   return (
     <Shell>

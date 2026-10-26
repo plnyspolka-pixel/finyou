@@ -89,7 +89,7 @@ export function ChatWidget({ source = "landing", subtitle = "asystentka Finance 
   }
 
   return (
-    <div className="fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-50 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:right-5">
+    <div className="fy-ania-public fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 z-50 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:right-5">
       {!open ? (
         <Button onClick={() => setOpen(true)} aria-label="Otwórz rozmowę z Anią" className="h-12 gap-2 rounded-full px-4 shadow-lg">
           <MessageCircle className="h-5 w-5" /> Ania

@@ -58,7 +58,7 @@ export async function getLinkHubData(): Promise<{ tracks: LinkHubTrack[] }> {
         ctaUrl:
           profile?.ctaUrl ??
           (t === "inwestor"
-            ? "https://financeyou.pl/dla-inwestora"
+            ? "https://financeyou.pl/"
             : "https://app.financeyou.pl/embed/wniosek"),
         magnets: rows
           .filter((r) => r.audience === TRACK_TO_AUDIENCE[t])

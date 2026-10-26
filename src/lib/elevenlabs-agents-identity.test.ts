@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ANIA_IDENTITY_RULES, buildChannelRulesSection, channelRules } from "./agent-channel-rules";
 import { buildAgentPrompt } from "./elevenlabs-agents.server";
 import { buildIntakeChecklistRules } from "./property-intake-checklist";
+import { INVESTOR_SELF_SERVICE_RULES } from "./investor-prompt-policy";
 import { buildInvestorSalesScript } from "./investor-sales-script";
 
 describe("shared Ania identity routing", () => {
@@ -12,9 +13,9 @@ describe("shared Ania identity routing", () => {
       // Procedura przyjmowania zgłoszenia idzie na samą górę, potem prompt z panelu bez zmian.
       expect(built.startsWith(buildIntakeChecklistRules() + stored)).toBe(true);
     } else if (surface === "investor_info") {
-      expect(built.startsWith(buildInvestorSalesScript() + stored)).toBe(true);
+      expect(built.startsWith(buildInvestorSalesScript() + INVESTOR_SELF_SERVICE_RULES + stored)).toBe(true);
     } else {
-      expect(built.startsWith(stored)).toBe(true);
+      expect(built.startsWith(INVESTOR_SELF_SERVICE_RULES + stored)).toBe(true);
     }
     expect(built.split(ANIA_IDENTITY_RULES)).toHaveLength(2);
   });

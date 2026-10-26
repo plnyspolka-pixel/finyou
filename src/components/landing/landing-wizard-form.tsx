@@ -340,6 +340,7 @@ export function LandingWizardForm({ preset, initialAmount }: { preset?: LandingW
                 }}
               />
             )}
+            <div className="space-y-2"><Label htmlFor="lw-amount">Kwota finansowania (zł)</Label><Input id="lw-amount" inputMode="numeric" value={String(amount).replace(/\B(?=(\d{3})+(?!\d))/g," ")} onChange={e => { const n=Number(e.target.value.replace(/\D/g,"")); setAmount(Math.min(1000000,Math.max(0,n))); }} className={FANCY_INPUT_CLASS}/></div>
             <div className="space-y-2 pt-2">
               <Label
                 htmlFor="lw-city"

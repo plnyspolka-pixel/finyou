@@ -1,3 +1,4 @@
+import { analyticsPageUrl } from "@/lib/analytics-url";
 import { useEffect, useRef } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -142,7 +143,7 @@ export function GoogleAnalytics() {
     lastPath.current = path;
     window.gtag("event", "page_view", {
       page_path: path,
-      page_location: window.location.href,
+      page_location: analyticsPageUrl(window.location.href),
       page_title: document.title,
       send_to: settings.ga4_measurement_id,
     });

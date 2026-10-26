@@ -19,13 +19,14 @@
 import {
   SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
   SUBSCRIPTION_YEARLY_PLN,
+  plnLabel,
 } from "@/lib/investor-plan/plans";
 
 /** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (dokumenty-1-0.ts). */
-export const CENA_ABONAMENTU = `${SUBSCRIPTION_YEARLY_PLN.toLocaleString("pl-PL", {minimumFractionDigits: 2})} zł brutto za 365 dni`;
+export const CENA_ABONAMENTU = `${plnLabel(SUBSCRIPTION_YEARLY_PLN).replace(/\u00a0/g," ").replace(" zł",",00 zł")} brutto za 365 dni`;
 
-export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.0";
-export const REGULAMIN_ABONAMENTU_DATA_PL = "19 października 2026 r.";
+export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.1";
+export const REGULAMIN_ABONAMENTU_DATA_PL = "26 października 2026 r.";
 export const REGULAMIN_ABONAMENTU_PATH = "/regulamin-inwestora";
 
 export const FUNDACJA = {
@@ -40,7 +41,7 @@ export function regulaminAbonamentuInwestora(): string {
   const f = FUNDACJA;
   return `# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-**wersja 1.0 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
+**wersja 1.1 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
 
 ## § 1. Postanowienia ogólne
 

@@ -22,6 +22,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
+import { cleanInvestorPrompt, INVESTOR_SELF_SERVICE_RULES } from "@/lib/investor-prompt-policy";
 import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { normalizeKwNumber } from "./kw";
 import {
@@ -83,7 +84,7 @@ export async function fetchAgentPrompt(
       .maybeSingle();
     const dbPrompt = (data?.system_prompt ?? "").trim();
     if (dbPrompt.length > 20) {
-      const out = { prompt: dbPrompt, firstMessage: data?.first_message ?? null };
+      const out = { prompt: variant === "klient" ? dbPrompt : INVESTOR_SELF_SERVICE_RULES + cleanInvestorPrompt(dbPrompt), firstMessage: data?.first_message ?? null };
       cachedAgentPrompts.set(variant, { ...out, fetchedAt: now });
       return out;
     }
