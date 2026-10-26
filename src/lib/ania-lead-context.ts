@@ -10,7 +10,7 @@ export const A0_TEXT_AGENT_ID = "agent_3601m4n7nwm2e8htr6vcpap8rx9q";
 /** Agenci, którym przysługuje narzędzie schedule_investor_callback. */
 export const INVESTOR_CALLBACK_AGENT_IDS = [A2P_VOICE_AGENT_ID, A2P_TEXT_AGENT_ID] as const;
 
-export const INVESTOR_LANDING_URL = "https://financeyou.pl/dla-inwestora";
+export const INVESTOR_LANDING_URL = "https://financeyou.pl/";
 /** Źródło wpisów kolejki/SMS dla ścieżki inwestorskiej. */
 export const INVESTOR_LEAD_SOURCE = "meta_lead_inwestor";
 

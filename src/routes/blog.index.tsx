@@ -267,7 +267,7 @@ function BlogIndex() {
               finansowania pod zabezpieczenie nieruchomości
             </a>{" "}
             oraz dla{" "}
-            <a href="/dla-inwestora" style={{ color: "#a9cffb" }}>
+            <a href="/" style={{ color: "#a9cffb" }}>
               inwestorów w pożyczki hipoteczne
             </a>
             . Sprawdź też{" "}
@@ -300,7 +300,7 @@ function BlogIndex() {
         sub="Bezpłatny wniosek o finansowanie pod zabezpieczenie nieruchomości albo program partnerski dla inwestorów — szkolenie i narzędzia w jednym abonamencie."
         buttons={[
           { label: "Dla klienta — złóż wniosek", href: "/dla-klienta" },
-          { label: "Dla inwestora — zostań partnerem", href: "/dla-inwestora" },
+          { label: "Dla inwestora — zostań partnerem", href: "/" },
         ]}
       />
     </MarketingShell>

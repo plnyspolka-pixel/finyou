@@ -819,3 +819,5 @@
 @media(max-width:640px){.fy-sales-hero h1{font-size:2rem;line-height:1.15}.fy-sales-hero-inner{padding:2rem 1.25rem}.fy-sales-topbar{font-size:.7rem}.fy-sales-nav{padding:.65rem .85rem;gap:.5rem}.fy-sales-nav>a:first-child img{max-width:110px}.fy-sales-nav>a:not(:first-child){font-size:.75rem;padding:.55rem .65rem}.fy-sales-actions>a{width:100%}.fy-about-grid{grid-template-columns:minmax(0,1fr);gap:2rem}.fy-sales-client-nav{gap:.5rem}.fy-sales-client-nav>a>span{font-size:.7rem}.fy-sales-modules li{gap:.5rem}.fy-sales-modules li strong{font-size:.9rem}.fy-sales-card{padding:1.2rem}.fy-marketing h1,.fy-marketing h2{overflow-wrap:break-word;letter-spacing:0}.fy-sales-video-box{padding:1rem}}
 
 @media(max-width:640px){.fy-sales-hero-image{object-position:25% center;opacity:.3}.fy-sales-hero-inner{padding-block:1.5rem}.fy-sales-hero h1{font-size:1.75rem}.fy-sales-hero li{font-size:.88rem}.fy-sales-proof{padding:.75rem 1rem}}
+
+@media(max-width:640px){.fy-hero-cta-visible .fy-ania-public{bottom:14rem}.fy-sales-hero .fy-sales-actions>a{font-size:.78rem;padding-inline:.65rem}.fy-sales-hero h1{max-width:100%}}

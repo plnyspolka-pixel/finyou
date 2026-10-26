@@ -64,6 +64,8 @@ export const Route = createFileRoute("/pobierz/$slug")({
       { property: "og:title", content: title },
       { property: "og:description", content: desc },
       { name: "twitter:description", content: desc },
+      { name: "twitter:title", content: title },
+      { name: "referrer", content: "no-referrer" },
       { property: "og:url", content: url },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pl_PL" },

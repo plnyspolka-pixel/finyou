@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { TRACKS, type Track } from "./types";
 
-export const INVESTOR_PAGE_URL = "https://financeyou.pl/dla-inwestora";
+export const INVESTOR_PAGE_URL = "https://financeyou.pl/";
 export const BORROWER_DEFAULT_CTA_URL = "https://app.financeyou.pl/embed/wniosek";
 
 const slotSchema = z.object({

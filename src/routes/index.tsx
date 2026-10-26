@@ -1,6 +1,7 @@
 import investorHero from "@/assets/investor-sales-hero.jpg";
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { MarketingShell } from "@/components/marketing/shell";
 import { Section, SectionHead, FeatureGrid, ProcessSteps, FAQ } from "@/components/marketing/sections";
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
@@ -44,6 +45,11 @@ const PROTECTION = [
   { icon: "shieldcheck" as const, t: "A jak nie zapłaci?", d: "Hipoteka do 60% LTV i Windykator AI. Poznaj historię spłaty przy sprzedaży zabezpieczenia poniżej." },
 ];
 function InvestorHome() {
+ useEffect(() => {
+  const buttons = document.querySelectorAll<HTMLAnchorElement>(".fy-sales-hero .fy-sales-actions a");
+  const update = () => { const overlapping = Array.from(buttons).some(el => { const r=el.getBoundingClientRect(); return r.top < innerHeight - 60 && r.bottom > innerHeight - 160; }); document.documentElement.classList.toggle("fy-hero-cta-visible", overlapping); };
+  window.addEventListener("scroll",update,{passive:true});update();return () => {window.removeEventListener("scroll",update);document.documentElement.classList.remove("fy-hero-cta-visible");};
+ }, []);
  const { materials } = Route.useLoaderData(); const { data: proof } = useSuspenseQuery(proofQuery);
  return <MarketingShell page="home">
   <section className="fy-sales-hero"><img className="fy-sales-hero-image" src={investorHero} alt="Zabudowa mieszkaniowa — ilustracja zabezpieczenia nieruchomością" width={1920} height={1088} fetchPriority="high"/><div className="fy-sales-hero-inner"><Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow><h1>Pożyczaj pod hipotekę jak bank — nawet jeśli nigdy tego nie robiłeś.</h1><p className="fy-sales-brand">Finance You</p><ul>{["Twoje pieniądze nigdy nie przechodzą przez Finance You — przelewasz je bezpośrednio firmie po podpisie u notariusza, z hipoteką na Twoje nazwisko.", "Sprawy z całej Polski trafiają do Ciebie — nie szukasz klientów.", "Umowa, ocena ryzyka i hipoteka przygotowane w systemie."].map(t => <li key={t}><BrandIcon name="check" size={20}/><span>{t}</span></li>)}</ul><div className="fy-sales-actions"><MktButton variant="gold" size="lg" href={LESSON}>Obejrzyj darmową lekcję — 30 minut</MktButton><MktButton variant="outline" size="lg" href="#cennik">Zobacz program i cenę</MktButton></div></div></section>
