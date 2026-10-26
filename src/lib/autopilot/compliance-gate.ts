@@ -108,9 +108,14 @@ export async function runGateLoop(
     if (n > MAX_GATE_ITERATIONS) break;
     const issues = [...hitsToIssues(blocks), ...(review?.issues ?? [])];
     if (!issues.length) {
+      // Bez uwag, a ryzyko ponad progiem: złagodzić obietnice. Linię o ryzyku
+      // dokładamy tylko, gdy jej nie ma — rolka ma mieć jedno zdanie o ryzyku,
+      // a nie zbierać kolejne przy każdej poprawce (decyzja właściciela 26.10.2026).
       issues.push({
         problem: `Ryzyko oceniono na ${review?.risk ?? "?"}/100.`,
-        fix: "Złagodź obietnice, dodaj uczciwą linię o ryzyku.",
+        fix: /ryzyk/iu.test(text)
+          ? "Złagodź lub usuń obietnice i superlatywy, nie dodając kolejnych zastrzeżeń — jedno zdanie o ryzyku, które już jest, wystarcza."
+          : "Złagodź obietnice i dodaj jedno uczciwe zdanie o ryzyku.",
       });
     }
     text = await deps.rewrite(text, input.ctx, issues);

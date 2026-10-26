@@ -14,6 +14,12 @@ import {
   b2bMentions,
   overstressesB2b,
 } from "./autopilot/track-voice";
+import {
+  MAX_WARNING_SENTENCES_PER_REEL,
+  acceptCondensedScript,
+  countWarnings,
+  overWarns,
+} from "./autopilot/script-warnings";
 import type { Track } from "./autopilot/types";
 
 const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -63,6 +69,7 @@ export async function generateVideoScript(
   const trackRules = opts.track ? `\n${TRACK_SCRIPT_RULES[opts.track]}` : "";
   const system = `Jesteś scenarzystą krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}${trackRules}
 Napisz tekst MÓWIONY dla lektora: 60-140 słów, hook w pierwszym zdaniu (teza albo pytanie, nie zagadka), prosty język, zero didaskaliów, zero emoji — tekst idzie prosto do syntezy mowy.
+Zastrzeżenia: w całym tekście DOKŁADNIE jedno krótkie zdanie o ryzyku — i ani jednego więcej. Żadnych innych ostrzeżeń ani formułek prawnych („nie stanowi oferty/porady”, „zwrot nie jest gwarantowany”, „wynik szacunkowy”, „materiał poglądowy”, zastrzeżenie przy CTA) — te są w opisie publikacji, nie w tekście mówionym. Lektor ma edukować, nie ostrzegać co drugie zdanie.
 Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","description":"opis 1-3 zdania","hashtags":["#tag1","#tag2","#tag3"]}`;
   let parsed = await chatJson(system, prompt);
   let script = typeof parsed.script === "string" ? parsed.script.trim() : "";
@@ -85,6 +92,16 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
       // zostaje pierwsza wersja — bramka compliance i tak ją sprawdzi
     }
   }
+  // Nadmiar zastrzeżeń (więcej niż jedno zdanie o ryzyku) → jedna próba
+  // odchudzenia; nieudana zostawia tekst, produkcja ma drugą szansę po bramce.
+  if (script && overWarns(script)) {
+    try {
+      const slim = await condenseScriptWarnings(script, { track: opts.track });
+      if (slim) script = slim;
+    } catch {
+      // zostaje wersja z nadmiarem zastrzeżeń
+    }
+  }
   if (!script) throw new Error("AI nie zwróciło scenariusza.");
   return {
     script,
@@ -94,6 +111,36 @@ Zwracaj WYŁĄCZNIE JSON: {"script":"...","title":"tytuł do 90 znaków","descri
       ? parsed.hashtags.filter((h: unknown): h is string => typeof h === "string")
       : [],
   };
+}
+
+/**
+ * Odchudzenie zastrzeżeń (decyzja właściciela 26.10.2026): scenariusz z więcej
+ * niż jednym zdaniem o ryzyku / zastrzeżeniem wraca do modelu z poleceniem
+ * zostawienia dokładnie jednego. Wynik przyjmujemy tylko, gdy zastrzeżeń
+ * ubyło, jedno zostało, hasło CTA i długość się zgadzają, a reguły twarde nie
+ * zgłaszają nowych blokad (acceptCondensedScript); inaczej zostaje oryginał.
+ * Zwraca null, gdy nie ma co odchudzać albo wynik się nie nadaje.
+ */
+export async function condenseScriptWarnings(
+  script: string,
+  opts: { track?: Track | null } = {},
+): Promise<string | null> {
+  if (!overWarns(script)) return null;
+  const parsed = await chatJson(
+    `Jesteś redaktorem scenariuszy krótkich pionowych wideo (Shorts/Reels) firmy finansowej. ${BRAND_CONTEXT}
+Dostajesz gotowy tekst mówiony lektora, w którym jest ZA DUŻO zastrzeżeń i ostrzeżeń (${countWarnings(script)} zdania, dozwolone ${MAX_WARNING_SENTENCES_PER_REEL}) — lektor zamiast edukować ostrzega widza co drugie zdanie.
+Zadanie: zostaw DOKŁADNIE JEDNO krótkie zdanie o ryzyku (najlepiej to ze słowem „ryzyko”, najbardziej konkretne dla tematu; dwa możesz scalić w jedno), a wszystkie pozostałe zastrzeżenia usuń w całości: „nie stanowi oferty/porady/rekomendacji”, „nie gwarantuje”, „zwrot/wynik nie jest gwarantowany”, „wynik szacunkowy/orientacyjny”, „materiał poglądowy/informacyjny”, „nie zastępuje analizy prawnej”, „decyzja zależy od oceny/finansującego”, drugie zdanie o utracie kapitału itp.
+ZASADY:
+- Nie zmieniaj hooka (pierwszego zdania), kolejności treści ani sensu edukacyjnego; nie dopisuj nowych treści.
+- Nie dodawaj obietnic, gwarancji, superlatywów ani procentów zwrotu — usunięte zastrzeżenie nie może zostać zastąpione obietnicą.
+- CTA na końcu zostaje w całości (hasło WIELKIMI LITERAMI bez zmian), ale bez doklejonego zastrzeżenia.
+- Zero didaskaliów, zero emoji — tekst idzie prosto do syntezy mowy.
+Zwracaj WYŁĄCZNIE JSON: {"script":"..."}`,
+    script,
+  );
+  const out = typeof parsed.script === "string" ? parsed.script.trim() : "";
+  const verdict = acceptCondensedScript(script, out, { kind: "script", track: opts.track ?? null });
+  return verdict.ok ? out : null;
 }
 
 /**

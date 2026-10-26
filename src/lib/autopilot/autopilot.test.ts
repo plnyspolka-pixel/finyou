@@ -298,6 +298,33 @@ describe("pętla bramki compliance", () => {
     );
     expect(r.status).toBe("rewritten");
   });
+
+  it("wysokie ryzyko bez uwag: linia o ryzyku dokładana tylko, gdy jej nie ma", async () => {
+    const seen: { problem: string; fix: string }[][] = [];
+    const depsFor = (): GateDeps => {
+      let n = 0;
+      return {
+        review: async () =>
+          n++ === 0
+            ? { verdict: "ok", risk: 60, issues: [] }
+            : { verdict: "ok", risk: 10, issues: [] },
+        rewrite: async (t, _ctx, issues) => {
+          seen.push(issues);
+          return t;
+        },
+      };
+    };
+    await runGateLoop(
+      { text: "Czy wiesz, czym jest LTV? Pamiętaj o ryzyku.", ctx: { kind: "script" } },
+      depsFor(),
+    );
+    await runGateLoop({ text: "Czy wiesz, czym jest LTV?", ctx: { kind: "script" } }, depsFor());
+    expect(seen).toHaveLength(2);
+    // Z linią o ryzyku: złagodzić obietnice, nie dokładać kolejnych zastrzeżeń.
+    expect(seen[0][0].fix).toMatch(/nie dodając kolejnych zastrzeżeń/);
+    // Bez linii o ryzyku: dodać jedno zdanie.
+    expect(seen[1][0].fix).toMatch(/dodaj jedno uczciwe zdanie o ryzyku/);
+  });
 });
 
 describe("metryki", () => {

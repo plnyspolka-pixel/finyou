@@ -115,7 +115,7 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
       label: "Inwestor prywatny",
       targetGroup:
         "Prywatni inwestorzy szukający sposobu na zarabianie na nieruchomościach bez kupowania, budowania i remontowania",
-      tone: "Szanse, nie straszenie. Wolność finansowa, „zarabiaj tak, jak banki od stuleci” – zawsze z uczciwą linią o ryzyku.",
+      tone: "Szanse, nie straszenie. Wolność finansowa, „zarabiaj tak, jak banki od stuleci” – z jednym uczciwym zdaniem o ryzyku (nie więcej).",
       ctaUrl: INVESTOR_PAGE_URL,
       ctaLabel: "Zobacz, jak to działa",
       youtubeFirstComment: {

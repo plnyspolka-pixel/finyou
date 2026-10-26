@@ -30,9 +30,9 @@ export const TRACK_SCRIPT_RULES: Record<Track, string> = {
 - Mów po prostu o pożyczkach pod zastaw nieruchomości. NIE akcentuj, że oferta jest tylko dla firm: słowa „firma”, „przedsiębiorca”, „działalność” (i odmiany) najwyżej RAZ w całym tekście i tylko, gdy temat tego wymaga — najlepiej wcale. Warunki (w tym działalność gospodarcza) klient poznaje przy wniosku.
 - Nie kieruj do konsumentów: nigdy „na dowolny cel”, „na wakacje”, „na wesele”, „na samochód”, „dla osób prywatnych”, „kredyt konsumencki”.
 - Bez obietnic („dla każdego”, „bez BIK”, „bez sprawdzania”, „100% decyzji”), bez presji czasu, bez kosztu/oprocentowania jako hasła.
-- Widz jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie. Jedno uczciwe zdanie o ryzyku/koszcie.`,
+- Widz jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie. DOKŁADNIE jedno uczciwe zdanie o ryzyku/koszcie — bez kolejnych zastrzeżeń i formułek prawnych w innych zdaniach.`,
   inwestor: `TOR: inwestor prywatny — szanse, nie straszenie; „zarabiaj tak, jak banki od stuleci”, zarabianie na nieruchomościach bez kupowania i remontowania.
-- Zawsze uczciwe zdanie o ryzyku. Bez stóp zwrotu, gwarancji, odkupu, „sam inwestuję” i zamkniętych grup.`,
+- DOKŁADNIE jedno uczciwe zdanie o ryzyku (nie więcej; bez „nie stanowi oferty”, „zwrot nie jest gwarantowany” i podobnych formułek w kolejnych zdaniach). Bez stóp zwrotu, gwarancji, odkupu, „sam inwestuję” i zamkniętych grup.`,
 };
 
 /** Przykłady hooków toru (dla planera) — bez akcentu „dla firm”. */

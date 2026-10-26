@@ -23,6 +23,7 @@ import {
   type TrackPipeline,
 } from "./production";
 import { evaluateGuards } from "./safety";
+import { MAX_WARNING_SENTENCES_PER_REEL, countWarnings } from "./script-warnings";
 import { loadAutopilotConfig, loadUsage, logAutopilot, warsawDayStartIso } from "./state.server";
 import { TRACKS, TRACK_TO_AUDIENCE, type Track } from "./types";
 
@@ -287,6 +288,38 @@ export async function produceReels(
         });
         continue;
       }
+      // Odchudzenie zastrzeżeń po bramce: poprawki recenzenta potrafiły dołożyć
+      // drugie i trzecie zdanie o ryzyku — w rolce zostaje jedno (decyzja
+      // właściciela 26.10.2026). Wynik sprawdza acceptCondensedScript (reguły
+      // twarde, hasło, długość); gotową rolkę i tak ocenia raz jeszcze bramka
+      // Etapu 0 przed publikacją. Nieudane odchudzenie zostawia tekst z bramki.
+      let script = scriptGate.text;
+      const warningsBefore = countWarnings(script);
+      if (warningsBefore > MAX_WARNING_SENTENCES_PER_REEL) {
+        try {
+          const { condenseScriptWarnings } = await import("@/lib/studio-ai.server");
+          const slim = await condenseScriptWarnings(script, { track });
+          if (slim) {
+            script = slim;
+            await logAutopilot({
+              action: "reel_warnings_condensed",
+              status: "ok",
+              summary: `Produkcja (${track}, ${series.slug}): zastrzeżenia w scenariuszu ${warningsBefore} → ${countWarnings(slim)}`,
+              payload: {
+                track,
+                series: series.slug,
+                keyword,
+                before: scriptGate.text,
+                after: slim,
+              },
+              actor: opts.actor ?? null,
+            }).catch(() => null);
+          }
+        } catch {
+          // zostaje scenariusz z bramki
+        }
+      }
+
       // Tytuł: reguły twarde bez recenzenta (czas żądania); przy blokadzie tytuł serii.
       const rawTitle = publishTitleWithKeyword(gen.title || series.title, keyword);
       const titleBlocked = checkHardRules(rawTitle, { kind: "title", track }).some(
@@ -313,7 +346,7 @@ export async function produceReels(
         .from("studio_video_jobs")
         .insert({
           prompt: brief,
-          script: scriptGate.text,
+          script,
           avatar_id: lead.lead,
           avatar_ids: avatarIds,
           voice_id: FILIP_VOICE_ID,
