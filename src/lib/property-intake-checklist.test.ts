@@ -23,4 +23,7 @@ describe("procedura przyjmowania zgłoszenia", () => {
     expect(rules).toContain("NIE PRZYJMUJESZ WNIOSKU PRZEZ TELEFON");
     expect(rules).toContain("financeyou.pl");
   });
+  it("nie mówi o firmie i nie sprawdza celu gospodarczego", () => {
+    expect(rules).toContain("NIE mówisz, że finansujemy tylko firmy");
+  });
 });
