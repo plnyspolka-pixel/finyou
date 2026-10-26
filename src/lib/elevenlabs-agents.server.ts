@@ -13,6 +13,7 @@
 // rozmowy (bez obietnic kontaktu analityka).
 import { createClient } from "@supabase/supabase-js";
 import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
+import { cleanInvestorPrompt, INVESTOR_SELF_SERVICE_RULES } from "@/lib/investor-prompt-policy";
 import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { fetchAgentPrompt, type AgentVariant } from "@/lib/elevenlabs-text-agent.server";
 import {
@@ -79,8 +80,8 @@ export function buildAgentPrompt(surface: AgentSurface, basePrompt: string): str
   // Zakaz zmyślania danych kontaktowych dotyczy każdego agenta.
   // Inwestor: stały scenariusz rozmowy (z ceną z cennika w kodzie) NA SAMEJ GÓRZE.
   if (surface === "investor_info")
-    return buildInvestorSalesScript() + basePrompt + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
-  if (surface !== "intake") return basePrompt + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
+    return buildInvestorSalesScript() + INVESTOR_SELF_SERVICE_RULES + cleanInvestorPrompt(basePrompt) + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
+  if (surface !== "intake") return INVESTOR_SELF_SERVICE_RULES + cleanInvestorPrompt(basePrompt) + NO_INVENTED_CONTACT_RULES + ANIA_IDENTITY_RULES;
   // Procedura przyjmowania zgłoszenia (lista per rodzaj zabezpieczenia, jak we
   // wniosku na stronie) idzie NA SAMĄ GÓRĘ — ma pierwszeństwo przed promptem z panelu.
   return (
