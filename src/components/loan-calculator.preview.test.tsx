@@ -97,7 +97,7 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
 
   it("domyślna prowizja inwestora wynosi 3% i limity są zachowane", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
-    expect(screen.getAllByRole("spinbutton").some((input) => (input as HTMLInputElement).value === "3")).toBe(true);
+    expect(screen.getAllByRole("textbox").some((input) => (input as HTMLInputElement).value === "3")).toBe(true);
     expect(pageText()).toContain("maks. 14,5% — odsetki maksymalne");
   });
 
