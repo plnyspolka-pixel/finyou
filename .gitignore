@@ -33,3 +33,6 @@ dist-ssr
 
 # Projekt używa buna (bun.lock) — lock npm-a tylko wprowadza w błąd.
 package-lock.json
+
+# wartości sekretów do wgrania do Workera (nigdy do repo)
+.sekrety/
