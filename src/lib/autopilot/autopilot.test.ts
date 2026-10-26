@@ -41,7 +41,7 @@ describe("profile torów", () => {
     });
     expect(p.pozyczkobiorca.targetGroup).toBe("Przedsiębiorcy potrzebujący szybkiego finansowania");
     expect(p.pozyczkobiorca.ctaUrl).toBe("https://app.financeyou.pl/embed/wniosek");
-    expect(p.inwestor.ctaUrl).toBe("https://financeyou.pl/dla-inwestora");
+    expect(p.inwestor.ctaUrl).toBe("https://financeyou.pl/");
     expect(p.pozyczkobiorca.dailyAiBudgetPln + p.inwestor.dailyAiBudgetPln).toBe(50);
     expect(p.inwestor.monthlyAdBudgetPln).toBe(0);
   });
@@ -51,7 +51,7 @@ describe("profile torów", () => {
     expect(ok.profiles.inwestor.weeklyReels).toBe(7);
     expect(ok.errors).toEqual([]);
     const bad = resolveProfiles({ audience_profiles: { inwestor: { ctaUrl: "nie-url" } } });
-    expect(bad.profiles.inwestor.ctaUrl).toBe("https://financeyou.pl/dla-inwestora");
+    expect(bad.profiles.inwestor.ctaUrl).toBe("https://financeyou.pl/");
     expect(bad.errors.length).toBe(1);
   });
 

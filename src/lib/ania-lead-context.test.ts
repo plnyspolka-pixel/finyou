@@ -54,7 +54,7 @@ describe("zmienne kontekstu leada", () => {
 describe("SMS inwestora", () => {
   it("treść z imieniem i bez imienia", () => {
     expect(investorWelcomeSmsBody("Jan")).toBe(
-      "Dzień dobry, Jan, tu Ania z Finance You — dziękuję za zostawienie danych w sprawie inwestowania w pożyczki pod hipotekę. Zadzwonię wkrótce; wcześniej więcej tu: https://financeyou.pl/dla-inwestora",
+      "Dzień dobry, Jan, tu Ania z Finance You — dziękuję za zostawienie danych w sprawie inwestowania w pożyczki pod hipotekę. Zadzwonię wkrótce; wcześniej więcej tu: https://financeyou.pl/",
     );
     expect(investorWelcomeSmsBody(null).startsWith("Dzień dobry, tu Ania")).toBe(true);
   });
