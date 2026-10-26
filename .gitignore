@@ -33,3 +33,7 @@ dist-ssr
 
 # Projekt używa buna (bun.lock) — lock npm-a tylko wprowadza w błąd.
 package-lock.json
+
+# Raporty analityczne eksportowane lokalnie — materiał z danych klientów,
+# nie trafia do repozytorium (nawet w wersji zanonimizowanej).
+raporty-anonim/
