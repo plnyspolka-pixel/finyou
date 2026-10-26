@@ -5,6 +5,7 @@ import {
   MAX_PRODUCED_PER_TRACK_PER_DAY,
   PRODUCTION_PROMPT_TAG,
   REEL_BUFFER_PER_TRACK,
+  SCHEDULED_HORIZON_DAYS,
   buildReelBrief,
   decideProduction,
   keywordOfReel,
@@ -40,6 +41,40 @@ describe("produkcja — decyzja o buforze", () => {
         producedToday: 0,
       }).produce,
     ).toBe(false);
+  });
+
+  it("rolki zaplanowane w kolejkach na najbliższe dni liczą się do zapasu (kolejka nie rośnie)", () => {
+    expect(SCHEDULED_HORIZON_DAYS).toBe(REEL_BUFFER_PER_TRACK);
+    // Jutro i pojutrze mają już rolki w kolejce — nic nie dorabiamy.
+    const full = decideProduction({
+      track: "inwestor",
+      ready: 0,
+      inProgress: 0,
+      scheduledSoon: 2,
+      producedToday: 0,
+    });
+    expect(full.produce).toBe(false);
+    expect(full.reason).toMatch(/2 zaplanowanych/);
+    // Jedna rolka zaplanowana, jedna w produkcji — zapas pełny.
+    expect(
+      decideProduction({
+        track: "inwestor",
+        ready: 0,
+        inProgress: 1,
+        scheduledSoon: 1,
+        producedToday: 1,
+      }).produce,
+    ).toBe(false);
+    // Dziura w kolejce (rolka zdjęta) — produkcja ją wypełnia.
+    expect(
+      decideProduction({
+        track: "pozyczkobiorca",
+        ready: 0,
+        inProgress: 0,
+        scheduledSoon: 1,
+        producedToday: 0,
+      }).produce,
+    ).toBe(true);
   });
 
   it("limit dzienny ma pierwszeństwo przed pustym zapasem", () => {

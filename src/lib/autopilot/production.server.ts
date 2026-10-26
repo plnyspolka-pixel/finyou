@@ -15,8 +15,10 @@ import {
   MAX_PRODUCED_PER_TRACK_PER_DAY,
   PRODUCTION_COST_PLN,
   PRODUCTION_PROMPT_TAG,
+  SCHEDULED_HORIZON_DAYS,
   buildReelBrief,
   decideProduction,
+  pipelineStock,
   pickSeries,
   pickTopic,
   publishTitleWithKeyword,
@@ -83,9 +85,53 @@ async function count(build: (q: any) => any): Promise<number> {
   return n ?? 0;
 }
 
-/** Zapas toru: gotowe nieopublikowane + w produkcji; produkcja z dziś. */
-export async function loadPipeline(track: Track, dayStartIso: string): Promise<TrackPipeline> {
-  const [ready, inProgress, producedToday] = await Promise.all([
+/** Statusy wpisów kolejek, które jeszcze nie wyszły (social / YouTube). */
+const SOCIAL_WAITING = ["pending", "processing", "publishing"];
+const YOUTUBE_WAITING = ["pending", "uploading"];
+
+/**
+ * Rolki toru czekające w kolejkach publikacji w horyzoncie zapasu (liczone
+ * po zadaniu Studia — jedna rolka ma wpisy na IG, FB i YouTube).
+ */
+async function scheduledSoon(track: Track, now: Date): Promise<number> {
+  const until = new Date(now.getTime() + SCHEDULED_HORIZON_DAYS * 86_400_000).toISOString();
+  const from = now.toISOString();
+  const [social, youtube] = await Promise.all([
+    db
+      .from("social_publish_queue")
+      .select("studio_job_id")
+      .eq("track", track)
+      .in("status", SOCIAL_WAITING)
+      .not("studio_job_id", "is", null)
+      .gte("scheduled_at", from)
+      .lt("scheduled_at", until)
+      .limit(200),
+    db
+      .from("youtube_publish_queue")
+      .select("studio_job_id")
+      .eq("track", track)
+      .in("status", YOUTUBE_WAITING)
+      .not("studio_job_id", "is", null)
+      .gte("scheduled_at", from)
+      .lt("scheduled_at", until)
+      .limit(200),
+  ]);
+  const ids = new Set<string>();
+  for (const r of [...(social.data ?? []), ...(youtube.data ?? [])] as {
+    studio_job_id: string | null;
+  }[]) {
+    if (r.studio_job_id) ids.add(r.studio_job_id);
+  }
+  return ids.size;
+}
+
+/** Zapas toru: gotowe nieopublikowane + w produkcji + zaplanowane na najbliższe dni; produkcja z dziś. */
+export async function loadPipeline(
+  track: Track,
+  dayStartIso: string,
+  now: Date = new Date(),
+): Promise<TrackPipeline> {
+  const [ready, inProgress, producedToday, soon] = await Promise.all([
     count((q) =>
       q
         .eq("status", "ready")
@@ -101,8 +147,9 @@ export async function loadPipeline(track: Track, dayStartIso: string): Promise<T
         .like("prompt", `${PRODUCTION_PROMPT_TAG}%`)
         .gte("created_at", dayStartIso),
     ),
+    scheduledSoon(track, now),
   ]);
-  return { track, ready, inProgress, producedToday };
+  return { track, ready, inProgress, scheduledSoon: soon, producedToday };
 }
 
 async function recentJobs(
@@ -198,13 +245,13 @@ export async function produceReels(
   const candidates = await Promise.all(
     (opts.tracks ?? [...TRACKS]).map(async (track) => ({
       track,
-      pipeline: await loadPipeline(track, dayStart),
+      pipeline: await loadPipeline(track, dayStart, now),
       recent: await recentJobs(track),
     })),
   );
   candidates.sort((a, b) => {
-    const za = a.pipeline.ready + a.pipeline.inProgress;
-    const zb = b.pipeline.ready + b.pipeline.inProgress;
+    const za = pipelineStock(a.pipeline);
+    const zb = pipelineStock(b.pipeline);
     if (za !== zb) return za - zb;
     const la = a.recent[0]?.created_at ?? "";
     const lb = b.recent[0]?.created_at ?? "";

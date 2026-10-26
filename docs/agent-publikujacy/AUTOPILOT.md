@@ -57,7 +57,11 @@ W `full_autopilot` (i w `semi_auto`) tick co godzinę dba o zapas rolek per tor
 
 1. Strażnik: tryb, wyłącznik, dzienny budżet AI, kredyty HeyGen (odczyt `remaining_quota`,
    próg `heygenMinRemainingCredits`).
-2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`). Poniżej
+2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`) + rolki
+   czekające w kolejkach publikacji na najbliższe `SCHEDULED_HORIZON_DAYS` (2) dni. Bez tego
+   ostatniego składnika zaplanowana rolka znikała z licznika i kolejka rosła o rolkę dziennie na
+   tor (26.10.2026: 12 rolek na 8 dni naprzód). Rolki zaplanowane dalej nie blokują produkcji,
+   więc zdjęta z kolejki rolka zwalnia slot, który produkcja wypełnia. Poniżej
    bufora `REEL_BUFFER_PER_TRACK` (2) powstaje jedna rolka; maks. `MAX_PRODUCED_PER_TRACK_PER_DAY`
    (2) na dobę. Jeden tick = jedna rolka (kilka wywołań LLM musi zmieścić się w jednym żądaniu);
    tory ustawiają się w kolejce: najpierw mniejszy zapas, potem ten dawniej obsłużony.
@@ -172,6 +176,12 @@ polecenie o ryzyku z czterech miejsc naraz, a poprawki recenzenta dokładały ko
 - recenzent bramki nie żąda rozszerzania zdania o ryzyku ani formułek, a język marki i formaty
   serii nie są naruszeniem; autor poprawek usuwa obietnicę zamiast dokładać ostrzeżenie; poprawka
   „z urzędu” (ryzyko > 40 bez uwag) dokłada linię o ryzyku tylko, gdy jej nie ma.
+- licznik łapie też ostrzeżenia o koszcie („wyższy koszt”, „bywa droższe”), o braku spłaty ze
+  skutkiem (egzekucja, utrata, zaspokojenie) i „zależy od pozytywnej weryfikacji”; nazwy
+  materiałów w cudzysłowie („…szanse i ryzyka”) nie są zastrzeżeniem,
+- projektant elementów dynamicznych (Remotion) nie wstawia kart `alert` — pulsujący trójkąt
+  „UWAGA” dublował zdanie o ryzyku na ekranie (w części rolek dwa razy). Zdanie o ryzyku zostaje
+  w głosie i napisach. Ręczny projekt (`set_studio_motion`) może alert nadal zawierać.
 
 ## Zadanie jednorazowe dla właściciela: profil Instagram
 

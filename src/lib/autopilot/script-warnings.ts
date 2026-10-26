@@ -30,9 +30,31 @@ const WARNING_RE = new RegExp(
     "(?:wyłącznie|czysto)\\s+(?:poglądow|informacyjn|orientacyjn)\\p{L}*",
     "(?:wynik|kwota|kalkulacj|wyliczeni|dane|liczby)\\p{L}*\\s+(?:jest\\s+|są\\s+|to\\s+)?(?:szacunkow|orientacyjn)\\p{L}*",
     "decyzj\\p{L}*\\s+(?:zależy|należy)\\s+(?:od|do)\\s+(?:oceny|weryfikacji|finansując|indywidualn|inwestora|decyzji)\\p{L}*",
+    // „Finansowanie / kwota zależy od pozytywnej weryfikacji / oceny wniosku”.
+    "zależ\\p{L}*\\s+od\\s+(?:pozytywn\\p{L}*\\s+)?(?:oceny|weryfikacji|decyzji)",
+    // Koszt jako ostrzeżenie: „wiąże się z wyższym kosztem”, „bywa droższe”.
+    "(?:wyższ|większ)\\p{L}*\\s+koszt\\p{L}*",
+    "koszt\\p{L}*\\s+(?:\\p{L}+\\s+){0,3}(?:jest|są|bywa|będzie)\\s+wyższ\\p{L}*",
+    "drożs\\p{L}*|droższ\\p{L}*",
+    "(?:możesz|można|mogą|może)\\s+(?:\\p{L}+\\s+)?stracić",
   ].join("|"),
   "iu",
 );
+
+/** Brak spłaty + skutek („przy braku spłaty… egzekucja / utrata / zaspokojenie”). */
+const NON_REPAYMENT_RE =
+  /(?:niespłac\p{L}*|nie\s+spłac\p{L}*|nie\s+uda\s+się\s+spłacić|brak\p{L}*\s+(?:terminowej\s+)?spłaty)/iu;
+const CONSEQUENCE_RE = /(?:utrat\p{L}*|egzekucj\p{L}*|zaspokoj\p{L}*|strac\p{L}*|ryzyk\p{L}*)/iu;
+
+/** Tytuły materiałów w cudzysłowie („…(szanse i ryzyka)”) to nazwy, nie zastrzeżenia. */
+function withoutQuotedTitles(sentence: string): string {
+  return sentence.replace(/„[^”]*”/gu, " ").replace(/"[^"]*"/gu, " ");
+}
+
+function isWarningSentence(sentence: string): boolean {
+  const s = withoutQuotedTitles(sentence);
+  return WARNING_RE.test(s) || (NON_REPAYMENT_RE.test(s) && CONSEQUENCE_RE.test(s));
+}
 
 const RISK_WORD_RE = /ryzyk/iu;
 
@@ -48,7 +70,7 @@ export function splitSentences(text: string): string[] {
 
 /** Zdania scenariusza, które są ostrzeżeniem / zastrzeżeniem. */
 export function warningSentences(text: string): string[] {
-  return splitSentences(text).filter((s) => WARNING_RE.test(s));
+  return splitSentences(text).filter(isWarningSentence);
 }
 
 export function countWarnings(text: string): number {

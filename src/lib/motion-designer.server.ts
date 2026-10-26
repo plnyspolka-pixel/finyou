@@ -12,6 +12,7 @@ import {
   MOTION_COMPONENTS,
   MOTION_LIMITS,
   sanitizeMotionDesign,
+  withoutWarningCards,
   type MotionDesignElement,
 } from "./motion-catalog";
 
@@ -29,7 +30,8 @@ ZASADY TREŚCI
 - Liczby słownie w scenariuszu („dwustoma pięćdziesięcioma tysiącami”) zapisuj cyframi („250 tys. zł”).
 
 ZASADY KOMPOZYCJI
-- Wybierz komponent, który najlepiej pokazuje strukturę informacji: widełki → range, granica opłacalności → threshold, dwie opcje → versus, obalany mit → mythFact, pojedyncza kluczowa liczba → stat, lista warunków → checklist, proces → steps, pointa → keyword, zastrzeżenie → alert, ostatnie zdanie z wezwaniem → cta.
+- Wybierz komponent, który najlepiej pokazuje strukturę informacji: widełki → range, granica opłacalności → threshold, dwie opcje → versus, obalany mit → mythFact, pojedyncza kluczowa liczba → stat, lista warunków → checklist, proces → steps, pointa → keyword, ostatnie zdanie z wezwaniem → cta.
+- Zdanie o ryzyku, koszcie albo inne zastrzeżenie NIE dostaje żadnego elementu — lektor i napisy wystarczą. Komponentu alert nie używaj wcale (decyzja właściciela 26.10.2026: rolka ma jedno zdanie o ryzyku, bez kart „Uwaga” z trójkątem ostrzegawczym). Ostrzeżenie nie może być wizualnym bohaterem rolki.
 - Rytm: ok. jeden element na 7–10 s nagrania, maksymalnie ${MOTION_LIMITS.maxElements}. Nie wszystko wymaga grafiki — zostaw oddech, szczególnie w pierwszych 2 s (hook mówi twarz).
 - Strefa "top" (nad awatarem) dla kart z treścią; "center" (na awatarze) tylko dla krótkich akcentów keyword (do ~3 s).
 - Elementy nie mogą się nakładać w czasie — każdy kolejny zaczyna się po poprzednim.
@@ -111,5 +113,5 @@ export async function designMotion(args: {
     effort: "high",
     label: "Projektant",
   });
-  return sanitizeMotionDesign(parsed.elements);
+  return withoutWarningCards(sanitizeMotionDesign(parsed.elements));
 }
