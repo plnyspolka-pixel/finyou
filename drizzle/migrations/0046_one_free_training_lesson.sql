@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS training_videos_one_free_lesson ON public.training_videos ((free_lesson)) WHERE free_lesson = true;
