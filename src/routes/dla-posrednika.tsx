@@ -1,10 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
   SectionHead,
   FeatureGrid,
-  PricingCard,
   FAQ,
   ComplianceNote,
   CTASection,
@@ -13,53 +12,27 @@ import {
 import { MktBadge, MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
-import { MarketingPricing } from "@/components/marketing/pricing";
-import { listAccessProducts } from "@/lib/access/state.functions";
-import type { AccessProduct } from "@/lib/access/core";
+import { formatPLN } from "@/lib/labels";
+import { INVESTOR_COMMISSION_PLN } from "@/lib/affiliate/engine-pure";
 
-const JOIN = "/rejestracja?role=posrednik";
-
-// Cennik z katalogu access_products (te same ceny co panel pośrednika).
-async function loadBrokerProducts(): Promise<AccessProduct[]> {
-  try {
-    return await listAccessProducts({ data: { audience: "broker" } });
-  } catch {
-    return [];
-  }
-}
-
-const PRICING_FEATURES: Record<number, string[]> = {
-  30: [
-    "Bez limitu liczby ofert",
-    "Leady Finance You i pełny CRM",
-    "Skrzynka, kampanie i automatyzacje",
-    "Akademia Pośrednika i program poleceń",
-  ],
-  365: [
-    "Wszystko z pakietu 30-dniowego",
-    "Pełny rok bez przerw w dostępie",
-    "Priorytetowe wsparcie",
-  ],
-};
+// Bez bramki płatności: rejestracja, akceptacja umowy i konto do wypłaty prowizji.
+const JOIN = "/posrednicy/rejestracja";
+const COMMISSION = formatPLN(INVESTOR_COMMISSION_PLN);
 
 export const Route = createFileRoute("/dla-posrednika")({
-  // Moduł pośrednika ukryty na stronie publicznej — strona przekierowuje na główną.
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
-  loader: async () => ({ products: await loadBrokerProducts() }),
   head: () => ({
     meta: [
-      { title: "Program Pośrednika — zarabiaj z CRM, AI i bazą inwestorów | Finance You" },
+      { title: "Dla pośrednika — bezpłatny CRM i dostęp do inwestorów | Finance You" },
       {
         name: "description",
         content:
-          "Dołącz do Programu Pośrednika Finance You: gotowy CRM, szkolenie, kampanie wspierane AI, dostęp do prywatnych inwestorów, wzory dokumentów i transparentny model prowizji.",
+          "Zostań pośrednikiem Finance You za darmo: wprowadzaj wnioski klientów, przedstawiaj je prywatnym inwestorom i śledź w CRM, jak reagują. 1000 zł za każdego poleconego inwestora.",
       },
       { property: "og:title", content: "Dla pośredników — Finance You" },
       {
         property: "og:description",
-        content: "Gotowy system: CRM, szkolenie, kampanie AI, baza inwestorów i model prowizji.",
+        content:
+          "Bezpłatne konto pośrednika: wnioski klientów, inwestorzy i CRM reakcji inwestorów.",
       },
       { property: "og:url", content: "https://financeyou.pl/dla-posrednika" },
       { property: "og:type", content: "website" },
@@ -71,24 +44,9 @@ export const Route = createFileRoute("/dla-posrednika")({
 
 const GET: FeatureItemData[] = [
   {
-    icon: "automation",
-    t: "Dedykowana kampania reklamowa w Twoim regionie",
-    d: "Kampania kierowana na miasta powyżej 30 000 mieszkańców oraz obszar w promieniu około 17 km, czyli tam, gdzie najczęściej poszukują nieruchomości nasi inwestorzy.",
-  },
-  {
-    icon: "aibrain",
-    t: "Osobista asystentka Ania AI",
-    d: "Dzwoni do klientów, odpowiada na e-maile i wiadomości prywatne, zbiera informacje i zapisuje wszystko w systemie.",
-  },
-  {
     icon: "application",
     t: "Prosty kreator wniosku",
     d: "Prowadzi Cię krok po kroku przez cały proces i podpowiada, jakie dane, dokumenty oraz informacje należy zebrać od klienta.",
-  },
-  {
-    icon: "ai",
-    t: "Wsparcie analityka AI",
-    d: "Pomaga sprawdzić nieruchomość, wychwycić potencjalne ryzyka i przygotować kompletną ofertę inwestycyjną.",
   },
   {
     icon: "investors",
@@ -106,19 +64,9 @@ const GET: FeatureItemData[] = [
     d: "Zasady rozliczenia są ustalane z góry, a status prowizji możesz śledzić w systemie.",
   },
   {
-    icon: "knowledge",
-    t: "Komplet materiałów marketingowych",
-    d: "Otrzymujesz gotowe grafiki, teksty reklamowe, posty, skrypty rozmów i materiały do samodzielnego generowania leadów.",
-  },
-  {
-    icon: "training",
-    t: "Pełne szkolenie branżowe",
-    d: "Nauczysz się pozyskiwać klientów, kwalifikować sprawy, analizować nieruchomości i skutecznie domykać transakcje.",
-  },
-  {
     icon: "crm",
-    t: "Przejrzysty system CRM",
-    d: "W jednym miejscu widzisz klientów, historię kontaktu, dokumenty, aktualny etap sprawy i kolejne zadania.",
+    t: "CRM z reakcjami inwestorów",
+    d: "Widzisz, którzy inwestorzy otworzyli ofertę, odpowiedzieli, są zainteresowani albo złożyli propozycję finansowania.",
   },
   {
     icon: "access",
@@ -138,81 +86,59 @@ const GET: FeatureItemData[] = [
 ];
 
 const EARN = [
-  { t: "Pozyskujesz klienta", d: "Z własnej sieci lub z kampanii wspieranych AI." },
-  { t: "Wprowadzasz go do systemu", d: "Sprawa trafia do uporządkowanego procesu." },
-  { t: "Prowadzisz sprawę w CRM", d: "Dokumenty, komunikacja i statusy w jednym miejscu." },
-  { t: "Sprawa trafia do inwestorów", d: "Inwestorzy analizują projekt." },
-  { t: "Powstaje prowizja", d: "Po uruchomieniu finansowania naliczana jest prowizja." },
+  { t: "Zakładasz bezpłatne konto", d: "Dane, akceptacja umowy i konto do wypłaty prowizji." },
   {
-    t: "Rozliczenie",
-    d: "Prowizja jest rozliczana transparentnie przez Finance You zgodnie z zasadami współpracy.",
+    t: "Wprowadzasz wniosek klienta",
+    d: "Kreator prowadzi Cię przez dane, nieruchomość i dokumenty.",
   },
-];
-
-const STAGES = [
-  "Rejestracja",
-  "Szkolenie",
-  "Pierwszy klient",
-  "Obsługa w CRM",
-  "Współpraca z inwestorem",
-  "Prowizja",
-  "Skalowanie",
-  "Lokalna sieć klientów",
+  {
+    t: "Oferta trafia do inwestorów",
+    d: "Przedstawiamy ją prywatnym i instytucjonalnym inwestorom.",
+  },
+  {
+    t: "Śledzisz reakcje w CRM",
+    d: "Otwarcia, odpowiedzi, zainteresowanie i propozycje finansowania.",
+  },
+  {
+    t: "Finance You prowadzi formalności",
+    d: "Umowa, notariusz i koordynacja aż do wypłaty środków.",
+  },
+  { t: "Rozliczenie", d: "Prowizje i ich status widzisz w panelu, wypłaty na podane konto." },
 ];
 
 const CRM: { icon: Icon3DName; t: string }[] = [
-  { icon: "status", t: "Status klienta" },
+  { icon: "status", t: "Status oferty" },
+  { icon: "investors", t: "Reakcje inwestorów" },
+  { icon: "chat", t: "Odpowiedzi i pytania" },
+  { icon: "growth", t: "Propozycje finansowania" },
   { icon: "documents", t: "Dokumenty" },
-  { icon: "house", t: "Nieruchomość" },
-  { icon: "dossier", t: "Numer KW" },
-  { icon: "investors", t: "Inwestorzy" },
-  { icon: "chat", t: "Komunikacja" },
-  { icon: "growth", t: "Prowizja" },
-  { icon: "procedures", t: "Zadania" },
-  { icon: "crm", t: "Historia kontaktu" },
-];
-
-const CAMP: FeatureItemData[] = [
-  { icon: "documents", t: "Gotowe materiały", d: "Kreacje i treści gotowe do użycia." },
-  { icon: "automation", t: "Automatyzacja kontaktu", d: "Sekwencje follow-up bez ręcznej pracy." },
-  { icon: "chat", t: "Komunikaty SMS / e-mail", d: "Wielokanałowa komunikacja z leadami." },
-  { icon: "growth", t: "Wsparcie leadów", d: "Dogrzewanie i kwalifikacja kontaktów." },
-  { icon: "updates", t: "Follow-upy", d: "Przypomnienia i ponawianie kontaktu." },
-  { icon: "crmfolder", t: "Segmentacja klientów", d: "Porządek w bazie i priorytetach." },
+  { icon: "house", t: "Nieruchomość i KW" },
 ];
 
 const FAQS = [
   {
-    q: "Czy muszę mieć doświadczenie?",
-    a: "Nie. Otrzymujesz szkolenie i gotowy proces. Program jest dostosowany do osób na różnym poziomie zaawansowania.",
+    q: "Ile kosztuje konto pośrednika?",
+    a: "Nic. Rejestrujesz się, akceptujesz umowę i podajesz konto do wypłaty prowizji — bez opłat i bez limitu ofert.",
   },
   {
-    q: "Czy dostaję szkolenie?",
-    a: "Tak. Wdrożenie obejmuje szkolenie z procesu, standardów i obsługi w CRM.",
+    q: "Czy muszę przejść szkolenie?",
+    a: "Nie. Kreator wniosku prowadzi Cię krok po kroku, a formalności transakcji prowadzi Finance You.",
   },
   {
-    q: "Jak działa CRM?",
-    a: "CRM porządkuje klientów, dokumenty, nieruchomości, komunikację, statusy i prowizje w jednym panelu pośrednika.",
+    q: "Skąd wiem, jak inwestorzy reagują na moją ofertę?",
+    a: "W zakładce „Reakcje inwestorów” widzisz dla każdej oferty: wysyłki, otwarcia, odpowiedzi, zainteresowanie i propozycje finansowania. Dane inwestorów są anonimowe.",
   },
   {
-    q: "Jak rozliczana jest prowizja?",
-    a: "Po uruchomieniu finansowania powstaje prowizja, rozliczana transparentnie przez Finance You zgodnie z zasadami współpracy. Szczegóły określa umowa o współpracy.",
+    q: "Ile zarabiam za poleconego inwestora?",
+    a: `${COMMISSION} za każdego nowego inwestora, który założy konto z Twojego linku i kupi dostęp do Finance You. Prowizję zatwierdza Finance You po zaksięgowaniu płatności.`,
+  },
+  {
+    q: "Jak dostaję wypłatę?",
+    a: "Na konto podane przy rejestracji, po osiągnięciu progu 500 zł i zatwierdzeniu prowizji. Rozliczasz się jako B2B albo w ramach działalności nierejestrowanej.",
   },
   {
     q: "Czy mogę obsługiwać własnych klientów?",
-    a: "Tak. Możesz wprowadzać własnych klientów i prowadzić ich sprawy w systemie.",
-  },
-  {
-    q: "Czy Finance You daje inwestorów?",
-    a: "Tak. Uzyskujesz dostęp do bazy inwestorów współpracujących z Finance You.",
-  },
-  {
-    q: "Czy mogę korzystać z kampanii AI?",
-    a: "Tak. Otrzymujesz gotowe materiały i automatyzację kontaktu wspieraną AI.",
-  },
-  {
-    q: "Czy mogę skalować współpracę?",
-    a: "Tak. Model pozwala budować lokalną sieć klientów i rozwijać współpracę.",
+    a: "Tak. Wprowadzasz własnych klientów i prowadzisz ich sprawy w swoim panelu.",
   },
 ];
 
@@ -230,7 +156,7 @@ function Hero() {
         }}
       >
         <div>
-          <MktBadge variant="gold">Program Pośrednika</MktBadge>
+          <MktBadge variant="gold">Konto pośrednika — bezpłatne</MktBadge>
           <h1
             style={{
               marginTop: "1rem",
@@ -261,12 +187,12 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Otrzymujesz gotowy system: CRM, szkolenie, kampanie wspierane AI, bazę inwestorów,
-            dokumenty i model rozliczeń prowizji.
+            Wprowadzaj wnioski klientów, przedstawiaj je inwestorom i śledź w CRM, jak reagują. Bez
+            opłat. Dodatkowo {COMMISSION} za każdego nowego inwestora, którego polecisz.
           </p>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <MktButton variant="cta" href={JOIN}>
-              <BrandIcon name="ltv" size={18} /> Dołącz jako pośrednik
+              <BrandIcon name="ltv" size={18} /> Załóż bezpłatne konto
             </MktButton>
           </div>
         </div>
@@ -286,18 +212,40 @@ function Hero() {
             style={{
               position: "relative",
               borderRadius: "var(--radius-2xl)",
-              overflow: "hidden",
               border: "1px solid rgba(255,255,255,.15)",
+              background: "rgba(255,255,255,.06)",
               boxShadow: "var(--shadow-2xl)",
+              padding: "1.6rem",
+              display: "grid",
+              gap: "1rem",
             }}
           >
-            <iframe
-              title="Program Pośrednika Finance You"
-              allow="autoplay; fullscreen"
-              allowFullScreen
-              src="https://fast.wistia.net/embed/iframe/fws0jrux1n?seo=false"
-              style={{ width: "100%", aspectRatio: "16 / 9", display: "block", border: 0 }}
-            />
+            {[
+              ["Zarejestruj się", "Załóż konto i zaakceptuj umowę."],
+              ["Podaj konto do wypłaty", "Tam trafiają Twoje prowizje."],
+              ["Wprowadzaj klientów", "I patrz, jak reagują inwestorzy."],
+            ].map(([t, d], i) => (
+              <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <span
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 32,
+                    height: 32,
+                    flexShrink: 0,
+                    borderRadius: "50%",
+                    background: "var(--gradient-brand)",
+                    fontWeight: 800,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{t}</div>
+                  <div style={{ fontSize: "0.9rem", color: "rgba(255,255,255,.75)" }}>{d}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -306,78 +254,33 @@ function Hero() {
 }
 
 function BrokerLanding() {
-  const { products } = Route.useLoaderData();
   return (
-    <MarketingShell page="posrednik" sticky={{ label: "Dołącz jako pośrednik", href: JOIN }}>
+    <MarketingShell page="posrednik" sticky={{ label: "Załóż konto pośrednika", href: JOIN }}>
       <Hero />
 
       <Section>
-        <SectionHead eyebrow="Co dostajesz" title="Gotowy system do prowadzenia klientów" />
+        <SectionHead eyebrow="Co dostajesz" title="Bezpłatne narzędzia do prowadzenia klientów" />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={GET} icon3d />
         </div>
       </Section>
 
       <Section tint>
-        <SectionHead eyebrow="Jak zarabiasz" title="Od klienta do rozliczonej prowizji" />
+        <SectionHead eyebrow="Jak to działa" title="Od rejestracji do rozliczonej prowizji" />
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={EARN.map((e) => ({ icon: "check", t: e.t, d: e.d }))} />
         </div>
         <ComplianceNote style={{ marginTop: "2rem" }}>
-          Warunki współpracy i rozliczeń prowizyjnych określa umowa o współpracy. Nie gwarantujemy
-          konkretnych kwot.
+          Warunki współpracy i rozliczeń prowizyjnych określa umowa akceptowana przy rejestracji.
+          Nie gwarantujemy finansowania ani konkretnych kwot.
         </ComplianceNote>
       </Section>
 
       <Section>
-        <SectionHead eyebrow="Ścieżka rozwoju" title="Od pierwszego klienta do własnego biznesu" />
-        <div
-          className="fy-steps"
-          style={{
-            marginTop: "2.5rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(4,1fr)",
-            gap: "0.9rem",
-          }}
-        >
-          {STAGES.map((s, i) => (
-            <div
-              key={s}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "1rem",
-                borderRadius: "var(--radius-xl)",
-                border: "1px solid var(--border)",
-                background: "var(--card)",
-                boxShadow: "var(--shadow-xs)",
-              }}
-            >
-              <span
-                style={{
-                  display: "grid",
-                  placeItems: "center",
-                  width: 30,
-                  height: 30,
-                  flexShrink: 0,
-                  borderRadius: "50%",
-                  background: "var(--gradient-brand)",
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: "0.78rem",
-                }}
-              >
-                {i + 1}
-              </span>
-              <span style={{ fontSize: "0.82rem", fontWeight: 600 }}>{s}</span>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section tint>
-        <SectionHead eyebrow="CRM dla pośrednika" title="Wszystko o kliencie w jednym panelu" />
+        <SectionHead
+          eyebrow="CRM pośrednika"
+          title="Widzisz, jak inwestorzy reagują na Twoje oferty"
+        />
         <div
           className="fy-modules"
           style={{
@@ -408,80 +311,18 @@ function BrokerLanding() {
         </div>
       </Section>
 
-      <Section>
-        <SectionHead eyebrow="Kampanie AI" title="Pozyskuj leady z gotowymi narzędziami" />
-        <div style={{ marginTop: "2.5rem" }}>
-          <FeatureGrid items={CAMP} icon3d />
-        </div>
-      </Section>
-
-      <Section>
-        <SectionHead
-          center
-          eyebrow="Na żywo"
-          title="Ostatnie transakcje"
-          sub="Faktury sprzedaży realizowane w systemie Finance You — aktualizowane na bieżąco."
-        />
-        <div
-          style={{
-            marginTop: "2.5rem",
-            maxWidth: "60rem",
-            marginLeft: "auto",
-            marginRight: "auto",
-            borderRadius: 16,
-            overflow: "hidden",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          <iframe
-            src="https://app.financeyou.pl/embed/faktury"
-            style={{ border: 0, width: "100%", minHeight: 600, height: 720, display: "block" }}
-            loading="lazy"
-            title="Faktury sprzedaży Finance You"
-          />
-        </div>
-      </Section>
-
       <Section tint>
         <SectionHead
           center
-          eyebrow="Cennik"
-          title="Program Pośrednika Finance You"
-          sub="Jednorazowa płatność za czasowy dostęp — bez automatycznych odnowień. Konto darmowe (do 5 ofert) masz zawsze bez opłat."
+          eyebrow="Program partnerski"
+          title={`${COMMISSION} za każdego nowego inwestora`}
+          sub="W panelu dostajesz link polecający. Gdy inwestor założy konto z Twojego linku i kupi dostęp do Finance You, naliczamy Ci prowizję."
         />
-        <div style={{ marginTop: "2.5rem" }}>
-          <MarketingPricing
-            products={products}
-            audience="broker"
-            ctaLabel="Wykup dostęp"
-            featuresByDuration={PRICING_FEATURES}
-            fallback={
-              <PricingCard
-                eyebrow="Program Pośrednika Finance You"
-                title="Pełny dostęp pośrednika"
-                price="499 zł"
-                period="/ 30 dni"
-                cta="Załóż konto pośrednika"
-                href={JOIN}
-                features={[
-                  "CRM + panel pośrednika",
-                  "Szkolenie wdrożeniowe",
-                  "Kampanie AI i materiały",
-                  "Dostęp do bazy inwestorów",
-                  "Wzory dokumentów i procedury",
-                  "Transparentny model prowizyjny",
-                ]}
-                note="Ceny brutto. Dostęp roczny: 2 999 zł / 365 dni. Konto darmowe: do 5 ofert. Warunki określa umowa o współpracy."
-              />
-            }
-          />
+        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
+          <MktButton variant="cta" href="/posrednicy">
+            Zasady programu partnerskiego
+          </MktButton>
         </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>
-          Ceny brutto (PLN). Zakup wymaga konta pośrednika — po wybraniu pakietu przejdziesz do
-          bezpiecznej płatności Tpay, a faktura zostanie wystawiona automatycznie. Warunki
-          współpracy i rozliczeń prowizyjnych określa umowa o współpracy.
-        </ComplianceNote>
       </Section>
 
       <Section id="faq">
@@ -491,8 +332,8 @@ function BrokerLanding() {
 
       <CTASection
         single
-        title="Zacznij prowadzić klientów w systemie, który daje Ci proces, narzędzia i inwestorów."
-        buttons={[{ label: "Dołącz jako pośrednik", href: JOIN }]}
+        title="Załóż bezpłatne konto pośrednika i przedstaw swoich klientów inwestorom."
+        buttons={[{ label: "Załóż konto pośrednika", href: JOIN }]}
       />
     </MarketingShell>
   );

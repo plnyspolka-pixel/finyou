@@ -438,6 +438,28 @@ describe("webhook Tpay — program partnerski", () => {
     expect((db().tables.affiliate_commissions ?? []).length).toBe(1);
   });
 
+  it("prowizja tylko za nowego inwestora — kolejny zakup (odnowienie) jej nie nalicza", async () => {
+    seedAffiliate();
+    const first = seedPayment({
+      provider_transaction_id: "tr_first",
+      created_at: "2026-08-01T10:00:00.000Z",
+    });
+    tpayCorrect("tr_first", first, 999);
+    await handleTpayNotification({ tr_id: "tr_first" });
+
+    const renewal = seedPayment({
+      provider_transaction_id: "tr_renew",
+      created_at: "2026-09-01T10:00:00.000Z",
+    });
+    tpayCorrect("tr_renew", renewal, 999);
+    await handleTpayNotification({ tr_id: "tr_renew" });
+
+    const events = db().tables.affiliate_commission_events ?? [];
+    expect(events).toHaveLength(1);
+    expect(events[0].external_ref).toBe("tpay:tr_first");
+    expect((db().tables.affiliate_commissions ?? []).length).toBe(1);
+  });
+
   it("bez zapisanego partnera polecającego zdarzenie nie powstaje", async () => {
     const paymentId = seedPayment({ provider_transaction_id: "tr_noaff" });
     tpayCorrect("tr_noaff", paymentId, 999);

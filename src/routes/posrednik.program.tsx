@@ -15,12 +15,11 @@ import {
   BanknoteIcon,
   Copy,
   UserCheck,
-  Building2,
-  HandCoins,
   AlertTriangle,
   Info,
 } from "lucide-react";
 import { formatPLN } from "@/lib/labels";
+import { INVESTOR_COMMISSION_PLN } from "@/lib/affiliate/engine-pure";
 import { partnerStatusLabels, partnerStatusColors } from "@/lib/affiliate/labels";
 import { ComplianceNotice } from "@/components/affiliate/compliance-notice";
 import { getAffiliateDashboard, getMyAffiliatePartner } from "@/lib/affiliate/partner.functions";
@@ -29,7 +28,7 @@ export const Route = createFileRoute("/posrednik/program")({
   component: ProgramDashboard,
 });
 
-const APP_ORIGIN = "https://app.financeyou.pl";
+const SITE_ORIGIN = "https://financeyou.pl";
 
 function ProgramDashboard() {
   const dashFn = useServerFn(getAffiliateDashboard);
@@ -69,7 +68,10 @@ function ProgramDashboard() {
     );
   }
 
-  const refLink = `${APP_ORIGIN}/posrednicy/rejestracja?ref=${me.referral_code}`;
+  // Polecenie trafia na stronę dla inwestora; kod ?ref= zapisuje się na koncie
+  // inwestora po rejestracji (ReferralCapture), a prowizja nalicza się przy
+  // jego pierwszym opłaconym dostępie.
+  const refLink = `${SITE_ORIGIN}/dla-inwestora?ref=${me.referral_code}`;
   const b = dash.balances;
   const progPct = Math.min(100, Math.round((b.dostepne / b.prog) * 100));
 
@@ -92,8 +94,6 @@ function ProgramDashboard() {
 
   const counts = [
     { label: "Polecenia inwestorów", value: dash.counts.inwestorzy, icon: UserCheck },
-    { label: "Polecenia pośredników", value: dash.counts.posrednicy, icon: Building2 },
-    { label: "Polecenia klientów", value: dash.counts.klienci, icon: HandCoins },
   ];
 
   return (
@@ -104,7 +104,7 @@ function ProgramDashboard() {
             <Network className="h-6 w-6" /> Program pośredników
           </h1>
           <p className="text-sm text-muted-foreground">
-            Twoja sieć poleceń i prowizje sieciowe do 3 poziomów.
+            {formatPLN(INVESTOR_COMMISSION_PLN)} za każdego nowego inwestora, który kupi dostęp.
           </p>
         </div>
         <Badge className={partnerStatusColors[me.status] ?? "bg-slate-100"} variant="secondary">
@@ -133,9 +133,10 @@ function ProgramDashboard() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Twój link polecający</CardTitle>
+          <CardTitle className="text-base">Twój link polecający dla inwestorów</CardTitle>
           <CardDescription>
-            Udostępniaj, aby budować swoją sieć poleceń. Kod: <b>{me.referral_code}</b>
+            Wyślij go inwestorowi. Gdy założy konto z tego linku i kupi dostęp, otrzymasz{" "}
+            {formatPLN(INVESTOR_COMMISSION_PLN)} prowizji. Kod: <b>{me.referral_code}</b>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row gap-2">
@@ -196,25 +197,6 @@ function ProgramDashboard() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Prowizje wg poziomu</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span>Poziom 1 (bezpośrednie)</span>
-              <b className="tabular-nums">{formatPLN(dash.levels.level1)}</b>
-            </div>
-            <div className="flex justify-between">
-              <span>Poziom 2</span>
-              <b className="tabular-nums">{formatPLN(dash.levels.level2)}</b>
-            </div>
-            <div className="flex justify-between">
-              <span>Poziom 3</span>
-              <b className="tabular-nums">{formatPLN(dash.levels.level3)}</b>
-            </div>
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Polecenia</CardTitle>

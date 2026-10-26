@@ -26,7 +26,7 @@ export const Route = createFileRoute("/posrednicy/rejestracja")({
 });
 
 function RejestracjaPartnera() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshRoles } = useAuth();
   const { ref } = Route.useSearch();
   const navigate = useNavigate();
   const register = useServerFn(registerAffiliatePartner);
@@ -69,6 +69,8 @@ function RejestracjaPartnera() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!terms) return toast.error("Zaakceptuj regulamin programu");
+    if (bank.replace(/\s/g, "").length < 26)
+      return toast.error("Podaj numer konta do wypłaty prowizji (26 cyfr)");
     if (settlementType === "b2b" && (!companyName.trim() || !nip.trim()))
       return toast.error("Dla B2B podaj nazwę firmy i NIP");
     if (settlementType === "unregistered_activity") {
@@ -99,8 +101,9 @@ function RejestracjaPartnera() {
           termsVersion: "1.0",
         },
       });
-      toast.success("Zgłoszenie wysłane! Konto pośrednika czeka na akceptację administratora.");
-      void navigate({ to: "/posrednik" });
+      await refreshRoles();
+      toast.success("Konto pośrednika aktywne — witaj w Finance You!");
+      void navigate({ to: "/posrednik/wnioski" });
     } catch (err) {
       toast.error("Rejestracja nie powiodła się", { description: (err as Error).message });
     } finally {
@@ -117,10 +120,13 @@ function RejestracjaPartnera() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 py-10 px-4">
       <div className="mx-auto max-w-2xl space-y-6">
         <div className="text-center space-y-1">
-          <Link to="/posrednicy" className="text-sm text-primary hover:underline">
-            ← Program pośredników
+          <Link to="/dla-posrednika" className="text-sm text-primary hover:underline">
+            ← Dla pośrednika
           </Link>
           <h1 className="text-2xl md:text-3xl font-bold">Rejestracja pośrednika</h1>
+          <p className="text-sm text-muted-foreground">
+            Bezpłatnie: załóż konto, zaakceptuj umowę i podaj konto do wypłaty prowizji.
+          </p>
           {ref && (
             <p className="text-sm text-muted-foreground">
               Polecenie od pośrednika: <b>{ref}</b>
@@ -274,7 +280,7 @@ function RejestracjaPartnera() {
                   <Input value={city} onChange={(e) => setCity(e.target.value)} />
                 </div>
                 <div className="space-y-1 sm:col-span-2">
-                  <Label>Numer rachunku bankowego</Label>
+                  <Label>Numer konta do wypłaty prowizji</Label>
                   <Input
                     value={bank}
                     onChange={(e) => setBank(e.target.value)}
@@ -315,13 +321,25 @@ function RejestracjaPartnera() {
                     className="mt-0.5"
                   />
                   <span>
-                    Akceptuję regulamin programu pośredników Finance You i potwierdzam, że nie będę
+                    Akceptuję{" "}
+                    <Link to="/regulamin" target="_blank" className="text-primary underline">
+                      regulamin serwisu
+                    </Link>
+                    ,{" "}
+                    <Link
+                      to="/polityka-prywatnosci"
+                      target="_blank"
+                      className="text-primary underline"
+                    >
+                      politykę prywatności
+                    </Link>{" "}
+                    oraz zasady programu pośredników Finance You i potwierdzam, że nie będę
                     gwarantować finansowania ani występować jako przedstawiciel Finance You bez
                     odrębnego upoważnienia.
                   </span>
                 </label>
                 <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? "Wysyłanie…" : "Wyślij zgłoszenie"}
+                  {submitting ? "Zakładanie konta…" : "Załóż konto pośrednika"}
                 </Button>
               </CardContent>
             </Card>

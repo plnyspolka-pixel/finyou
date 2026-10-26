@@ -18,6 +18,8 @@ export const Route = createFileRoute("/sitemap.xml")({
           // /posrednik to panele wymagające logowania — nie trafiają do sitemapy.
           { path: "/dla-klienta", lastmod: today, changefreq: "weekly", priority: "0.9" },
           { path: "/dla-inwestora", lastmod: today, changefreq: "weekly", priority: "0.9" },
+          { path: "/dla-posrednika", lastmod: today, changefreq: "weekly", priority: "0.8" },
+          { path: "/posrednicy", lastmod: today, changefreq: "monthly", priority: "0.6" },
           // Podstrony szkolenia i modułów partnera (/dla-inwestora/<moduł>).
           ...INVESTOR_MODULES.map(
             (m): SitemapEntry => ({

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,10 @@ import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import type { Database } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/posrednik/szkolenia")({
+  // Pośrednik działa bez płatnego dostępu, szkoleń i materiałów — moduł wyłączony.
+  beforeLoad: () => {
+    throw redirect({ to: "/posrednik/wnioski" });
+  },
   component: SzkoleniaPosrednik,
 });
 

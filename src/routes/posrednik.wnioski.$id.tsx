@@ -42,6 +42,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ClientFilesManager } from "@/components/media/ClientFilesManager";
 import { ClientCommsPreview } from "@/components/comms/ClientCommsPreview";
 import { SendToInvestorsDialog } from "@/components/broker/send-to-investors-dialog";
+import { ApplicationReactionsCard } from "@/components/broker/investor-reactions";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { EditableField } from "@/components/admin/EditableField";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
@@ -99,6 +100,7 @@ export function BrokerApplicationDetail({
   // Historia komunikacji wisi na leadach — RLS udostępnia ją tylko personelowi
   // wewnętrznemu, więc pośrednikowi zewnętrznemu sekcji nie pokazujemy.
   const canSeeComms = roles.includes("operator") || roles.includes("administrator");
+  const isExternalBroker = roles.includes("posrednik") && !canSeeComms;
 
   const load = useCallback(
     async (silent = false) => {
@@ -376,6 +378,8 @@ export function BrokerApplicationDetail({
         </div>
         <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
+
+      {isExternalBroker && <ApplicationReactionsCard applicationId={id} />}
 
       {/* Pliki klienta — jeden worek: zdjęcia, skany, załączniki. Wszystko jako miniatury. */}
       <FancyCard tone="light">

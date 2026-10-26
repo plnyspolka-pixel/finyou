@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,10 @@ import {
 import { MarketingComplianceNotice } from "@/components/affiliate/compliance-notice";
 
 export const Route = createFileRoute("/posrednik/marketing")({
+  // Pośrednik działa bez płatnego dostępu, szkoleń i materiałów — moduł wyłączony.
+  beforeLoad: () => {
+    throw redirect({ to: "/posrednik/wnioski" });
+  },
   component: BrokerMarketingPage,
 });
 

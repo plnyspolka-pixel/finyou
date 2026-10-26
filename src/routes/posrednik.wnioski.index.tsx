@@ -26,11 +26,7 @@ import { loanStatusLabels } from "@/lib/labels";
 import { KwPotentialBadge } from "@/components/location-scoring/kw-potential-badge";
 import { collectClientFileRefs, resolveClientFilesHero, plikiLabel } from "@/lib/property-photos";
 import { toDisplayableImageUrl } from "@/lib/heic-preview";
-import {
-  getMyBrokerOfferUsage,
-  softDeleteMyApplication,
-  type BrokerOfferUsage,
-} from "@/lib/access/state.functions";
+import { softDeleteMyApplication } from "@/lib/access/state.functions";
 
 export const Route = createFileRoute("/posrednik/wnioski/")({
   component: MojeWnioski,
@@ -84,13 +80,11 @@ export function MojeWnioski() {
   const { user, roles } = useAuth();
   const navigate = useNavigate();
   const base = usePanelBase();
-  const usageFn = useServerFn(getMyBrokerOfferUsage);
   const deleteFn = useServerFn(softDeleteMyApplication);
   const [rows, setRows] = useState<Row[]>([]);
   const [heroByApp, setHeroByApp] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [usage, setUsage] = useState<BrokerOfferUsage | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Zewnętrzny pośrednik widzi wyłącznie własne oferty (wszystkie statusy);
@@ -114,21 +108,11 @@ export function MojeWnioski() {
     const all = (data as any as Row[]) ?? [];
     setRows(all);
     setLoading(false);
-    try {
-      setUsage(await usageFn());
-    } catch {
-      setUsage(null);
-    }
     return all;
   };
 
   const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        "Usunąć tę ofertę? Zwolni to miejsce w limicie darmowego konta. Oferta nie będzie już widoczna.",
-      )
-    )
-      return;
+    if (!window.confirm("Usunąć tę ofertę? Oferta nie będzie już widoczna.")) return;
     setDeletingId(id);
     try {
       await deleteFn({ data: { applicationId: id } });
@@ -192,16 +176,11 @@ export function MojeWnioski() {
         title={isExternalBroker ? "Moje oferty" : "Wnioski szukające inwestora"}
         subtitle={
           isExternalBroker
-            ? "Twoje oferty wprowadzone do Finance You. Usunięcie oferty zwalnia miejsce w limicie darmowego konta."
+            ? "Twoje oferty wprowadzone do Finance You — bez limitu. Reakcje inwestorów znajdziesz w zakładce „Reakcje inwestorów”."
             : "Wszystkie kompletne wnioski ze statusem „szukamy inwestora” — gotowe do przedstawienia inwestorom."
         }
         actions={
           <div className="flex items-center gap-3">
-            {usage && !usage.hasPaidAccess && !usage.isBypass && (
-              <Badge variant={usage.activeCount >= usage.freeLimit ? "destructive" : "secondary"}>
-                Limit ofert: {usage.activeCount}/{usage.freeLimit}
-              </Badge>
-            )}
             <Button asChild>
               <Link to={`${base}/wniosek` as any}>
                 <FilePlus2 className="mr-2 h-4 w-4" />

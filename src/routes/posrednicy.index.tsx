@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ComplianceNotice } from "@/components/affiliate/compliance-notice";
+import { formatPLN } from "@/lib/labels";
+import { INVESTOR_COMMISSION_PLN } from "@/lib/affiliate/engine-pure";
 import {
   Network,
   Wallet,
   BadgeCheck,
-  Building2,
+  Link2,
   UserCheck,
   HandCoins,
   ArrowRight,
@@ -17,17 +19,17 @@ import {
 export const Route = createFileRoute("/posrednicy/")({
   head: () => ({
     meta: [
-      { title: "Program pośredników Finance You — sieć pośredników, 3-poziomowy system prowizji" },
+      { title: "Program partnerski Finance You — 1000 zł za każdego nowego inwestora" },
       {
         name: "description",
         content:
-          "Dołącz do sieci pośredników Finance You. Prowizja sieciowa do 3 poziomów wyłącznie od realnych zdarzeń gospodarczych. Rozliczenie B2B lub działalność nierejestrowana. Próg wypłaty 500 zł.",
+          "Polecaj inwestorów Finance You. Za każdego nowego inwestora, który kupi dostęp, płacimy 1000 zł prowizji. Rejestracja bezpłatna, rozliczenie B2B lub działalność nierejestrowana.",
       },
-      { property: "og:title", content: "Program pośredników Finance You" },
+      { property: "og:title", content: "Program partnerski Finance You — 1000 zł za inwestora" },
       {
         property: "og:description",
         content:
-          "Sieć pośredników i 3-poziomowy system prowizji. Prowizje wyłącznie od realnych zdarzeń gospodarczych.",
+          "Za każdego nowego inwestora, który kupi dostęp do Finance You, płacimy 1000 zł prowizji.",
       },
       { property: "og:url", content: "https://financeyou.pl/posrednicy" },
       { property: "og:type", content: "website" },
@@ -37,21 +39,23 @@ export const Route = createFileRoute("/posrednicy/")({
   component: PosrednicyLanding,
 });
 
-const events = [
+const COMMISSION = formatPLN(INVESTOR_COMMISSION_PLN);
+
+const steps = [
   {
     icon: UserCheck,
-    title: "Opłacone konto inwestora",
-    desc: "Osoba polecona opłaca konto inwestora, a płatność zostaje zaksięgowana i nie jest zwrócona.",
+    title: "1. Zarejestruj się",
+    desc: "Bezpłatnie: dane, akceptacja umowy i numer konta do wypłaty prowizji. Konto działa od razu.",
   },
   {
-    icon: Building2,
-    title: "Opłacone konto pośrednika",
-    desc: "Realnie opłacone, nieanulowane konto/usługa pośrednika — nie za samą rejestrację osoby.",
+    icon: Link2,
+    title: "2. Polecaj inwestorów",
+    desc: "W panelu dostajesz swój link polecający. Inwestor zakłada konto z Twojego linku.",
   },
   {
     icon: HandCoins,
-    title: "Skuteczna wypłata środków klientowi",
-    desc: "Klient polecony otrzymuje środki, a Finance You uzyskuje należne wynagrodzenie z transakcji.",
+    title: `3. Otrzymujesz ${COMMISSION}`,
+    desc: "Gdy polecony nowy inwestor kupi dostęp do Finance You, naliczamy Ci prowizję.",
   },
 ];
 
@@ -71,7 +75,7 @@ function PosrednicyLanding() {
           </Button>
           <Button asChild size="sm">
             <Link to="/posrednicy/rejestracja" search={{ ref: "" }}>
-              Zostań pośrednikiem
+              Dołącz do programu
             </Link>
           </Button>
         </div>
@@ -80,15 +84,15 @@ function PosrednicyLanding() {
       <main className="mx-auto max-w-5xl px-4 py-12 space-y-12">
         <section className="text-center space-y-5">
           <Badge variant="secondary" className="gap-1">
-            <Network className="h-3.5 w-3.5" /> Sieć pośredników Finance You
+            <Network className="h-3.5 w-3.5" /> Program partnerski Finance You
           </Badge>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-            Program pośredników i 3-poziomowy system prowizji
+            {COMMISSION} za każdego nowego inwestora
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Polecaj inwestorów, pośredników i klientów. Zarabiaj prowizję sieciową do trzech
-            poziomów — wyłącznie od realnych zdarzeń gospodarczych. Rozliczaj się jako B2B lub w
-            ramach działalności nierejestrowanej.
+            Polecaj inwestorów zainteresowanych pożyczkami zabezpieczonymi na nieruchomościach. Za
+            każdego nowego inwestora, który kupi dostęp do Finance You, płacimy {COMMISSION}{" "}
+            prowizji. Rozliczasz się jako B2B lub w ramach działalności nierejestrowanej.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Button asChild size="lg">
@@ -100,9 +104,9 @@ function PosrednicyLanding() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-center">Za co powstaje prowizja</h2>
+          <h2 className="text-2xl font-semibold text-center">Jak to działa</h2>
           <div className="grid gap-4 md:grid-cols-3">
-            {events.map((e) => (
+            {steps.map((e) => (
               <Card key={e.title}>
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -120,12 +124,12 @@ function PosrednicyLanding() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Network className="h-5 w-5 text-primary" /> 3 poziomy
+                <ShieldCheck className="h-5 w-5 text-primary" /> Kiedy prowizja jest należna
               </CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
-              Poziom 1 — Ty (bezpośrednie polecenie). Poziom 2 — pośrednik, który zaprosił Ciebie.
-              Poziom 3 — jego sponsor. Prowizja sieciowa nie jest naliczana powyżej 3 poziomów.
+              Za nowego inwestora (pierwszy zakup dostępu, bez odnowień), gdy płatność jest
+              zaksięgowana i nie została zwrócona. Prowizję zatwierdza Finance You.
             </CardContent>
           </Card>
           <Card>
@@ -160,17 +164,17 @@ function PosrednicyLanding() {
                 <ShieldCheck className="h-6 w-6 text-primary shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">
-                    Wynagrodzenie za realną sprzedaż, nie za rekrutację
+                    Wynagrodzenie za realny zakup, nie za rejestrację
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Program nie jest systemem zarabiania na zapraszaniu osób. Prowizja powstaje
-                    wyłącznie z realnego zdarzenia gospodarczego.
+                    Sama rejestracja poleconej osoby nie daje prowizji. {COMMISSION} należy się, gdy
+                    nowy inwestor faktycznie kupi dostęp do Finance You.
                   </p>
                 </div>
               </div>
               <Button asChild>
                 <Link to="/posrednicy/rejestracja" search={{ ref: "" }}>
-                  Zostań pośrednikiem <ArrowRight className="ml-2 h-4 w-4" />
+                  Dołącz do programu <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>

@@ -80,7 +80,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
   inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
-  posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
+  posrednik: { label: "Załóż konto pośrednika", href: "/posrednicy/rejestracja" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
@@ -147,6 +147,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const nav = [
     { label: "Klient", href: PAGE_PATH.klient, key: "klient" as const },
     { label: "Inwestor", href: PAGE_PATH.inwestor, key: "inwestor" as const },
+    { label: "Pośrednik", href: PAGE_PATH.posrednik, key: "posrednik" as const },
     { label: "Jak działa", href: page === "home" ? "#jak-dziala" : "/#jak-dziala", key: "jak" },
     { label: "Blog", href: "/blog", key: "blog" },
     {
@@ -399,6 +400,8 @@ export function SiteFooter() {
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
         { t: "Inwestor", href: PAGE_PATH.inwestor },
+        { t: "Pośrednik", href: PAGE_PATH.posrednik },
+        { t: "Program partnerski", href: "/posrednicy" },
       ],
     },
     {

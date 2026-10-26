@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Navigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { selectAccountRole } from "@/lib/account-role.functions";
@@ -80,6 +80,16 @@ function RolePickerPage() {
             "Inwestor",
             "Przeglądaj oferty i inwestuj w zabezpieczone pożyczki.",
           )}
+          <p className="text-center text-sm text-muted-foreground sm:col-span-2">
+            Jesteś pośrednikiem?{" "}
+            <Link
+              to="/posrednicy/rejestracja"
+              search={{ ref: "" }}
+              className="font-medium text-accent hover:underline"
+            >
+              Załóż bezpłatne konto pośrednika →
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -9,6 +9,13 @@
 
 export const PAYOUT_THRESHOLD_PLN = 500;
 
+/**
+ * Prowizja za nowego inwestora, który kupi dostęp (poziom 1). Kwotę naliczają
+ * reguły w affiliate_commission_rules — ta stała służy tylko do komunikacji
+ * na stronie i w panelu i musi być z nimi zgodna.
+ */
+export const INVESTOR_COMMISSION_PLN = 1000;
+
 export type CommissionEventType =
   | "investor_account_paid"
   | "broker_account_paid"

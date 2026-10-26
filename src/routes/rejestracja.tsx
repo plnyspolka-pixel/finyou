@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useSearch } from "@tanstack/react-router";
 import { useState, FormEvent } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,12 +15,19 @@ import { MktBadge } from "@/components/marketing/primitives";
 type SignupRole = "klient" | "inwestor";
 
 const searchSchema = z.object({
-  // .catch — nieznana rola w URL (np. stare linki ?role=posrednik) nie wywala strony.
-  role: z.enum(["klient", "inwestor"]).optional().catch(undefined),
+  // .catch — nieznana rola w URL nie wywala strony.
+  role: z.enum(["klient", "inwestor", "posrednik"]).optional().catch(undefined),
+  ref: z.string().max(60).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/rejestracja")({
   validateSearch: (s) => searchSchema.parse(s),
+  // Pośrednik ma osobną rejestrację: dane, umowa i konto do wypłaty prowizji.
+  beforeLoad: ({ search }) => {
+    if (search.role === "posrednik") {
+      throw redirect({ to: "/posrednicy/rejestracja", search: { ref: search.ref ?? "" } });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Finance You — Załóż konto" },
@@ -77,7 +84,7 @@ const HERO_COPY: Record<SignupRole, { title: string; lead: string }> = {
 
 function RegisterPage() {
   const search = useSearch({ from: "/rejestracja" });
-  const [role, setRole] = useState<SignupRole>(search.role ?? "klient");
+  const [role, setRole] = useState<SignupRole>(search.role === "inwestor" ? "inwestor" : "klient");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -210,6 +217,16 @@ function RegisterPage() {
                     );
                   })}
                 </div>
+                <p className="text-center text-xs text-muted-foreground">
+                  Jesteś pośrednikiem?{" "}
+                  <Link
+                    to="/posrednicy/rejestracja"
+                    search={{ ref: search.ref ?? "" }}
+                    className="font-medium text-accent hover:underline"
+                  >
+                    Załóż bezpłatne konto pośrednika →
+                  </Link>
+                </p>
 
                 <SocialSignIn
                   labelPrefix="Zarejestruj się"

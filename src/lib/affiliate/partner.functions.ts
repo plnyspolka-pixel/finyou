@@ -103,7 +103,10 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         settlement_type: data.settlementType,
-        status: "pending_approval",
+        // Samoobsługa: konto aktywne od razu po akceptacji umowy. Każda
+        // prowizja i tak czeka na zatwierdzenie administratora.
+        status: "active",
+        approved_at: new Date().toISOString(),
         sponsor_partner_id: sponsorPartnerId,
         referral_code: referralCode,
         referral_slug: referralSlug,
@@ -131,13 +134,40 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
 
     if (error || !inserted) throw new Error(`Rejestracja nie powiodła się: ${error?.message}`);
 
+    // Rola pośrednika daje panel /posrednik (wnioski, reakcje inwestorów,
+    // prowizje). Konta pracownicze zostają bez zmian.
+    const { data: roleRows } = await affiliateDb
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+    if (!roles.some((r) => ["administrator", "operator", "ksiegowosc"].includes(r))) {
+      await affiliateDb
+        .from("user_roles")
+        .upsert({ user_id: userId, role: "posrednik" } as any, { onConflict: "user_id,role" });
+      // Domyślna rola „klient” z rejestracji znika, chyba że to prawdziwy
+      // klient z kartoteką — wtedy zachowuje dostęp do swojego panelu.
+      const { data: clientRow } = await affiliateDb
+        .from("clients")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (!(clientRow ?? []).length) {
+        await affiliateDb.from("user_roles").delete().eq("user_id", userId).eq("role", "klient");
+      }
+    }
+
     await logAffiliateAudit(affiliateDb, {
       actorUserId: userId,
       actorRole: "partner",
       entityType: "affiliate_partner",
       entityId: (inserted as { id: string }).id,
       action: "partner_registered",
-      after: { settlement_type: data.settlementType, sponsor_partner_id: sponsorPartnerId },
+      after: {
+        settlement_type: data.settlementType,
+        sponsor_partner_id: sponsorPartnerId,
+        status: "active",
+      },
     });
 
     return inserted;

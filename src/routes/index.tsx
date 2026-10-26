@@ -73,6 +73,15 @@ const ROLES: RoleCardProps[] = [
     cta: "Zostań partnerem",
     href: "/dla-inwestora",
   },
+  {
+    icon3d: "handshake",
+    accent: "var(--gold-600)",
+    badge: { v: "gold", t: "Pośrednik" },
+    title: "Dla pośredników",
+    desc: "Bezpłatne konto: wprowadzaj wnioski klientów, przedstawiaj je inwestorom i śledź w CRM, jak reagują.",
+    cta: "Załóż konto pośrednika",
+    href: "/dla-posrednika",
+  },
 ];
 
 const MODULES: { icon: Icon3DName; t: string }[] = [
@@ -241,16 +250,16 @@ function Landing() {
       <Section id="sciezki">
         <SectionHead
           eyebrow="Wybierz ścieżkę"
-          title="Dwie role, jeden partner"
+          title="Trzy role, jeden partner"
           sub="Każda ścieżka prowadzi do osobnego, dopasowanego procesu w Finance You."
         />
         <div
           className="fy-steps"
           style={{
             margin: "2.5rem auto 0",
-            maxWidth: "56rem",
+            maxWidth: "72rem",
             display: "grid",
-            gridTemplateColumns: "repeat(2,1fr)",
+            gridTemplateColumns: "repeat(3,1fr)",
             gap: "1.1rem",
           }}
         >
