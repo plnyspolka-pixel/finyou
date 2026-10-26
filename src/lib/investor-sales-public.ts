@@ -1,4 +1,3 @@
-export const COMPLETE_APPLICATION_STATUSES = ["wniosek_kompletny", "do_analizy", "rokuje", "wyslany_do_inwestorow", "oferta_od_inwestora", "oferta_przekazana_klientowi", "zaakceptowany_przez_klienta", "do_umowy", "oczekuje_podpisania_umowy", "umowa_podpisana", "oczekuje_ustanowienia_zabezpieczen", "zabezpieczenia_ustanowione", "dokumenty_dostarczone_do_inwestora", "oczekuje_wyplaty", "wyplacony", "warunki_zaakceptowane", "dokumenty_przygotowanie_umowy", "notariusz", "zamkniety", "zamkniete"] as const;
 export type PublicCase = { ref: string; propertyType: string; voivodeship: string; amount: number; months: number | null; status: string; daysAgo: number };
 export function publicCase(row: { project_ref?: string | null; match_seq?: number; status: string; created_at: string; teaser?: Record<string, unknown> | null }, now = Date.now()): PublicCase | null {
   const t = row.teaser;
