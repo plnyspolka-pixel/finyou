@@ -34,26 +34,14 @@ export function FreeMaterialsSection({ data }: { data: FreeMaterials }) {
     <Section id={FREE_MATERIALS_SECTION_ID} tint>
       <SectionHead eyebrow={copy.eyebrow} title={copy.title} sub={copy.sub} />
 
-      {data.materials.length > 0 && (
         <div style={grid}>
           {data.materials.map((m) => (
             <MaterialCard key={m.slug} audience={data.audience} m={m} />
           ))}
-        </div>
-      )}
-
-      {data.tools.length > 0 && (
-        <>
-          <h3 style={{ marginTop: "2rem", fontSize: "1.05rem", fontWeight: 700 }}>
-            {copy.toolsLabel}
-          </h3>
-          <div style={{ ...grid, marginTop: "0.9rem" }}>
             {data.tools.map((t) => (
               <ToolCard key={t.slug} t={t} />
             ))}
-          </div>
-        </>
-      )}
+        </div>
 
       <p
         style={{
@@ -74,7 +62,8 @@ const grid: CSSProperties = {
   marginTop: "2rem",
   display: "grid",
   gap: "1rem",
-  gridTemplateColumns: "repeat(auto-fill, minmax(17rem, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 17rem), 1fr))",
+  gridAutoRows: "1fr",
 };
 
 function useCard(): [
@@ -87,7 +76,7 @@ function useCard(): [
     display: "flex",
     flexDirection: "column",
     background: "var(--card)",
-    border: `1px solid ${h ? "oklch(0.40 0.25 268 / 0.5)" : "var(--border)"}`,
+    border: `1px solid ${h ? "var(--accent)" : "var(--border)"}`,
     borderRadius: "var(--radius-2xl)",
     padding: "1.4rem",
     boxShadow: h ? "var(--shadow-lg)" : "var(--shadow-sm)",
@@ -152,7 +141,7 @@ function ToolCard({ t }: { t: FreeTool }) {
     <article {...handlers} style={style}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Icon3D name="calculator" size={48} />
-        <MktBadge variant="secondary">Kalkulator · online</MktBadge>
+        <MktBadge variant="secondary">Narzędzie · online</MktBadge>
       </div>
       <h3 style={{ marginTop: "0.9rem", fontSize: "1.05rem", fontWeight: 700, lineHeight: 1.3 }}>
         {t.title}
@@ -169,7 +158,7 @@ function ToolCard({ t }: { t: FreeTool }) {
       </p>
       <div style={{ marginTop: "auto", paddingTop: "1.1rem" }}>
         <MktButton variant="outline" size="sm" href={t.url}>
-          Policz teraz →
+          Policz teraz
         </MktButton>
       </div>
     </article>

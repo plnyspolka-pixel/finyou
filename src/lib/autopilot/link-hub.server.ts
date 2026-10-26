@@ -64,7 +64,7 @@ export async function getLinkHubData(): Promise<{ tracks: LinkHubTrack[] }> {
           .filter((r) => r.audience === TRACK_TO_AUDIENCE[t])
           .slice(0, 4)
           .map((r) => ({ slug: r.slug, title: r.title, headline: r.headline })),
-        tools: STARTER_CALCULATORS.filter((c) => c.track === t).map((c) => ({
+        tools: STARTER_CALCULATORS.filter((c) => c.track === t && (data ?? []).some((r) => r.slug === c.slug)).map((c) => ({
           slug: c.slug,
           title: c.title,
           keyword: c.keyword,

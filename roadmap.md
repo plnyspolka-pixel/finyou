@@ -1,3 +1,8 @@
+# Darmowe materiały i narzędzia
+- [ ] Wycofać kalkulator raty i filtrować wszystkie publiczne listy publikacją.
+- [ ] Wspólna szata stron PDF/narzędzi; wyniki klienta bez e-maila, inwestor z bramką.
+- [ ] Testy, kontrola desktop/mobile i zatwierdzona publikacja.
+
 # Public Ania conversations
 - [x] Ania test corrections: merged provider placeholders, personalized investor greeting and first outbound SMS, text filler filtering, caller-scoped loan purpose tools, callback evaluation. 39 tests passed; full tsgo passed; real A2P personalized greeting and unauthenticated/identityless write rejection verified. No real lead write/call/SMS exercised.
 - [ ] Publish approved Ania corrections and confirm result; public-ranking security finding still requires owner decision.
