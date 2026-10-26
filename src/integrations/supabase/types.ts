@@ -5362,6 +5362,7 @@ export type Database = {
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          video_max_percent: number
         }
         Insert: {
           bounced_at?: string | null
@@ -5379,6 +5380,7 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          video_max_percent?: number
         }
         Update: {
           bounced_at?: string | null
@@ -5396,6 +5398,7 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          video_max_percent?: number
         }
         Relationships: []
       }
@@ -8908,6 +8911,9 @@ export type Database = {
           updated_at: string
           user_agent: string | null
           utm: Json | null
+          video_expires_at: string | null
+          video_max_percent: number
+          video_token_hash: string | null
         }
         Insert: {
           consent?: boolean
@@ -8931,6 +8937,9 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           utm?: Json | null
+          video_expires_at?: string | null
+          video_max_percent?: number
+          video_token_hash?: string | null
         }
         Update: {
           consent?: boolean
@@ -8954,6 +8963,9 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           utm?: Json | null
+          video_expires_at?: string | null
+          video_max_percent?: number
+          video_token_hash?: string | null
         }
         Relationships: [
           {
@@ -9068,6 +9080,7 @@ export type Database = {
           id: string
           instant_download: boolean
           match_any_post: boolean
+          material_type: string
           meta_description: string | null
           mime_type: string | null
           og_image_url: string | null
@@ -9108,6 +9121,7 @@ export type Database = {
           id?: string
           instant_download?: boolean
           match_any_post?: boolean
+          material_type?: string
           meta_description?: string | null
           mime_type?: string | null
           og_image_url?: string | null
@@ -9148,6 +9162,7 @@ export type Database = {
           id?: string
           instant_download?: boolean
           match_any_post?: boolean
+          material_type?: string
           meta_description?: string | null
           mime_type?: string | null
           og_image_url?: string | null
@@ -15846,6 +15861,10 @@ export type Database = {
           reference_id: string
           reference_type: string
         }[]
+      }
+      update_free_video_progress: {
+        Args: { p_percent: number; p_signup: string }
+        Returns: undefined
       }
     }
     Enums: {
