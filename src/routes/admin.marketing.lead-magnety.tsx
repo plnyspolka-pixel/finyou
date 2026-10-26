@@ -251,6 +251,7 @@ function toInput(form: FormState): LeadMagnetInput {
     slug: form.slug.toLowerCase().trim(),
     title: form.title.trim(),
     audience: form.audience,
+    material_type: form.slug === "darmowa-lekcja" ? "video" : "pdf",
     headline: form.headline.trim(),
     subheadline: form.subheadline.trim() || undefined,
     benefits: lines(form.benefits),
@@ -754,6 +755,7 @@ function EditorDialog({
       title: form.title || "nasz materiał",
       keyword: keywords[0] ?? null,
       audience: form.audience,
+    material_type: form.slug === "darmowa-lekcja" ? "video" : "pdf",
       platform: "facebook",
     });
 

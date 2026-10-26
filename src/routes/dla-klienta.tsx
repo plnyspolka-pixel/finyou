@@ -23,7 +23,7 @@ import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions"
 const APPLY = "#wniosek";
 
 export const Route = createFileRoute("/dla-klienta")({
-  validateSearch: (s: Record<string, unknown>) => ({ kwota: typeof s.kwota === "string" || typeof s.kwota === "number" ? String(s.kwota) : undefined }),
+  validateSearch: (s: Record<string, unknown>)  : { kwota?: string } => ({ kwota: typeof s.kwota === "string" || typeof s.kwota === "number" ? String(s.kwota) : undefined }),
   // Dział „Darmowe materiały” – opublikowane lead magnety klienta. Odporne na
   // brak bazy w SSR: wtedy sekcja się nie renderuje, reszta strony bez zmian.
   loader: async () => ({

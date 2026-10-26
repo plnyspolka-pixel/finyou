@@ -105,10 +105,11 @@ export const Route = createFileRoute("/pobierz/$slug")({
 
 function LeadMagnetPage() {
   const { slug } = Route.useParams();
+  const search = Route.useSearch();
   const { data } = useSuspenseQuery(magnetQuery(slug));
   const magnet = data.magnet as PublicLeadMagnet;
 
-  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={Route.useSearch().t}/></Shell>;
+  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={search.t}/></Shell>;
 
   return (
     <Shell>
