@@ -116,15 +116,23 @@ export async function requestVideoRendition(sourceUrl: string): Promise<VideoRen
 /**
  * „Ponów" przy wpisie kolejki: nieudany rendition dostaje nowy budżet prób,
  * żeby ponowiona publikacja znów spróbowała kompresji (np. po naprawie
- * usługi), zamiast od razu słać oryginał.
+ * usługi), zamiast od razu słać oryginał. Zeruje też wiersz zawieszony w
+ * `processing` bez id zadania (worker padł między przejęciem a zapisem id);
+ * wiersza z trwającym zadaniem nie rusza — tym zajmuje się `settleRendition`.
  */
 export async function resetVideoRendition(sourceUrl: string | null | undefined): Promise<void> {
   if (!isRenditionCandidateUrl(sourceUrl)) return;
   await table()
-    .update({ status: "pending", attempt_count: 0, job_id: null, job_started_at: null })
+    .update({
+      status: "pending",
+      attempt_count: 0,
+      job_id: null,
+      job_started_at: null,
+      last_error: null,
+    })
     .eq("source_url", sourceUrl)
     .eq("profile", VIDEO_RENDITION_PROFILE)
-    .eq("status", "failed");
+    .or("status.eq.failed,and(status.eq.processing,job_id.is.null)");
 }
 
 // ── Zlecenie i domknięcie ───────────────────────────────────────────────────
@@ -144,12 +152,21 @@ type SubmitOutcome = {
  * Zleca zadanie w usłudze. Optymistyczne przejęcie wiersza (pending/failed →
  * processing) chroni przed podwójnym zleceniem, gdy tick i publikator trafią
  * na ten sam wiersz w tej samej chwili.
+ *
+ * Ponowienie (`reason` ≠ null — decyzja `retry` z `resolveVideoRendition`)
+ * może przejąć także wiersz `processing`: zawieszony bez id zadania, z
+ * zadaniem, które usługa zgubiła albo zgłosiła jako nieudane, albo po
+ * przekroczonym czasie. Bez tego taki wiersz wisiał bezterminowo (do
+ * wyczerpania prób nikt nie mógł go przejąć), a publikacja odraczała się
+ * w nieskończoność. Warunek na `attempt_count` to blokada optymistyczna:
+ * z dwóch równoległych przebiegów tylko jeden zleca.
  */
 async function submitRendition(
   row: VideoRenditionRow,
   reason: string | null,
 ): Promise<SubmitOutcome> {
   const attempt = row.attempt_count + 1;
+  const claimableFrom = reason ? ["pending", "failed", "processing"] : ["pending", "failed"];
   const { data: claimed, error: claimErr } = await table()
     .update({
       status: "processing",
@@ -159,10 +176,23 @@ async function submitRendition(
       last_error: reason,
     })
     .eq("id", row.id)
-    .in("status", ["pending", "failed"])
+    .in("status", claimableFrom)
+    .eq("attempt_count", row.attempt_count)
     .select("id");
   if (claimErr) throw new Error(`video_renditions: ${claimErr.message}`);
   if (!claimed?.length) return { claimed: false, unsupported: null };
+
+  if (row.status === "processing" && row.job_id) {
+    // Stare zadanie (zaginione, nieudane albo po czasie) — sprzątamy w usłudze,
+    // żeby nie kodowała dalej na darmo. Błąd nieistotny: zadanie i tak jest
+    // już poza obiegiem.
+    try {
+      const burner = await import("./caption-burner.server");
+      await burner.discardBurnerJob(row.job_id);
+    } catch (e) {
+      console.warn(`[renditions] nie udało się usunąć starego zadania (${row.id}): ${errMsg(e)}`);
+    }
+  }
 
   try {
     const path = renditionStoragePath(row.id);

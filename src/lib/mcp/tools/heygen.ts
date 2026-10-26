@@ -190,7 +190,12 @@ export const heygenStatus = defineTool({
         // Własne style napisów (rozmiar, pozycja) — usługa FFmpeg poza HeyGenem.
         caption_burner: burner.isCaptionBurnerConfigured()
           ? await burner.checkCaptionBurnerHealth()
-          : { ok: false, ffmpeg: null, error: "nie skonfigurowana (CAPTION_BURNER_URL)" },
+          : {
+              ok: false,
+              ffmpeg: null,
+              transcode: false,
+              error: "nie skonfigurowana (CAPTION_BURNER_URL)",
+            },
         render_engine: await (async () => {
           const { resolveRenderEngine } = await import("@/lib/studio-render-engine");
           const { getRemotionEnv } = await import("@/lib/remotion-render.server");
