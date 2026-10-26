@@ -7,13 +7,15 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, type FormEvent } from "react";
-import { Calculator, Lock, ShieldCheck } from "lucide-react";
+import { Check, Lock, ShieldCheck, Phone } from "lucide-react";
 import { getPublicToolFn, submitToolSignupFn } from "@/lib/autopilot/tools.functions";
 import { runCalculator, type CalculatorConfig } from "@/lib/autopilot/calculator-engine";
 import { RISK_LINES } from "@/lib/autopilot/compliance-rules";
 import { consentTextFor } from "@/lib/lead-magnets/core";
 import { TRACK_TO_AUDIENCE } from "@/lib/autopilot/types";
-import { FinanceYouLogo } from "@/components/finance-you-logo";
+import { FocusShell, focusFieldStyle } from "@/components/marketing/focus-shell";
+import { MktButton, Eyebrow } from "@/components/marketing/primitives";
+import { formatToolInput } from "@/lib/autopilot/tool-input";
 import { COMPANY_DATA } from "@/lib/company";
 import { SITE_URL } from "@/lib/seo/company";
 
@@ -55,19 +57,14 @@ export const Route = createFileRoute("/narzedzie/$slug")({
         { property: "og:title", content: cfg.title },
         { property: "og:description", content: cfg.promise },
         { property: "og:url", content: url },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary" },
       ],
       links: [{ rel: "canonical", href: url }],
     };
   },
   notFoundComponent: () => (
-    <main className="grid min-h-screen place-items-center px-4 text-center">
-      <div>
-        <h1 className="text-2xl font-extrabold">Tego narzędzia nie ma</h1>
-        <a className="mt-3 inline-block text-accent underline" href="/start">
-          Zobacz, co mamy na start
-        </a>
-      </div>
-    </main>
+    <FocusShell><div className="px-5 py-16 text-center"><h1 className="text-2xl font-extrabold">Tego narzędzia nie ma</h1><div className="mt-6"><MktButton href="/" variant="cta">Przejdź na stronę główną</MktButton></div></div></FocusShell>
   ),
   component: ToolPage,
 });
@@ -76,7 +73,12 @@ function ToolPage() {
   const { slug } = Route.useParams();
   const search = Route.useSearch();
   const { data } = useSuspenseQuery(toolQuery(slug, search.t));
-  const cfg = data.tool!.config as CalculatorConfig;
+  if (!data.tool) return null;
+  return <ToolCalculator cfg={data.tool.config} initialUnlocked={data.unlocked} signupOpen={data.tool.signupOpen} />;
+}
+
+function ToolCalculator({ cfg, initialUnlocked, signupOpen }: { cfg: CalculatorConfig; initialUnlocked: boolean; signupOpen: boolean }) {
+  const search = Route.useSearch();
   const [values, setValues] = useState<Record<string, string>>(() => {
     const v: Record<string, string> = {};
     for (const f of cfg.fields) {
@@ -85,91 +87,52 @@ function ToolPage() {
     }
     return v;
   });
-  const [unlocked, setUnlocked] = useState<boolean>(data.unlocked);
+  const [unlocked, setUnlocked] = useState<boolean>(initialUnlocked);
   const run = useMemo(() => runCalculator(cfg, values, { unlocked }), [cfg, values, unlocked]);
 
+  const borrower = cfg.track === "pozyczkobiorca";
+  const mainResult = run.visible[0];
   return (
-    <main className="min-h-screen bg-background px-4 py-8 text-foreground">
-      <div className="mx-auto flex max-w-xl flex-col gap-5">
-        <header className="flex items-center justify-between">
-          <a href="/start" aria-label="Finance You – start">
-            <FinanceYouLogo size="sm" />
-          </a>
-        </header>
-        <div>
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-accent">
-            <Calculator className="h-4 w-4" aria-hidden /> Bezpłatne narzędzie
-          </p>
-          <h1 className="mt-2 text-2xl font-extrabold leading-tight">{cfg.title}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{cfg.promise}</p>
+    <FocusShell>
+      <section className="fy-tool-layout">
+        <div className="fy-tool-intro">
+          <Eyebrow tone="gold">Bezpłatne narzędzie · {borrower ? "dla klienta" : "dla inwestora"}</Eyebrow>
+          <h1 className="mt-3 text-3xl font-black leading-tight md:text-4xl">{cfg.title}</h1>
+          <p className="mt-5 text-base leading-relaxed text-muted-foreground">{cfg.promise}</p>
         </div>
-
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex flex-col gap-4">
-            {cfg.fields.map((f) => (
-              <label key={f.key} className="flex flex-col gap-1 text-sm font-medium">
+        <ul className="fy-tool-assumptions">
+          {cfg.assumptions.map((a) => <li key={a} className="flex items-start gap-3"><Check size={18} className="mt-1 shrink-0" style={{ color: "var(--gold-600)" }} /><span>{a}</span></li>)}
+        </ul>
+        <div className="fy-tool-panel">
+          <div className="fy-tool-card">
+            <h2 className="mb-5 text-xl font-bold">{borrower ? "Sprawdź kwotę finansowania" : "Policz LTV i bufor"}</h2>
+            <div className="grid gap-5">
+              {cfg.fields.map((f) => <label key={f.key} className="grid gap-2 text-sm font-semibold">
                 {f.label}
-                {f.unit ? (
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {f.unit === "pln" ? "zł" : f.unit === "pct" ? "%" : "miesiące"}
-                  </span>
-                ) : null}
-                <input
-                  inputMode="decimal"
-                  value={values[f.key] ?? ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  className="rounded-lg border border-border bg-background px-3 py-2.5 text-base"
-                  aria-invalid={Boolean(run.errors[f.key])}
-                />
-                {run.errors[f.key] ? (
-                  <span className="text-xs text-destructive">{run.errors[f.key]}</span>
-                ) : f.help ? (
-                  <span className="text-xs font-normal text-muted-foreground">{f.help}</span>
-                ) : null}
-              </label>
-            ))}
+                <span className="relative block">
+                  <input inputMode="decimal" aria-invalid={Boolean(run.errors[f.key])} aria-describedby={run.errors[f.key] ? `error-${f.key}` : undefined} value={formatToolInput(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value.replace(/\s/g, "") }))} style={{ ...focusFieldStyle, paddingRight: "4.5rem" }} />
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-muted-foreground">{f.unit === "pln" ? "zł" : f.unit === "pct" ? "%" : f.unit === "months" ? "mies." : ""}</span>
+                </span>
+                {run.errors[f.key] ? <span id={`error-${f.key}`} className="text-xs text-destructive">{run.errors[f.key]}</span> : f.help ? <span className="text-xs font-normal text-muted-foreground">{f.help}</span> : null}
+              </label>)}
+            </div>
+            {run.ok && mainResult ? <div className="fy-tool-result" aria-live="polite">
+              <p className="text-sm text-muted-foreground">{mainResult.label}</p>
+              <p className="fy-tool-main-number">{mainResult.value}</p>
+              <dl className="mt-5 grid gap-3">
+                {run.visible.slice(1).map((r) => <div key={r.key} className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-sm text-muted-foreground">{r.label}</dt><dd className="font-semibold">{r.value}</dd></div>)}
+                {run.gated.map((r) => <div key={r.key} className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-sm text-muted-foreground">{r.label}</dt><dd className="flex items-center gap-1 text-sm text-muted-foreground"><Lock size={14} /> po zapisie</dd></div>)}
+              </dl>
+              {borrower ? <div className="mt-6 grid gap-3">
+                <MktButton href="/dla-klienta" variant="gold" style={{ whiteSpace: "normal", height: "auto", minHeight: "3rem", padding: "0.8rem 1rem", textAlign: "center", lineHeight: 1.4 }}>Złóż bezpłatny wniosek na tę kwotę</MktButton>
+                <MktButton href="tel:+48732059898" variant="outline" style={{ height: "3rem" }}><Phone size={16} />Zadzwoń: +48 732 059 898</MktButton>
+              </div> : run.gated.length > 0 && signupOpen ? <UnlockForm cfg={cfg} values={values} onUnlocked={() => setUnlocked(true)} /> : null}
+            </div> : null}
           </div>
-        </section>
-
-        {run.ok ? (
-          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <h2 className="text-lg font-bold">Wynik</h2>
-            <dl className="mt-3 flex flex-col gap-2">
-              {run.visible.map((r) => (
-                <div key={r.key} className="flex items-baseline justify-between gap-4">
-                  <dt className="text-sm text-muted-foreground">{r.label}</dt>
-                  <dd className="text-right text-base font-bold">{r.value}</dd>
-                </div>
-              ))}
-              {run.gated.map((r) => (
-                <div key={r.key} className="flex items-baseline justify-between gap-4 opacity-70">
-                  <dt className="text-sm text-muted-foreground">{r.label}</dt>
-                  <dd className="flex items-center gap-1 text-right text-sm">
-                    <Lock className="h-3.5 w-3.5" aria-hidden /> po zapisie
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            {run.gated.length > 0 && data.tool!.signupOpen ? (
-              <UnlockForm cfg={cfg} values={values} onUnlocked={() => setUnlocked(true)} />
-            ) : null}
-          </section>
-        ) : null}
-
-        <section className="text-xs leading-relaxed text-muted-foreground">
-          <p className="font-semibold">Założenia</p>
-          <ul className="mt-1 list-disc pl-4">
-            {cfg.assumptions.map((a) => (
-              <li key={a}>{a}</li>
-            ))}
-          </ul>
-          <p className="mt-3">{RISK_LINES[cfg.track]}</p>
-          <p className="mt-2">
-            {COMPANY_DATA.legalName} · KRS {COMPANY_DATA.krs} · {COMPANY_DATA.email}
-          </p>
-        </section>
-      </div>
-    </main>
+          <div className="mt-5 px-1 text-xs leading-relaxed text-muted-foreground"><p>{RISK_LINES[cfg.track]}</p><p className="mt-2">{COMPANY_DATA.legalName} · KRS {COMPANY_DATA.krs} · {COMPANY_DATA.email}</p></div>
+        </div>
+      </section>
+    </FocusShell>
   );
 }
 
@@ -243,7 +206,7 @@ function UnlockForm({
         placeholder="Imię (opcjonalnie)"
         value={firstName}
         onChange={(e) => setFirstName(e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2.5 text-base"
+        style={focusFieldStyle}
         autoComplete="given-name"
       />
       <input
@@ -252,7 +215,7 @@ function UnlockForm({
         placeholder="Twój e-mail"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded-lg border border-border bg-background px-3 py-2.5 text-base"
+        style={focusFieldStyle}
         autoComplete="email"
       />
       <input
@@ -280,14 +243,10 @@ function UnlockForm({
         </span>
       </label>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={busy}
-        className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-60"
-      >
+      <MktButton type="submit" disabled={busy} variant="gold" style={{ whiteSpace: "normal", height: "auto", minHeight: "3rem", padding: "0.8rem 1rem" }}>
         <ShieldCheck className="h-4 w-4" aria-hidden />
         {busy ? "Zapisuję…" : "Pokaż pełny wynik"}
-      </button>
+      </MktButton>
     </form>
   );
 }

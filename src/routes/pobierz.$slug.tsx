@@ -11,9 +11,8 @@ import {
   submitLeadMagnetSignup,
 } from "@/lib/lead-magnets/lead-magnets.functions";
 import type { PublicLeadMagnet } from "@/lib/lead-magnets/core";
-import { FinanceYouLogo } from "@/components/finance-you-logo";
+import { FocusShell as Shell, focusFieldStyle as fieldStyle } from "@/components/marketing/focus-shell";
 import { MktButton, Eyebrow, MktBadge } from "@/components/marketing/primitives";
-import { COMPANY_DATA } from "@/lib/company";
 import { SITE_URL } from "@/lib/seo/company";
 
 type SearchParams = {
@@ -99,62 +98,6 @@ export const Route = createFileRoute("/pobierz/$slug")({
   ),
   component: LeadMagnetPage,
 });
-
-/** Skupiona strona bez pełnej nawigacji — logo, treść, krótka stopka. */
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="fy-marketing" style={{ display: "flex", flexDirection: "column" }}>
-      <header
-        style={{
-          borderBottom: "1px solid rgba(84,124,214,0.25)",
-          background: "rgba(9,14,38,0.8)",
-          backdropFilter: "blur(14px)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: "72rem",
-            margin: "0 auto",
-            padding: "0.9rem 1.25rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-          }}
-        >
-          <a
-            href="/"
-            style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
-          >
-            <FinanceYouLogo variant="dark" size="sm" />
-          </a>
-          <span style={{ fontSize: "0.8rem", color: "var(--muted-foreground)" }}>
-            Bezpłatny materiał od Finance You
-          </span>
-        </div>
-      </header>
-      <main style={{ flex: 1 }}>{children}</main>
-      <footer
-        style={{
-          borderTop: "1px solid rgba(84,124,214,0.2)",
-          padding: "1.4rem 1.25rem 2rem",
-          textAlign: "center",
-          fontSize: "0.78rem",
-          color: "var(--muted-foreground)",
-        }}
-      >
-        <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-          <a href="/">financeyou.pl</a>
-          <a href="/polityka-prywatnosci">Polityka prywatności</a>
-          <a href={`mailto:${COMPANY_DATA.email}`}>{COMPANY_DATA.email}</a>
-        </div>
-        <p style={{ margin: "0.6rem 0 0" }}>
-          {COMPANY_DATA.legalName}, {COMPANY_DATA.addressFull}
-        </p>
-      </footer>
-    </div>
-  );
-}
 
 function LeadMagnetPage() {
   const { slug } = Route.useParams();
@@ -255,15 +198,6 @@ function LeadMagnetPage() {
     </Shell>
   );
 }
-
-const fieldStyle: CSSProperties = {
-  width: "100%",
-  padding: "0.8rem 1rem",
-  borderRadius: "var(--radius-xl)",
-  border: "1px solid var(--border)",
-  color: "var(--foreground)",
-  fontSize: "1rem",
-};
 
 function SignupCard({ magnet }: { magnet: PublicLeadMagnet }) {
   const search = Route.useSearch();
