@@ -26,6 +26,59 @@ import {
 export const INVESTOR_WELCOME_SMS_SOURCE = "lead_welcome_investor";
 import { investorFirstMessage } from "./ania-text-policy";
 
+/** Rodzaj wiersza harmonogramu dla SMS-a powitalnego inwestora wstrzymanego przez okno wysyłki. */
+export const INVESTOR_WELCOME_SMS_KIND = "lead_welcome_investor";
+
+/**
+ * SMS powitalny inwestora. Idempotentny per numer. Gdy lead wpadł w nocy albo
+ * w niedzielę (hamulec SMS: quiet_hours / sunday), SMS nie przepada — planujemy
+ * go na najbliższe okno wysyłki (obsługuje go follow-up-tick).
+ */
+export async function sendInvestorWelcomeSms(opts: {
+  phone: string;
+  leadId: string | null;
+  firstName: string;
+  amount: string | number | null | undefined;
+  createdAt: string | null | undefined;
+}): Promise<{ ok: boolean; reason?: string; skipped?: boolean; error?: string }> {
+  if (await investorSmsAlreadySent(opts.phone)) return { ok: false, skipped: true, reason: "already_sent" };
+  try {
+    const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+    const vars = leadDynamicVariables({
+      firstName: opts.firstName,
+      source: "meta_ads",
+      role: "inwestor",
+      amount: opts.amount as any,
+      createdAt: opts.createdAt as any,
+    });
+    const r: any = await sendSmsInternal({
+      phone: opts.phone,
+      body: investorFirstMessage(vars) ?? investorWelcomeSmsBody(opts.firstName),
+      source: INVESTOR_WELCOME_SMS_SOURCE,
+      category: "automated",
+      metadata: { source: INVESTOR_WELCOME_SMS_SOURCE, lead_role: "inwestor" },
+    });
+    if (!r.ok && (r.reason === "quiet_hours" || r.reason === "sunday") && opts.leadId) {
+      const { WELCOME_SMS_STEP_INDEX, nextWindowOpenAt } = await import("@/lib/follow-up-plan.server");
+      await supabaseAdmin.from("lead_follow_up_schedule").upsert(
+        {
+          lead_id: opts.leadId,
+          channel: "sms",
+          step_index: WELCOME_SMS_STEP_INDEX,
+          status: "pending",
+          scheduled_at: nextWindowOpenAt(new Date()).toISOString(),
+          metadata: { kind: INVESTOR_WELCOME_SMS_KIND, created_at: opts.createdAt ?? null },
+        } as any,
+        { onConflict: "lead_id,channel,step_index" },
+      );
+    }
+    return { ok: !!r.ok, reason: r.reason, skipped: r.skipped, error: r.error };
+  } catch (e: any) {
+    console.error("[meta-investor] welcome sms", e);
+    return { ok: false, error: e?.message ?? "send error" };
+  }
+}
+
 export interface InvestorLeadInput {
   leadgenId: string;
   formId: string | null;
@@ -138,22 +191,10 @@ export async function captureMetaInvestorLead(
     }
   }
 
-  let smsSent = false;
-  if (phoneNorm && !(await investorSmsAlreadySent(phoneNorm))) {
-    try {
-      const { sendSmsInternal } = await import("@/lib/voicebot.functions");
-      const r = await sendSmsInternal({
-        phone: phoneNorm,
-        body: investorFirstMessage(leadDynamicVariables({ firstName: first, source: "meta_ads", role: "inwestor", amount, createdAt })) ?? investorWelcomeSmsBody(first),
-        source: INVESTOR_WELCOME_SMS_SOURCE,
-        category: "automated",
-        metadata: { source: INVESTOR_WELCOME_SMS_SOURCE, lead_role: "inwestor" },
-      });
-      smsSent = r.ok;
-    } catch (e) {
-      console.error("[meta-investor] welcome sms", e);
-    }
-  }
+  const smsResult = phoneNorm
+    ? await sendInvestorWelcomeSms({ phone: phoneNorm, leadId: leadId ?? null, firstName: first, amount, createdAt })
+    : { ok: false };
+  const smsSent = smsResult.ok;
 
   let callResult = "skipped";
   if (phoneNorm && input.allowCall) {

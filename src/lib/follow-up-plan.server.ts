@@ -813,7 +813,10 @@ export async function processDueFollowUps(): Promise<{
     // Spróbuj świeży magic link (auto-zaloguje klienta do /klient). Fallback: financeyou.pl
     let returnLink = "https://financeyou.pl";
     const needsMagicLink =
-      row.channel === "email" || (row.channel === "sms" && row.metadata?.kind !== WELCOME_SMS_KIND);
+      row.channel === "email" ||
+      (row.channel === "sms" &&
+        row.metadata?.kind !== WELCOME_SMS_KIND &&
+        row.metadata?.kind !== "lead_welcome_investor");
     if (lead.email && needsMagicLink) {
       try {
         const { ensureKlientAccountAndMagicLink } = await import("@/lib/client-magic-link.server");
@@ -878,6 +881,40 @@ export async function processDueFollowUps(): Promise<{
           );
           sent++;
         }
+      } else if (row.channel === "sms" && row.metadata?.kind === "lead_welcome_investor") {
+        // SMS powitalny INWESTORA wstrzymany w nocy / w niedzielę — wysyłamy w oknie.
+        const { sendInvestorWelcomeSms } = await import("@/lib/meta-investor-capture.server");
+        const phone = lead.phone_normalized;
+        if (!phone) {
+          await s
+            .from("lead_follow_up_schedule")
+            .update({ status: "skipped", error_message: "no phone" })
+            .eq("id", row.id);
+          skipped++;
+          continue;
+        }
+        const r = await sendInvestorWelcomeSms({
+          phone,
+          leadId: row.lead_id,
+          firstName: lead.first_name ?? "",
+          amount: lead.application_data?.lead_amount ?? "",
+          createdAt: row.metadata?.created_at ?? null,
+        });
+        if (r.reason === "quiet_hours" || r.reason === "sunday") {
+          skipped++;
+          continue;
+        }
+        await s
+          .from("lead_follow_up_schedule")
+          .update({
+            status: r.ok ? "sent" : r.skipped ? "skipped" : "error",
+            sent_at: r.ok ? new Date().toISOString() : null,
+            error_message: r.ok ? null : (r.error ?? r.reason ?? "send error"),
+            attempts: 1,
+          })
+          .eq("id", row.id);
+        if (r.ok) sent++;
+        else skipped++;
       } else if (row.channel === "sms" && row.metadata?.kind === WELCOME_SMS_KIND) {
         // SMS powitalny, który przy wejściu leada trafił poza okno wysyłki
         // (noc / niedziela) — teraz jest okno, więc idzie z aktualnym linkiem.
