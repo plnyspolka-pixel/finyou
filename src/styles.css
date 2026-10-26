@@ -359,6 +359,22 @@
 .fy-marketing ::selection { background: rgba(79, 139, 240, 0.35); }
 .fy-marketing select option { background: #0a1030; color: #e8eefc; }
 
+.fy-tool-layout { max-width: 72rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2.5rem; row-gap: 1.6rem; align-items: start; }
+.fy-tool-intro { grid-column: 1; grid-row: 1; }
+.fy-tool-assumptions { grid-column: 1; grid-row: 2; list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; line-height: 1.6; }
+.fy-tool-panel { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
+.fy-tool-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-3xl); box-shadow: var(--shadow-lg); padding: 1.75rem; }
+.fy-tool-result { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.fy-tool-main-number { margin: 0.4rem 0 0; color: var(--gold-600); font-size: 2.5rem; font-weight: 900; line-height: 1.2; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .fy-tool-layout { grid-template-columns: minmax(0, 1fr); padding-top: 2rem; }
+  .fy-tool-intro, .fy-tool-panel, .fy-tool-assumptions { grid-column: 1; grid-row: auto; }
+  .fy-tool-panel { order: 1; }
+  .fy-tool-assumptions { order: 2; }
+  .fy-tool-card { padding: 1.25rem; }
+  .fy-tool-main-number { font-size: 2rem; }
+}
+
 /* ——— premium animated hero background ——— */
 .fy-hero { position: relative; overflow: hidden; isolation: isolate;
   background: radial-gradient(125% 90% at 50% -12%, #101a44 0%, #0a1030 46%, #05081c 100%); }

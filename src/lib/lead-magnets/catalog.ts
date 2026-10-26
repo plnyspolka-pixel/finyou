@@ -52,7 +52,6 @@ export const AI_MATERIAL_LINE =
 export const START_URL = `${SITE_URL}/start`;
 export const TOOL_URLS = {
   ile: `${SITE_URL}/narzedzie/ile-pod-nieruchomosc`,
-  rata: `${SITE_URL}/narzedzie/kalkulator-raty`,
   ltv: `${SITE_URL}/narzedzie/kalkulator-ltv`,
 } as const;
 
@@ -172,7 +171,6 @@ const INVESTOR_ACTIONS: LeadMagnetAction[] = [
 const BORROWER_ACTIONS: LeadMagnetAction[] = [
   { label: "Bezpłatny wniosek o finansowanie", url: BORROWER_DEFAULT_CTA_URL },
   { label: "Kalkulator: ile firma może uzyskać pod nieruchomość", url: TOOL_URLS.ile },
-  { label: "Kalkulator raty i harmonogramu", url: TOOL_URLS.rata },
   { label: "Wszystkie materiały i narzędzia", url: START_URL },
 ];
 

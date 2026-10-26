@@ -1,6 +1,9 @@
 import { ChatWidget } from "@/components/landing/chat-widget";
 import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
+import { freeMaterialHref } from "@/lib/lead-magnets/free-materials";
 import type { ReactNode } from "react";
 import { FinanceYouLogo } from "@/components/finance-you-logo";
 import { MktButton } from "./primitives";
@@ -113,13 +116,6 @@ const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string 
       { label: "Pożyczki wg miast", href: "/pozyczki" },
     ],
   },
-  {
-    label: "Bezpłatnie",
-    links: [
-      { label: "Darmowe materiały (PDF)", href: "/dla-klienta#materialy" },
-      { label: "Ile uzyskasz pod nieruchomość?", href: "/narzedzie/ile-pod-nieruchomosc" },
-    ],
-  },
 ];
 
 type InvestorMenuLink = { label: string; href: string; sep?: boolean };
@@ -140,6 +136,12 @@ function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
 }
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
+  const { data: freeClient } = useQuery({ queryKey: ["free-material-menu", "klient"], queryFn: () => getFreeMaterialsFn({ data: { audience: "klient" } }), staleTime: 60_000 });
+  const freeLinks = [
+    ...(freeClient?.materials ?? []).map((m) => ({ label: m.title, href: freeMaterialHref("klient", m.slug) })),
+    ...(freeClient?.tools ?? []).map((t) => ({ label: t.title, href: t.url })),
+  ];
+  const clientMenuGroups = [...CLIENT_MENU_GROUPS, ...(freeLinks.length ? [{ label: "Bezpłatnie", links: freeLinks }] : [])];
   const [open, setOpen] = useState(false);
   const active = NAV_KEY[page] ?? page;
   const nav = [
@@ -211,7 +213,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                   {link}
                   <div className="fy-nav-drop-panel fy-nav-drop-panel--groups">
                     <div className="fy-nav-drop-groups">
-                      {CLIENT_MENU_GROUPS.map((g) => (
+                      {clientMenuGroups.map((g) => (
                         <div key={g.label}>
                           <div className="fy-nav-drop-label">{g.label}</div>
                           {g.links.map((l) => (
@@ -319,7 +321,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               ? [
                   <details key="klient-sub" className="fy-nav-mobile-sub">
                     <summary>Rodzaje pożyczek</summary>
-                    {CLIENT_MENU_GROUPS.flatMap((g) => g.links).map((l) => (
+                    {clientMenuGroups.flatMap((g) => g.links).map((l) => (
                       <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
                         {l.label}
                       </a>

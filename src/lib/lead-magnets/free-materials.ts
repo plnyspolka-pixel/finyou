@@ -106,7 +106,7 @@ export const FREE_MATERIALS_COPY: Record<
   klient: {
     eyebrow: "Darmowe materiały",
     title: "Zanim złożysz wniosek, przygotuj firmę. Bezpłatnie.",
-    sub: "Przewodniki i checklisty o finansowaniu firmy pod nieruchomość oraz kalkulatory online. Wysyłamy na e-mail, bez opłat i bez zobowiązań.",
+    sub: "Przewodnik o finansowaniu firmy pod nieruchomość wyślemy na e-mail. Orientacyjną kwotę finansowania policzysz online bez zapisu — bez opłat i bez zobowiązań.",
     toolsLabel: "Policz sam, zanim zapytasz",
   },
   inwestor: {
