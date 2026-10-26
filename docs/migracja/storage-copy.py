@@ -41,7 +41,7 @@ def env(name):
 
 
 def req(url, key, method='GET', data=None, headers=None, timeout=600):
-    h = {'Authorization': f'Bearer {key}', 'apikey': key}
+    h = {'Authorization': f'Bearer {key}', 'apikey': key} if key else {}   # podpisany URL: bez nagłówków
     if headers:
         h.update(headers)
     r = urllib.request.Request(url, data=data, method=method, headers=h)
@@ -114,18 +114,28 @@ def main():
     new_base, new_key = env('NEW_SUPABASE_URL'), env('NEW_SERVICE_KEY')
     old_base = os.environ.get('OLD_SUPABASE_URL', 'https://jqvepxhulxdnbwbogkhe.supabase.co')
     old_key = os.environ.get('OLD_SERVICE_KEY')
-    signed = {}
+    signed, signed_meta = {}, {}
     if a.signed_manifest:
-        for e in json.load(open(a.signed_manifest)):
-            signed[(e['bucket'], e['name'])] = e['url']
+        import urllib.parse
+        old_base_ = os.environ.get('OLD_SUPABASE_URL', 'https://jqvepxhulxdnbwbogkhe.supabase.co')
+        for path_ in a.signed_manifest.split(','):          # kilka plików manifestu po przecinku
+            for e in json.load(open(path_, encoding='utf-8')):
+                # wpis bez url = bucket publiczny; spacje/polskie znaki w ścieżce kodowane, % zostaje
+                url = e.get('url') or f"{old_base_}/storage/v1/object/public/{e['bucket']}/{e['name']}"
+                signed[(e['bucket'], e['name'])] = urllib.parse.quote(url, safe=":/?=&%~+")
+                # rozmiar/etag/mimetype z manifestu → delta (pominięcie plików już skopiowanych o tym samym rozmiarze)
+                signed_meta[(e['bucket'], e['name'])] = {'size': e.get('size'), 'etag': e.get('etag'), 'mimetype': e.get('mimetype')}
     if not old_key and not signed:
         sys.exit('potrzebny OLD_SERVICE_KEY albo --signed-manifest')
 
     state = json.load(open(STATE_FILE)) if os.path.exists(STATE_FILE) else {}
     with req(f'{new_base}/storage/v1/bucket', new_key) as resp:
         new_buckets = {b['id'] for b in json.loads(resp.read())}
-    with req(f'{old_base}/storage/v1/bucket', old_key or new_key) as resp:
-        old_buckets = [b['id'] for b in json.loads(resp.read())] if old_key else sorted({b for b, _ in signed})
+    if old_key:
+        with req(f'{old_base}/storage/v1/bucket', old_key) as resp:
+            old_buckets = [b['id'] for b in json.loads(resp.read())]
+    else:
+        old_buckets = sorted({b for b, _ in signed})
     wanted = [b for b in old_buckets if not a.buckets or b in a.buckets.split(',')]
     missing = [b for b in wanted if b not in new_buckets]
     if missing:
@@ -133,7 +143,7 @@ def main():
 
     plan, dedup_map, oversize = [], {}, []
     for b in wanted:
-        objs = list_objects(old_base, old_key, b) if old_key else [{'name': n, 'size': None, 'etag': None, 'mimetype': None} for (bb, n) in signed if bb == b]
+        objs = list_objects(old_base, old_key, b) if old_key else [dict({'name': n}, **signed_meta.get((bb, n), {'size': None, 'etag': None, 'mimetype': None})) for (bb, n) in signed if bb == b]
         have = {o['name']: o for o in list_objects(new_base, new_key, b)}
         seen = {}
         for o in sorted(objs, key=lambda x: x['name']):
