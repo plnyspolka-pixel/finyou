@@ -17,6 +17,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
+import { SUBSCRIPTION_PRICE_SENTENCE } from "@/lib/investor-plan/plans";
 import { orderLimitsFromSettings } from "./order-cycle-core";
 
 const loose = (c: unknown) => c as any;
@@ -520,7 +521,7 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
     const { investorHasFullAccess } = await import("@/lib/access/guards.server");
     if (!(await investorHasFullAccess(userId))) {
       throw new Error(
-        "Zlecenie wymaga aktywnego abonamentu inwestora — wykup go w zakładce Dostęp i płatności (1 500 zł / 30 dni albo 7 000 zł / 365 dni).",
+        `Zlecenie wymaga aktywnego abonamentu inwestora — wykup go w zakładce Dostęp i płatności. ${SUBSCRIPTION_PRICE_SENTENCE}.`,
       );
     }
 

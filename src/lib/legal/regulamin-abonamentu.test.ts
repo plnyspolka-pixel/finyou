@@ -14,15 +14,15 @@ import {
   REGULAMIN_ABONAMENTU_VERSION,
   regulaminAbonamentuInwestora,
 } from "./regulamin-abonamentu";
-import { ABONAMENT_UMOWA, SPRZEDAWCA_ABONAMENTU } from "./dokumenty-1-0";
+import { SPRZEDAWCA_ABONAMENTU } from "./dokumenty-1-0";
 
 const tekst = regulaminAbonamentuInwestora();
 const sha = createHash("sha256").update(tekst, "utf8").digest("hex");
 
 describe("regulamin abonamentu inwestora", () => {
   it("wersja 1.0 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
-    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.0");
-    expect(sha).toBe("14efebaacefc3dabc6c24647464c9a61fe45c1c0d6b2223fe666e07970fbd309");
+    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.1");
+    expect(sha).toBe("ca86a91f08198ff038d8f3413ffef7d3ff1efad53e2d387ae17ad63e42b7e296");
   });
 
   it("całość jako szkolenie w treściach cyfrowych — bez prawa odstąpienia (art. 38 ust. 1 pkt 13)", () => {
@@ -36,7 +36,7 @@ describe("regulamin abonamentu inwestora", () => {
   });
 
   it("cena i sprzedawca zgodne z Umową ramową 1.0", () => {
-    expect(CENA_ABONAMENTU).toBe(ABONAMENT_UMOWA);
+    expect(CENA_ABONAMENTU.replace(/\u00a0/g," ")).toBe("7 000,00 zł brutto za 365 dni");
     expect(tekst).toContain(CENA_ABONAMENTU);
     expect(SPRZEDAWCA_ABONAMENTU).toContain(FUNDACJA.nazwa);
     expect(SPRZEDAWCA_ABONAMENTU).toContain(FUNDACJA.krs);

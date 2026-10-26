@@ -5,6 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const tokenInput = z.object({ token: z.string().regex(/^[a-z0-9]{32,64}$/), lessonId: z.string().uuid().default(FREE_LESSON_ID) });
 export const getFreeLessonVideo = createServerFn({ method: "POST" }).inputValidator((v) => tokenInput.parse(v)).handler(async ({ data }) => {
+  const { setResponseHeader } = await import("@tanstack/react-start/server");
+  setResponseHeader("Cache-Control", "no-store");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const hash = await videoTokenHash(data.token);
   const { data: grant } = await db.from("lead_magnet_signups").select("id,consent,video_expires_at,lead_magnets(slug,published)").eq("video_token_hash", hash).maybeSingle();
@@ -16,6 +18,8 @@ export const getFreeLessonVideo = createServerFn({ method: "POST" }).inputValida
   return { url: signed.signedUrl, title: lesson.title, poster: lesson.thumbnail_url, description: lesson.description };
 });
 export const saveFreeLessonProgress = createServerFn({ method: "POST" }).inputValidator(v => tokenInput.extend({ percent: z.number().int().min(0).max(100) }).parse(v)).handler(async ({ data }) => {
+  const { setResponseHeader } = await import("@tanstack/react-start/server");
+  setResponseHeader("Cache-Control", "no-store");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   const { data: grant } = await db.from("lead_magnet_signups").select("id,consent,video_expires_at,lead_magnets(slug,published)").eq("video_token_hash", await videoTokenHash(data.token)).maybeSingle();
   if (!lessonGrantValid(grant, data.lessonId) || !grant) throw new Error("Brak dostępu.");

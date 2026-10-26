@@ -2,8 +2,8 @@
 // marketingowej, bramek serwerowych i testów.
 //
 // Model (od 30 września 2026 r. — cennik abonamentowy):
-//  • Inwestor płaci ABONAMENT za dostęp do systemu: 1 500 zł miesięcznie albo
-//    7 000 zł za rok (rabat za płatność roczną liczony niżej). Płatność
+//  • Inwestor płaci za 12 miesięcy programu szkoleniowego i narzędzia.
+//    Jedyna oferta: 7 000 zł. Płatność
 //    jednorazowa za wybrany okres przez Tpay (przelew, BLIK) — bez podpinania
 //    karty kredytowej i bez automatycznego odnawiania. Nie ma Pakietu PRO,
 //    Opłaty Sukcesu ani opłaty za pojedynczy Projekt.
