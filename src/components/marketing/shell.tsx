@@ -99,7 +99,8 @@ const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
   { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
   { label: "Co zyskujesz", hash: "#korzysci" },
   { label: "Cennik", hash: "#cennik" },
-  { label: "Darmowe materiały", hash: "#materialy" },
+  // Darmowe materiały są w stopce (osobna kolumna), nie w menu.
+  { label: "Darmowe materiały", hash: "#materialy", hidden: true },
 ];
 
 /** Rozwijane menu „Klient” — podstrony produktów z lib/loan-products. */
@@ -144,12 +145,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const client = page === "klient" || page === "kalkulator";
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (st) => st.location.pathname });
-  const audience = client ? "klient" : "inwestor";
-  const { data: free } = useQuery({
-    queryKey: ["free-material-menu", audience],
-    queryFn: () => getFreeMaterialsFn({ data: { audience } }),
-    staleTime: 60000,
-  });
   const nav = [
     { label: "Szkolenie", href: "/#szkolenie" },
     { label: "Case study", href: "/historie" },
@@ -159,18 +154,12 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
     { label: "FAQ", href: "/#faq" },
   ];
   const current = (href: string) => (href === pathname ? ("page" as const) : undefined);
-  // „Narzędzia” = wyłącznie płatne moduły; „Darmowe materiały” = lekcja,
-  // PDF-y (w tym raporty spraw po publikacji) i kalkulatory online.
+  // „Narzędzia” = wyłącznie płatne moduły. Darmowe materiały (lekcja, PDF-y,
+  // kalkulatory) są w stopce — osobna kolumna.
   const tools = INVESTOR_MODULES.filter((m) => !m.bonus).map((m) => ({
     label: m.menuLabel,
     href: investorModulePath(m.slug),
   }));
-  const freeDownloads = (free?.materials ?? []).map((m) => ({
-    label: m.slug === FREE_LESSON_SLUG ? "Darmowa lekcja 1 — ok.\u00a035 minut" : m.title,
-    href: freeMaterialHref(audience, m.slug),
-  }));
-  const freeCalculators = (free?.tools ?? []).map((t) => ({ label: t.title, href: t.url }));
-  const freeLinks = [...freeDownloads, ...freeCalculators];
   return (
     <header className="fy-sales-header">
       {page === "home" && (
@@ -217,18 +206,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
                   ))}
                 </div>
               </details>
-              {freeLinks.length > 0 && (
-                <details className="fy-sales-dropdown">
-                  <summary>Darmowe materiały</summary>
-                  <div>
-                    {freeLinks.map((l) => (
-                      <a key={l.href} href={l.href}>
-                        {l.label}
-                      </a>
-                    ))}
-                  </div>
-                </details>
-              )}
               {nav.slice(1).map((n) => (
                 <a key={n.href} href={n.href} aria-current={current(n.href)}>
                   {n.label}
@@ -271,16 +248,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               </a>
             ))}
           </details>
-          {freeLinks.length > 0 && (
-            <details>
-              <summary>Darmowe materiały</summary>
-              {freeLinks.map((l) => (
-                <a key={l.href} href={l.href}>
-                  {l.label}
-                </a>
-              ))}
-            </details>
-          )}
           <a href="/logowanie">Zaloguj</a>
         </nav>
       )}
@@ -312,7 +279,28 @@ export function StickyCTA({ label, href }: { label: string; href: string }) {
   );
 }
 
+/** Kolumna stopki „Darmowe materiały”: wszystkie opublikowane materiały
+ *  (lekcja, PDF-y klienta i inwestora) i kalkulatory online. */
+function useFreeMaterialLinks(): { t: string; href: string }[] {
+  const query = (audience: "klient" | "inwestor") => ({
+    queryKey: ["free-material-footer", audience],
+    queryFn: () => getFreeMaterialsFn({ data: { audience } }),
+    staleTime: 60000,
+  });
+  const { data: inwestor } = useQuery(query("inwestor"));
+  const { data: klient } = useQuery(query("klient"));
+  const links = [inwestor, klient].flatMap((free) => [
+    ...(free?.materials ?? []).map((m) => ({
+      t: m.slug === FREE_LESSON_SLUG ? "Darmowa lekcja 1 — ok.\u00a035 minut" : m.title,
+      href: freeMaterialHref(free!.audience, m.slug),
+    })),
+    ...(free?.tools ?? []).map((tool) => ({ t: tool.title, href: tool.url })),
+  ]);
+  return links.filter((l, i) => links.findIndex((x) => x.href === l.href) === i);
+}
+
 export function SiteFooter() {
+  const freeLinks = useFreeMaterialLinks();
   const cols = [
     {
       h: "Ścieżki",
@@ -338,6 +326,7 @@ export function SiteFooter() {
         { t: "Opinie na Trustpilot", href: TRUSTPILOT_PROFILE_URL },
       ],
     },
+    ...(freeLinks.length ? [{ h: "Darmowe materiały", links: freeLinks }] : []),
     {
       h: "Informacje",
       links: [
@@ -358,7 +347,9 @@ export function SiteFooter() {
           padding: "3.5rem 1.5rem",
           display: "grid",
           gap: "2.5rem",
-          gridTemplateColumns: "1.6fr 1fr 1.4fr 1fr 1fr",
+          gridTemplateColumns: freeLinks.length
+            ? "1.5fr 1fr 1.3fr 1fr 1.3fr 1fr"
+            : "1.6fr 1fr 1.4fr 1fr 1fr",
         }}
       >
         <div>
