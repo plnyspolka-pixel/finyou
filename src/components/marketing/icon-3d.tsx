@@ -53,6 +53,10 @@ const FILES = {
 
 export type Icon3DName = keyof typeof FILES;
 export const ICON3D_NAMES = Object.keys(FILES) as Icon3DName[];
+/** Plik PNG ikony w /public/marketing/icons-3d (np. do PDF-ów). */
+export function icon3dFile(name: Icon3DName): string {
+  return FILES[name];
+}
 
 const BASE = "/marketing/icons-3d";
 

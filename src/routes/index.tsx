@@ -216,6 +216,12 @@ function InvestorHome() {
         <p className="mt-5 text-sm text-muted-foreground">
           Pełne dane sprawy widzą partnerzy z aktywnym abonamentem.
         </p>
+        {/* Tylko gdy lead magnet „raporty-spraw” jest opublikowany (pkt 7). */}
+        {materials.materials.some((m) => m.slug === "raporty-spraw") && (
+          <a className="fy-sales-link" href="/pobierz/raporty-spraw">
+            Zobacz przykładowe raporty spraw →
+          </a>
+        )}
       </Section>
       <Section id="jak-dziala">
         <SectionHead title="Jak to działa — 5 kroków" />

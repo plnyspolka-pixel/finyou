@@ -7,7 +7,7 @@ const rows = vi.hoisted(() => [
 ]);
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: () => {
   let filtered = [...rows];
-  const query = { select: () => query, eq: (key: string, value: unknown) => { filtered = filtered.filter((r) => r[key as keyof typeof r] === value); return query; }, order: () => query, limit: async () => ({ data: filtered, error: null }) };
+  const query = { select: () => query, eq: (key: string, value: unknown) => { filtered = filtered.filter((r) => r[key as keyof typeof r] === value); return query; }, neq: (key: string, value: unknown) => { filtered = filtered.filter((r) => r[key as keyof typeof r] !== value); return query; }, order: () => query, limit: async () => ({ data: filtered, error: null }) };
   return query;
 } } }));
 import { listFreeMaterials } from "./free-materials.server";
