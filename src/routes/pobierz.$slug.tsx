@@ -119,11 +119,12 @@ function LeadMagnetPage() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(magnetQuery(slug));
   const magnet = data.magnet as PublicLeadMagnet;
+  const search = Route.useSearch();
 
   if (magnet.material_type === "video")
     return (
       <Shell>
-        <FreeLessonExperience magnet={magnet} token={Route.useSearch().t} />
+        <FreeLessonExperience magnet={magnet} token={search.t} />
       </Shell>
     );
 
