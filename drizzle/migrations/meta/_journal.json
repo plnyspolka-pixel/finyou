@@ -330,6 +330,41 @@
       "when": 1793040736326,
       "tag": "0046_one_free_training_lesson",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793040796326,
+      "tag": "0047_add_role_partner",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1793040856326,
+      "tag": "0048_program_partnerski_i_posrednik",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1793040916326,
+      "tag": "0049_broker_feedback_powiadomienia",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1793040976326,
+      "tag": "0050_darmowa_lekcja_opis",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1793041036326,
+      "tag": "0051_webinar_lead_magnet",
+      "breakpoints": true
     }
   ]
 }

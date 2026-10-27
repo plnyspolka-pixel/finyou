@@ -1272,7 +1272,7 @@ export function SinglePageApplicationForm({
       </p>
 
       {/* Limit ofert pośrednika (gdyby baza go zgłosiła — obecnie wyłączony,
-          migracja 20261026190000). Modal tylko komunikuje wynik. */}
+          migracja drizzle 0048). Modal tylko komunikuje wynik. */}
       <Dialog open={limitModalOpen} onOpenChange={setLimitModalOpen}>
         <DialogContent>
           <DialogHeader>

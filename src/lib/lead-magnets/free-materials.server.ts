@@ -15,9 +15,13 @@ export async function listFreeMaterials(audience: LeadMagnetAudience): Promise<F
   try {
     const { data, error } = await supabaseAdmin
       .from("lead_magnets")
-      .select("slug,title,headline,subheadline,benefits,cta_text,file_name,audience,signup_count,material_type")
+      .select(
+        "slug,title,headline,subheadline,benefits,cta_text,file_name,audience,signup_count,material_type",
+      )
       .eq("published", true)
       .eq("audience", audience)
+      // Zapis na webinar ma własny widżet i stronę — nie jest „materiałem”.
+      .neq("slug", "webinar")
       .order("signup_count", { ascending: false })
       .limit(40);
     if (error) throw new Error(error.message);
@@ -27,8 +31,14 @@ export async function listFreeMaterials(audience: LeadMagnetAudience): Promise<F
         audience,
         toolSlugs: STARTER_CALCULATORS.map((c) => c.slug),
       }),
-      tools: STARTER_CALCULATORS.filter((c) => c.track === track && (data ?? []).some((r) => r.slug === c.slug)).map((c) => ({
-        slug: c.slug, title: c.title, promise: c.promise, keyword: c.keyword, url: `/narzedzie/${c.slug}`,
+      tools: STARTER_CALCULATORS.filter(
+        (c) => c.track === track && (data ?? []).some((r) => r.slug === c.slug),
+      ).map((c) => ({
+        slug: c.slug,
+        title: c.title,
+        promise: c.promise,
+        keyword: c.keyword,
+        url: `/narzedzie/${c.slug}`,
       })),
     };
   } catch (e) {

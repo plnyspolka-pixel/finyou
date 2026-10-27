@@ -5,7 +5,7 @@ export const VIDEO_TOKEN_TTL_DAYS = 30;
  * Opis darmowej lekcji 1 (34:03) — zgodny z treścią nagrania (decyzja
  * właściciela 27.10.2026). Jedno źródło dla strony lekcji, karty w „Darmowych
  * materiałach” i odtwarzacza; te same teksty trafiają do bazy migracją
- * 20261027120000 (lead_magnets i training_videos).
+ * drizzle 0050 (lead_magnets i training_videos).
  */
 export const FREE_LESSON_COPY = {
   title: "Dlaczego po 15 latach inwestowania w nieruchomości wybrałem pożyczki pod hipotekę",

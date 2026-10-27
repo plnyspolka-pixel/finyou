@@ -197,6 +197,8 @@ import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as SCodeRouteImport } from './routes/s.$code'
+import { Route as WebinarIndexRouteImport } from './routes/webinar.index'
+import { Route as WebinarPokojRouteImport } from './routes/webinar.pokoj'
 import { Route as WeryfikacjaCodeRouteImport } from './routes/weryfikacja.$code'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -1279,6 +1281,16 @@ const SCodeRoute = SCodeRouteImport.update({
   path: '/s/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WebinarIndexRoute = WebinarIndexRouteImport.update({
+  id: '/webinar/',
+  path: '/webinar/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebinarPokojRoute = WebinarPokojRouteImport.update({
+  id: '/webinar/pokoj',
+  path: '/webinar/pokoj',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WeryfikacjaCodeRoute = WeryfikacjaCodeRouteImport.update({
   id: '/weryfikacja/$code',
   path: '/weryfikacja/$code',
@@ -2187,6 +2199,7 @@ export interface FileRoutesByFullPath {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -2200,6 +2213,7 @@ export interface FileRoutesByFullPath {
   '/pozyczki/': typeof PozyczkiIndexRoute
   '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/webinar/': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -2496,6 +2510,7 @@ export interface FileRoutesByTo {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -2509,6 +2524,7 @@ export interface FileRoutesByTo {
   '/pozyczki': typeof PozyczkiIndexRoute
   '/program-partnerski': typeof ProgramPartnerskiIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
+  '/webinar': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -2817,6 +2833,7 @@ export interface FileRoutesById {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -2830,6 +2847,7 @@ export interface FileRoutesById {
   '/pozyczki/': typeof PozyczkiIndexRoute
   '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/webinar/': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -3139,6 +3157,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -3152,6 +3171,7 @@ export interface FileRouteTypes {
     | '/pozyczki/'
     | '/program-partnerski/'
     | '/propozycje/'
+    | '/webinar/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3448,6 +3468,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -3461,6 +3482,7 @@ export interface FileRouteTypes {
     | '/pozyczki'
     | '/program-partnerski'
     | '/propozycje'
+    | '/webinar'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3768,6 +3790,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -3781,6 +3804,7 @@ export interface FileRouteTypes {
     | '/pozyczki/'
     | '/program-partnerski/'
     | '/propozycje/'
+    | '/webinar/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3975,6 +3999,7 @@ export interface RootRouteChildren {
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   SCodeRoute: typeof SCodeRoute
+  WebinarPokojRoute: typeof WebinarPokojRoute
   WeryfikacjaCodeRoute: typeof WeryfikacjaCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -3982,6 +4007,7 @@ export interface RootRouteChildren {
   PozyczkiIndexRoute: typeof PozyczkiIndexRoute
   ProgramPartnerskiIndexRoute: typeof ProgramPartnerskiIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
+  WebinarIndexRoute: typeof WebinarIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiMigrationStorageManifestRoute: typeof ApiMigrationStorageManifestRoute
@@ -5377,6 +5403,20 @@ declare module '@tanstack/react-router' {
       path: '/s/$code'
       fullPath: '/s/$code'
       preLoaderRoute: typeof SCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webinar/': {
+      id: '/webinar/'
+      path: '/webinar'
+      fullPath: '/webinar/'
+      preLoaderRoute: typeof WebinarIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webinar/pokoj': {
+      id: '/webinar/pokoj'
+      path: '/webinar/pokoj'
+      fullPath: '/webinar/pokoj'
+      preLoaderRoute: typeof WebinarPokojRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/weryfikacja/$code': {
@@ -6839,6 +6879,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   SCodeRoute: SCodeRoute,
+  WebinarPokojRoute: WebinarPokojRoute,
   WeryfikacjaCodeRoute: WeryfikacjaCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
@@ -6846,6 +6887,7 @@ const rootRouteChildren: RootRouteChildren = {
   PozyczkiIndexRoute: PozyczkiIndexRoute,
   ProgramPartnerskiIndexRoute: ProgramPartnerskiIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
+  WebinarIndexRoute: WebinarIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiMigrationStorageManifestRoute: ApiMigrationStorageManifestRoute,

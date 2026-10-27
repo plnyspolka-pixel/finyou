@@ -1,4 +1,5 @@
 import { ChatWidget } from "@/components/landing/chat-widget";
+import { WebinarWidget } from "./webinar-widget";
 import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -504,6 +505,7 @@ export function MarketingShell({
       {children}
       <SiteFooter />
       <ChatWidget source={`public:${page}`} />
+      {(page === "home" || page === "inwestorModul") && <WebinarWidget />}
       {sticky ? <StickyCTA label={sticky.label} href={sticky.href} /> : null}
     </div>
   );

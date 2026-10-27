@@ -832,3 +832,9 @@
 .fy-marketing [id]{scroll-margin-top:6rem}
 /* Hero: tekst tylko na gładkim granacie, nie na grafice (pkt 15). */
 @media(min-width:901px){.fy-sales-hero h1{max-width:44rem}.fy-sales-hero ul{max-width:42rem}}
+/* Webinar (pkt 18): desktop — kafelek w prawym dolnym rogu nad przyciskiem
+   czatu; mobile — belka przy dolnej krawędzi (czat stoi wyżej, ok. 10rem). */
+.fy-webinar-widget{position:fixed;z-index:45;right:1.25rem;bottom:calc(10rem + env(safe-area-inset-bottom));display:flex;align-items:center;gap:.8rem;max-width:22rem;padding:.8rem .9rem;border:1px solid var(--sales-gold,#f0c667);border-radius:12px;background:var(--sales-ink,#0a1030);color:var(--sales-on-dark,#f8fafc);box-shadow:var(--shadow-lg)}
+.fy-webinar-widget__text{display:grid;font-size:.82rem;line-height:1.35}.fy-webinar-widget__text strong{color:var(--sales-gold,#f0c667)}
+.fy-webinar-widget__close{position:absolute;top:.25rem;right:.25rem;padding:.2rem;opacity:.7}.fy-webinar-widget__close:hover{opacity:1}
+@media(max-width:640px){.fy-webinar-widget{left:0;right:0;bottom:0;max-width:none;border-radius:0;border-width:1px 0 0;padding:.6rem 2rem .6rem .9rem;justify-content:space-between}}
