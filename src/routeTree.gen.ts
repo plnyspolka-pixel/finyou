@@ -28,6 +28,7 @@ import { Route as NoweHasloRouteImport } from './routes/nowe-haslo'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PolitykaCookiesRouteImport } from './routes/polityka-cookies'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
@@ -161,6 +162,10 @@ import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as PartnerIndexRouteImport } from './routes/partner.index'
+import { Route as PartnerProgramRouteImport } from './routes/partner.program'
+import { Route as PartnerProwizjeRouteImport } from './routes/partner.prowizje'
+import { Route as PartnerRozliczeniaRouteImport } from './routes/partner.rozliczenia'
 import { Route as PobierzPlikTokenRouteImport } from './routes/pobierz-plik.$token'
 import { Route as PobierzSlugRouteImport } from './routes/pobierz.$slug'
 import { Route as PodpisTokenRouteImport } from './routes/podpis.$token'
@@ -184,6 +189,8 @@ import { Route as PosrednikSzkoleniaRouteImport } from './routes/posrednik.szkol
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
 import { Route as PozyczkiIndexRouteImport } from './routes/pozyczki.index'
 import { Route as PozyczkiSlugRouteImport } from './routes/pozyczki.$slug'
+import { Route as ProgramPartnerskiIndexRouteImport } from './routes/program-partnerski.index'
+import { Route as ProgramPartnerskiRejestracjaRouteImport } from './routes/program-partnerski.rejestracja'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
@@ -411,6 +418,11 @@ const OperatorRoute = OperatorRouteImport.update({
 const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
   id: '/operator-rejestracja',
   path: '/operator-rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PolitykaCookiesRoute = PolitykaCookiesRouteImport.update({
@@ -1088,6 +1100,26 @@ const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
   path: '/wniosek',
   getParentRoute: () => OperatorRoute,
 } as any)
+const PartnerIndexRoute = PartnerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerProgramRoute = PartnerProgramRouteImport.update({
+  id: '/program',
+  path: '/program',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerProwizjeRoute = PartnerProwizjeRouteImport.update({
+  id: '/prowizje',
+  path: '/prowizje',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerRozliczeniaRoute = PartnerRozliczeniaRouteImport.update({
+  id: '/rozliczenia',
+  path: '/rozliczenia',
+  getParentRoute: () => PartnerRoute,
+} as any)
 const PobierzPlikTokenRoute = PobierzPlikTokenRouteImport.update({
   id: '/pobierz-plik/$token',
   path: '/pobierz-plik/$token',
@@ -1203,6 +1235,17 @@ const PozyczkiSlugRoute = PozyczkiSlugRouteImport.update({
   path: '/pozyczki/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProgramPartnerskiIndexRoute = ProgramPartnerskiIndexRouteImport.update({
+  id: '/program-partnerski/',
+  path: '/program-partnerski/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgramPartnerskiRejestracjaRoute =
+  ProgramPartnerskiRejestracjaRouteImport.update({
+    id: '/program-partnerski/rejestracja',
+    path: '/program-partnerski/rejestracja',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PropozycjeIndexRoute = PropozycjeIndexRouteImport.update({
   id: '/propozycje/',
   path: '/propozycje/',
@@ -1967,6 +2010,7 @@ export interface FileRoutesByFullPath {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/partner': typeof PartnerRouteWithChildren
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -2095,6 +2139,9 @@ export interface FileRoutesByFullPath {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2115,6 +2162,7 @@ export interface FileRoutesByFullPath {
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
@@ -2125,9 +2173,11 @@ export interface FileRoutesByFullPath {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/operator/': typeof OperatorIndexRoute
+  '/partner/': typeof PartnerIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/pozyczki/': typeof PozyczkiIndexRoute
+  '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2396,6 +2446,9 @@ export interface FileRoutesByTo {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2415,6 +2468,7 @@ export interface FileRoutesByTo {
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
@@ -2425,9 +2479,11 @@ export interface FileRoutesByTo {
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/operator': typeof OperatorIndexRoute
+  '/partner': typeof PartnerIndexRoute
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/pozyczki': typeof PozyczkiIndexRoute
+  '/program-partnerski': typeof ProgramPartnerskiIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2578,6 +2634,7 @@ export interface FileRoutesById {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/partner': typeof PartnerRouteWithChildren
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -2706,6 +2763,9 @@ export interface FileRoutesById {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2726,6 +2786,7 @@ export interface FileRoutesById {
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
@@ -2736,9 +2797,11 @@ export interface FileRoutesById {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/operator/': typeof OperatorIndexRoute
+  '/partner/': typeof PartnerIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/pozyczki/': typeof PozyczkiIndexRoute
+  '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2890,6 +2953,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/partner'
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -3018,6 +3082,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3038,6 +3105,7 @@ export interface FileRouteTypes {
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
@@ -3048,9 +3116,11 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/operator/'
+    | '/partner/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/pozyczki/'
+    | '/program-partnerski/'
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -3319,6 +3389,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3338,6 +3411,7 @@ export interface FileRouteTypes {
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
@@ -3348,9 +3422,11 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/operator'
+    | '/partner'
     | '/posrednicy'
     | '/posrednik'
     | '/pozyczki'
+    | '/program-partnerski'
     | '/propozycje'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -3500,6 +3576,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/partner'
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -3628,6 +3705,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3648,6 +3728,7 @@ export interface FileRouteTypes {
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
@@ -3658,9 +3739,11 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/operator/'
+    | '/partner/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/pozyczki/'
+    | '/program-partnerski/'
     | '/propozycje/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -3811,6 +3894,7 @@ export interface RootRouteChildren {
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  PartnerRoute: typeof PartnerRouteWithChildren
   PolitykaCookiesRoute: typeof PolitykaCookiesRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
@@ -3848,6 +3932,7 @@ export interface RootRouteChildren {
   PodpisTokenRoute: typeof PodpisTokenRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
+  ProgramPartnerskiRejestracjaRoute: typeof ProgramPartnerskiRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   SCodeRoute: typeof SCodeRoute
@@ -3856,6 +3941,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
   PozyczkiIndexRoute: typeof PozyczkiIndexRoute
+  ProgramPartnerskiIndexRoute: typeof ProgramPartnerskiIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -4068,6 +4154,13 @@ declare module '@tanstack/react-router' {
       path: '/operator-rejestracja'
       fullPath: '/operator-rejestracja'
       preLoaderRoute: typeof OperatorRejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/polityka-cookies': {
@@ -5001,6 +5094,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorWniosekRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/partner/': {
+      id: '/partner/'
+      path: '/'
+      fullPath: '/partner/'
+      preLoaderRoute: typeof PartnerIndexRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/program': {
+      id: '/partner/program'
+      path: '/program'
+      fullPath: '/partner/program'
+      preLoaderRoute: typeof PartnerProgramRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/prowizje': {
+      id: '/partner/prowizje'
+      path: '/prowizje'
+      fullPath: '/partner/prowizje'
+      preLoaderRoute: typeof PartnerProwizjeRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/rozliczenia': {
+      id: '/partner/rozliczenia'
+      path: '/rozliczenia'
+      fullPath: '/partner/rozliczenia'
+      preLoaderRoute: typeof PartnerRozliczeniaRouteImport
+      parentRoute: typeof PartnerRoute
+    }
     '/pobierz-plik/$token': {
       id: '/pobierz-plik/$token'
       path: '/pobierz-plik/$token'
@@ -5160,6 +5281,20 @@ declare module '@tanstack/react-router' {
       path: '/pozyczki/$slug'
       fullPath: '/pozyczki/$slug'
       preLoaderRoute: typeof PozyczkiSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/program-partnerski/': {
+      id: '/program-partnerski/'
+      path: '/program-partnerski'
+      fullPath: '/program-partnerski/'
+      preLoaderRoute: typeof ProgramPartnerskiIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/program-partnerski/rejestracja': {
+      id: '/program-partnerski/rejestracja'
+      path: '/program-partnerski/rejestracja'
+      fullPath: '/program-partnerski/rejestracja'
+      preLoaderRoute: typeof ProgramPartnerskiRejestracjaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/propozycje/': {
@@ -6500,6 +6635,23 @@ const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
   OperatorRouteChildren,
 )
 
+interface PartnerRouteChildren {
+  PartnerProgramRoute: typeof PartnerProgramRoute
+  PartnerProwizjeRoute: typeof PartnerProwizjeRoute
+  PartnerRozliczeniaRoute: typeof PartnerRozliczeniaRoute
+  PartnerIndexRoute: typeof PartnerIndexRoute
+}
+
+const PartnerRouteChildren: PartnerRouteChildren = {
+  PartnerProgramRoute: PartnerProgramRoute,
+  PartnerProwizjeRoute: PartnerProwizjeRoute,
+  PartnerRozliczeniaRoute: PartnerRozliczeniaRoute,
+  PartnerIndexRoute: PartnerIndexRoute,
+}
+
+const PartnerRouteWithChildren =
+  PartnerRoute._addFileChildren(PartnerRouteChildren)
+
 interface PosrednikLeadyRouteChildren {
   PosrednikLeadyIdRoute: typeof PosrednikLeadyIdRoute
   PosrednikLeadyIndexRoute: typeof PosrednikLeadyIndexRoute
@@ -6580,6 +6732,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  PartnerRoute: PartnerRouteWithChildren,
   PolitykaCookiesRoute: PolitykaCookiesRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
@@ -6619,6 +6772,7 @@ const rootRouteChildren: RootRouteChildren = {
   PodpisTokenRoute: PodpisTokenRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PozyczkiSlugRoute: PozyczkiSlugRoute,
+  ProgramPartnerskiRejestracjaRoute: ProgramPartnerskiRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   SCodeRoute: SCodeRoute,
@@ -6627,6 +6781,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,
   PozyczkiIndexRoute: PozyczkiIndexRoute,
+  ProgramPartnerskiIndexRoute: ProgramPartnerskiIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

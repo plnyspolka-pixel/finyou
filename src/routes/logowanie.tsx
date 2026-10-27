@@ -13,7 +13,7 @@ import { z } from "zod";
 const searchSchema = z.object({
   claim: z.string().optional(),
   next: z.string().optional(),
-  role: z.enum(["klient", "inwestor", "posrednik", "operator"]).optional(),
+  role: z.enum(["klient", "inwestor", "posrednik", "partner", "operator"]).optional(),
 });
 
 export const Route = createFileRoute("/logowanie")({

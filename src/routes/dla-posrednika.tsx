@@ -13,11 +13,17 @@ import { MktBadge, MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { formatPLN } from "@/lib/labels";
-import { INVESTOR_COMMISSION_PLN } from "@/lib/affiliate/engine-pure";
+import {
+  BROKER_COMMISSION_PERCENT_OF_FEE,
+  brokerCommissionForLoan,
+} from "@/lib/affiliate/engine-pure";
 
 // Bez bramki płatności: rejestracja, akceptacja umowy i konto do wypłaty prowizji.
 const JOIN = "/posrednicy/rejestracja";
-const COMMISSION = formatPLN(INVESTOR_COMMISSION_PLN);
+// Pośrednik zarabia WYŁĄCZNIE prowizję od uruchomionej pożyczki klienta,
+// którego przyprowadził (osobny program niż partnerski — /program-partnerski).
+const RATE = `${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You`;
+const EXAMPLES = [100000, 300000, 500000];
 
 export const Route = createFileRoute("/dla-posrednika")({
   head: () => ({
@@ -43,6 +49,11 @@ export const Route = createFileRoute("/dla-posrednika")({
 });
 
 const GET: FeatureItemData[] = [
+  {
+    icon: "growth",
+    t: "Prowizja od uruchomionej pożyczki",
+    d: `Za każdą uruchomioną pożyczkę klienta, którego przyprowadzisz, otrzymujesz ${RATE}.`,
+  },
   {
     icon: "application",
     t: "Prosty kreator wniosku",
@@ -99,8 +110,8 @@ const EARN = [
     d: "Umowa, notariusz i koordynacja aż do wypłaty środków.",
   },
   {
-    t: "Polecasz inwestorów",
-    d: `Za każdego nowego inwestora, który kupi abonament — ${COMMISSION}.`,
+    t: "Pożyczka uruchomiona — dostajesz prowizję",
+    d: `Po wypłacie środków klientowi naliczamy Ci prowizję: ${RATE} z tej pożyczki.`,
   },
 ];
 
@@ -127,12 +138,12 @@ const FAQS = [
     a: "W zakładce „Reakcje inwestorów” widzisz dla każdej oferty: wysyłki, otwarcia, odpowiedzi, zainteresowanie i propozycje finansowania. Dane inwestorów są anonimowe.",
   },
   {
-    q: "Ile zarabiam za poleconego inwestora?",
-    a: `${COMMISSION} za każdego nowego inwestora, który założy konto z Twojego linku i kupi abonament. Prowizję zatwierdza Finance You po zaksięgowaniu płatności.`,
+    q: "Na czym zarabiam jako pośrednik?",
+    a: `Na prowizji od każdej uruchomionej pożyczki klienta, którego przyprowadzisz: ${RATE} z tej pożyczki. Przykładowo przy pożyczce 300 000 zł to ok. ${formatPLN(brokerCommissionForLoan(300000))}.`,
   },
   {
-    q: "Czy dostaję prowizję za zrealizowany temat klienta?",
-    a: "Nie. Prowizja jest naliczana wyłącznie od abonamentu kupionego przez poleconego nowego inwestora.",
+    q: "Kiedy prowizja jest należna?",
+    a: "Gdy pożyczka Twojego klienta zostanie uruchomiona, czyli środki zostaną wypłacone klientowi. Sam wniosek, oferta czy zainteresowanie inwestora nie dają jeszcze prowizji. Prowizję zatwierdza Finance You.",
   },
   {
     q: "Jak dostaję wypłatę?",
@@ -168,7 +179,7 @@ function Hero() {
               letterSpacing: "-0.025em",
             }}
           >
-            Przedstaw klientów jako{" "}
+            Zarabiaj jako{" "}
             <span
               style={{
                 background: "linear-gradient(95deg,#f0c667,#f6dc9c 34%,#5fa2f6 82%)",
@@ -189,8 +200,9 @@ function Hero() {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Wprowadzaj wnioski klientów, przedstawiaj je inwestorom i śledź w CRM, jak reagują. Bez
-            opłat. Zarabiasz {COMMISSION} za każdego nowego inwestora, który kupi abonament.
+            Przyprowadź klienta, wprowadź jego wniosek i śledź w CRM, jak reagują inwestorzy. Konto
+            jest bezpłatne. Zarabiasz prowizję od każdej uruchomionej pożyczki Twojego klienta —{" "}
+            {RATE}.
           </p>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
             <MktButton variant="cta" href={JOIN}>
@@ -224,7 +236,7 @@ function Hero() {
           >
             {[
               ["Zarejestruj się", "Załóż konto i zaakceptuj umowę."],
-              ["Podaj konto do wypłaty", "Tam trafiają prowizje za inwestorów."],
+              ["Podaj konto do wypłaty", "Tam trafiają prowizje od pożyczek."],
               ["Wprowadzaj klientów", "I patrz, jak reagują inwestorzy."],
             ].map(([t, d], i) => (
               <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -313,18 +325,47 @@ function BrokerLanding() {
         </div>
       </Section>
 
-      <Section tint>
+      <Section tint id="prowizja">
         <SectionHead
           center
-          eyebrow="Program partnerski"
-          title={`${COMMISSION} za każdego nowego inwestora`}
-          sub="Zarabiasz wyłącznie na abonamentach inwestorów: w panelu dostajesz link polecający, a gdy nowy inwestor założy konto z Twojego linku i kupi abonament, naliczamy Ci prowizję. Za zrealizowane tematy klientów prowizji nie ma."
+          eyebrow="Ile zarabiasz"
+          title="Prowizja od każdej uruchomionej pożyczki Twojego klienta"
+          sub={`Otrzymujesz ${RATE} z pożyczki klienta, którego przyprowadziłeś. Prowizja jest należna po wypłacie środków klientowi.`}
         />
-        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "center" }}>
-          <MktButton variant="cta" href="/posrednicy">
-            Zasady programu partnerskiego
-          </MktButton>
+        <div
+          className="fy-steps"
+          style={{
+            margin: "2.5rem auto 0",
+            maxWidth: "48rem",
+            display: "grid",
+            gridTemplateColumns: "repeat(3,1fr)",
+            gap: "0.9rem",
+          }}
+        >
+          {EXAMPLES.map((amount) => (
+            <div
+              key={amount}
+              style={{
+                padding: "1.2rem",
+                borderRadius: "var(--radius-xl)",
+                border: "1px solid var(--border)",
+                background: "var(--card)",
+                boxShadow: "var(--shadow-xs)",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "0.82rem", opacity: 0.75 }}>Pożyczka {formatPLN(amount)}</div>
+              <div style={{ marginTop: 6, fontSize: "1.5rem", fontWeight: 800 }}>
+                ok. {formatPLN(brokerCommissionForLoan(amount))}
+              </div>
+              <div style={{ fontSize: "0.78rem", opacity: 0.7 }}>Twoja prowizja</div>
+            </div>
+          ))}
         </div>
+        <ComplianceNote style={{ marginTop: "2rem" }}>
+          Kwoty przykładowe — dokładną prowizję wyliczamy od wynagrodzenia Finance You z danej
+          pożyczki. Prowizja nie przysługuje za sam wniosek, ofertę ani zainteresowanie inwestora.
+        </ComplianceNote>
       </Section>
 
       <Section id="faq">

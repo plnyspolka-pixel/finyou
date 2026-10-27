@@ -1,15 +1,25 @@
 import { ShieldCheck, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-/** Stały komunikat zgodności programu pośredników (brak prowizji za zapraszanie). */
-export function ComplianceNotice({ className }: { className?: string }) {
+/**
+ * Stały komunikat zgodności — dwa osobne programy:
+ * pośrednik zarabia na uruchomionej pożyczce przyprowadzonego klienta,
+ * partner na abonamencie nowego inwestora z jego linku.
+ */
+export function ComplianceNotice({
+  className,
+  kind = "partner",
+}: {
+  className?: string;
+  kind?: "broker" | "partner";
+}) {
   return (
     <Alert className={className}>
       <ShieldCheck className="h-4 w-4" />
       <AlertDescription className="text-xs leading-relaxed">
-        Program nie przewiduje prowizji za samo zapraszanie osób ani za zrealizowane tematy
-        klientów. Prowizja jest naliczana wyłącznie od abonamentu kupionego przez poleconego nowego
-        inwestora.
+        {kind === "broker"
+          ? "Pośrednik otrzymuje prowizję od każdej uruchomionej (wypłaconej) pożyczki klienta, którego przyprowadził. Nie ma prowizji za samo przekazanie wniosku ani za zapraszanie osób."
+          : "Partner otrzymuje prowizję wyłącznie za nowego inwestora, który zarejestruje się z jego linku i opłaci abonament. Nie ma prowizji za samą rejestrację poleconej osoby."}
       </AlertDescription>
     </Alert>
   );
@@ -34,8 +44,8 @@ export function BrokerAccountComplianceNotice({ className }: { className?: strin
     <Alert className={className}>
       <Info className="h-4 w-4" />
       <AlertDescription className="text-xs leading-relaxed">
-        Prowizja może zostać naliczona wyłącznie od realnie opłaconego i niezwróconego abonamentu
-        poleconego inwestora, nie za samą rejestrację osoby w programie.
+        Prowizja jest naliczana wyłącznie od realnych zdarzeń: uruchomionej pożyczki klienta
+        (pośrednik) albo opłaconego i niezwróconego abonamentu poleconego inwestora (partner).
       </AlertDescription>
     </Alert>
   );

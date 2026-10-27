@@ -7,7 +7,6 @@ import {
   Mail,
   UserCircle,
   Receipt,
-  Network,
   Coins,
 } from "lucide-react";
 import { PanelShell, type NavGroup } from "@/components/layout/panel-shell";
@@ -17,7 +16,8 @@ export const Route = createFileRoute("/posrednik")({
 });
 
 // Pośrednik bez bramki płatności, szkoleń i materiałów: wnioski klientów,
-// CRM reakcji inwestorów, skrzynka do wysyłki ofert i program poleceń.
+// CRM reakcji inwestorów, skrzynka do wysyłki ofert i prowizje od uruchomionych
+// pożyczek jego klientów (jedyne źródło zarobku pośrednika).
 const groups: NavGroup[] = [
   {
     items: [
@@ -29,10 +29,9 @@ const groups: NavGroup[] = [
     ],
   },
   {
-    label: "Program poleceń",
+    label: "Moje prowizje",
     items: [
-      { to: "/posrednik/program", label: "Link i saldo", icon: Network },
-      { to: "/posrednik/prowizje", label: "Prowizje", icon: Coins },
+      { to: "/posrednik/prowizje", label: "Prowizje od pożyczek", icon: Coins },
       { to: "/posrednik/rozliczenia", label: "Wypłaty i rozliczenia", icon: Receipt },
     ],
   },

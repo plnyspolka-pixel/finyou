@@ -152,7 +152,12 @@ function PartnerzyPage() {
               {rows.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <div className="font-medium">{partnerName(p)}</div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      {partnerName(p)}
+                      <Badge variant="outline" className="h-5 text-[10px]">
+                        {p.partner_kind === "broker" ? "Pośrednik" : "Partner"}
+                      </Badge>
+                    </div>
                     <div className="text-[11px] text-muted-foreground">
                       {p.email ?? "—"}
                       {p.nip ? ` · NIP ${p.nip}` : ""}

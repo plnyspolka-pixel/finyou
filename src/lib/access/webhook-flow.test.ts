@@ -479,6 +479,15 @@ describe("webhook Tpay — program partnerski", () => {
     expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
   });
 
+  it("polecenie przez konto pośrednika nie daje prowizji za inwestora", async () => {
+    seedAffiliate();
+    db().tables.affiliate_partners[0].partner_kind = "broker";
+    const paymentId = seedPayment({ provider_transaction_id: "tr_broker_ref" });
+    tpayCorrect("tr_broker_ref", paymentId, 999);
+    await handleTpayNotification({ tr_id: "tr_broker_ref" });
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+  });
+
   it("bez zapisanego partnera polecającego zdarzenie nie powstaje", async () => {
     const paymentId = seedPayment({ provider_transaction_id: "tr_noaff" });
     tpayCorrect("tr_noaff", paymentId, 999);

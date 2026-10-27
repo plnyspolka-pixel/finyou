@@ -401,7 +401,7 @@ export function SiteFooter() {
         { t: "Klient", href: PAGE_PATH.klient },
         { t: "Inwestor", href: PAGE_PATH.inwestor },
         { t: "Pośrednik", href: PAGE_PATH.posrednik },
-        { t: "Program partnerski", href: "/posrednicy" },
+        { t: "Program partnerski", href: "/program-partnerski" },
       ],
     },
     {

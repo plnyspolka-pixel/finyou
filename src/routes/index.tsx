@@ -78,7 +78,7 @@ const ROLES: RoleCardProps[] = [
     accent: "var(--gold-600)",
     badge: { v: "gold", t: "Pośrednik" },
     title: "Dla pośredników",
-    desc: "Bezpłatne konto: wprowadzaj wnioski klientów, przedstawiaj je inwestorom i śledź w CRM, jak reagują.",
+    desc: "Przyprowadź klienta i zarabiaj prowizję od każdej uruchomionej pożyczki. Konto bezpłatne, a w CRM widzisz, jak reagują inwestorzy.",
     cta: "Załóż konto pośrednika",
     href: "/dla-posrednika",
   },

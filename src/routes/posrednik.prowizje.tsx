@@ -15,6 +15,10 @@ import {
 import { Coins } from "lucide-react";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
+  BROKER_COMMISSION_PERCENT_OF_FEE,
+  INVESTOR_COMMISSION_PLN,
+} from "@/lib/affiliate/engine-pure";
+import {
   commissionStatusLabels,
   commissionStatusColors,
   settlementTypeLabels,
@@ -24,10 +28,11 @@ import { ComplianceNotice } from "@/components/affiliate/compliance-notice";
 import { getAffiliateCommissions } from "@/lib/affiliate/partner.functions";
 
 export const Route = createFileRoute("/posrednik/prowizje")({
-  component: ProwizjePage,
+  component: () => <ProwizjePage kind="broker" />,
 });
 
-function ProwizjePage() {
+/** Prowizje — wspólne dla panelu pośrednika i partnera (różnią się opisem). */
+export function ProwizjePage({ kind }: { kind: "broker" | "partner" }) {
   const fn = useServerFn(getAffiliateCommissions);
   const q = useQuery({ queryKey: ["affiliate-commissions"], queryFn: () => fn() });
   const items = (q.data as any[]) ?? [];
@@ -57,7 +62,9 @@ function ProwizjePage() {
           <Coins className="h-6 w-6" /> Prowizje
         </h1>
         <p className="text-sm text-muted-foreground">
-          Prowizje za abonamenty kupione przez poleconych nowych inwestorów.
+          {kind === "broker"
+            ? `Prowizja od każdej uruchomionej pożyczki Twojego klienta: ${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You z tej pożyczki.`
+            : `${formatPLN(INVESTOR_COMMISSION_PLN)} za każdego nowego inwestora, który zarejestruje się z Twojego linku i kupi abonament.`}
         </p>
       </div>
 
@@ -93,7 +100,9 @@ function ProwizjePage() {
             <p className="p-4 text-muted-foreground">Ładowanie…</p>
           ) : items.length === 0 ? (
             <p className="p-4 text-muted-foreground">
-              Brak prowizji. Pojawią się tu, gdy polecony inwestor kupi abonament.
+              {kind === "broker"
+                ? "Brak prowizji. Pojawią się tu po uruchomieniu (wypłacie) pożyczki Twojego klienta."
+                : "Brak prowizji. Pojawią się tu, gdy polecony inwestor kupi abonament."}
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -101,7 +110,6 @@ function ProwizjePage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Poziom</TableHead>
                     <TableHead>Podstawa</TableHead>
                     <TableHead>Forma</TableHead>
                     <TableHead className="text-right">Kwota</TableHead>
@@ -113,9 +121,6 @@ function ProwizjePage() {
                   {items.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="text-xs">{formatDate(c.created_at)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">P{c.network_level}</Badge>
-                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {basisTypeLabels[c.basis_type] ?? c.basis_type}
                       </TableCell>
@@ -145,7 +150,7 @@ function ProwizjePage() {
         </CardContent>
       </Card>
 
-      <ComplianceNotice />
+      <ComplianceNotice kind={kind} />
     </div>
   );
 }

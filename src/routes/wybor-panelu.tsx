@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Building2,
   Calculator,
+  Handshake,
   Headset,
   LineChart,
   Loader2,
@@ -35,6 +36,7 @@ const ROLE_ICONS: Record<AppRole, typeof Building2> = {
   operator: Headset,
   ksiegowosc: Calculator,
   posrednik: Users,
+  partner: Handshake,
   inwestor: LineChart,
   klient: Building2,
 };

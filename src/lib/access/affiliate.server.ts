@@ -1,4 +1,5 @@
-// Zdarzenia programu partnerskiego po potwierdzonej płatności Tpay.
+// Zdarzenia programu partnerskiego po potwierdzonej płatności Tpay —
+// wyłącznie abonament inwestora poleconego przez konto partnera.
 // Powstają wyłącznie, gdy użytkownik ma zapisanego aktywnego partnera
 // polecającego (profiles.referred_by_partner_id). Unikalność external_ref
 // (`tpay:<transaction_id>`) gwarantuje jednorazowe naliczenie prowizji.
@@ -38,10 +39,15 @@ export async function createAffiliateEventForAccessPayment(
   if (!partnerId) return { ok: true, skipped: "no_referring_partner" };
 
   const { data: partner } = await (db.from("affiliate_partners") as any)
-    .select("id,status")
+    .select("id,status,partner_kind")
     .eq("id", partnerId)
     .maybeSingle();
   if (!partner || partner.status !== "active") return { ok: true, skipped: "partner_not_active" };
+  // Za inwestorów płacimy wyłącznie kontom programu partnerskiego — pośrednik
+  // zarabia tylko na uruchomionych pożyczkach swoich klientów.
+  if ((partner.partner_kind ?? "partner") !== "partner") {
+    return { ok: true, skipped: "not_partner_program" };
+  }
 
   // Prowizja za inwestora tylko za NOWEGO inwestora — przy jego pierwszym
   // opłaconym dostępie. Odnowienia i kolejne zakupy nie dają prowizji.
