@@ -145,10 +145,11 @@ export function buildReelBrief(input: ReelBriefInput): string {
   } else {
     lines.push("Zakończ zachętą do obserwowania profilu (bez obietnic).");
   }
-  // Decyzja właściciela 26.10.2026: w rolce DOKŁADNIE jedno zdanie o ryzyku —
-  // formułki prawne („nie stanowi oferty”, „wynik szacunkowy”…) ma stopka opisu.
+  // Decyzja właściciela 27.10.2026: rolki są sprzedażowe — fakty i mechanizm,
+  // bez zdań o ryzyku, koszcie i możliwej stracie (widz to wie). Linia o
+  // ryzyku jest w stopce opisu publikacji. Zakazy obietnic zostają.
   lines.push(
-    "Zastrzeżenia: DOKŁADNIE jedno krótkie zdanie o ryzyku w naturalnym miejscu (przed CTA) — i ani jednego więcej. Nie dopisuj formułek „nie stanowi oferty/porady”, „wynik szacunkowy”, „materiał poglądowy” ani zastrzeżeń przy CTA; te są w opisie publikacji, nie w tekście mówionym. Bez liczb o zwrocie w procentach, bez gwarancji i bez obiecywania, że ryzyka nie ma. Nie używaj frazy „dla każdego” w żadnej formie (także zaprzeczonej); nie obiecuj, że weryfikacji nie będzie, i nie sugeruj przeznaczenia prywatnego.",
+    "Rolka sprzedażowa: przedstaw fakty, mechanizm i korzyść, bez oceniania za widza. ŻADNYCH zdań o ryzyku, koszcie (np. „droższe niż bank”), możliwej stracie kapitału czy majątku ani zastrzeżeń i formułek prawnych („nie stanowi oferty”, „wynik szacunkowy”) — widz to wie, a ryzyko jest w stopce opisu publikacji. Bez liczb o zwrocie w procentach, bez gwarancji i bez twierdzenia, że ryzyka nie ma. Nie używaj frazy „dla każdego” w żadnej formie (także zaprzeczonej); nie obiecuj, że weryfikacji nie będzie, i nie sugeruj przeznaczenia prywatnego.",
   );
   const examples = TRACK_HOOK_EXAMPLES[track];
   if (examples.length)
