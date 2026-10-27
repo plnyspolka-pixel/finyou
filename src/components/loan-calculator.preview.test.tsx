@@ -70,7 +70,7 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
       "Twój zysk",
     ])
       expect(screen.getByText(t)).toBeInTheDocument();
-    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja — firma spłaca ją w ratach"])
+    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja"])
       expect(screen.getByText(t)).toBeInTheDocument();
 
     const text = pageText();
@@ -95,10 +95,22 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(indicatorsMock).not.toHaveBeenCalled();
   });
 
-  it("domyślna prowizja inwestora wynosi 3% i limity są zachowane", () => {
+  it("domyślna prowizja inwestora wynosi 20%, etykieta bez dubla i limity są zachowane", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
-    expect(screen.getAllByRole("textbox").some((input) => (input as HTMLInputElement).value === "3")).toBe(true);
+    expect(
+      screen.getAllByRole("textbox").some((input) => (input as HTMLInputElement).value === "20"),
+    ).toBe(true);
     expect(pageText()).toContain("maks. 14,5% — odsetki maksymalne");
+    expect(pageText()).toContain("20,0% (");
+    expect(pageText().match(/firma spłaca ją w ratach/g)?.length).toBe(1);
+  });
+
+  it("stopa w polu i w tekstach z przecinkiem; pole przyjmuje przecinek i kropkę", () => {
+    renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
+    const inputs = screen.getAllByRole("textbox") as HTMLInputElement[];
+    expect(inputs.some((i) => /^\d+,\d+$/.test(i.value) || /^\d+$/.test(i.value))).toBe(true);
+    expect(inputs.every((i) => !/^\d+\.\d+$/.test(i.value))).toBe(true);
+    expect(pageText().replace(/@keyframes[^\n]*/g, "")).not.toMatch(/\d\.\d+%/);
   });
 
   it("dla okresu innego niż 12 mies. dopisuje stopę roczną", () => {
@@ -117,7 +129,6 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} investorGuidance />);
     expect(pageText()).not.toMatch(/wyzysk|art\.|krotność|wartość referencyjna|MPKK/i);
   });
-
 });
 
 describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie", () => {
