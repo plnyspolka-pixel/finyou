@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,10 @@ import {
 import { formatWarsawDate, type AccessProduct } from "@/lib/access/core";
 
 export const Route = createFileRoute("/posrednik/abonament")({
+  // Pośrednik działa bez płatnego dostępu, szkoleń i materiałów — moduł wyłączony.
+  beforeLoad: () => {
+    throw redirect({ to: "/posrednik/wnioski" });
+  },
   validateSearch: (
     search: Record<string, unknown>,
   ): { tpay?: string; payment?: string; product?: string } => ({

@@ -438,6 +438,56 @@ describe("webhook Tpay — program partnerski", () => {
     expect((db().tables.affiliate_commissions ?? []).length).toBe(1);
   });
 
+  it("prowizja tylko za nowego inwestora — kolejny zakup (odnowienie) jej nie nalicza", async () => {
+    seedAffiliate();
+    const first = seedPayment({
+      provider_transaction_id: "tr_first",
+      created_at: "2026-08-01T10:00:00.000Z",
+    });
+    tpayCorrect("tr_first", first, 999);
+    await handleTpayNotification({ tr_id: "tr_first" });
+
+    const renewal = seedPayment({
+      provider_transaction_id: "tr_renew",
+      created_at: "2026-09-01T10:00:00.000Z",
+    });
+    tpayCorrect("tr_renew", renewal, 999);
+    await handleTpayNotification({ tr_id: "tr_renew" });
+
+    const events = db().tables.affiliate_commission_events ?? [];
+    expect(events).toHaveLength(1);
+    expect(events[0].external_ref).toBe("tpay:tr_first");
+    expect((db().tables.affiliate_commissions ?? []).length).toBe(1);
+  });
+
+  it("zakup okazji i konto pośrednika nie dają prowizji — tylko abonament inwestora", async () => {
+    seedAffiliate();
+    const unlock = seedPayment({
+      provider_transaction_id: "tr_unl",
+      product_id: "unlock",
+      expected_amount_grosz: 150000,
+      unlock_match_id: "22222222-2222-4222-8222-222222222222",
+    });
+    tpayCorrect("tr_unl", unlock, 1500);
+    await handleTpayNotification({ tr_id: "tr_unl" });
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+
+    const { createAffiliateEventForAccessPayment } = await import("./affiliate.server");
+    const broker = seedPayment({ audience: "broker", status: "paid" });
+    const res = await createAffiliateEventForAccessPayment(broker);
+    expect(res.skipped).toBe("not_investor_subscription");
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+  });
+
+  it("polecenie przez konto pośrednika nie daje prowizji za inwestora", async () => {
+    seedAffiliate();
+    db().tables.affiliate_partners[0].partner_kind = "broker";
+    const paymentId = seedPayment({ provider_transaction_id: "tr_broker_ref" });
+    tpayCorrect("tr_broker_ref", paymentId, 999);
+    await handleTpayNotification({ tr_id: "tr_broker_ref" });
+    expect(db().tables.affiliate_commission_events ?? []).toHaveLength(0);
+  });
+
   it("bez zapisanego partnera polecającego zdarzenie nie powstaje", async () => {
     const paymentId = seedPayment({ provider_transaction_id: "tr_noaff" });
     tpayCorrect("tr_noaff", paymentId, 999);

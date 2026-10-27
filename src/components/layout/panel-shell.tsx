@@ -70,7 +70,9 @@ export function PanelShell({
           ? "operator"
           : pathname.startsWith("/posrednik")
             ? "posrednik"
-            : "klient";
+            : pathname.startsWith("/partner")
+              ? "partner"
+              : "klient";
       void navigate({ to: "/logowanie", search: { role, next: pathname } as never });
       return;
     }

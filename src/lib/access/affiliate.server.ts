@@ -1,4 +1,5 @@
-// Zdarzenia programu partnerskiego po potwierdzonej płatności Tpay.
+// Zdarzenia programu partnerskiego po potwierdzonej płatności Tpay —
+// wyłącznie abonament inwestora poleconego przez konto partnera.
 // Powstają wyłącznie, gdy użytkownik ma zapisanego aktywnego partnera
 // polecającego (profiles.referred_by_partner_id). Unikalność external_ref
 // (`tpay:<transaction_id>`) gwarantuje jednorazowe naliczenie prowizji.
@@ -17,7 +18,7 @@ export async function createAffiliateEventForAccessPayment(
 ): Promise<{ ok: boolean; eventId?: string; skipped?: string }> {
   const { data: payment } = await (db.from("access_payments") as any)
     .select(
-      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider,provider_transaction_id,product_id,processed_at,affiliate_event_id,currency",
+      "id,user_id,audience,status,paid_amount_grosz,expected_amount_grosz,provider,provider_transaction_id,product_id,unlock_match_id,processed_at,created_at,affiliate_event_id,currency",
     )
     .eq("id", paymentId)
     .maybeSingle();
@@ -25,6 +26,10 @@ export async function createAffiliateEventForAccessPayment(
   if (payment.status !== "paid") return { ok: false, skipped: "payment_not_paid" };
   if (payment.affiliate_event_id)
     return { ok: true, eventId: payment.affiliate_event_id, skipped: "already_linked" };
+  // Partner zarabia wyłącznie na abonamencie inwestora — nie na kontach
+  // pośredników ani zakupach pojedynczych okazji.
+  if (payment.audience !== "investor") return { ok: true, skipped: "not_investor_subscription" };
+  if (payment.unlock_match_id) return { ok: true, skipped: "not_investor_subscription" };
 
   const { data: profile } = await (db.from("profiles") as any)
     .select("referred_by_partner_id")
@@ -34,10 +39,21 @@ export async function createAffiliateEventForAccessPayment(
   if (!partnerId) return { ok: true, skipped: "no_referring_partner" };
 
   const { data: partner } = await (db.from("affiliate_partners") as any)
-    .select("id,status")
+    .select("id,status,partner_kind")
     .eq("id", partnerId)
     .maybeSingle();
   if (!partner || partner.status !== "active") return { ok: true, skipped: "partner_not_active" };
+  // Za inwestorów płacimy wyłącznie kontom programu partnerskiego — pośrednik
+  // zarabia tylko na uruchomionych pożyczkach swoich klientów.
+  if ((partner.partner_kind ?? "partner") !== "partner") {
+    return { ok: true, skipped: "not_partner_program" };
+  }
+
+  // Prowizja za inwestora tylko za NOWEGO inwestora — przy jego pierwszym
+  // opłaconym dostępie. Odnowienia i kolejne zakupy nie dają prowizji.
+  if (!(await isFirstInvestorPurchase(payment))) {
+    return { ok: true, skipped: "not_first_investor_purchase" };
+  }
 
   const gross = groszToPln(Number(payment.paid_amount_grosz ?? payment.expected_amount_grosz));
   const net = round2(gross / 1.23);
@@ -46,8 +62,7 @@ export async function createAffiliateEventForAccessPayment(
   const externalRef = payment.provider_transaction_id
     ? `${payment.provider ?? "tpay"}:${payment.provider_transaction_id}`
     : `access:${payment.id}`;
-  const eventType =
-    payment.audience === "investor" ? "investor_account_paid" : "broker_account_paid";
+  const eventType = "investor_account_paid";
 
   try {
     const { createCommissionEvent } = await import("@/lib/affiliate/engine");
@@ -88,6 +103,33 @@ export async function createAffiliateEventForAccessPayment(
     console.error("[access-affiliate] event failed", msg);
     return { ok: false, skipped: msg };
   }
+}
+
+async function isFirstInvestorPurchase(payment: {
+  id: string;
+  user_id: string;
+  created_at: string | null;
+}): Promise<boolean> {
+  // Wcześniejszy opłacony abonament inwestora (zwroty i okazje się nie liczą).
+  let earlier = (db.from("access_payments") as any)
+    .select("id")
+    .eq("user_id", payment.user_id)
+    .eq("audience", "investor")
+    .eq("status", "paid")
+    .is("unlock_match_id", null)
+    .neq("id", payment.id);
+  if (payment.created_at) earlier = earlier.lt("created_at", payment.created_at);
+  const { data: prev } = await earlier.limit(1);
+  if ((prev ?? []).length > 0) return false;
+
+  // Prowizja za to konto już naliczona (np. ze starszej ścieżki płatności).
+  const { data: events } = await (db.from("affiliate_commission_events") as any)
+    .select("id")
+    .eq("event_type", "investor_account_paid")
+    .eq("paid_account_id", payment.user_id)
+    .not("event_status", "in", "(cancelled,refunded,chargeback)")
+    .limit(1);
+  return (events ?? []).length === 0;
 }
 
 /** Zwrot / chargeback → istniejący mechanizm korekty (clawback prowizji). */

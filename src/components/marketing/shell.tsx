@@ -1,7 +1,10 @@
 import { ChatWidget } from "@/components/landing/chat-widget";
+import { WebinarWidget } from "./webinar-widget";
 import { COMPANY_DATA, COMPANY_REGISTRY_LINE } from "@/lib/company";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouterState } from "@tanstack/react-router";
+import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
 import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 import { freeMaterialHref } from "@/lib/lead-magnets/free-materials";
 import type { ReactNode } from "react";
@@ -82,7 +85,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
   inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
-  posrednik: { label: "Dołącz jako pośrednik", href: "/rejestracja?role=posrednik" },
+  posrednik: { label: "Załóż konto pośrednika", href: "/posrednicy/rejestracja" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
@@ -138,12 +141,151 @@ function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
 }
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
- const client = page === "klient" || page === "kalkulator";
- const [open, setOpen] = useState(false);
- const { data: free } = useQuery({ queryKey: ["free-material-menu", client ? "klient" : "inwestor"], queryFn: () => getFreeMaterialsFn({data:{audience:client ? "klient" : "inwestor"}}), staleTime:60000 });
- const nav = [{label:"Szkolenie",href:"/#szkolenie"},{label:"Sprawy",href:"/#sprawy"},{label:"Cennik",href:"/#cennik"},{label:"O nas",href:"/o-nas"},{label:"Blog",href:"/blog"},{label:"FAQ",href:"/#faq"}];
- const freeLinks = [...(free?.materials ?? []).map(m=>({label:m.title,href:freeMaterialHref(client ? "klient" : "inwestor",m.slug)})),...(free?.tools??[]).map(t=>({label:t.title,href:t.url}))];
- return <header className="fy-sales-header">{page === "home" && <div className="fy-sales-topbar"><a href="/dla-klienta">Potrzebujesz pożyczki pod zastaw nieruchomości? Przejdź do wniosku →</a></div>}<div className="fy-sales-nav"><a href="/" aria-label="Finance You — strona główna"><FinanceYouLogo variant="dark" size="md"/></a>{client ? <div className="fy-sales-client-nav"><a href={`tel:${COMPANY_DATA.phone.e164}`}><Phone size={16}/><span>{CONTACT.phone}</span></a><MktButton size="sm" variant="gold" href="/dla-klienta#wniosek">Złóż wniosek</MktButton></div> : <><nav className="fy-sales-nav-desktop" aria-label="Menu inwestora"><a href={nav[0].href}>Szkolenie</a><details className="fy-sales-dropdown"><summary>Narzędzia</summary><div>{INVESTOR_MODULES.filter(m=>!m.bonus).map(m=><a href={investorModulePath(m.slug)} key={m.slug}>{m.menuLabel}</a>)}<strong>Bezpłatnie</strong>{freeLinks.map(l=><a key={l.href} href={l.href}>{l.label}</a>)}</div></details>{nav.slice(1).map(n=><a key={n.href} href={n.href}>{n.label}</a>)}<a href="/logowanie">Zaloguj</a></nav><MktButton size="sm" variant="gold" href="/#cennik">Zostań partnerem</MktButton><Button className="fy-sales-menu-toggle" variant="outline" size="icon" aria-label="Menu" onClick={()=>setOpen(!open)}><Menu size={20}/></Button></>}</div>{!client && open && <nav className="fy-sales-mobile-nav" aria-label="Menu mobilne">{nav.map(n=><a href={n.href} key={n.href} onClick={()=>setOpen(false)}>{n.label}</a>)}<details><summary>Narzędzia i bezpłatne materiały</summary>{INVESTOR_MODULES.map(m=><a key={m.slug} href={investorModulePath(m.slug)}>{m.menuLabel}</a>)}{freeLinks.map(l=><a key={l.href} href={l.href}>{l.label}</a>)}</details><a href="/logowanie">Zaloguj</a></nav>}</header>;
+  const client = page === "klient" || page === "kalkulator";
+  const [open, setOpen] = useState(false);
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
+  const audience = client ? "klient" : "inwestor";
+  const { data: free } = useQuery({
+    queryKey: ["free-material-menu", audience],
+    queryFn: () => getFreeMaterialsFn({ data: { audience } }),
+    staleTime: 60000,
+  });
+  const nav = [
+    { label: "Szkolenie", href: "/#szkolenie" },
+    { label: "Case study", href: "/historie" },
+    { label: "Cennik", href: "/#cennik" },
+    { label: "O nas", href: "/o-nas" },
+    { label: "Blog", href: "/blog" },
+    { label: "FAQ", href: "/#faq" },
+  ];
+  const current = (href: string) => (href === pathname ? ("page" as const) : undefined);
+  // „Narzędzia” = wyłącznie płatne moduły; „Darmowe materiały” = lekcja,
+  // PDF-y (w tym raporty spraw po publikacji) i kalkulatory online.
+  const tools = INVESTOR_MODULES.filter((m) => !m.bonus).map((m) => ({
+    label: m.menuLabel,
+    href: investorModulePath(m.slug),
+  }));
+  const freeDownloads = (free?.materials ?? []).map((m) => ({
+    label: m.slug === FREE_LESSON_SLUG ? "Darmowa lekcja 1 — ok.\u00a035 minut" : m.title,
+    href: freeMaterialHref(audience, m.slug),
+  }));
+  const freeCalculators = (free?.tools ?? []).map((t) => ({ label: t.title, href: t.url }));
+  const freeLinks = [...freeDownloads, ...freeCalculators];
+  return (
+    <header className="fy-sales-header">
+      {page === "home" && (
+        <div className="fy-sales-topbar">
+          <a href="/dla-klienta">
+            Potrzebujesz pożyczki pod zastaw nieruchomości? Przejdź do wniosku →
+          </a>
+          <span aria-hidden> · </span>
+          <a href="/dla-posrednika">Masz klientów? Zostań pośrednikiem →</a>
+        </div>
+      )}
+      <div className="fy-sales-nav">
+        <a href="/" aria-label="Finance You — strona główna">
+          <FinanceYouLogo variant="dark" size="md" />
+        </a>
+        {page === "posrednik" ? (
+          <div className="fy-sales-client-nav">
+            <a href="/logowanie">Zaloguj</a>
+            <MktButton size="sm" variant="gold" href="/posrednicy/rejestracja">
+              Załóż konto pośrednika
+            </MktButton>
+          </div>
+        ) : client ? (
+          <div className="fy-sales-client-nav">
+            <a href={`tel:${COMPANY_DATA.phone.e164}`}>
+              <Phone size={16} />
+              <span>{CONTACT.phone}</span>
+            </a>
+            <MktButton size="sm" variant="gold" href="/dla-klienta#wniosek">
+              Złóż wniosek
+            </MktButton>
+          </div>
+        ) : (
+          <>
+            <nav className="fy-sales-nav-desktop" aria-label="Menu inwestora">
+              <a href={nav[0].href}>{nav[0].label}</a>
+              <details className="fy-sales-dropdown">
+                <summary>Narzędzia</summary>
+                <div>
+                  {tools.map((l) => (
+                    <a href={l.href} key={l.href}>
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              </details>
+              {freeLinks.length > 0 && (
+                <details className="fy-sales-dropdown">
+                  <summary>Darmowe materiały</summary>
+                  <div>
+                    {freeLinks.map((l) => (
+                      <a key={l.href} href={l.href}>
+                        {l.label}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              )}
+              {nav.slice(1).map((n) => (
+                <a key={n.href} href={n.href} aria-current={current(n.href)}>
+                  {n.label}
+                </a>
+              ))}
+              <a href="/logowanie">Zaloguj</a>
+            </nav>
+            <MktButton size="sm" variant="gold" href="/#cennik">
+              Zostań partnerem
+            </MktButton>
+            <Button
+              className="fy-sales-menu-toggle"
+              variant="outline"
+              size="icon"
+              aria-label="Menu"
+              onClick={() => setOpen(!open)}
+            >
+              <Menu size={20} />
+            </Button>
+          </>
+        )}
+      </div>
+      {!client && page !== "posrednik" && open && (
+        <nav className="fy-sales-mobile-nav" aria-label="Menu mobilne">
+          {nav.map((n) => (
+            <a
+              href={n.href}
+              key={n.href}
+              aria-current={current(n.href)}
+              onClick={() => setOpen(false)}
+            >
+              {n.label}
+            </a>
+          ))}
+          <details>
+            <summary>Narzędzia</summary>
+            {tools.map((l) => (
+              <a key={l.href} href={l.href}>
+                {l.label}
+              </a>
+            ))}
+          </details>
+          {freeLinks.length > 0 && (
+            <details>
+              <summary>Darmowe materiały</summary>
+              {freeLinks.map((l) => (
+                <a key={l.href} href={l.href}>
+                  {l.label}
+                </a>
+              ))}
+            </details>
+          )}
+          <a href="/logowanie">Zaloguj</a>
+        </nav>
+      )}
+    </header>
+  );
 }
 
 export function StickyCTA({ label, href }: { label: string; href: string }) {
@@ -177,6 +319,8 @@ export function SiteFooter() {
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
         { t: "Jesteś inwestorem? →", href: PAGE_PATH.inwestor },
+        { t: "Pośrednik", href: PAGE_PATH.posrednik },
+        { t: "Program partnerski", href: "/program-partnerski" },
       ],
     },
     {
@@ -361,6 +505,7 @@ export function MarketingShell({
       {children}
       <SiteFooter />
       <ChatWidget source={`public:${page}`} />
+      {(page === "home" || page === "inwestorModul") && <WebinarWidget />}
       {sticky ? <StickyCTA label={sticky.label} href={sticky.href} /> : null}
     </div>
   );

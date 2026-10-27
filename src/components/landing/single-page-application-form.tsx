@@ -1271,15 +1271,15 @@ export function SinglePageApplicationForm({
         You.
       </p>
 
-      {/* Limit 5 ofert na darmowym koncie pośrednika (egzekwowany w bazie —
-          modal tylko komunikuje wynik). */}
+      {/* Limit ofert pośrednika (gdyby baza go zgłosiła — obecnie wyłączony,
+          migracja drizzle 0048). Modal tylko komunikuje wynik. */}
       <Dialog open={limitModalOpen} onOpenChange={setLimitModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Limit ofert darmowego konta</DialogTitle>
+            <DialogTitle>Limit ofert</DialogTitle>
             <DialogDescription>
-              W darmowym koncie możesz posiadać maksymalnie 5 ofert jednocześnie. Usuń jedną z
-              istniejących ofert albo wykup pełny dostęp.
+              Osiągnięto limit ofert. Usuń jedną z istniejących ofert albo skontaktuj się z Finance
+              You.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -1291,14 +1291,6 @@ export function SinglePageApplicationForm({
               }}
             >
               Zobacz moje oferty
-            </Button>
-            <Button
-              onClick={() => {
-                setLimitModalOpen(false);
-                void navigate({ to: "/posrednik/abonament" });
-              }}
-            >
-              Wykup pełny dostęp
             </Button>
             <Button variant="ghost" onClick={() => setLimitModalOpen(false)}>
               Anuluj

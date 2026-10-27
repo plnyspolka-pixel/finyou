@@ -218,13 +218,20 @@ export async function registerLeadMagnetSignup(
     }
   }
 
-  const videoMaterial = magnet.material_type === "video" && magnet.slug === "darmowa-lekcja";
+  // Wideo za e-mail: darmowa lekcja albo pokój webinaru — link z osobistym
+  // tokenem (hash w bazie), ważny VIDEO_TOKEN_TTL_DAYS.
+  const webinar = magnet.material_type === "video" && magnet.slug === "webinar";
+  const videoMaterial =
+    magnet.material_type === "video" && (magnet.slug === "darmowa-lekcja" || webinar);
   if (videoMaterial) {
     const { videoTokenHash, VIDEO_TOKEN_TTL_DAYS } = await import("@/lib/free-lesson");
-    const { error } = await supabaseAdmin.from("lead_magnet_signups").update({
-      video_token_hash: await videoTokenHash(token),
-      video_expires_at: new Date(Date.now() + VIDEO_TOKEN_TTL_DAYS * 86400000).toISOString(),
-    }).eq("id", signupId);
+    const { error } = await supabaseAdmin
+      .from("lead_magnet_signups")
+      .update({
+        video_token_hash: await videoTokenHash(token),
+        video_expires_at: new Date(Date.now() + VIDEO_TOKEN_TTL_DAYS * 86400000).toISOString(),
+      })
+      .eq("id", signupId);
     if (error) throw new Error("Nie udało się udostępnić lekcji.");
   }
 
@@ -233,7 +240,13 @@ export async function registerLeadMagnetSignup(
   // wyśle tej osobie zaproszenie do opinii. Ponowna wysyłka tego samego pliku
   // już nie, żeby nie mnożyć zaproszeń.
   const bcc = existing ? [] : await trustpilotLeadMagnetBccAddresses();
-  const link = videoMaterial ? `https://financeyou.pl/pobierz/darmowa-lekcja?t=${token}` : input.emailOverride?.link ? input.emailOverride.link(token) : downloadUrl(token);
+  const link = webinar
+    ? `https://financeyou.pl/webinar/pokoj?t=${token}`
+    : videoMaterial
+      ? `https://financeyou.pl/pobierz/darmowa-lekcja?t=${token}`
+      : input.emailOverride?.link
+        ? input.emailOverride.link(token)
+        : downloadUrl(token);
   const sent = input.emailOverride
     ? await sendResendEmail({
         to: email,

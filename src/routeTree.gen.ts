@@ -30,6 +30,7 @@ import { Route as ONasRouteImport } from './routes/o-nas'
 import { Route as OfertyRouteImport } from './routes/oferty'
 import { Route as OperatorRouteImport } from './routes/operator'
 import { Route as OperatorRejestracjaRouteImport } from './routes/operator-rejestracja'
+import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PolitykaCookiesRouteImport } from './routes/polityka-cookies'
 import { Route as PolitykaPrywatnosciRouteImport } from './routes/polityka-prywatnosci'
 import { Route as PosrednikRouteImport } from './routes/posrednik'
@@ -163,6 +164,10 @@ import { Route as OperatorProfilRouteImport } from './routes/operator.profil'
 import { Route as OperatorSkrzynkaRouteImport } from './routes/operator.skrzynka'
 import { Route as OperatorTablicaRouteImport } from './routes/operator.tablica'
 import { Route as OperatorWniosekRouteImport } from './routes/operator.wniosek'
+import { Route as PartnerIndexRouteImport } from './routes/partner.index'
+import { Route as PartnerProgramRouteImport } from './routes/partner.program'
+import { Route as PartnerProwizjeRouteImport } from './routes/partner.prowizje'
+import { Route as PartnerRozliczeniaRouteImport } from './routes/partner.rozliczenia'
 import { Route as PobierzPlikTokenRouteImport } from './routes/pobierz-plik.$token'
 import { Route as PobierzSlugRouteImport } from './routes/pobierz.$slug'
 import { Route as PodpisTokenRouteImport } from './routes/podpis.$token'
@@ -178,6 +183,7 @@ import { Route as PosrednikPodpisyRouteImport } from './routes/posrednik.podpisy
 import { Route as PosrednikProfilRouteImport } from './routes/posrednik.profil'
 import { Route as PosrednikProgramRouteImport } from './routes/posrednik.program'
 import { Route as PosrednikProwizjeRouteImport } from './routes/posrednik.prowizje'
+import { Route as PosrednikReakcjeRouteImport } from './routes/posrednik.reakcje'
 import { Route as PosrednikRozliczeniaRouteImport } from './routes/posrednik.rozliczenia'
 import { Route as PosrednikSkrzynkaRouteImport } from './routes/posrednik.skrzynka'
 import { Route as PosrednikStrukturaRouteImport } from './routes/posrednik.struktura'
@@ -185,10 +191,14 @@ import { Route as PosrednikSzkoleniaRouteImport } from './routes/posrednik.szkol
 import { Route as PosrednikWniosekRouteImport } from './routes/posrednik.wniosek'
 import { Route as PozyczkiIndexRouteImport } from './routes/pozyczki.index'
 import { Route as PozyczkiSlugRouteImport } from './routes/pozyczki.$slug'
+import { Route as ProgramPartnerskiIndexRouteImport } from './routes/program-partnerski.index'
+import { Route as ProgramPartnerskiRejestracjaRouteImport } from './routes/program-partnerski.rejestracja'
 import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as SCodeRouteImport } from './routes/s.$code'
+import { Route as WebinarIndexRouteImport } from './routes/webinar.index'
+import { Route as WebinarPokojRouteImport } from './routes/webinar.pokoj'
 import { Route as WeryfikacjaCodeRouteImport } from './routes/weryfikacja.$code'
 import { Route as WniosekTokenRouteImport } from './routes/wniosek.$token'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -276,6 +286,7 @@ import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes/api/public/hooks/auto-distribution-tick'
 import { Route as ApiPublicHooksAutopilotTickRouteImport } from './routes/api/public/hooks/autopilot-tick'
+import { Route as ApiPublicHooksBrokerFeedbackTickRouteImport } from './routes/api/public/hooks/broker-feedback-tick'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
@@ -422,6 +433,11 @@ const OperatorRoute = OperatorRouteImport.update({
 const OperatorRejestracjaRoute = OperatorRejestracjaRouteImport.update({
   id: '/operator-rejestracja',
   path: '/operator-rejestracja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PolitykaCookiesRoute = PolitykaCookiesRouteImport.update({
@@ -1099,6 +1115,26 @@ const OperatorWniosekRoute = OperatorWniosekRouteImport.update({
   path: '/wniosek',
   getParentRoute: () => OperatorRoute,
 } as any)
+const PartnerIndexRoute = PartnerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerProgramRoute = PartnerProgramRouteImport.update({
+  id: '/program',
+  path: '/program',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerProwizjeRoute = PartnerProwizjeRouteImport.update({
+  id: '/prowizje',
+  path: '/prowizje',
+  getParentRoute: () => PartnerRoute,
+} as any)
+const PartnerRozliczeniaRoute = PartnerRozliczeniaRouteImport.update({
+  id: '/rozliczenia',
+  path: '/rozliczenia',
+  getParentRoute: () => PartnerRoute,
+} as any)
 const PobierzPlikTokenRoute = PobierzPlikTokenRouteImport.update({
   id: '/pobierz-plik/$token',
   path: '/pobierz-plik/$token',
@@ -1174,6 +1210,11 @@ const PosrednikProwizjeRoute = PosrednikProwizjeRouteImport.update({
   path: '/prowizje',
   getParentRoute: () => PosrednikRoute,
 } as any)
+const PosrednikReakcjeRoute = PosrednikReakcjeRouteImport.update({
+  id: '/reakcje',
+  path: '/reakcje',
+  getParentRoute: () => PosrednikRoute,
+} as any)
 const PosrednikRozliczeniaRoute = PosrednikRozliczeniaRouteImport.update({
   id: '/rozliczenia',
   path: '/rozliczenia',
@@ -1209,6 +1250,17 @@ const PozyczkiSlugRoute = PozyczkiSlugRouteImport.update({
   path: '/pozyczki/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProgramPartnerskiIndexRoute = ProgramPartnerskiIndexRouteImport.update({
+  id: '/program-partnerski/',
+  path: '/program-partnerski/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgramPartnerskiRejestracjaRoute =
+  ProgramPartnerskiRejestracjaRouteImport.update({
+    id: '/program-partnerski/rejestracja',
+    path: '/program-partnerski/rejestracja',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PropozycjeIndexRoute = PropozycjeIndexRouteImport.update({
   id: '/propozycje/',
   path: '/propozycje/',
@@ -1227,6 +1279,16 @@ const RCodeRoute = RCodeRouteImport.update({
 const SCodeRoute = SCodeRouteImport.update({
   id: '/s/$code',
   path: '/s/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebinarIndexRoute = WebinarIndexRouteImport.update({
+  id: '/webinar/',
+  path: '/webinar/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebinarPokojRoute = WebinarPokojRouteImport.update({
+  id: '/webinar/pokoj',
+  path: '/webinar/pokoj',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WeryfikacjaCodeRoute = WeryfikacjaCodeRouteImport.update({
@@ -1703,6 +1765,12 @@ const ApiPublicHooksAutopilotTickRoute =
     path: '/api/public/hooks/autopilot-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksBrokerFeedbackTickRoute =
+  ApiPublicHooksBrokerFeedbackTickRouteImport.update({
+    id: '/api/public/hooks/broker-feedback-tick',
+    path: '/api/public/hooks/broker-feedback-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDailyBlogTickRoute =
   ApiPublicHooksDailyBlogTickRouteImport.update({
     id: '/api/public/hooks/daily-blog-tick',
@@ -1975,6 +2043,7 @@ export interface FileRoutesByFullPath {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/partner': typeof PartnerRouteWithChildren
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -2103,6 +2172,9 @@ export interface FileRoutesByFullPath {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2116,15 +2188,18 @@ export interface FileRoutesByFullPath {
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
+  '/posrednik/reakcje': typeof PosrednikReakcjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -2132,10 +2207,13 @@ export interface FileRoutesByFullPath {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/operator/': typeof OperatorIndexRoute
+  '/partner/': typeof PartnerIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/pozyczki/': typeof PozyczkiIndexRoute
+  '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/webinar/': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -2221,6 +2299,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2405,6 +2484,9 @@ export interface FileRoutesByTo {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2417,15 +2499,18 @@ export interface FileRoutesByTo {
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
+  '/posrednik/reakcje': typeof PosrednikReakcjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin': typeof AdminIndexRoute
@@ -2433,10 +2518,13 @@ export interface FileRoutesByTo {
   '/inwestor': typeof InwestorIndexRoute
   '/klient': typeof KlientIndexRoute
   '/operator': typeof OperatorIndexRoute
+  '/partner': typeof PartnerIndexRoute
   '/posrednicy': typeof PosrednicyIndexRoute
   '/posrednik': typeof PosrednikIndexRoute
   '/pozyczki': typeof PozyczkiIndexRoute
+  '/program-partnerski': typeof ProgramPartnerskiIndexRoute
   '/propozycje': typeof PropozycjeIndexRoute
+  '/webinar': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -2522,6 +2610,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2588,6 +2677,7 @@ export interface FileRoutesById {
   '/oferty': typeof OfertyRoute
   '/operator': typeof OperatorRouteWithChildren
   '/operator-rejestracja': typeof OperatorRejestracjaRoute
+  '/partner': typeof PartnerRouteWithChildren
   '/polityka-cookies': typeof PolitykaCookiesRoute
   '/polityka-prywatnosci': typeof PolitykaPrywatnosciRoute
   '/posrednik': typeof PosrednikRouteWithChildren
@@ -2716,6 +2806,9 @@ export interface FileRoutesById {
   '/operator/skrzynka': typeof OperatorSkrzynkaRoute
   '/operator/tablica': typeof OperatorTablicaRoute
   '/operator/wniosek': typeof OperatorWniosekRoute
+  '/partner/program': typeof PartnerProgramRoute
+  '/partner/prowizje': typeof PartnerProwizjeRoute
+  '/partner/rozliczenia': typeof PartnerRozliczeniaRoute
   '/pobierz-plik/$token': typeof PobierzPlikTokenRoute
   '/pobierz/$slug': typeof PobierzSlugRoute
   '/podpis/$token': typeof PodpisTokenRoute
@@ -2729,15 +2822,18 @@ export interface FileRoutesById {
   '/posrednik/profil': typeof PosrednikProfilRoute
   '/posrednik/program': typeof PosrednikProgramRoute
   '/posrednik/prowizje': typeof PosrednikProwizjeRoute
+  '/posrednik/reakcje': typeof PosrednikReakcjeRoute
   '/posrednik/rozliczenia': typeof PosrednikRozliczeniaRoute
   '/posrednik/skrzynka': typeof PosrednikSkrzynkaRoute
   '/posrednik/struktura': typeof PosrednikStrukturaRoute
   '/posrednik/szkolenia': typeof PosrednikSzkoleniaRoute
   '/posrednik/wniosek': typeof PosrednikWniosekRoute
   '/pozyczki/$slug': typeof PozyczkiSlugRoute
+  '/program-partnerski/rejestracja': typeof ProgramPartnerskiRejestracjaRoute
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
   '/admin/': typeof AdminIndexRoute
@@ -2745,10 +2841,13 @@ export interface FileRoutesById {
   '/inwestor/': typeof InwestorIndexRoute
   '/klient/': typeof KlientIndexRoute
   '/operator/': typeof OperatorIndexRoute
+  '/partner/': typeof PartnerIndexRoute
   '/posrednicy/': typeof PosrednicyIndexRoute
   '/posrednik/': typeof PosrednikIndexRoute
   '/pozyczki/': typeof PozyczkiIndexRoute
+  '/program-partnerski/': typeof ProgramPartnerskiIndexRoute
   '/propozycje/': typeof PropozycjeIndexRoute
+  '/webinar/': typeof WebinarIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/auto-dystrybucja/pytania': typeof AdminAutoDystrybucjaPytaniaRoute
@@ -2834,6 +2933,7 @@ export interface FileRoutesById {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2901,6 +3001,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/partner'
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -3029,6 +3130,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3042,15 +3146,18 @@ export interface FileRouteTypes {
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
+    | '/posrednik/reakcje'
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -3058,10 +3165,13 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/operator/'
+    | '/partner/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/pozyczki/'
+    | '/program-partnerski/'
     | '/propozycje/'
+    | '/webinar/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3147,6 +3257,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3331,6 +3442,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3343,15 +3457,18 @@ export interface FileRouteTypes {
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
+    | '/posrednik/reakcje'
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin'
@@ -3359,10 +3476,13 @@ export interface FileRouteTypes {
     | '/inwestor'
     | '/klient'
     | '/operator'
+    | '/partner'
     | '/posrednicy'
     | '/posrednik'
     | '/pozyczki'
+    | '/program-partnerski'
     | '/propozycje'
+    | '/webinar'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3448,6 +3568,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3513,6 +3634,7 @@ export interface FileRouteTypes {
     | '/oferty'
     | '/operator'
     | '/operator-rejestracja'
+    | '/partner'
     | '/polityka-cookies'
     | '/polityka-prywatnosci'
     | '/posrednik'
@@ -3641,6 +3763,9 @@ export interface FileRouteTypes {
     | '/operator/skrzynka'
     | '/operator/tablica'
     | '/operator/wniosek'
+    | '/partner/program'
+    | '/partner/prowizje'
+    | '/partner/rozliczenia'
     | '/pobierz-plik/$token'
     | '/pobierz/$slug'
     | '/podpis/$token'
@@ -3654,15 +3779,18 @@ export interface FileRouteTypes {
     | '/posrednik/profil'
     | '/posrednik/program'
     | '/posrednik/prowizje'
+    | '/posrednik/reakcje'
     | '/posrednik/rozliczenia'
     | '/posrednik/skrzynka'
     | '/posrednik/struktura'
     | '/posrednik/szkolenia'
     | '/posrednik/wniosek'
     | '/pozyczki/$slug'
+    | '/program-partnerski/rejestracja'
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
     | '/admin/'
@@ -3670,10 +3798,13 @@ export interface FileRouteTypes {
     | '/inwestor/'
     | '/klient/'
     | '/operator/'
+    | '/partner/'
     | '/posrednicy/'
     | '/posrednik/'
     | '/pozyczki/'
+    | '/program-partnerski/'
     | '/propozycje/'
+    | '/webinar/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/auto-dystrybucja/pytania'
@@ -3759,6 +3890,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3825,6 +3957,7 @@ export interface RootRouteChildren {
   OfertyRoute: typeof OfertyRoute
   OperatorRoute: typeof OperatorRouteWithChildren
   OperatorRejestracjaRoute: typeof OperatorRejestracjaRoute
+  PartnerRoute: typeof PartnerRouteWithChildren
   PolitykaCookiesRoute: typeof PolitykaCookiesRoute
   PolitykaPrywatnosciRoute: typeof PolitykaPrywatnosciRoute
   PosrednikRoute: typeof PosrednikRouteWithChildren
@@ -3862,15 +3995,19 @@ export interface RootRouteChildren {
   PodpisTokenRoute: typeof PodpisTokenRoute
   PosrednicyRejestracjaRoute: typeof PosrednicyRejestracjaRoute
   PozyczkiSlugRoute: typeof PozyczkiSlugRoute
+  ProgramPartnerskiRejestracjaRoute: typeof ProgramPartnerskiRejestracjaRoute
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   SCodeRoute: typeof SCodeRoute
+  WebinarPokojRoute: typeof WebinarPokojRoute
   WeryfikacjaCodeRoute: typeof WeryfikacjaCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
   BlogIndexRoute: typeof BlogIndexRoute
   PosrednicyIndexRoute: typeof PosrednicyIndexRoute
   PozyczkiIndexRoute: typeof PozyczkiIndexRoute
+  ProgramPartnerskiIndexRoute: typeof ProgramPartnerskiIndexRoute
   PropozycjeIndexRoute: typeof PropozycjeIndexRoute
+  WebinarIndexRoute: typeof WebinarIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiMigrationStorageManifestRoute: typeof ApiMigrationStorageManifestRoute
@@ -3907,6 +4044,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksAutoDistributionTickRoute: typeof ApiPublicHooksAutoDistributionTickRoute
   ApiPublicHooksAutopilotTickRoute: typeof ApiPublicHooksAutopilotTickRoute
+  ApiPublicHooksBrokerFeedbackTickRoute: typeof ApiPublicHooksBrokerFeedbackTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -4096,6 +4234,13 @@ declare module '@tanstack/react-router' {
       path: '/operator-rejestracja'
       fullPath: '/operator-rejestracja'
       preLoaderRoute: typeof OperatorRejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/polityka-cookies': {
@@ -5029,6 +5174,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperatorWniosekRouteImport
       parentRoute: typeof OperatorRoute
     }
+    '/partner/': {
+      id: '/partner/'
+      path: '/'
+      fullPath: '/partner/'
+      preLoaderRoute: typeof PartnerIndexRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/program': {
+      id: '/partner/program'
+      path: '/program'
+      fullPath: '/partner/program'
+      preLoaderRoute: typeof PartnerProgramRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/prowizje': {
+      id: '/partner/prowizje'
+      path: '/prowizje'
+      fullPath: '/partner/prowizje'
+      preLoaderRoute: typeof PartnerProwizjeRouteImport
+      parentRoute: typeof PartnerRoute
+    }
+    '/partner/rozliczenia': {
+      id: '/partner/rozliczenia'
+      path: '/rozliczenia'
+      fullPath: '/partner/rozliczenia'
+      preLoaderRoute: typeof PartnerRozliczeniaRouteImport
+      parentRoute: typeof PartnerRoute
+    }
     '/pobierz-plik/$token': {
       id: '/pobierz-plik/$token'
       path: '/pobierz-plik/$token'
@@ -5134,6 +5307,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PosrednikProwizjeRouteImport
       parentRoute: typeof PosrednikRoute
     }
+    '/posrednik/reakcje': {
+      id: '/posrednik/reakcje'
+      path: '/reakcje'
+      fullPath: '/posrednik/reakcje'
+      preLoaderRoute: typeof PosrednikReakcjeRouteImport
+      parentRoute: typeof PosrednikRoute
+    }
     '/posrednik/rozliczenia': {
       id: '/posrednik/rozliczenia'
       path: '/rozliczenia'
@@ -5183,6 +5363,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PozyczkiSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/program-partnerski/': {
+      id: '/program-partnerski/'
+      path: '/program-partnerski'
+      fullPath: '/program-partnerski/'
+      preLoaderRoute: typeof ProgramPartnerskiIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/program-partnerski/rejestracja': {
+      id: '/program-partnerski/rejestracja'
+      path: '/program-partnerski/rejestracja'
+      fullPath: '/program-partnerski/rejestracja'
+      preLoaderRoute: typeof ProgramPartnerskiRejestracjaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/propozycje/': {
       id: '/propozycje/'
       path: '/propozycje'
@@ -5209,6 +5403,20 @@ declare module '@tanstack/react-router' {
       path: '/s/$code'
       fullPath: '/s/$code'
       preLoaderRoute: typeof SCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webinar/': {
+      id: '/webinar/'
+      path: '/webinar'
+      fullPath: '/webinar/'
+      preLoaderRoute: typeof WebinarIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webinar/pokoj': {
+      id: '/webinar/pokoj'
+      path: '/webinar/pokoj'
+      fullPath: '/webinar/pokoj'
+      preLoaderRoute: typeof WebinarPokojRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/weryfikacja/$code': {
@@ -5818,6 +6026,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/hooks/autopilot-tick'
       fullPath: '/api/public/hooks/autopilot-tick'
       preLoaderRoute: typeof ApiPublicHooksAutopilotTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/broker-feedback-tick': {
+      id: '/api/public/hooks/broker-feedback-tick'
+      path: '/api/public/hooks/broker-feedback-tick'
+      fullPath: '/api/public/hooks/broker-feedback-tick'
+      preLoaderRoute: typeof ApiPublicHooksBrokerFeedbackTickRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/daily-blog-tick': {
@@ -6521,6 +6736,23 @@ const OperatorRouteWithChildren = OperatorRoute._addFileChildren(
   OperatorRouteChildren,
 )
 
+interface PartnerRouteChildren {
+  PartnerProgramRoute: typeof PartnerProgramRoute
+  PartnerProwizjeRoute: typeof PartnerProwizjeRoute
+  PartnerRozliczeniaRoute: typeof PartnerRozliczeniaRoute
+  PartnerIndexRoute: typeof PartnerIndexRoute
+}
+
+const PartnerRouteChildren: PartnerRouteChildren = {
+  PartnerProgramRoute: PartnerProgramRoute,
+  PartnerProwizjeRoute: PartnerProwizjeRoute,
+  PartnerRozliczeniaRoute: PartnerRozliczeniaRoute,
+  PartnerIndexRoute: PartnerIndexRoute,
+}
+
+const PartnerRouteWithChildren =
+  PartnerRoute._addFileChildren(PartnerRouteChildren)
+
 interface PosrednikLeadyRouteChildren {
   PosrednikLeadyIdRoute: typeof PosrednikLeadyIdRoute
   PosrednikLeadyIndexRoute: typeof PosrednikLeadyIndexRoute
@@ -6545,6 +6777,7 @@ interface PosrednikRouteChildren {
   PosrednikProfilRoute: typeof PosrednikProfilRoute
   PosrednikProgramRoute: typeof PosrednikProgramRoute
   PosrednikProwizjeRoute: typeof PosrednikProwizjeRoute
+  PosrednikReakcjeRoute: typeof PosrednikReakcjeRoute
   PosrednikRozliczeniaRoute: typeof PosrednikRozliczeniaRoute
   PosrednikSkrzynkaRoute: typeof PosrednikSkrzynkaRoute
   PosrednikStrukturaRoute: typeof PosrednikStrukturaRoute
@@ -6565,6 +6798,7 @@ const PosrednikRouteChildren: PosrednikRouteChildren = {
   PosrednikProfilRoute: PosrednikProfilRoute,
   PosrednikProgramRoute: PosrednikProgramRoute,
   PosrednikProwizjeRoute: PosrednikProwizjeRoute,
+  PosrednikReakcjeRoute: PosrednikReakcjeRoute,
   PosrednikRozliczeniaRoute: PosrednikRozliczeniaRoute,
   PosrednikSkrzynkaRoute: PosrednikSkrzynkaRoute,
   PosrednikStrukturaRoute: PosrednikStrukturaRoute,
@@ -6601,6 +6835,7 @@ const rootRouteChildren: RootRouteChildren = {
   OfertyRoute: OfertyRoute,
   OperatorRoute: OperatorRouteWithChildren,
   OperatorRejestracjaRoute: OperatorRejestracjaRoute,
+  PartnerRoute: PartnerRouteWithChildren,
   PolitykaCookiesRoute: PolitykaCookiesRoute,
   PolitykaPrywatnosciRoute: PolitykaPrywatnosciRoute,
   PosrednikRoute: PosrednikRouteWithChildren,
@@ -6640,15 +6875,19 @@ const rootRouteChildren: RootRouteChildren = {
   PodpisTokenRoute: PodpisTokenRoute,
   PosrednicyRejestracjaRoute: PosrednicyRejestracjaRoute,
   PozyczkiSlugRoute: PozyczkiSlugRoute,
+  ProgramPartnerskiRejestracjaRoute: ProgramPartnerskiRejestracjaRoute,
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   SCodeRoute: SCodeRoute,
+  WebinarPokojRoute: WebinarPokojRoute,
   WeryfikacjaCodeRoute: WeryfikacjaCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,
   BlogIndexRoute: BlogIndexRoute,
   PosrednicyIndexRoute: PosrednicyIndexRoute,
   PozyczkiIndexRoute: PozyczkiIndexRoute,
+  ProgramPartnerskiIndexRoute: ProgramPartnerskiIndexRoute,
   PropozycjeIndexRoute: PropozycjeIndexRoute,
+  WebinarIndexRoute: WebinarIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiMigrationStorageManifestRoute: ApiMigrationStorageManifestRoute,
@@ -6688,6 +6927,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAutoDistributionTickRoute:
     ApiPublicHooksAutoDistributionTickRoute,
   ApiPublicHooksAutopilotTickRoute: ApiPublicHooksAutopilotTickRoute,
+  ApiPublicHooksBrokerFeedbackTickRoute: ApiPublicHooksBrokerFeedbackTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:

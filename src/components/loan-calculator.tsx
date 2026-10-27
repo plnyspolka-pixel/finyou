@@ -87,19 +87,21 @@ function NumberField({
   step?: string | number;
 }) {
   const [focused, setFocused] = useState(false);
-  const [draft, setDraft] = useState<string>(String(value));
+  // Polski zapis liczb: wyświetlamy przecinek, wpis przyjmuje przecinek i kropkę.
+  const shown = String(value).replace(".", ",");
+  const [draft, setDraft] = useState<string>(shown);
   useEffect(() => {
-    if (!focused) setDraft(String(value));
-  }, [value, focused]);
+    if (!focused) setDraft(shown);
+  }, [shown, focused]);
   return (
     <Input
       type="text"
       inputMode="decimal"
       step={step}
-      value={focused ? draft : String(value)}
+      value={focused ? draft : shown}
       onFocus={(e) => {
         setFocused(true);
-        setDraft(String(value));
+        setDraft(shown);
         e.currentTarget.select();
       }}
       onChange={(e) => {
@@ -264,14 +266,14 @@ export function LoanCalculator({
 
   const [months, setMonths] = useState(initialMonths);
   const [annualRate, setAnnualRate] = useState(initialAnnualRate);
-  const [commissionPct, setCommissionPct] = useState(marketingPreview ? 3 : initialCommissionPct);
+  const [commissionPct, setCommissionPct] = useState(marketingPreview ? 20 : initialCommissionPct);
   const [maxPayment, setMaxPayment] = useState(initialMaxPayment);
   const [operatorCommissionPct, setOperatorCommissionPct] = useState(3);
 
   // ŹRÓDŁO PRAWDY: Kwota Udzielona (kwota pożyczki z umowy) — od niej liczone są
   // odsetki i raty. Model silnika (fees.ts / loan-schedule.ts):
   //  • prowizja INWESTORA jest rozłożona równo na raty,
-  //  • prowizja Finance You (5 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
+  //  • prowizja Finance You (7 %, min 5 000 zł, bez VAT) jest POTRĄCANA z wypłaty
   //    — inwestor przelewa ją na rachunek FY, resztę klientowi; NIE wchodzi do rat.
   const [onHand, setOnHand] = useState<number>(initialOnHand ?? initialAmount);
   const amount = onHand;
@@ -325,7 +327,7 @@ export function LoanCalculator({
     investorGuidance && nbpOverride != null ? maxInterestRate(nbpOverride) : maxCapitalRate();
   const statutoryInterest = effectiveRefRate + 3.5;
 
-  // Prowizja Finance You: 5 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
+  // Prowizja Finance You: 7 % Kwoty Udzielonej, min 5 000 zł, bez VAT —
   // POTRĄCANA z wypłaty (nie wchodzi do rat).
   const financeYouFeePln = hideFinanceYouFee ? 0 : fyCommission(amount);
   // Kapitał, od którego liczone są odsetki i raty = Kwota Udzielona.
@@ -345,7 +347,7 @@ export function LoanCalculator({
 
   // Prowizja inwestora — zawsze sterowana ręcznie suwakiem.
   const commissionPln = (amount * commissionPct) / 100;
-  // Prowizja Finance You (5 %) wlicza się do limitu MPKK razem z prowizją inwestora.
+  // Prowizja Finance You (7 %) wlicza się do limitu MPKK razem z prowizją inwestora.
   const commissionAboveReference = commissionPln + financeYouFeePln > maxNonInterest + 1e-9;
   const effectiveCommissionPct = commissionPct;
 
@@ -901,15 +903,15 @@ export function LoanCalculator({
                 </p>
                 <p className="mt-1 text-xs text-emerald-100/80">
                   zysk <b className="text-white">{formatPLN(investorProfit)}</b> · ROI{" "}
-                  <b className="text-white">{investorRoiPct.toFixed(1)}%</b> (
-                  {investorRoiAnnualPct.toFixed(1)}% / rok)
+                  <b className="text-white">{investorRoiPct.toFixed(1).replace(".", ",")}%</b> (
+                  {investorRoiAnnualPct.toFixed(1).replace(".", ",")}% / rok)
                   {investorGuidance && !marketingPreview && realAnnualRoiPct != null && (
                     <>
                       {" "}
                       · realnie ponad inflację{" "}
                       <b className={beatsInflation ? "text-white" : "text-rose-300"}>
                         {realAnnualRoiPct >= 0 ? "+" : ""}
-                        {realAnnualRoiPct.toFixed(1)}% / rok
+                        {realAnnualRoiPct.toFixed(1).replace(".", ",")}% / rok
                       </b>
                     </>
                   )}
@@ -967,7 +969,7 @@ export function LoanCalculator({
                 <div
                   className={`mt-0.5 text-base font-bold tabular-nums ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : "text-white"}`}
                 >
-                  {krotnosc.toFixed(2)}×
+                  {krotnosc.toFixed(2).replace(".", ",")}×
                 </div>
               </div>
             </div>
@@ -1100,7 +1102,7 @@ export function LoanCalculator({
                   ? interestExceeds
                     ? `powyżej odsetek maksymalnych (${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}%)`
                     : `maks. ${MAX_INTEREST_RATE.toFixed(1).replace(".", ",")}% — odsetki maksymalne`
-                  : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2)}%`}
+                  : `limit ustawowy: ${MAX_INTEREST_RATE.toFixed(2).replace(".", ",")}%`}
               </span>
             </div>
           </div>
@@ -1109,7 +1111,7 @@ export function LoanCalculator({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Label className="flex flex-[1_1_10rem] items-center gap-1.5">
                 {marketingPreview
-                  ? "Twoja prowizja — firma spłaca ją w ratach"
+                  ? "Twoja prowizja"
                   : "Prowizja dla inwestora (jednorazowa, pozaodsetkowa)"}{" "}
                 {investorGuidance && !marketingPreview && (
                   <InfoTip text="Jedyny koszt pozaodsetkowy po stronie inwestora, rozłożony na raty. Domyślnie ustawiona na wartość referencyjną ze wzoru MPKK — pożyczek B2B ten limit nie obejmuje, ale prowizja nie może naruszać zasad współżycia społecznego." />
@@ -1135,7 +1137,10 @@ export function LoanCalculator({
               onValueChange={(v) => setCommissionPctTouched(v[0])}
             />
             {marketingPreview ? (
-              <p className="text-xs text-muted-foreground">{commissionPct.toFixed(1).replace(".", ",")}% ({plnLabel(commissionPln)}) — firma spłaca ją w ratach</p>
+              <p className="text-xs text-muted-foreground">
+                {commissionPct.toFixed(1).replace(".", ",")}% ({plnLabel(commissionPln)}) — firma
+                spłaca ją w ratach
+              </p>
             ) : (
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0%</span>
@@ -1216,9 +1221,9 @@ export function LoanCalculator({
                 <Alert className="py-2 border-rose-400/60 bg-rose-950/60 text-rose-50">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Realny roczny zysk inwestora <b>{investorRoiAnnualPct.toFixed(1)}%</b> jest
-                    poniżej minimum <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub
-                    skróć okres.
+                    Realny roczny zysk inwestora{" "}
+                    <b>{investorRoiAnnualPct.toFixed(1).replace(".", ",")}%</b> jest poniżej minimum{" "}
+                    <b>36% RRSO</b>. Zwiększ oprocentowanie, prowizję inwestora lub skróć okres.
                   </AlertDescription>
                 </Alert>
               )}
@@ -1336,7 +1341,9 @@ export function LoanCalculator({
               </div>
               <span className="text-white/80">
                 Referencyjna:{" "}
-                <b className="tabular-nums text-white">{effectiveRefRate.toFixed(2)}%</b>
+                <b className="tabular-nums text-white">
+                  {effectiveRefRate.toFixed(2).replace(".", ",")}%
+                </b>
                 {investorGuidance && !marketingPreview && nbpOverride != null && (
                   <span className="text-xs text-amber-300"> (ręcznie)</span>
                 )}
@@ -1344,19 +1351,23 @@ export function LoanCalculator({
               {ratesQ.data?.lombardRate != null && (
                 <span className="text-white/80">
                   Lombardowa:{" "}
-                  <b className="tabular-nums text-white">{ratesQ.data.lombardRate.toFixed(2)}%</b>
+                  <b className="tabular-nums text-white">
+                    {ratesQ.data.lombardRate.toFixed(2).replace(".", ",")}%
+                  </b>
                 </span>
               )}
               {ratesQ.data?.depositRate != null && (
                 <span className="text-white/80">
                   Depozytowa:{" "}
-                  <b className="tabular-nums text-white">{ratesQ.data.depositRate.toFixed(2)}%</b>
+                  <b className="tabular-nums text-white">
+                    {ratesQ.data.depositRate.toFixed(2).replace(".", ",")}%
+                  </b>
                 </span>
               )}
               <span className="text-white/70">
                 Maks. odsetki ustawowe:{" "}
                 <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-emerald-300">
-                  {MAX_INTEREST_RATE.toFixed(2)}%
+                  {MAX_INTEREST_RATE.toFixed(2).replace(".", ",")}%
                 </b>
               </span>
               {ratesQ.data?.effectiveFrom && (
@@ -1374,8 +1385,12 @@ export function LoanCalculator({
         <>
           {resultBlock}
           {paramsBlock}
-          <p className="text-sm text-muted-foreground">Prowizja Finance You — płaci firma z kwoty wypłaty</p>
-          <p className="text-sm text-muted-foreground">Kalkulator pilnuje za Ciebie limitu odsetek i kosztów.</p>
+          <p className="text-sm text-muted-foreground">
+            Prowizja Finance You — płaci firma z kwoty wypłaty
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Kalkulator pilnuje za Ciebie limitu odsetek i kosztów.
+          </p>
         </>
       ) : (
         <>
@@ -1410,10 +1425,11 @@ export function LoanCalculator({
                 <AlertTriangle className="h-4 w-4 !text-rose-300" />
                 <AlertTitle>Odsetki — przekroczony limit ustawowy</AlertTitle>
                 <AlertDescription className="pt-1 text-rose-100/90">
-                  Oprocentowanie <b>{annualRate.toFixed(2)}%</b> przekracza limit (
-                  <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> = 2 × (stopa ref. NBP{" "}
-                  {effectiveRefRate.toFixed(2)}% + 3,5 p.p.), art. 359 §2¹ KC). Pożyczkobiorca może
-                  żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest egzekwowalna.
+                  Oprocentowanie <b>{annualRate.toFixed(2).replace(".", ",")}%</b> przekracza limit
+                  (<b>{MAX_INTEREST_RATE.toFixed(2).replace(".", ",")}%</b> = 2 × (stopa ref. NBP{" "}
+                  {effectiveRefRate.toFixed(2).replace(".", ",")}% + 3,5 p.p.), art. 359 §2¹ KC).
+                  Pożyczkobiorca może żądać zwrotu nadpłaconych odsetek — nadwyżka nie jest
+                  egzekwowalna.
                 </AlertDescription>
               </Alert>
             ) : (
@@ -1422,8 +1438,9 @@ export function LoanCalculator({
                   <CheckCircle2 className="h-4 w-4 !text-emerald-300" />
                   <AlertTitle>Odsetki w limicie ustawowym</AlertTitle>
                   <AlertDescription className="text-sm text-emerald-100/90">
-                    Oprocentowanie <b>{annualRate.toFixed(2)}%</b> ≤ limit{" "}
-                    <b>{MAX_INTEREST_RATE.toFixed(2)}%</b> (art. 359 §2¹ KC — odsetki maksymalne).
+                    Oprocentowanie <b>{annualRate.toFixed(2).replace(".", ",")}%</b> ≤ limit{" "}
+                    <b>{MAX_INTEREST_RATE.toFixed(2).replace(".", ",")}%</b> (art. 359 §2¹ KC —
+                    odsetki maksymalne).
                   </AlertDescription>
                 </Alert>
               )
@@ -1478,7 +1495,8 @@ export function LoanCalculator({
 
             {/* 3) Krotność spłaty — orientacyjny próg z praktyki, nie granica z ustawy;
                 o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności umowy. */}
-            {investorGuidance && !marketingPreview &&
+            {investorGuidance &&
+              !marketingPreview &&
               (krotnoscDanger ? (
                 <Alert className={dangerCls}>
                   <ShieldAlert className="h-4 w-4 !text-rose-300" />
@@ -1522,7 +1540,8 @@ export function LoanCalculator({
             {/* 4) AML — rejestr transakcji ponadprogowych (art. 72 ustawy AML): wypłata
                 POWYŻEJ 15 000 EUR, jak w module AML. Ostrożne brzmienie — status instytucji
                 obowiązanej zależy od tego, czy pożyczki są udzielane w ramach działalności. */}
-            {investorGuidance && !marketingPreview &&
+            {investorGuidance &&
+              !marketingPreview &&
               (amlAboveThreshold ? (
                 <Alert className={warnCls}>
                   <ShieldAlert className="h-4 w-4 !text-amber-300" />
@@ -1624,7 +1643,8 @@ export function LoanCalculator({
                 <>
                   <div className="flex justify-between gap-3">
                     <span className="pl-3">
-                      ↳ prowizja operatora ({operatorCommissionPctClamped.toFixed(1)}%)
+                      ↳ prowizja operatora (
+                      {operatorCommissionPctClamped.toFixed(1).replace(".", ",")}%)
                     </span>
                     <b className="shrink-0 tabular-nums whitespace-nowrap text-right text-amber-200">
                       {formatPLN(operatorCommissionPln)}
@@ -1661,7 +1681,7 @@ export function LoanCalculator({
                   <b
                     className={`shrink-0 tabular-nums whitespace-nowrap ${krotnoscDanger ? "text-rose-300" : krotnoscWarn ? "text-amber-300" : ""}`}
                   >
-                    {krotnosc.toFixed(2)}×
+                    {krotnosc.toFixed(2).replace(".", ",")}×
                   </b>
                 </div>
               )}
@@ -1888,7 +1908,7 @@ export function LoanCalculator({
                     <div className="flex justify-between gap-3">
                       <span className="text-white/70">LTV (kwota pożyczki / wartość)</span>
                       <b className="shrink-0 tabular-nums whitespace-nowrap text-right">
-                        {ltvPct.toFixed(1)}%
+                        {ltvPct.toFixed(1).replace(".", ",")}%
                       </b>
                     </div>
                     <div className="flex justify-between gap-3">
@@ -1921,7 +1941,7 @@ export function LoanCalculator({
                       <b
                         className={`shrink-0 tabular-nums whitespace-nowrap ${collateralShortfall ? "text-rose-300" : "text-emerald-300"}`}
                       >
-                        {collateralCoveragePct.toFixed(0)}%
+                        {collateralCoveragePct.toFixed(0).replace(".", ",")}%
                       </b>
                     </div>
                   </div>
@@ -2154,8 +2174,8 @@ export function LoanCalculator({
                           />
                           <span>
                             Potwierdzam aktualną stopę ref. NBP:{" "}
-                            <b>{effectiveRefRate.toFixed(2)}%</b> (limit odsetek:{" "}
-                            {MAX_INTEREST_RATE.toFixed(2)}%).
+                            <b>{effectiveRefRate.toFixed(2).replace(".", ",")}%</b> (limit odsetek:{" "}
+                            {MAX_INTEREST_RATE.toFixed(2).replace(".", ",")}%).
                           </span>
                         </label>
                         <div className="flex items-center gap-2 text-sm pl-6">
@@ -2189,8 +2209,8 @@ export function LoanCalculator({
                             className="mt-0.5"
                           />
                           <span>
-                            Krotność spłaty: <b>{krotnosc.toFixed(2)}×</b> — akceptuję ryzyko
-                            prawne.
+                            Krotność spłaty: <b>{krotnosc.toFixed(2).replace(".", ",")}×</b> —
+                            akceptuję ryzyko prawne.
                           </span>
                         </label>
                       </div>

@@ -35,6 +35,10 @@ function slugify(s: string): string {
 }
 
 const RegisterInput = z.object({
+  // Dwa osobne rodzaje konta: pośrednik (prowizja od uruchomionej pożyczki
+  // przyprowadzonego klienta) albo partner (1000 zł za nowego inwestora,
+  // który kupi abonament).
+  kind: z.enum(["broker", "partner"]),
   settlementType: z.enum(["b2b", "unregistered_activity"]),
   firstName: z.string().min(1).max(120),
   lastName: z.string().min(1).max(120),
@@ -64,7 +68,11 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
     const { userId } = context;
 
     const existing = await resolvePartnerId(affiliateDb, userId);
-    if (existing) throw new Error("Jesteś już zarejestrowany jako partner.");
+    if (existing) {
+      throw new Error(
+        "To konto jest już zarejestrowane w programie pośredników lub w programie partnerskim. Do drugiego programu załóż osobne konto na inny adres e-mail.",
+      );
+    }
 
     if (data.settlementType === "b2b" && (!data.companyName || !data.nip)) {
       throw new Error("Dla rozliczenia B2B wymagane są nazwa firmy i NIP.");
@@ -103,7 +111,11 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
       .insert({
         user_id: userId,
         settlement_type: data.settlementType,
-        status: "pending_approval",
+        partner_kind: data.kind,
+        // Samoobsługa: konto aktywne od razu po akceptacji umowy. Każda
+        // prowizja i tak czeka na zatwierdzenie administratora.
+        status: "active",
+        approved_at: new Date().toISOString(),
         sponsor_partner_id: sponsorPartnerId,
         referral_code: referralCode,
         referral_slug: referralSlug,
@@ -131,13 +143,43 @@ export const registerAffiliatePartner = createServerFn({ method: "POST" })
 
     if (error || !inserted) throw new Error(`Rejestracja nie powiodła się: ${error?.message}`);
 
+    // Pośrednik → panel /posrednik (wnioski, reakcje inwestorów, prowizje od
+    // pożyczek); partner → panel /partner (link polecający, prowizje za
+    // inwestorów). Konta pracownicze zostają bez zmian.
+    const role = data.kind === "broker" ? "posrednik" : "partner";
+    const { data: roleRows } = await affiliateDb
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+    if (!roles.some((r) => ["administrator", "operator", "ksiegowosc"].includes(r))) {
+      await affiliateDb
+        .from("user_roles")
+        .upsert({ user_id: userId, role } as any, { onConflict: "user_id,role" });
+      // Domyślna rola „klient” z rejestracji znika, chyba że to prawdziwy
+      // klient z kartoteką — wtedy zachowuje dostęp do swojego panelu.
+      const { data: clientRow } = await affiliateDb
+        .from("clients")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+      if (!(clientRow ?? []).length) {
+        await affiliateDb.from("user_roles").delete().eq("user_id", userId).eq("role", "klient");
+      }
+    }
+
     await logAffiliateAudit(affiliateDb, {
       actorUserId: userId,
       actorRole: "partner",
       entityType: "affiliate_partner",
       entityId: (inserted as { id: string }).id,
       action: "partner_registered",
-      after: { settlement_type: data.settlementType, sponsor_partner_id: sponsorPartnerId },
+      after: {
+        settlement_type: data.settlementType,
+        partner_kind: data.kind,
+        sponsor_partner_id: sponsorPartnerId,
+        status: "active",
+      },
     });
 
     return inserted;
@@ -149,7 +191,7 @@ export const getMyAffiliatePartner = createServerFn({ method: "GET" })
     const { data } = await affiliateDb
       .from("affiliate_partners")
       .select(
-        "id,settlement_type,status,referral_code,referral_slug,first_name,last_name,company_name,email,phone,nip,regon,address_street,address_postal_code,address_city,billing_email,website_url,bank_account_encrypted,vat_payer,sponsor_partner_id,created_at,approved_at",
+        "id,partner_kind,settlement_type,status,referral_code,referral_slug,first_name,last_name,company_name,email,phone,nip,regon,address_street,address_postal_code,address_city,billing_email,website_url,bank_account_encrypted,vat_payer,sponsor_partner_id,created_at,approved_at",
       )
       .eq("user_id", context.userId)
       .maybeSingle();

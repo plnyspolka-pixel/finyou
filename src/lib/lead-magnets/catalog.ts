@@ -1245,7 +1245,7 @@ const bankOdmowil = defineMagnet({
             type: "bullets",
             items: [
               "Maksymalna kwota = 60 % wartości nieruchomości (limit LTV) − istniejące obciążenia hipoteczne.",
-              "Na rękę = kwota udzielona − prowizja Finance You (pięć procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT).",
+              "Na rękę = kwota udzielona − prowizja Finance You (siedem procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT).",
               "Własne liczby wpisz w kalkulatorze ILE – pełne wyliczenie przyjdzie mailem.",
             ],
           },
@@ -1263,7 +1263,7 @@ const bankOdmowil = defineMagnet({
             rows: [
               [
                 "Prowizja Finance You",
-                "pięć procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT – potrącana z wypłaty. Przykład: kwota udzielona 100 000 zł → 5 000 zł do Finance You, 95 000 zł na rachunek firmy.",
+                "siedem procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT – potrącana z wypłaty. Przykład: kwota udzielona 100 000 zł → 7 000 zł do Finance You, 93 000 zł na rachunek firmy.",
               ],
               [
                 "Odsetki dla finansującego",
@@ -1666,7 +1666,7 @@ const odWnioskuDoWyplaty = defineMagnet({
           {
             type: "bullets",
             items: [
-              "Prowizja Finance You to pięć procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT – nie ma opłat z góry.",
+              "Prowizja Finance You to siedem procent kwoty udzielonej, nie mniej niż 5 000 zł, bez VAT – nie ma opłat z góry.",
               "Odsetki dla finansującego są w harmonogramie, nie w wypłacie – płacisz je według umowy.",
               "Koszty notariusza i wpisu hipoteki płacisz przy akcie, poza wypłatą.",
               "Zobowiązania spłacane z wypłaty idą bezpośrednio do wierzycieli – to warunek wykreślenia ich hipotek.",

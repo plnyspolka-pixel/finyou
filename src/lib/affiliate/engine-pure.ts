@@ -9,6 +9,39 @@
 
 export const PAYOUT_THRESHOLD_PLN = 500;
 
+/**
+ * Prowizja za nowego inwestora, który kupi dostęp (poziom 1). Kwotę naliczają
+ * reguły w affiliate_commission_rules — ta stała służy tylko do komunikacji
+ * na stronie i w panelu i musi być z nimi zgodna.
+ */
+export const INVESTOR_COMMISSION_PLN = 1000;
+
+/**
+ * Standardowe wynagrodzenie Finance You od uruchomionej pożyczki (% kwoty) —
+ * ta sama wartość co w triggerze affiliate_on_loan_disbursed.
+ */
+export const FINANCE_YOU_FEE_PERCENT = 7;
+
+/**
+ * Pośrednik dostaje połowę wynagrodzenia Finance You z uruchomionej pożyczki
+ * przyprowadzonego klienta (reguła client_funds_disbursed, poziom 1) — czyli
+ * 3,5% kwoty pożyczki. Stałe służą do komunikacji i muszą być zgodne z regułą.
+ */
+export const BROKER_COMMISSION_PERCENT_OF_FEE = 50;
+export const BROKER_COMMISSION_PERCENT_OF_LOAN =
+  (FINANCE_YOU_FEE_PERCENT * BROKER_COMMISSION_PERCENT_OF_FEE) / 100;
+
+/** Wynagrodzenie Finance You od pożyczki: 7% kwoty. */
+export function financeYouFeeForLoan(loanAmount: number): number {
+  const amount = Math.max(0, Number(loanAmount) || 0);
+  return Math.round((amount * FINANCE_YOU_FEE_PERCENT) / 100);
+}
+
+/** Przykładowa prowizja pośrednika od uruchomionej pożyczki danej kwoty. */
+export function brokerCommissionForLoan(loanAmount: number): number {
+  return roundMoney((financeYouFeeForLoan(loanAmount) * BROKER_COMMISSION_PERCENT_OF_FEE) / 100);
+}
+
 export type CommissionEventType =
   | "investor_account_paid"
   | "broker_account_paid"

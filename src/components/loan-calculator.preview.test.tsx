@@ -70,7 +70,7 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
       "Twój zysk",
     ])
       expect(screen.getByText(t)).toBeInTheDocument();
-    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja — firma spłaca ją w ratach"])
+    for (const t of ["Kwota pożyczki", "Okres", "Oprocentowanie roczne", "Twoja prowizja"])
       expect(screen.getByText(t)).toBeInTheDocument();
 
     const text = pageText();
@@ -95,10 +95,22 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     expect(indicatorsMock).not.toHaveBeenCalled();
   });
 
-  it("domyślna prowizja inwestora wynosi 3% i limity są zachowane", () => {
+  it("domyślna prowizja inwestora wynosi 20%, etykieta bez dubla i limity są zachowane", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
-    expect(screen.getAllByRole("textbox").some((input) => (input as HTMLInputElement).value === "3")).toBe(true);
+    expect(
+      screen.getAllByRole("textbox").some((input) => (input as HTMLInputElement).value === "20"),
+    ).toBe(true);
     expect(pageText()).toContain("maks. 14,5% — odsetki maksymalne");
+    expect(pageText()).toContain("20,0% (");
+    expect(pageText().match(/firma spłaca ją w ratach/g)?.length).toBe(1);
+  });
+
+  it("stopa w polu i w tekstach z przecinkiem; pole przyjmuje przecinek i kropkę", () => {
+    renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} />);
+    const inputs = screen.getAllByRole("textbox") as HTMLInputElement[];
+    expect(inputs.some((i) => /^\d+,\d+$/.test(i.value) || /^\d+$/.test(i.value))).toBe(true);
+    expect(inputs.every((i) => !/^\d+\.\d+$/.test(i.value))).toBe(true);
+    expect(pageText().replace(/@keyframes[^\n]*/g, "")).not.toMatch(/\d\.\d+%/);
   });
 
   it("dla okresu innego niż 12 mies. dopisuje stopę roczną", () => {
@@ -117,7 +129,6 @@ describe("LoanCalculator — podgląd na landingu (marketingPreview)", () => {
     renderCalc(<LoanCalculator marketingPreview initialMaxPayment={0} investorGuidance />);
     expect(pageText()).not.toMatch(/wyzysk|art\.|krotność|wartość referencyjna|MPKK/i);
   });
-
 });
 
 describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie", () => {
@@ -158,9 +169,9 @@ describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie"
   it("krotność: orientacyjny próg 2,0×, nie granica z ustawy", async () => {
     renderCalc(<LoanCalculator investorGuidance />);
     const text = pageText();
-    expect(text).toMatch(/Krotność 1,34× — poniżej orientacyjnego progu 2,0×/);
+    expect(text).toMatch(/Krotność 1,35× — poniżej orientacyjnego progu 2,0×/);
     expect(text).toContain(
-      "Pożyczkobiorca spłaca 1,34× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
+      "Pożyczkobiorca spłaca 1,35× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
     );
     expect(text).not.toContain("brak ryzyka lichwy");
     await waitFor(() => expect(pageText()).toContain("AML — wypłata powyżej 15 000 EUR"));

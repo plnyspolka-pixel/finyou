@@ -15963,6 +15963,7 @@ export type Database = {
         | "ksiegowosc"
         | "operator_wewnetrzny"
         | "posrednik"
+        | "partner"
       automation_status: "aktywna" | "wstrzymana" | "zakonczona" | "blad"
       consent_kind: "privacy" | "marketing" | "terms" | "terms_investor"
       contact_channel:
@@ -16331,6 +16332,7 @@ export const Constants = {
         "ksiegowosc",
         "operator_wewnetrzny",
         "posrednik",
+        "partner",
       ],
       automation_status: ["aktywna", "wstrzymana", "zakonczona", "blad"],
       consent_kind: ["privacy", "marketing", "terms", "terms_investor"],

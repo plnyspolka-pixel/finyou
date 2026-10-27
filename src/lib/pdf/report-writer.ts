@@ -309,8 +309,19 @@ export class ReportWriter {
     items?: string[];
     itemsLabel?: string;
     meta?: string[];
+    /** Ikona (PNG) w prawym górnym rogu okładki — z `embedPng`. */
+    icon?: PDFImage;
   }): void {
     this.pageBreak();
+    if (opts.icon) {
+      const s = 96;
+      this.page.drawImage(opts.icon, {
+        x: A4.w - MARGIN.right - s,
+        y: A4.h - MARGIN.top - 20 - s,
+        width: s,
+        height: s,
+      });
+    }
     this.y -= 90;
     if (opts.eyebrow) {
       this.paragraph(opts.eyebrow.toUpperCase(), { size: 9, bold: true, color: GRAY, after: 10 });
@@ -349,6 +360,39 @@ export class ReportWriter {
       }
     }
     this.newPage();
+  }
+
+  /**
+   * Obraz (PNG/JPEG) w treści: skalowany do `maxWidth`×`maxHeight` z
+   * zachowaniem proporcji, wyrównany do lewej albo do środka. Gdy brak
+   * miejsca — nowa strona.
+   */
+  async image(
+    bytes: Uint8Array,
+    opts: {
+      format: "png" | "jpg";
+      maxWidth?: number;
+      maxHeight?: number;
+      align?: "left" | "center";
+      after?: number;
+    },
+  ): Promise<void> {
+    const img =
+      opts.format === "png" ? await this.doc.embedPng(bytes) : await this.doc.embedJpg(bytes);
+    const maxW = Math.min(opts.maxWidth ?? CONTENT_W, CONTENT_W);
+    const maxH = opts.maxHeight ?? 260;
+    const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+    const w = img.width * scale;
+    const h = img.height * scale;
+    this.ensure(h + 4);
+    const x = opts.align === "center" ? MARGIN.left + (CONTENT_W - w) / 2 : MARGIN.left;
+    this.page.drawImage(img, { x, y: this.y - h, width: w, height: h });
+    this.y -= h + (opts.after ?? 10);
+  }
+
+  /** Osadza PNG (np. ikonę okładki) do późniejszego użycia. */
+  async embedPng(bytes: Uint8Array): Promise<PDFImage> {
+    return this.doc.embedPng(bytes);
   }
 
   /** Lista kontrolna — pusty kwadracik do odhaczenia zamiast kropki. */

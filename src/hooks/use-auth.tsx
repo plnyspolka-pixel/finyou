@@ -8,7 +8,8 @@ export type AppRole =
   | "klient"
   | "inwestor"
   | "ksiegowosc"
-  | "posrednik";
+  | "posrednik"
+  | "partner";
 
 interface AuthState {
   user: User | null;
@@ -64,6 +65,7 @@ const ALL_ROLES: AppRole[] = [
   "inwestor",
   "ksiegowosc",
   "posrednik",
+  "partner",
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -180,6 +182,7 @@ export function defaultPathForRoles(roles: AppRole[]): string {
   if (roles.includes("operator")) return "/operator/leady";
   if (roles.includes("ksiegowosc")) return "/admin/ksiegowosc";
   if (roles.includes("posrednik")) return "/posrednik";
+  if (roles.includes("partner")) return "/partner";
   if (roles.includes("inwestor")) return "/inwestor";
   return "/klient";
 }
@@ -210,7 +213,13 @@ export const ROLE_PANELS: RolePanel[] = [
     role: "posrednik",
     path: "/posrednik",
     title: "Pośrednik",
-    desc: "Panel pośrednika — przekazane wnioski i prowizje.",
+    desc: "Wnioski Twoich klientów, reakcje inwestorów i prowizje od uruchomionych pożyczek.",
+  },
+  {
+    role: "partner",
+    path: "/partner",
+    title: "Partner",
+    desc: "Program partnerski — link polecający i prowizje za nowych inwestorów.",
   },
   {
     role: "inwestor",

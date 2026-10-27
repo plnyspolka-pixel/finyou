@@ -54,7 +54,7 @@ export const STARTER_CALCULATORS: CalculatorConfig[] = [
     testCases: [
       {
         input: { property_value: 1000000, encumbrances: 100000 },
-        expect: { max_loan_pln: 500000, fy_fee_pln: 25000, net_pln: 475000 },
+        expect: { max_loan_pln: 500000, fy_fee_pln: 35000, net_pln: 465000 },
       },
       {
         input: { property_value: 200000, encumbrances: 200000 },

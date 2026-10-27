@@ -223,11 +223,11 @@ Zrealizowane (pkt 3.1 i 3.5 zlecenia — część niezależna od decyzji blokuj�
 
 ## Prowizja od Pożyczkobiorcy a osoba Pożyczkodawcy
 
-Prowizja Finance You (5 % Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana
+Prowizja Finance You (7 % Kwoty Udzielonej, min 5 000 zł, bez VAT, potrącana
 z wypłaty) należy się za POŚREDNICTWO, więc zależy od tego, kto pożycza:
 
 - Pożyczkodawcą jest inwestor → `warunki.prowizja_finance_you` pominięte
-  znaczy „dolicz 5 %" (`uzupelnijRozliczenieFinanceYou`), a `rachunki.finance_you`
+  znaczy „dolicz 7 %" (`uzupelnijRozliczenieFinanceYou`), a `rachunki.finance_you`
   silnik wpisuje sam (Finance You ma jeden rachunek).
 - Pożyczkodawcą jest **sama Finance You** → prowizji nie ma: silnik ustawia
   `prowizja_finance_you: null` i usuwa rachunek prowizyjny, nawet jeśli wpisał

@@ -45,6 +45,8 @@ export async function runAccessExpiryReminders(): Promise<{
     .from("access_entitlements")
     .select("user_id,audience,active_until")
     .not("active_until", "is", null)
+    // Pośrednik działa bez płatnego dostępu — nie przypominamy o odnowieniu.
+    .eq("audience", "investor")
     .gte("active_until", horizonPast.toISOString())
     .lte("active_until", horizonFuture.toISOString());
 

@@ -137,7 +137,7 @@ export const adminListPartners = createServerFn({ method: "GET" })
     let q = affiliateDb
       .from("affiliate_partners")
       .select(
-        "id,settlement_type,status,referral_code,first_name,last_name,company_name,email,phone,nip,sponsor_partner_id,created_at,approved_at,bank_account_encrypted",
+        "id,partner_kind,settlement_type,status,referral_code,first_name,last_name,company_name,email,phone,nip,sponsor_partner_id,created_at,approved_at,bank_account_encrypted",
       )
       .order("created_at", { ascending: false });
     if (data.status) q = q.eq("status", data.status);

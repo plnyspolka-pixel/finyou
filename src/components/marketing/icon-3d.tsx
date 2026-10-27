@@ -53,6 +53,10 @@ const FILES = {
 
 export type Icon3DName = keyof typeof FILES;
 export const ICON3D_NAMES = Object.keys(FILES) as Icon3DName[];
+/** Plik PNG ikony w /public/marketing/icons-3d (np. do PDF-ów). */
+export function icon3dFile(name: Icon3DName): string {
+  return FILES[name];
+}
 
 const BASE = "/marketing/icons-3d";
 
@@ -68,7 +72,8 @@ type Props = {
 
 export function Icon3D({ name, size = 64, alt, shadow = true, className, style, imgStyle }: Props) {
   const file = FILES[name] ?? FILES.shield;
-  const src = `${BASE}/${file}`;
+  // WebP (do 256 px, ~10× lżejsze niż PNG) — PNG zostają jako źródła.
+  const src = `${BASE}/${file.replace(/\.png$/, ".webp")}`;
   const decorative = alt == null;
   return (
     <span

@@ -32,7 +32,8 @@ export const Route = createFileRoute("/posrednik/rozliczenia")({
   component: RozliczeniaPage,
 });
 
-function RozliczeniaPage() {
+/** Dane rozliczeniowe i wypłaty — wspólne dla panelu pośrednika i partnera. */
+export function RozliczeniaPage() {
   const meFn = useServerFn(getMyAffiliatePartner);
   const dashFn = useServerFn(getAffiliateDashboard);
   const payoutsFn = useServerFn(getAffiliatePayouts);
@@ -75,9 +76,7 @@ function RozliczeniaPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Wallet className="h-6 w-6" /> Rozliczenia i wypłaty
         </h1>
-        <p className="text-muted-foreground">
-          Nie jesteś jeszcze zarejestrowany w programie pośredników.
-        </p>
+        <p className="text-muted-foreground">Nie masz jeszcze konta pośrednika ani partnera.</p>
       </div>
     );
   }

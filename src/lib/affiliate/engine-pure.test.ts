@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  brokerCommissionForLoan,
+  financeYouFeeForLoan,
   ancestorChain,
   calculateAmount,
   decideCommissionStatus,
@@ -254,5 +256,17 @@ describe("getTaxPeriod / ancestorChain / roundMoney", () => {
   it("roundMoney zaokrągla do groszy", () => {
     expect(roundMoney(100.005)).toBe(100.01);
     expect(roundMoney(33.333333)).toBe(33.33);
+  });
+});
+
+describe("prowizja pośrednika od uruchomionej pożyczki", () => {
+  it("wynagrodzenie FY: 7% kwoty pożyczki (jak trigger w bazie)", () => {
+    expect(financeYouFeeForLoan(100000)).toBe(7000);
+    expect(financeYouFeeForLoan(300000)).toBe(21000);
+  });
+  it("pośrednik dostaje 50% wynagrodzenia FY, czyli 3,5% kwoty pożyczki", () => {
+    expect(brokerCommissionForLoan(100000)).toBe(3500);
+    expect(brokerCommissionForLoan(300000)).toBe(10500);
+    expect(brokerCommissionForLoan(500000)).toBe(17500);
   });
 });

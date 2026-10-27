@@ -87,7 +87,13 @@ export function leadMagnetCrossChecks(v: {
   if (v.match_any_post && v.trigger_keywords.length === 0) {
     return "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.";
   }
-  if (v.published && !(v.material_type === "video" && v.slug === "darmowa-lekcja") && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
+  if (
+    v.published &&
+    !(v.material_type === "video" && (v.slug === "darmowa-lekcja" || v.slug === "webinar")) &&
+    !v.file_path &&
+    !v.file_url &&
+    !isCatalogSlug(v.slug)
+  ) {
     return NO_FILE_MESSAGE;
   }
   for (const t of [v.reply_private_template, v.reply_fallback_template, v.email_body]) {
@@ -106,7 +112,13 @@ export const leadMagnetSchema = leadMagnetBaseSchema.superRefine((v, ctx) => {
       message: "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.",
     });
   }
-  if (v.published && !(v.material_type === "video" && v.slug === "darmowa-lekcja") && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
+  if (
+    v.published &&
+    !(v.material_type === "video" && (v.slug === "darmowa-lekcja" || v.slug === "webinar")) &&
+    !v.file_path &&
+    !v.file_url &&
+    !isCatalogSlug(v.slug)
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["file_url"],
