@@ -1,18 +1,18 @@
-// Zastrzeżenia w scenariuszu rolki (decyzja właściciela 26.10.2026): tekst
-// mówiony ma DOKŁADNIE jedno zdanie o ryzyku. Pozostałe ostrzeżenia i formułki
-// („nie stanowi oferty/porady”, „zwrot nie jest gwarantowany”, „wynik
-// szacunkowy”, „materiał poglądowy”, drugie zdanie o utracie kapitału…) należą
-// do stopki opisu publikacji i do samego materiału — nie do rolki, w której
-// lektor zamiast edukować ostrzegał widza co drugie zdanie.
+// Zastrzeżenia w scenariuszu rolki (decyzja właściciela 27.10.2026): rolki są
+// sprzedażowe — tekst mówiony przedstawia fakty i mechanizm, bez zdań o
+// ryzyku, koszcie („droższe niż bank”), możliwej stracie kapitału czy majątku
+// i bez formułek („nie stanowi oferty”, „wynik szacunkowy”). Widz to wie, a
+// linia o ryzyku jest w stopce opisu publikacji (RISK_LINES).
 //
-// Moduł liczy zdania-zastrzeżenia (próg dla scenarzysty, bramki i produkcji)
-// i sprawdza wynik „odchudzenia” przez AI (acceptCondensedScript): zastrzeżeń
-// ma ubyć, jedno ma zostać, hasło CTA i długość mają się zgadzać, a reguły
-// twarde nie mogą zgłosić nowych blokad. Czysty moduł – bez I/O.
+// Główny zakaz jest w poleceniu scenarzysty (brief, zasady torów, generator).
+// Ten moduł to zabezpieczenie: liczy zdania-zastrzeżenia i sprawdza wynik ich
+// usunięcia przez AI (acceptCondensedScript): zastrzeżeń ma nie zostać, hasło
+// CTA i długość mają się zgadzać, a reguły twarde nie mogą zgłosić nowych
+// blokad. Czysty moduł – bez I/O.
 import { checkHardRules, type RuleContext } from "./compliance-rules";
 
-/** Ile zdań o ryzyku / zastrzeżeń może mieć scenariusz rolki. */
-export const MAX_WARNING_SENTENCES_PER_REEL = 1;
+/** Ile zdań o ryzyku / zastrzeżeń może mieć scenariusz rolki (sprzedażowej: zero). */
+export const MAX_WARNING_SENTENCES_PER_REEL = 0;
 
 /** Markery zdania-zastrzeżenia: ryzyko, brak gwarancji, formułki prawne, „szacunkowy”. */
 const WARNING_RE = new RegExp(
@@ -30,11 +30,31 @@ const WARNING_RE = new RegExp(
     "(?:wyłącznie|czysto)\\s+(?:poglądow|informacyjn|orientacyjn)\\p{L}*",
     "(?:wynik|kwota|kalkulacj|wyliczeni|dane|liczby)\\p{L}*\\s+(?:jest\\s+|są\\s+|to\\s+)?(?:szacunkow|orientacyjn)\\p{L}*",
     "decyzj\\p{L}*\\s+(?:zależy|należy)\\s+(?:od|do)\\s+(?:oceny|weryfikacji|finansując|indywidualn|inwestora|decyzji)\\p{L}*",
+    // „Finansowanie / kwota zależy od pozytywnej weryfikacji / oceny wniosku”.
+    "zależ\\p{L}*\\s+od\\s+(?:pozytywn\\p{L}*\\s+)?(?:oceny|weryfikacji|decyzji)",
+    // Koszt jako ostrzeżenie: „wiąże się z wyższym kosztem”, „bywa droższe”.
+    "(?:wyższ|większ)\\p{L}*\\s+koszt\\p{L}*",
+    "koszt\\p{L}*\\s+(?:\\p{L}+\\s+){0,3}(?:jest|są|bywa|będzie)\\s+wyższ\\p{L}*",
+    "drożs\\p{L}*|droższ\\p{L}*",
+    "(?:możesz|można|mogą|może)\\s+(?:\\p{L}+\\s+)?stracić",
   ].join("|"),
   "iu",
 );
 
-const RISK_WORD_RE = /ryzyk/iu;
+/** Brak spłaty + skutek („przy braku spłaty… egzekucja / utrata / zaspokojenie”). */
+const NON_REPAYMENT_RE =
+  /(?:niespłac\p{L}*|nie\s+spłac\p{L}*|nie\s+uda\s+się\s+spłacić|brak\p{L}*\s+(?:terminowej\s+)?spłaty)/iu;
+const CONSEQUENCE_RE = /(?:utrat\p{L}*|egzekucj\p{L}*|zaspokoj\p{L}*|strac\p{L}*|ryzyk\p{L}*)/iu;
+
+/** Tytuły materiałów w cudzysłowie („…(szanse i ryzyka)”) to nazwy, nie zastrzeżenia. */
+function withoutQuotedTitles(sentence: string): string {
+  return sentence.replace(/„[^”]*”/gu, " ").replace(/"[^"]*"/gu, " ");
+}
+
+function isWarningSentence(sentence: string): boolean {
+  const s = withoutQuotedTitles(sentence);
+  return WARNING_RE.test(s) || (NON_REPAYMENT_RE.test(s) && CONSEQUENCE_RE.test(s));
+}
 
 /** Podział na zdania: koniec zdania + wielka litera (nie tnie „750 tys. zł”). */
 export function splitSentences(text: string): string[] {
@@ -48,14 +68,14 @@ export function splitSentences(text: string): string[] {
 
 /** Zdania scenariusza, które są ostrzeżeniem / zastrzeżeniem. */
 export function warningSentences(text: string): string[] {
-  return splitSentences(text).filter((s) => WARNING_RE.test(s));
+  return splitSentences(text).filter(isWarningSentence);
 }
 
 export function countWarnings(text: string): number {
   return warningSentences(text).length;
 }
 
-/** Czy scenariusz ma więcej zastrzeżeń niż jedno dozwolone zdanie o ryzyku. */
+/** Czy scenariusz ma zastrzeżenia ponad limit (rolka sprzedażowa: jakiekolwiek). */
 export function overWarns(text: string): boolean {
   return countWarnings(text) > MAX_WARNING_SENTENCES_PER_REEL;
 }
@@ -73,8 +93,9 @@ function wordCount(text: string): number {
 }
 
 /**
- * Czy odchudzona wersja scenariusza nadaje się do użycia zamiast oryginału.
- * Odrzucenie = zostaje oryginał (z nadmiarem zastrzeżeń, ale bez utraty treści).
+ * Czy wersja bez zastrzeżeń nadaje się do użycia zamiast oryginału. Każde
+ * ubycie zastrzeżeń jest zyskiem (zero to cel, ale 4 → 1 też przyjmujemy).
+ * Odrzucenie = zostaje oryginał (z zastrzeżeniami, ale bez utraty treści).
  */
 export function acceptCondensedScript(
   original: string,
@@ -86,14 +107,12 @@ export function acceptCondensedScript(
   const before = countWarnings(original);
   const after = countWarnings(out);
   if (after >= before) return { ok: false, reason: `zastrzeżeń nie ubyło (${before} → ${after})` };
-  if (after < 1) return { ok: false, reason: "zniknęło zdanie o ryzyku" };
-  if (RISK_WORD_RE.test(original) && !RISK_WORD_RE.test(out))
-    return { ok: false, reason: "zniknęło słowo „ryzyko”" };
   const kw = scriptKeyword(original);
   if (kw && !out.includes(kw)) return { ok: false, reason: `brak hasła ${kw}` };
   const wb = wordCount(original);
   const wa = wordCount(out);
-  if (wa < Math.ceil(wb * 0.6)) return { ok: false, reason: `za krótki (${wa}/${wb} słów)` };
+  // Usunięcie kilku zdań-ostrzeżeń skraca tekst nawet o ~40%; krócej to już utrata treści.
+  if (wa < Math.ceil(wb * 0.5)) return { ok: false, reason: `za krótki (${wa}/${wb} słów)` };
   if (wa > wb + 5) return { ok: false, reason: `dłuższy niż oryginał (${wa}/${wb} słów)` };
   const known = new Set(
     checkHardRules(original, ctx)

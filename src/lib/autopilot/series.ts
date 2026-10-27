@@ -31,8 +31,6 @@ export interface SeriesDef {
   weekly?: boolean;
 }
 
-// Jedyne zastrzeżenie w rolce (decyzja właściciela 26.10.2026) — reszta w opisie.
-const RISK_BEAT = "ale: jedno krótkie zdanie o ryzyku (alert) — jedyne zastrzeżenie w rolce";
 const LOOP_BEAT = "puenta zapętlająca do hooka + CTA: obserwuj i skomentuj HASŁO";
 
 export const SERIES: SeriesDef[] = [
@@ -47,10 +45,9 @@ export const SERIES: SeriesDef[] = [
       "hook-teza w formie pytania",
       "liczba/kontrast",
       "jedno wyjaśnienie bez żargonu",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["stat", "keyword", "alert", "cta"],
+    motion: ["stat", "keyword", "cta"],
     defaultKeyword: "START",
   },
   {
@@ -63,10 +60,9 @@ export const SERIES: SeriesDef[] = [
       "hook: co robi bank, czego nie robisz Ty?",
       "porównanie mechanizmu",
       "co z tego wynika dla Ciebie",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["versus", "alert", "cta"],
+    motion: ["versus", "cta"],
     defaultKeyword: "START",
   },
   {
@@ -75,15 +71,8 @@ export const SERIES: SeriesDef[] = [
     title: "3 błędy inwestora",
     badge: "3 BŁĘDY",
     format: "list",
-    beats: [
-      "hook: który błąd kosztuje najwięcej?",
-      "błąd 1",
-      "błąd 2",
-      "błąd 3",
-      RISK_BEAT,
-      LOOP_BEAT,
-    ],
-    motion: ["checklist", "alert", "cta"],
+    beats: ["hook: który błąd kosztuje najwięcej?", "błąd 1", "błąd 2", "błąd 3", LOOP_BEAT],
+    motion: ["checklist", "cta"],
     defaultKeyword: "BŁĘDY",
   },
   {
@@ -97,10 +86,9 @@ export const SERIES: SeriesDef[] = [
       "nie mów…",
       "powiedz…",
       "dlaczego",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["versus", "keyword", "alert", "cta"],
+    motion: ["versus", "keyword", "cta"],
     defaultKeyword: "UMOWA",
   },
   {
@@ -113,10 +101,9 @@ export const SERIES: SeriesDef[] = [
       "hook: numer dnia + jedna lekcja",
       "kontekst",
       "lekcja",
-      RISK_BEAT,
       "zaobserwuj, żeby zobaczyć dzień X+1",
     ],
-    motion: ["keyword", "alert", "cta"],
+    motion: ["keyword", "cta"],
   },
   {
     slug: "audyt-zabezpieczenia",
@@ -130,10 +117,9 @@ export const SERIES: SeriesDef[] = [
       "LTV i bufor",
       "lokalizacja",
       "werdykt",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["threshold", "range", "checklist", "alert", "cta"],
+    motion: ["threshold", "range", "checklist", "cta"],
     defaultKeyword: "KSIĘGA",
     weekly: true,
   },
@@ -144,14 +130,8 @@ export const SERIES: SeriesDef[] = [
     title: "Bank odmówił – co dalej?",
     badge: "BANK ODMÓWIŁ",
     format: "steps",
-    beats: [
-      "hook: bank Ci odmówił?",
-      "dlaczego banki odmawiają",
-      "co możesz zrobić",
-      RISK_BEAT,
-      LOOP_BEAT,
-    ],
-    motion: ["steps", "alert", "cta"],
+    beats: ["hook: bank Ci odmówił?", "dlaczego banki odmawiają", "co możesz zrobić", LOOP_BEAT],
+    motion: ["steps", "cta"],
     defaultKeyword: "ODMOWA",
   },
   {
@@ -164,10 +144,9 @@ export const SERIES: SeriesDef[] = [
       "hook: ile dostaniesz pod nieruchomość wartą X?",
       "LTV na przykładzie",
       "obciążenia",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["threshold", "stat", "alert", "cta"],
+    motion: ["threshold", "stat", "cta"],
     defaultKeyword: "ILE",
   },
   {
@@ -181,10 +160,9 @@ export const SERIES: SeriesDef[] = [
       "błąd 1",
       "błąd 2",
       "błąd 3",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["checklist", "alert", "cta"],
+    motion: ["checklist", "cta"],
     defaultKeyword: "DOKUMENTY",
   },
   {
@@ -193,8 +171,8 @@ export const SERIES: SeriesDef[] = [
     title: "Mit vs fakt o pożyczkach pozabankowych",
     badge: "MIT vs FAKT",
     format: "myth",
-    beats: ["hook: mit w formie pytania", "fakt", "co to znaczy dla Ciebie", RISK_BEAT, LOOP_BEAT],
-    motion: ["mythFact", "alert", "cta"],
+    beats: ["hook: mit w formie pytania", "fakt", "co to znaczy dla Ciebie", LOOP_BEAT],
+    motion: ["mythFact", "cta"],
     defaultKeyword: "PROCES",
   },
   {
@@ -203,14 +181,8 @@ export const SERIES: SeriesDef[] = [
     title: "Krok po kroku: od wniosku do wypłaty",
     badge: "KROK PO KROKU",
     format: "steps",
-    beats: [
-      "hook: ile trwa droga od wniosku do wypłaty?",
-      "kroki",
-      "co przygotować",
-      RISK_BEAT,
-      LOOP_BEAT,
-    ],
-    motion: ["steps", "alert", "cta"],
+    beats: ["hook: ile trwa droga od wniosku do wypłaty?", "kroki", "co przygotować", LOOP_BEAT],
+    motion: ["steps", "cta"],
     defaultKeyword: "PROCES",
   },
   {
@@ -224,10 +196,9 @@ export const SERIES: SeriesDef[] = [
       "problem",
       "rozwiązanie",
       "wynik bez kwot klienta",
-      RISK_BEAT,
       LOOP_BEAT,
     ],
-    motion: ["steps", "keyword", "alert", "cta"],
+    motion: ["steps", "keyword", "cta"],
     defaultKeyword: "ILE",
     weekly: true,
   },
@@ -241,7 +212,12 @@ export function seriesBySlug(slug: string): SeriesDef | undefined {
   return SERIES.find((s) => s.slug === slug);
 }
 
-/** Seria w treściach o pieniądzach zawsze ma linię ryzyka (alert) – brief 5.2. */
-export function seriesHasRiskLine(s: SeriesDef): boolean {
-  return s.motion.includes("alert");
+/**
+ * Rolki są sprzedażowe (decyzja właściciela 27.10.2026): szkielet serii NIE ma
+ * beatu o ryzyku ani karty alert — scenariusz przedstawia fakty i mechanizm
+ * bez oceniania ryzyka za widza. Linia o ryzyku jest w stopce opisu publikacji
+ * (RISK_LINES w compliance-rules.ts), doklejanej automatycznie.
+ */
+export function seriesHasRiskBeat(s: SeriesDef): boolean {
+  return s.motion.includes("alert") || s.beats.some((b) => /ryzyk|zastrzeż/iu.test(b));
 }

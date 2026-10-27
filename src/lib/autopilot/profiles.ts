@@ -26,10 +26,16 @@ export const audienceProfileSchema = z.object({
   ctaUrl: z.string().url(),
   ctaLabel: z.string().min(2),
   /** Pierwszy komentarz YouTube; osobny od CTA opisu i innych platform. */
-  youtubeFirstComment: z.object({
-    text: z.string().trim().min(1).max(8000),
-    url: z.string().url().max(1000).refine((v) => v.startsWith("https://")),
-  }).optional(),
+  youtubeFirstComment: z
+    .object({
+      text: z.string().trim().min(1).max(8000),
+      url: z
+        .string()
+        .url()
+        .max(1000)
+        .refine((v) => v.startsWith("https://")),
+    })
+    .optional(),
   allowedTopics: z.array(z.string()).default([]),
   /** Dodatkowe frazy zakazane w torze (poza regułami twardymi w kodzie). */
   forbiddenPhrases: z.array(z.string()).default([]),
@@ -115,7 +121,7 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
       label: "Inwestor prywatny",
       targetGroup:
         "Prywatni inwestorzy szukający sposobu na zarabianie na nieruchomościach bez kupowania, budowania i remontowania",
-      tone: "Szanse, nie straszenie. Wolność finansowa, „zarabiaj tak, jak banki od stuleci” – z jednym uczciwym zdaniem o ryzyku (nie więcej).",
+      tone: "Szanse, nie straszenie. Wolność finansowa, „zarabiaj tak, jak banki od stuleci” – fakty i mechanizm, bez oceniania ryzyka za widza.",
       ctaUrl: INVESTOR_PAGE_URL,
       ctaLabel: "Zobacz, jak to działa",
       youtubeFirstComment: {

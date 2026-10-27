@@ -6,6 +6,7 @@ import { CATALOG_SLUGS, type CatalogSlug } from "./catalog-slugs";
 import type { LeadMagnetAudience } from "./core";
 
 export type FreeMaterialRow = {
+  material_type?: string;
   slug: string;
   title: string;
   headline: string;
@@ -18,6 +19,7 @@ export type FreeMaterialRow = {
 };
 
 export type FreeMaterial = {
+  material_type?: string;
   slug: string;
   title: string;
   headline: string;
@@ -79,6 +81,7 @@ export function orderFreeMaterials(
     .slice(0, max)
     .map(({ r }) => ({
       slug: r.slug,
+      material_type: r.material_type,
       title: r.title,
       headline: r.headline,
       subheadline: r.subheadline,

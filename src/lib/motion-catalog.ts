@@ -166,7 +166,7 @@ export const MOTION_CATALOG_PROMPT = `KATALOG KOMPONENTÓW (wyłącznie te; prop
 
 9. alert — ostrzeżenie/zastrzeżenie z ikoną.
    props: title (≤${MOTION_LIMITS.alertTitle}, np. "Uwaga"), text (≤${MOTION_LIMITS.alertText}, pełne zdanie).
-   Kiedy: lektor mówi „jedno zastrzeżenie”, „uważaj”, ryzyko.
+   Kiedy: tylko w ręcznym projekcie na wyraźne polecenie właściciela. Rolki autopilota są sprzedażowe i tej karty NIE dostają (decyzja 26.10.2026).
 
 10. cta — wezwanie na końcu.
    props: text (≤${MOTION_LIMITS.ctaText}), sub (≤${MOTION_LIMITS.ctaSub} lub null).
@@ -288,6 +288,15 @@ export function sanitizeMotionProps<C extends MotionComponent>(
     return null;
   })();
   return out as MotionProps[C] | null;
+}
+
+/**
+ * Projekt AI bez kart ostrzegawczych (`alert`): rolki są sprzedażowe, bez
+ * pulsującego trójkąta „Uwaga” nad awatarem (decyzje właściciela 26–27.10.2026). Ręczny projekt (`set_studio_motion`) może alert
+ * nadal zawierać — filtr stosuje tylko projektant AI.
+ */
+export function withoutWarningCards(elements: MotionDesignElement[]): MotionDesignElement[] {
+  return elements.filter((e) => e.component !== "alert");
 }
 
 /** Odczyt odpowiedzi projektanta — struktura, bez czasów (te liczy `motionWithCueTiming`). */

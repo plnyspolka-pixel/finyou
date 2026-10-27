@@ -27,7 +27,7 @@ import {
 import { pickHooks, scoreHook, scoreIdea } from "./idea-scoring";
 import { runCalculator, verifyCalculator } from "./calculator-engine";
 import { STARTER_CALCULATORS } from "./calculators";
-import { SERIES, seriesHasRiskLine } from "./series";
+import { SERIES, seriesHasRiskBeat } from "./series";
 import { contrastRatio, BRAND } from "@/lib/brand/brand";
 
 const NOW = new Date("2026-10-19T10:00:00Z");
@@ -299,31 +299,23 @@ describe("pętla bramki compliance", () => {
     expect(r.status).toBe("rewritten");
   });
 
-  it("wysokie ryzyko bez uwag: linia o ryzyku dokładana tylko, gdy jej nie ma", async () => {
+  it("wysokie ryzyko bez uwag: poprawka usuwa obietnice i nigdy nie dopisuje ryzyka", async () => {
     const seen: { problem: string; fix: string }[][] = [];
-    const depsFor = (): GateDeps => {
-      let n = 0;
-      return {
-        review: async () =>
-          n++ === 0
-            ? { verdict: "ok", risk: 60, issues: [] }
-            : { verdict: "ok", risk: 10, issues: [] },
-        rewrite: async (t, _ctx, issues) => {
-          seen.push(issues);
-          return t;
-        },
-      };
+    let n = 0;
+    const deps: GateDeps = {
+      review: async () =>
+        n++ === 0
+          ? { verdict: "ok", risk: 60, issues: [] }
+          : { verdict: "ok", risk: 10, issues: [] },
+      rewrite: async (t, _ctx, issues) => {
+        seen.push(issues);
+        return t;
+      },
     };
-    await runGateLoop(
-      { text: "Czy wiesz, czym jest LTV? Pamiętaj o ryzyku.", ctx: { kind: "script" } },
-      depsFor(),
-    );
-    await runGateLoop({ text: "Czy wiesz, czym jest LTV?", ctx: { kind: "script" } }, depsFor());
-    expect(seen).toHaveLength(2);
-    // Z linią o ryzyku: złagodzić obietnice, nie dokładać kolejnych zastrzeżeń.
-    expect(seen[0][0].fix).toMatch(/nie dodając kolejnych zastrzeżeń/);
-    // Bez linii o ryzyku: dodać jedno zdanie.
-    expect(seen[1][0].fix).toMatch(/dodaj jedno uczciwe zdanie o ryzyku/);
+    await runGateLoop({ text: "Czy wiesz, czym jest LTV?", ctx: { kind: "script" } }, deps);
+    expect(seen).toHaveLength(1);
+    expect(seen[0][0].fix).toMatch(/Nie dopisuj zdań o ryzyku/);
+    expect(seen[0][0].fix).not.toMatch(/dodaj/i);
   });
 });
 
@@ -444,7 +436,12 @@ describe("kalkulatory z konfiguracji", () => {
     const r = runCalculator(ile, { property_value: 1000000, encumbrances: 0 });
     expect(r.visible.find((v) => v.key === "max_loan_pln")?.value).toMatch(/600\s000 zł/);
     expect(r.gated).toEqual([]);
-    expect(r.visible.map((v) => v.key)).toEqual(["max_loan_pln", "limit_pct", "fy_fee_pln", "net_pln"]);
+    expect(r.visible.map((v) => v.key)).toEqual([
+      "max_loan_pln",
+      "limit_pct",
+      "fy_fee_pln",
+      "net_pln",
+    ]);
     const unlocked = runCalculator(ile, { property_value: 1000000 }, { unlocked: true });
     expect(unlocked.gated).toEqual([]);
   });
@@ -466,8 +463,8 @@ describe("kalkulatory z konfiguracji", () => {
 });
 
 describe("serie i marka", () => {
-  it("każda seria ma linię ryzyka (alert) i unikalny slug", () => {
-    expect(SERIES.every(seriesHasRiskLine)).toBe(true);
+  it("żadna seria nie ma beatu o ryzyku ani karty alert (rolki sprzedażowe); slugi unikalne", () => {
+    expect(SERIES.filter(seriesHasRiskBeat).map((s) => s.slug)).toEqual([]);
     expect(new Set(SERIES.map((s) => s.slug)).size).toBe(SERIES.length);
   });
 

@@ -1,5 +1,5 @@
-// Zastrzeżenia w rolce: liczenie zdań-ostrzeżeń i przyjęcie odchudzonej
-// wersji scenariusza (decyzja właściciela 26.10.2026: jedno zdanie o ryzyku).
+// Zastrzeżenia w rolce: liczenie zdań-ostrzeżeń i przyjęcie wersji bez nich
+// (decyzja właściciela 27.10.2026: rolki sprzedażowe bez zdań o ryzyku).
 import { describe, expect, it } from "vitest";
 import {
   MAX_WARNING_SENTENCES_PER_REEL,
@@ -33,8 +33,8 @@ const ONE_WARNING =
   "Skomentuj BŁĘDY, a wyślę Ci przewodnik „7 błędów inwestora w pożyczkach pod hipotekę – i jak ich uniknąć”.";
 
 describe("zastrzeżenia w scenariuszu — liczenie", () => {
-  it("dozwolone jest jedno zdanie o ryzyku", () => {
-    expect(MAX_WARNING_SENTENCES_PER_REEL).toBe(1);
+  it("rolka sprzedażowa: żadnych zdań o ryzyku", () => {
+    expect(MAX_WARNING_SENTENCES_PER_REEL).toBe(0);
   });
 
   it("podział na zdania nie tnie skrótów („750 tys. zł”) ani cudzysłowów", () => {
@@ -55,7 +55,7 @@ describe("zastrzeżenia w scenariuszu — liczenie", () => {
     expect(overWarns(OVERWARNED)).toBe(true);
 
     expect(countWarnings(ONE_WARNING)).toBe(1);
-    expect(overWarns(ONE_WARNING)).toBe(false);
+    expect(overWarns(ONE_WARNING)).toBe(true);
     expect(overWarns("Bank odmówił? Twoja nieruchomość może powiedzieć tak.")).toBe(false);
   });
 
@@ -69,48 +69,77 @@ describe("zastrzeżenia w scenariuszu — liczenie", () => {
     expect(scriptKeyword(OVERWARNED)).toBe("UMOWA");
     expect(scriptKeyword("Obserwuj profil, żeby nie przegapić.")).toBeNull();
   });
+
+  it("łapie ostrzeżenia o koszcie, braku spłaty i „zależy od weryfikacji” (rolka z kolejki na 29.10)", () => {
+    const s =
+      "Krok po kroku: ile trwa droga od wniosku do wypłaty? " +
+      "Najpierw następuje weryfikacja stanu prawnego oraz wartości nieruchomości. " +
+      "Pamiętaj jednak, że koszt takiego kapitału jest wyższy niż w banku. " +
+      "Jeśli zobowiązania nie uda się spłacić, zabezpieczenie może zostać zaspokojone z nieruchomości, więc skalkuluj to przed decyzją. " +
+      "Finansowanie zależy od pozytywnej weryfikacji wniosku i nieruchomości. " +
+      "Skomentuj PROCES, a wyślę Ci mapę procesu.";
+    expect(countWarnings(s)).toBe(3);
+    expect(countWarnings("Pozabankowe finansowanie bywa droższe niż bankowe.")).toBe(1);
+    expect(countWarnings("Taka pożyczka wiąże się z wyższym kosztem niż kredyt bankowy.")).toBe(1);
+  });
+
+  it("nie łapie treści: hook o utracie majątku, egzekucja bez braku spłaty, kolejność wpisów", () => {
+    expect(
+      countWarnings(
+        "Czy finansowanie pod nieruchomość oznacza natychmiastową utratę majątku? " +
+          "Do czasu ewentualnej egzekucji nieruchomość pozostaje Twoją własnością. " +
+          "Trzeci błąd to brak weryfikacji pierwszeństwa wpisu, co decyduje o kolejności zaspokojenia roszczeń. " +
+          "Czas zależy od stanu prawnego nieruchomości i kompletności dokumentów.",
+      ),
+    ).toBe(0);
+  });
+
+  it("nazwa materiału w cudzysłowie („…szanse i ryzyka”) nie jest zastrzeżeniem", () => {
+    expect(
+      countWarnings(
+        "Skomentuj START, a prześlę Ci materiał „Przewodnik startowy dla inwestora (szanse i ryzyka)”.",
+      ),
+    ).toBe(0);
+  });
 });
 
-describe("zastrzeżenia w scenariuszu — przyjęcie odchudzonej wersji", () => {
+describe("zastrzeżenia w scenariuszu — przyjęcie wersji bez zastrzeżeń", () => {
   const ctx = { kind: "script" as const, track: "inwestor" as const };
-  const slim =
+  const clean =
     "Czy wiesz, jak działa finansowanie pod hipotekę z perspektywy inwestora prywatnego? " +
     "Wielu zakłada, że jedyną drogą jest zakup i remont lokalu, tymczasem istnieje też mechanizm pożyczki zabezpieczonej wpisem w księdze wieczystej. " +
-    "W takim modelu pożyczkodawca może otrzymywać odsetki, o ile pożyczkobiorca terminowo spłaca zobowiązanie. " +
-    "Pamiętaj jednak o ryzyku: przy braku spłaty możesz stracić część lub całość kapitału. " +
-    "To jedna z form inwestowania, którą warto poznać. " +
+    "W takim modelu pożyczkodawca otrzymuje odsetki, a zabezpieczeniem jest nieruchomość. " +
+    "To forma inwestowania, którą warto poznać. " +
     "Obserwuj profil i skomentuj UMOWA, a wyślę Ci bezpłatny wzór umowy pożyczki pod hipotekę.";
 
-  it("przyjmuje wersję z jednym zdaniem o ryzyku, hasłem i podobną długością", () => {
-    const r = acceptCondensedScript(OVERWARNED, slim, ctx);
+  it("przyjmuje wersję bez zastrzeżeń z hasłem i podobną długością", () => {
+    const r = acceptCondensedScript(OVERWARNED, clean, ctx);
+    expect(r.ok, r.reason).toBe(true);
+    expect(r.reason).toMatch(/4 → 0/);
+  });
+
+  it("częściowe usunięcie też jest zyskiem (4 → 1)", () => {
+    const partial = clean.replace(
+      "To forma inwestowania, którą warto poznać. ",
+      "To forma inwestowania, którą warto poznać razem z jej ryzykiem. ",
+    );
+    const r = acceptCondensedScript(OVERWARNED, partial, ctx);
     expect(r.ok, r.reason).toBe(true);
     expect(r.reason).toMatch(/4 → 1/);
   });
 
-  it("odrzuca, gdy zastrzeżeń nie ubyło, zniknęło słowo „ryzyko” albo hasło", () => {
+  it("odrzuca, gdy zastrzeżeń nie ubyło albo zniknęło hasło", () => {
     expect(acceptCondensedScript(OVERWARNED, OVERWARNED, ctx).ok).toBe(false);
-    expect(
-      acceptCondensedScript(
-        OVERWARNED,
-        slim.replace(
-          "Pamiętaj jednak o ryzyku: przy braku spłaty możesz stracić część lub całość kapitału. ",
-          "",
-        ),
-        ctx,
-      ).reason,
-    ).toMatch(/ryzyk/);
-    expect(acceptCondensedScript(OVERWARNED, slim.replace("UMOWA", "START"), ctx).reason).toMatch(
+    expect(acceptCondensedScript(OVERWARNED, clean.replace("UMOWA", "START"), ctx).reason).toMatch(
       /UMOWA/,
     );
     expect(acceptCondensedScript(OVERWARNED, "", ctx).ok).toBe(false);
   });
 
   it("odrzuca wersję za krótką albo z nową blokadą reguł twardych", () => {
-    expect(
-      acceptCondensedScript(OVERWARNED, "Pamiętaj o ryzyku. Skomentuj UMOWA.", ctx).reason,
-    ).toMatch(/za krótki/);
-    const promised = slim.replace(
-      "To jedna z form inwestowania, którą warto poznać.",
+    expect(acceptCondensedScript(OVERWARNED, "Skomentuj UMOWA.", ctx).reason).toMatch(/za krótki/);
+    const promised = clean.replace(
+      "To forma inwestowania, którą warto poznać.",
       "To gwarantowany zysk dla każdego inwestora.",
     );
     const r = acceptCondensedScript(OVERWARNED, promised, ctx);

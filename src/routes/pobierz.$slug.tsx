@@ -13,9 +13,11 @@ import {
 import type { PublicLeadMagnet } from "@/lib/lead-magnets/core";
 import { FocusShell as Shell, focusFieldStyle as fieldStyle } from "@/components/marketing/focus-shell";
 import { MktButton, Eyebrow, MktBadge } from "@/components/marketing/primitives";
+import { FreeLessonExperience } from "@/components/marketing/free-lesson-experience";
 import { SITE_URL } from "@/lib/seo/company";
 
 type SearchParams = {
+  t?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
@@ -36,6 +38,7 @@ const magnetQuery = (slug: string) =>
 
 export const Route = createFileRoute("/pobierz/$slug")({
   validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    t: str(search.t, 64),
     utm_source: str(search.utm_source),
     utm_medium: str(search.utm_medium),
     utm_campaign: str(search.utm_campaign),
@@ -60,6 +63,7 @@ export const Route = createFileRoute("/pobierz/$slug")({
       { name: "description", content: desc },
       { property: "og:title", content: title },
       { property: "og:description", content: desc },
+      { name: "twitter:description", content: desc },
       { property: "og:url", content: url },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pl_PL" },
@@ -103,6 +107,8 @@ function LeadMagnetPage() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(magnetQuery(slug));
   const magnet = data.magnet as PublicLeadMagnet;
+
+  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={Route.useSearch().t}/></Shell>;
 
   return (
     <Shell>

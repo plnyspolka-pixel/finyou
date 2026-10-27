@@ -111,12 +111,18 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         // (external_number), bo przy połączeniach wychodzących system__caller_id
         // to nasz numer — SMS z linkiem trafiałby do nas zamiast do klienta.
         const convId = typeof body?.conversation_id === "string" ? body.conversation_id : null;
+        // Numer potwierdzony przez operatora (tylko połączenie telefoniczne) — jedyny,
+        // na który wolno wysłać SMS z narzędzia; numeru podanego przez model nie ufamy.
+        let verifiedPhone: string | null = null;
         if (convId) {
           try {
             const { getConversation } = await import("@/lib/elevenlabs-api.server");
             const { verifiedCallerPhone } = await import("@/lib/ania-loan-purpose.server");
             const fromCall = verifiedCallerPhone(await getConversation(convId));
-            if (fromCall) body.phone = fromCall;
+            if (fromCall) {
+              body.phone = fromCall;
+              verifiedPhone = fromCall;
+            }
           } catch (e) {
             console.error("[agent-tools] conversation phone lookup failed", e);
           }
@@ -130,6 +136,104 @@ export const Route = createFileRoute("/api/public/agent-tools")({
               ? { purpose: args.purpose ?? needs.purpose, needs } : args);
             return Response.json(result, { headers: { "cache-control": "no-store" } });
           }
+          // ── Narzędzia inwestorskie Ani (A0 recepcja, A2P presale) ──────────
+          // Wcześniej nieobsłużone: kończyły się „unknown tool”, a model i tak
+          // mówił, że zapisał / wysłał SMS. Każda odpowiedź mówi wprost, co się stało.
+          if (tool === "identify_caller") {
+            const leadId = await resolveLeadId(body);
+            if (!leadId) {
+              return Response.json({
+                ok: true,
+                result: { known: false, channel: body?.channel ?? null },
+              });
+            }
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: lead } = await supabaseAdmin
+              .from("leads")
+              .select("first_name, type, application_data")
+              .eq("id", leadId)
+              .maybeSingle();
+            return Response.json({
+              ok: true,
+              result: {
+                known: true,
+                first_name: lead?.first_name ?? null,
+                role: lead?.type === "inwestorski" ? "inwestor" : lead?.type ? "klient" : null,
+                lead_amount: (lead?.application_data as any)?.lead_amount ?? null,
+                channel: body?.channel ?? null,
+              },
+            });
+          }
+
+          if (tool === "save_investor_needs") {
+            const allowed = [
+              "ticket_pln", "min_yield_pct", "horizon_months", "experience", "summary",
+              "timeline", "decision_role", "wants_callback", "callback_phone", "callback_email",
+              "regions", "property_types", "objections",
+            ];
+            const needs: Record<string, unknown> = {};
+            for (const k of allowed) {
+              const v = (args as any)?.[k];
+              if (typeof v === "number" && Number.isFinite(v)) needs[k] = v;
+              else if (typeof v === "boolean") needs[k] = v;
+              else if (typeof v === "string" && v.trim()) needs[k] = v.trim().slice(0, 2000);
+              else if (Array.isArray(v)) needs[k] = v.filter((x) => typeof x === "string").slice(0, 20).map((x: string) => x.slice(0, 200));
+            }
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const db: any = supabaseAdmin;
+            const leadId = await resolveLeadId(body);
+            if (leadId) {
+              const { data: lead } = await db
+                .from("leads")
+                .select("application_data")
+                .eq("id", leadId)
+                .maybeSingle();
+              const appData = lead?.application_data ?? {};
+              const merged = {
+                ...appData,
+                investor_needs: { ...(appData.investor_needs ?? {}), ...needs, updated_at: new Date().toISOString() },
+              };
+              const { error } = await db.from("leads").update({ application_data: merged }).eq("id", leadId);
+              if (error) throw error;
+            }
+            // Zawsze ślad z rozmowy (także anonimowej na stronie), żeby nic nie przepadło.
+            await db.from("automation_events").insert({
+              automation_type: "ania_investor_needs_saved",
+              status: "sent",
+              sent_payload: { conversation_id: convId, lead_id: leadId, channel: body?.channel ?? null, needs },
+            });
+            return Response.json({
+              ok: true,
+              result: { saved: true, note: "Zapisane. Nie powtarzaj pytania — przejdź do następnego kroku." },
+            });
+          }
+
+          if (tool === "send_investor_registration_link") {
+            const link = "https://financeyou.pl/rejestracja?role=inwestor";
+            if (!verifiedPhone) {
+              return Response.json({
+                ok: false,
+                sent: false,
+                error:
+                  "SMS NIE został wysłany — to nie jest rozmowa telefoniczna (rozmówca jest na stronie financeyou.pl). Nie mów, że wysłałaś SMS. Powiedz, że rejestracja jest na stronie: financeyou.pl, przycisk „Zostań partnerem” albo cennik.",
+              });
+            }
+            const { sendSmsInternal } = await import("@/lib/voicebot.functions");
+            const r = await sendSmsInternal({
+              phone: verifiedPhone,
+              body: `Finance You: tu Ania. Rejestracja inwestora: ${link}`,
+              source: "elevenlabs_agent",
+            });
+            if (r.ok && !r.skipped) {
+              return Response.json({ ok: true, sent: true, result: { sent: true } });
+            }
+            return Response.json({
+              ok: false,
+              sent: false,
+              error: `SMS NIE został wysłany (${r.reason ?? r.error ?? "błąd"}). Nie mów, że wysłałaś — podaj adres słownie: financeyou pe el, rejestracja.`,
+            });
+          }
+
           // ── Narzędzia zapisu — reuse istniejącego executor-a botów ─────────
           if (WRITE_TOOLS.has(tool)) {
             let leadId = await resolveLeadId(body);

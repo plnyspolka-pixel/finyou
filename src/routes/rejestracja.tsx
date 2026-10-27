@@ -15,7 +15,7 @@ import { MktBadge } from "@/components/marketing/primitives";
 type SignupRole = "klient" | "inwestor";
 
 const searchSchema = z.object({
-  // .catch — nieznana rola w URL nie wywala strony.
+  // .catch — nieznana rola w URL (np. stare linki ?role=posrednik) nie wywala strony.
   role: z.enum(["klient", "inwestor", "posrednik"]).optional().catch(undefined),
   ref: z.string().max(60).optional().catch(undefined),
 });
@@ -42,6 +42,8 @@ export const Route = createFileRoute("/rejestracja")({
       },
       { property: "og:url", content: "https://financeyou.pl/rejestracja" },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:description", content: "Konto klienta do bezpłatnego wniosku albo konto inwestora Finance You." },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/rejestracja" }],
   }),
@@ -65,7 +67,7 @@ const ROLE_TILES: {
   {
     value: "inwestor",
     title: "Inwestor",
-    desc: "Przeglądaj oferty i inwestuj w pożyczki zabezpieczone hipotecznie.",
+    desc: "Szkolenie, narzędzia i sprawy w Twojej kwocie.",
     icon: LineChart,
     badge: { v: "secondary", t: "Inwestor" },
   },
@@ -147,8 +149,8 @@ function RegisterPage() {
             textAlign: "center",
           }}
         >
-          <MktBadge variant={ROLE_TILES.find((t) => t.value === role)!.badge.v}>
-            {ROLE_TILES.find((t) => t.value === role)!.badge.t}
+          <MktBadge variant={ROLE_TILES.find((t) => t.value === role)?.badge.v ?? "accent"}>
+            {ROLE_TILES.find((t) => t.value === role)?.badge.t}
           </MktBadge>
           <h1
             style={{
@@ -195,7 +197,7 @@ function RegisterPage() {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 sm:grid-cols-2">
+                {!search.role && <div className="grid gap-3 sm:grid-cols-2">
                   {ROLE_TILES.map((t) => {
                     const Icon = t.icon;
                     const active = role === t.value;
@@ -216,17 +218,15 @@ function RegisterPage() {
                       </button>
                     );
                   })}
-                </div>
-                <p className="text-center text-xs text-muted-foreground">
-                  Jesteś pośrednikiem?{" "}
-                  <Link
-                    to="/posrednicy/rejestracja"
-                    search={{ ref: search.ref ?? "" }}
-                    className="font-medium text-accent hover:underline"
-                  >
-                    Załóż bezpłatne konto pośrednika →
-                  </Link>
-                </p>
+                </div>}
+                {!search.role && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Masz własnych klientów?{" "}
+                    <Link to="/dla-posrednika" className="font-medium text-accent hover:underline">
+                      Zostań pośrednikiem →
+                    </Link>
+                  </p>
+                )}
 
                 <SocialSignIn
                   labelPrefix="Zarejestruj się"
@@ -285,7 +285,7 @@ function RegisterPage() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Wysyłanie linku…" : "Załóż konto i wyślij link"}
+                    {loading ? "Wysyłanie linku…" : role === "klient" ? "Przejdź do bezpłatnego wniosku" : "Załóż konto i wyślij link"}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
                     Masz już konto?{" "}

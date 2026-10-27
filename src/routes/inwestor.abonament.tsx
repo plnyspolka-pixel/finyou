@@ -21,7 +21,6 @@ import {
   SUBSCRIPTION_OPTIONS,
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
-  SUBSCRIPTION_YEARLY_DISCOUNT_PCT,
   SUBSCRIPTION_YEARLY_PER_MONTH_PLN,
   plnLabel,
 } from "@/lib/investor-plan/plans";
@@ -39,14 +38,9 @@ const SUBSCRIPTION_CODES = new Set<string>(
 );
 
 const FEATURES: Record<number, string[]> = {
-  30: [
-    "Zlecenia i Projekty dopasowane do Zlecenia",
-    "Raporty, analityka i generator umowy",
-    "Akademia, kalkulator compliance, AML i windykacja AI",
-  ],
   365: [
-    "Wszystko z abonamentu 30-dniowego",
-    `Rok dostępu za ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie — ${SUBSCRIPTION_YEARLY_DISCOUNT_PCT}% taniej`,
+    "Szkolenie i wszystkie narzędzia",
+    `Rok dostępu za ok. ${plnLabel(SUBSCRIPTION_YEARLY_PER_MONTH_PLN)} miesięcznie w 12 ratach`,
     "Bez przerw w dostępie przez 365 dni",
   ],
 };

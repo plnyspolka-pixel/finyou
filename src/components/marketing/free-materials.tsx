@@ -93,7 +93,7 @@ function MaterialCard({ audience, m }: { audience: LeadMagnetAudience; m: FreeMa
     <article {...handlers} style={style}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Icon3D name={icon} size={48} />
-        <MktBadge variant="secondary">PDF · bezpłatnie</MktBadge>
+        <MktBadge variant="secondary">{m.material_type === "video" ? "Wideo · bezpłatnie" : "PDF · bezpłatnie"}</MktBadge>
       </div>
       <h3 style={{ marginTop: "0.9rem", fontSize: "1.05rem", fontWeight: 700, lineHeight: 1.3 }}>
         {m.title}

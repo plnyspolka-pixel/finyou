@@ -34,6 +34,7 @@ export const leadMagnetBaseSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "tylko małe litery, cyfry i myślniki"),
   title: z.string().min(1).max(200),
   audience: z.enum(LEAD_MAGNET_AUDIENCES),
+  material_type: z.enum(["pdf", "video"]).default("pdf"),
   headline: z.string().min(1).max(300),
   subheadline: z.string().max(500).optional(),
   benefits: z.array(z.string().min(1).max(200)).max(12).default([]),
@@ -73,6 +74,7 @@ export const leadMagnetBaseSchema = z.object({
 /** Reguły krzyżowe wspólne dla panelu i MCP (po scaleniu zmian z wierszem). */
 export function leadMagnetCrossChecks(v: {
   slug?: string | null;
+  material_type?: string;
   match_any_post: boolean;
   trigger_keywords: string[];
   published: boolean;
@@ -85,7 +87,7 @@ export function leadMagnetCrossChecks(v: {
   if (v.match_any_post && v.trigger_keywords.length === 0) {
     return "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.";
   }
-  if (v.published && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
+  if (v.published && !(v.material_type === "video" && v.slug === "darmowa-lekcja") && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
     return NO_FILE_MESSAGE;
   }
   for (const t of [v.reply_private_template, v.reply_fallback_template, v.email_body]) {
@@ -104,7 +106,7 @@ export const leadMagnetSchema = leadMagnetBaseSchema.superRefine((v, ctx) => {
       message: "Reagowanie pod każdym postem wymaga przynajmniej jednego hasła.",
     });
   }
-  if (v.published && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
+  if (v.published && !(v.material_type === "video" && v.slug === "darmowa-lekcja") && !v.file_path && !v.file_url && !isCatalogSlug(v.slug)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["file_url"],

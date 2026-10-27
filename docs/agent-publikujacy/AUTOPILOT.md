@@ -34,11 +34,11 @@ Pauza (ręczna albo automatyczna przy anomalii) wstrzymuje **wyłącznie wpisy a
    w opisach, lead magnetach, stronach, mailach i reklamach. Flagi platform: YouTube
    `containsSyntheticMedia`, TikTok `is_aigc` (kolumna `contains_synthetic_media`, domyślnie `true`).
 3. **Recenzent LLM** – Claude (gdy jest `ANTHROPIC_API_KEY`), inaczej Gemini Pro z osobnym promptem.
-   Autor poprawek: Gemini Flash. Od 26.10.2026 recenzent ocenia proporcjonalnie: jedno zdanie
-   o ryzyku w rolce wystarcza (nie żąda jego rozszerzania ani formułek „nie stanowi oferty”,
-   „wynik szacunkowy”), a zatwierdzony język marki („jak bank”, „zarabiaj tak, jak banki od
-   stuleci”, formaty serii) nie jest naruszeniem. Autor poprawek usuwa obietnicę zamiast
-   równoważyć ją kolejnym ostrzeżeniem.
+   Autor poprawek: Gemini Flash. Od 27.10.2026 recenzent ocenia proporcjonalnie: rolki są
+   sprzedażowe, brak zdania o ryzyku nie jest naruszeniem i recenzent nigdy nie żąda dopisania
+   ostrzeżeń ani formułek („nie stanowi oferty”, „wynik szacunkowy”); zatwierdzony język marki
+   („jak bank”, „zarabiaj tak, jak banki od stuleci”, formaty serii) nie jest naruszeniem. Autor
+   poprawek usuwa obietnicę, nie dopisuje ostrzeżeń.
 4. **Pętla** – maks. 3 poprawki; potem odrzucenie i temat wraca do banku. Brak recenzenta = odrzucenie.
 5. **Audyt** – każda decyzja w `ai_growth_action_log` (`module = compliance_gate`): wersja reguł,
    iteracje, uwagi, tekst wejściowy i finalny.
@@ -57,7 +57,11 @@ W `full_autopilot` (i w `semi_auto`) tick co godzinę dba o zapas rolek per tor
 
 1. Strażnik: tryb, wyłącznik, dzienny budżet AI, kredyty HeyGen (odczyt `remaining_quota`,
    próg `heygenMinRemainingCredits`).
-2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`). Poniżej
+2. Zapas toru = rolki `ready` nieopublikowane + w produkcji (`queued` … `captioning`) + rolki
+   czekające w kolejkach publikacji na najbliższe `SCHEDULED_HORIZON_DAYS` (2) dni. Bez tego
+   ostatniego składnika zaplanowana rolka znikała z licznika i kolejka rosła o rolkę dziennie na
+   tor (26.10.2026: 12 rolek na 8 dni naprzód). Rolki zaplanowane dalej nie blokują produkcji,
+   więc zdjęta z kolejki rolka zwalnia slot, który produkcja wypełnia. Poniżej
    bufora `REEL_BUFFER_PER_TRACK` (2) powstaje jedna rolka; maks. `MAX_PRODUCED_PER_TRACK_PER_DAY`
    (2) na dobę. Jeden tick = jedna rolka (kilka wywołań LLM musi zmieścić się w jednym żądaniu);
    tory ustawiają się w kolejce: najpierw mniejszy zapas, potem ten dawniej obsłużony.
@@ -65,8 +69,8 @@ W `full_autopilot` (i w `semi_auto`) tick co godzinę dba o zapas rolek per tor
    serii → **opublikowany** lead magnet z katalogu albo kalkulator (`resolveKeywordTarget`); bez
    opublikowanego materiału rolka kończy się zachętą do obserwowania, bez hasła. Temat z
    `allowedTopics` profilu, też rotacyjnie.
-4. Brief (`buildReelBrief`: szkielet serii, ton toru, lead magnet, CTA „Skomentuj HASŁO”, zdanie o
-   ryzyku, ostatnie tytuły do uniknięcia) → scenariusz (`generateVideoScript` z zasadami toru) →
+4. Brief (`buildReelBrief`: szkielet serii, ton toru, lead magnet, CTA „Skomentuj HASŁO”, zakaz
+   zdań o ryzyku i koszcie, ostatnie tytuły do uniknięcia) → scenariusz (`generateVideoScript` z zasadami toru) →
    bramka compliance z maks. 2 poprawkami (recenzent zna mechanizm lead magnetu i ocenia
    proporcjonalnie) → tytuł z hasłem (`… Napisz HASŁO`) sprawdzony regułami twardymi.
 5. Job `queued` w Studiu z `track`, `series`, `compliance_status`, promptem z prefiksem
@@ -155,23 +159,27 @@ kadruje „cover” do pełnego pionu. Poprawka kadru: `set_studio_avatar_framin
 „firma / przedsiębiorca / działalność” najwyżej raz. Reguła compliance „konsument” i linia
 o celu gospodarczym w stopce opisu zostają.
 
-**Zastrzeżenia w rolkach (decyzja właściciela 26.10.2026):** w tekście mówionym jest
-**dokładnie jedno** zdanie o ryzyku. Formułki „nie stanowi oferty/porady”, „zwrot nie jest
-gwarantowany”, „wynik szacunkowy”, „materiał poglądowy”, zastrzeżenie doklejone do CTA — nie
-w rolce; te niesie stopka opisu (`RISK_LINES`) i sam materiał. Wcześniej scenarzysta dostawał
-polecenie o ryzyku z czterech miejsc naraz, a poprawki recenzenta dokładały kolejne zdania
-(rolki z 3–5 ostrzeżeniami na 100 słów). Teraz (`autopilot/script-warnings.ts`):
+**Rolki są sprzedażowe — bez zastrzeżeń (decyzja właściciela 27.10.2026, zastępuje „jedno
+zdanie o ryzyku” z 26.10):** tekst mówiony przedstawia fakty, mechanizm i korzyść, bez oceniania
+za widza. Żadnych zdań o ryzyku, koszcie („droższe niż bank”), możliwej stracie kapitału czy
+majątku, braku spłaty ani formułek („nie stanowi oferty”, „wynik szacunkowy”). Widz to wie, a
+linia o ryzyku, cel gospodarczy, KRS i oznaczenie AI są w stopce opisu publikacji (`RISK_LINES`,
+doklejane automatycznie). Zakazy obietnic zostają bez zmian: gwarancje, „bez ryzyka”, % zwrotu,
+„dla każdego”, „bez BIK”, zamknięte grupy, presja czasu, kierowanie do konsumentów.
 
-- brief, szkielet serii, zasady toru, ton profilu i prompt generatora mówią zgodnie: jedno zdanie,
-- `countWarnings` liczy zdania-zastrzeżenia (ryzyko, brak gwarancji, utrata kapitału, formułki
-  prawne, „szacunkowy”); powyżej jednego `condenseScriptWarnings` (Gemini Flash) prosi o
-  zostawienie jednego — w `generateVideoScript` (także z panelu i MCP) i w produkcji po bramce,
-- odchudzona wersja wchodzi tylko, gdy zastrzeżeń ubyło, jedno zostało (ze słowem „ryzyko”),
-  hasło CTA i długość się zgadzają, a reguły twarde nie zgłaszają nowych blokad
-  (`acceptCondensedScript`); inaczej zostaje oryginał. Dziennik: `reel_warnings_condensed`,
-- recenzent bramki nie żąda rozszerzania zdania o ryzyku ani formułek, a język marki i formaty
-  serii nie są naruszeniem; autor poprawek usuwa obietnicę zamiast dokładać ostrzeżenie; poprawka
-  „z urzędu” (ryzyko > 40 bez uwag) dokłada linię o ryzyku tylko, gdy jej nie ma.
+- Zakaz siedzi u źródła: brief (`buildReelBrief`), szkielety serii (bez beatu o ryzyku i bez
+  karty alert), zasady torów (`track-voice.ts`), ton profilu inwestora i polecenie generatora
+  (`generateVideoScript`).
+- Recenzent bramki nie traktuje braku zdania o ryzyku jako naruszenia i nigdy nie żąda dopisania
+  ostrzeżeń w żadnym rodzaju treści; autor poprawek ich nie dopisuje, tylko usuwa obietnice.
+  Poprawka „z urzędu” (ryzyko > 40 bez uwag) usuwa obietnice, niczego nie dopisuje.
+- Zabezpieczenie po generacji (`autopilot/script-warnings.ts`): `countWarnings` liczy
+  zdania-zastrzeżenia (ryzyko, brak gwarancji, utrata kapitału, koszt, brak spłaty ze skutkiem,
+  formułki prawne); gdy jakieś są, `condenseScriptWarnings` prosi o ich usunięcie. Wynik wchodzi,
+  gdy zastrzeżeń ubyło, hasło CTA zostało, tekst ma co najmniej połowę długości, a reguły twarde
+  nie zgłaszają nowych blokad (`acceptCondensedScript`). Dziennik: `reel_warnings_condensed`.
+- Projektant elementów dynamicznych (Remotion) nie wstawia kart `alert` (pulsujący trójkąt
+  „UWAGA”). Ręczny projekt (`set_studio_motion`) może alert nadal zawierać.
 
 ## Zadanie jednorazowe dla właściciela: profil Instagram
 
@@ -244,7 +252,7 @@ Pełny raport daje `autopilot_report` (MCP).
 
 ## Planer (pure)
 
-- `series.ts` – serie i formaty obu torów jako dane; każda seria ma linię ryzyka (`alert`).
+- `series.ts` – serie i formaty obu torów jako dane; od 27.10.2026 bez beatu o ryzyku i bez karty `alert` (rolki sprzedażowe).
 - `idea-scoring.ts` – scoring pomysłów 0–100 (próg 60) i hooków. Najlepszy hook idzie do produkcji,
   drugi do testu A/B.
 - `metrics.ts` – mediany per konto i tor, outliery ≥ 3×, A/B po 72 h, ocena lead magnetów pod opt-in.
