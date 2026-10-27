@@ -104,7 +104,7 @@ export const Route = createFileRoute("/pozyczki/$slug")({
       <Section>
         <p style={{ textAlign: "center", color: "var(--muted-foreground)" }}>
           Ta podstrona nie istnieje. <Link to="/pozyczki">Zobacz listę miast</Link> albo{" "}
-          <Link to="/dla-klienta">złóż wniosek</Link> — finansujemy nieruchomości w całej Polsce.
+          <Link to="/dla-klienta" search={{ kwota: undefined }}>złóż wniosek</Link> — finansujemy nieruchomości w całej Polsce.
         </p>
       </Section>
     </MarketingShell>
