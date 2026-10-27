@@ -16,6 +16,7 @@ import {
 } from "@/lib/lead-magnets/free-materials";
 import type { CatalogSlug } from "@/lib/lead-magnets/catalog-slugs";
 import type { LeadMagnetAudience } from "@/lib/lead-magnets/core";
+import { FREE_LESSON_COPY, FREE_LESSON_SLUG } from "@/lib/free-lesson";
 
 const CATALOG_ICON: Record<CatalogSlug, Icon3DName> = {
   "start-inwestora": "knowledge",
@@ -34,14 +35,27 @@ export function FreeMaterialsSection({ data }: { data: FreeMaterials }) {
     <Section id={FREE_MATERIALS_SECTION_ID} tint>
       <SectionHead eyebrow={copy.eyebrow} title={copy.title} sub={copy.sub} />
 
-        <div style={grid}>
-          {data.materials.map((m) => (
-            <MaterialCard key={m.slug} audience={data.audience} m={m} />
-          ))}
+      {/* Dwa podpisane bloki — nie mieszamy materiałów i kalkulatorów w jednej siatce. */}
+      {data.materials.length > 0 && (
+        <>
+          <h3 style={blockTitle}>Do pobrania</h3>
+          <div style={grid}>
+            {data.materials.map((m) => (
+              <MaterialCard key={m.slug} audience={data.audience} m={m} />
+            ))}
+          </div>
+        </>
+      )}
+      {data.tools.length > 0 && (
+        <>
+          <h3 style={blockTitle}>Kalkulatory online</h3>
+          <div style={grid}>
             {data.tools.map((t) => (
               <ToolCard key={t.slug} t={t} />
             ))}
-        </div>
+          </div>
+        </>
+      )}
 
       <p
         style={{
@@ -58,8 +72,14 @@ export function FreeMaterialsSection({ data }: { data: FreeMaterials }) {
   );
 }
 
+const blockTitle: CSSProperties = {
+  marginTop: "2.2rem",
+  fontSize: "1.2rem",
+  fontWeight: 750,
+};
+
 const grid: CSSProperties = {
-  marginTop: "2rem",
+  marginTop: "1rem",
   display: "grid",
   gap: "1rem",
   gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 17rem), 1fr))",
@@ -88,15 +108,26 @@ function useCard(): [
 
 function MaterialCard({ audience, m }: { audience: LeadMagnetAudience; m: FreeMaterial }) {
   const [, style, handlers] = useCard();
-  const icon: Icon3DName = m.catalog ? CATALOG_ICON[m.catalog] : "documents";
+  const icon: Icon3DName = m.catalog
+    ? CATALOG_ICON[m.catalog]
+    : m.material_type === "video"
+      ? "training"
+      : "documents";
+  // Lekcja 1: opis zgodny z nagraniem (FREE_LESSON_COPY), niezależnie od bazy.
+  const lesson = m.slug === FREE_LESSON_SLUG;
+  const title = lesson ? FREE_LESSON_COPY.title : m.title;
+  const headline = lesson ? FREE_LESSON_COPY.subtitle : m.headline;
+  const benefits: readonly string[] = lesson ? FREE_LESSON_COPY.benefits : m.benefits;
   return (
     <article {...handlers} style={style}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <Icon3D name={icon} size={48} />
-        <MktBadge variant="secondary">{m.material_type === "video" ? "Wideo · bezpłatnie" : "PDF · bezpłatnie"}</MktBadge>
+        <MktBadge variant="secondary">
+          {m.material_type === "video" ? "Wideo · bezpłatnie" : "PDF · bezpłatnie"}
+        </MktBadge>
       </div>
       <h3 style={{ marginTop: "0.9rem", fontSize: "1.05rem", fontWeight: 700, lineHeight: 1.3 }}>
-        {m.title}
+        {title}
       </h3>
       <p
         style={{
@@ -106,9 +137,9 @@ function MaterialCard({ audience, m }: { audience: LeadMagnetAudience; m: FreeMa
           color: "var(--muted-foreground)",
         }}
       >
-        {m.headline}
+        {headline}
       </p>
-      {m.benefits.length > 0 && (
+      {benefits.length > 0 && (
         <ul
           style={{
             margin: "0.7rem 0 0",
@@ -119,7 +150,7 @@ function MaterialCard({ audience, m }: { audience: LeadMagnetAudience; m: FreeMa
             color: "var(--muted-foreground)",
           }}
         >
-          {m.benefits.map((b) => (
+          {benefits.map((b) => (
             <li key={b} style={{ marginTop: "0.3rem" }}>
               {b}
             </li>

@@ -43,7 +43,10 @@ export const Route = createFileRoute("/rejestracja")({
       { property: "og:url", content: "https://financeyou.pl/rejestracja" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:description", content: "Konto klienta do bezpłatnego wniosku albo konto inwestora Finance You." },
+      {
+        name: "twitter:description",
+        content: "Konto klienta do bezpłatnego wniosku albo konto inwestora Finance You.",
+      },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/rejestracja" }],
   }),
@@ -197,28 +200,30 @@ function RegisterPage() {
               </div>
             ) : (
               <>
-                {!search.role && <div className="grid gap-3 sm:grid-cols-2">
-                  {ROLE_TILES.map((t) => {
-                    const Icon = t.icon;
-                    const active = role === t.value;
-                    return (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => setRole(t.value)}
-                        className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition ${
-                          active
-                            ? "border-accent bg-accent/10 ring-2 ring-accent/40"
-                            : "border-border hover:border-accent/60 hover:bg-accent/5"
-                        }`}
-                      >
-                        <Icon className="h-6 w-6 text-accent" />
-                        <div className="font-semibold text-foreground">{t.title}</div>
-                        <p className="text-xs text-muted-foreground">{t.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>}
+                {!search.role && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {ROLE_TILES.map((t) => {
+                      const Icon = t.icon;
+                      const active = role === t.value;
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setRole(t.value)}
+                          className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition ${
+                            active
+                              ? "border-accent bg-accent/10 ring-2 ring-accent/40"
+                              : "border-border hover:border-accent/60 hover:bg-accent/5"
+                          }`}
+                        >
+                          <Icon className="h-6 w-6 text-accent" />
+                          <div className="font-semibold text-foreground">{t.title}</div>
+                          <p className="text-xs text-muted-foreground">{t.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {!search.role && (
                   <p className="text-center text-xs text-muted-foreground">
                     Masz własnych klientów?{" "}
@@ -285,7 +290,11 @@ function RegisterPage() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Wysyłanie linku…" : role === "klient" ? "Przejdź do bezpłatnego wniosku" : "Załóż konto i wyślij link"}
+                    {loading
+                      ? "Wysyłanie linku…"
+                      : role === "klient"
+                        ? "Przejdź do bezpłatnego wniosku"
+                        : "Załóż konto i wyślij link"}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
                     Masz już konto?{" "}
