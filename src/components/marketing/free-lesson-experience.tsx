@@ -11,6 +11,7 @@ import {
   plnLabel,
 } from "@/lib/investor-plan/plans";
 import { MktButton, Eyebrow } from "./primitives";
+import { Icon3D } from "./icon-3d";
 import { focusFieldStyle } from "./focus-shell";
 
 export function FreeLessonExperience({
@@ -114,6 +115,7 @@ export function FreeLessonExperience({
   return (
     <section className="fy-tool-layout">
       <div className="fy-tool-intro">
+        <Icon3D name="training" size={64} className="mb-3" />
         <Eyebrow tone="gold">Bezpłatna lekcja · dla inwestora</Eyebrow>
         <h1 className="mt-4 text-3xl font-extrabold leading-tight">{FREE_LESSON_COPY.title}</h1>
         <p className="mt-5 text-muted-foreground">{FREE_LESSON_COPY.subtitle}</p>

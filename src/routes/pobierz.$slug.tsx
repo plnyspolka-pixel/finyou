@@ -16,6 +16,15 @@ import {
   focusFieldStyle as fieldStyle,
 } from "@/components/marketing/focus-shell";
 import { MktButton, Eyebrow, MktBadge } from "@/components/marketing/primitives";
+import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
+import { CATALOG_ICON } from "@/components/marketing/free-materials";
+import { isCatalogSlug } from "@/lib/lead-magnets/catalog-slugs";
+
+/** Ikona 3D nagłówka materiału: z katalogu PDF-ów, wideo → szkolenie. */
+function leadMagnetIcon(m: { slug: string; material_type?: string | null }): Icon3DName {
+  if (isCatalogSlug(m.slug)) return CATALOG_ICON[m.slug];
+  return m.material_type === "video" ? "training" : "documents";
+}
 import { FreeLessonExperience } from "@/components/marketing/free-lesson-experience";
 import { SITE_URL } from "@/lib/seo/company";
 
@@ -130,6 +139,7 @@ function LeadMagnetPage() {
           }}
         >
           <div>
+            <Icon3D name={leadMagnetIcon(magnet)} size={64} style={{ marginBottom: "0.8rem" }} />
             <Eyebrow tone="gold">
               {magnet.audience === "inwestor" ? "Dla inwestora" : "Dla klienta pożyczkowego"}
               {" · "}bezpłatnie

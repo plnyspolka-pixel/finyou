@@ -68,7 +68,8 @@ type Props = {
 
 export function Icon3D({ name, size = 64, alt, shadow = true, className, style, imgStyle }: Props) {
   const file = FILES[name] ?? FILES.shield;
-  const src = `${BASE}/${file}`;
+  // WebP (do 256 px, ~10× lżejsze niż PNG) — PNG zostają jako źródła.
+  const src = `${BASE}/${file.replace(/\.png$/, ".webp")}`;
   const decorative = alt == null;
   return (
     <span

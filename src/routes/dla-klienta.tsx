@@ -23,7 +23,9 @@ import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions"
 const APPLY = "#wniosek";
 
 export const Route = createFileRoute("/dla-klienta")({
-  validateSearch: (s: Record<string, unknown>) => ({ kwota: typeof s.kwota === "string" || typeof s.kwota === "number" ? String(s.kwota) : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    kwota: typeof s.kwota === "string" || typeof s.kwota === "number" ? String(s.kwota) : undefined,
+  }),
   // Dział „Darmowe materiały” – opublikowane lead magnety klienta. Odporne na
   // brak bazy w SSR: wtedy sekcja się nie renderuje, reszta strony bez zmian.
   loader: async () => ({
@@ -48,7 +50,11 @@ export const Route = createFileRoute("/dla-klienta")({
       { property: "og:url", content: "https://financeyou.pl/dla-klienta" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:description", content: "Finansowanie firmy pod zastaw nieruchomości. Bezpłatny wniosek, bez BIK i zobowiązań." },
+      {
+        name: "twitter:description",
+        content:
+          "Finansowanie firmy pod zastaw nieruchomości. Bezpłatny wniosek, bez BIK i zobowiązań.",
+      },
     ],
     links: [{ rel: "canonical", href: "https://financeyou.pl/dla-klienta" }],
   }),
@@ -56,23 +62,40 @@ export const Route = createFileRoute("/dla-klienta")({
 });
 
 const FORWHOM: FeatureItemData[] = [
- {icon:"house",t:"Zaległości w ZUS lub US",d:"Środki na uporządkowanie zobowiązań firmy."},
- {icon:"kalkulator",t:"Kontrakt do sfinansowania",d:"Kapitał na realizację zamówienia."},
- {icon:"shield",t:"Zatowarowanie",d:"Środki na zakup towaru do firmy."},
- {icon:"automation",t:"Spłata drogich zobowiązań",d:"Finansowanie dopasowane do sytuacji firmy."},
- {icon:"growth",t:"Zakup nieruchomości",d:"Nieruchomość na cel gospodarczy."},
- {icon:"loan",t:"Finansowanie pomostowe",d:"Kapitał do czasu domknięcia transakcji."},
+  { icon: "house", t: "Zaległości w ZUS lub US", d: "Środki na uporządkowanie zobowiązań firmy." },
+  { icon: "kalkulator", t: "Kontrakt do sfinansowania", d: "Kapitał na realizację zamówienia." },
+  { icon: "shield", t: "Zatowarowanie", d: "Środki na zakup towaru do firmy." },
+  {
+    icon: "automation",
+    t: "Spłata drogich zobowiązań",
+    d: "Finansowanie dopasowane do sytuacji firmy.",
+  },
+  { icon: "growth", t: "Zakup nieruchomości", d: "Nieruchomość na cel gospodarczy." },
+  { icon: "loan", t: "Finansowanie pomostowe", d: "Kapitał do czasu domknięcia transakcji." },
 ];
 
-const HOW = [
-  { t: "Wypełniasz formularz", d: "Krótki wniosek online — kilka minut." },
-  { t: "Dodajesz numer KW", d: "Numer księgi wieczystej i podstawowe informacje o nieruchomości." },
-  { t: "System porządkuje sprawę", d: "Twoje dane zostają ustrukturyzowane i opisane." },
+const HOW: { t: string; d: string; icon: Icon3DName }[] = [
+  { icon: "application", t: "Wypełniasz formularz", d: "Krótki wniosek online — kilka minut." },
   {
+    icon: "dossier",
+    t: "Dodajesz numer KW",
+    d: "Numer księgi wieczystej i podstawowe informacje o nieruchomości.",
+  },
+  {
+    icon: "ai",
+    t: "System porządkuje sprawę",
+    d: "Twoje dane zostają ustrukturyzowane i opisane.",
+  },
+  {
+    icon: "investors",
     t: "Sprawa trafia do finansujących",
     d: "Może zostać pokazana inwestorom i partnerom finansowym.",
   },
-  { t: "Pieniądze na Twoim koncie", d: "Po podpisie u notariusza i ustanowieniu zabezpieczeń inwestor przelewa środki." },
+  {
+    icon: "loan",
+    t: "Pieniądze na Twoim koncie",
+    d: "Po podpisie u notariusza i ustanowieniu zabezpieczeń inwestor przelewa środki.",
+  },
 ];
 
 const PROPS: { icon: Icon3DName; sec: keyof typeof PROPERTY_DOCS_BY_SECURITY }[] = [
@@ -172,7 +195,8 @@ function Hero({ amount }: { amount?: number }) {
               letterSpacing: "-0.025em",
             }}
           >
-            Do 1 000 000 zł pod zastaw nieruchomości dla Twojej firmy. Decyzja zwykle w 24 h, bez scoringu BIK.
+            Do 1 000 000 zł pod zastaw nieruchomości dla Twojej firmy. Decyzja zwykle w 24 h, bez
+            scoringu BIK.
           </h1>
           <p
             style={{
@@ -183,11 +207,18 @@ function Hero({ amount }: { amount?: number }) {
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Jeden bezpłatny wniosek trafia do wielu prywatnych inwestorów. Pieniądze na koncie nawet 2–3 dni po podpisie u notariusza.
+            Jeden bezpłatny wniosek trafia do wielu prywatnych inwestorów. Pieniądze na koncie nawet
+            2–3 dni po podpisie u notariusza.
           </p>
         </div>
         <div style={{ position: "relative" }}>
-          <div id="wniosek"><p className="mb-3 text-sm">Bez sprawdzania BIK · Bez zobowiązań</p><LandingWizardForm initialAmount={amount}/><p className="mt-4 text-sm">Wolisz zadzwonić? <a href="tel:+48732059898">+48 732 059 898</a></p></div>
+          <div id="wniosek">
+            <p className="mb-3 text-sm">Bez sprawdzania BIK · Bez zobowiązań</p>
+            <LandingWizardForm initialAmount={amount} />
+            <p className="mt-4 text-sm">
+              Wolisz zadzwonić? <a href="tel:+48732059898">+48 732 059 898</a>
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -199,7 +230,7 @@ function ClientLanding() {
   const { kwota } = Route.useSearch();
   return (
     <MarketingShell page="klient" sticky={{ label: "Złóż bezpłatny wniosek", href: APPLY }}>
-      <Hero amount={applicationAmountFromSearch(kwota)}/>
+      <Hero amount={applicationAmountFromSearch(kwota)} />
 
       <Section id="rodzaje-pozyczek">
         <SectionHead
@@ -250,7 +281,6 @@ function ClientLanding() {
         <div style={{ marginTop: "2.5rem" }}>
           <FeatureGrid items={FORWHOM} icon3d />
         </div>
-
       </Section>
 
       <Section tint>
@@ -377,7 +407,14 @@ function ClientLanding() {
         sub="Wniosek jest bezpłatny i bez zobowiązań."
         buttons={[{ label: "Złóż bezpłatny wniosek", href: APPLY }]}
       />
-      <details className="fy-sales-legal mx-auto mb-12 max-w-5xl px-6"><summary>Ważne informacje</summary><p>Finance You nie gwarantuje pożyczki. Zgłoszenie sprawy nie jest równoznaczne z przyznaniem finansowania. Decyzja, warunki i termin wypłaty zależą od inwestora, dokumentów i ustanowienia zabezpieczeń.</p></details>
+      <details className="fy-sales-legal mx-auto mb-12 max-w-5xl px-6">
+        <summary>Ważne informacje</summary>
+        <p>
+          Finance You nie gwarantuje pożyczki. Zgłoszenie sprawy nie jest równoznaczne z przyznaniem
+          finansowania. Decyzja, warunki i termin wypłaty zależą od inwestora, dokumentów i
+          ustanowienia zabezpieczeń.
+        </p>
+      </details>
     </MarketingShell>
   );
 }

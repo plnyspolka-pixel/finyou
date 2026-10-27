@@ -18,7 +18,7 @@ import type { CatalogSlug } from "@/lib/lead-magnets/catalog-slugs";
 import type { LeadMagnetAudience } from "@/lib/lead-magnets/core";
 import { FREE_LESSON_COPY, FREE_LESSON_SLUG } from "@/lib/free-lesson";
 
-const CATALOG_ICON: Record<CatalogSlug, Icon3DName> = {
+export const CATALOG_ICON: Record<CatalogSlug, Icon3DName> = {
   "start-inwestora": "knowledge",
   "checklista-ksiegi-wieczystej": "procedures",
   "bledy-inwestora": "shieldcheck",

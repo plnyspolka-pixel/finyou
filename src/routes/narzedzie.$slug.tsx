@@ -15,6 +15,7 @@ import { consentTextFor } from "@/lib/lead-magnets/core";
 import { TRACK_TO_AUDIENCE } from "@/lib/autopilot/types";
 import { FocusShell, focusFieldStyle } from "@/components/marketing/focus-shell";
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
+import { Icon3D } from "@/components/marketing/icon-3d";
 import { formatToolInput } from "@/lib/autopilot/tool-input";
 import { COMPANY_DATA } from "@/lib/company";
 import { SITE_URL } from "@/lib/seo/company";
@@ -119,6 +120,7 @@ function ToolCalculator({
     <FocusShell>
       <section className="fy-tool-layout">
         <div className="fy-tool-intro">
+          <Icon3D name={borrower ? "calculator" : "kalkulator"} size={64} className="mb-3" />
           <Eyebrow tone="gold">
             Bezpłatne narzędzie · {borrower ? "dla klienta" : "dla inwestora"}
           </Eyebrow>

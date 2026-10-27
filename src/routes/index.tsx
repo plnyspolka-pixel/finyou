@@ -11,6 +11,7 @@ import {
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
+import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { FreeMaterialsSection } from "@/components/marketing/free-materials";
 import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
@@ -111,6 +112,16 @@ const FAQS = [
     a: "Obejrzyj darmową lekcję po zapisie e-mail. Poznaj program i cennik. Kody rabatowe wysyłamy w mailingu.",
   },
 ];
+// Ikona 3D karty sprawy wg typu nieruchomości (pkt 14).
+const CASE_ICON: Record<string, Icon3DName> = {
+  Mieszkanie: "propApartment",
+  Dom: "propHouse",
+  "Lokal użytkowy": "propStore",
+  "Działka budowlana": "propPlot",
+  "Grunt rolny": "propField",
+};
+const TOOL_ICON: Icon3DName[] = ["ai", "documents", "complianceAml", "shieldcheck"];
+
 const PROTECTION = [
   {
     icon: "shield" as const,
@@ -172,7 +183,7 @@ function InvestorHome() {
       <Section id="ochrona">
         <SectionHead title="Boisz się? Słusznie. Oto co Cię chroni." />
         <div className="mt-8">
-          <FeatureGrid items={PROTECTION} />
+          <FeatureGrid items={PROTECTION} icon3d />
         </div>
         <a className="fy-sales-link" href="#historie">
           Zobacz, jak hipoteka zadziałała →
@@ -187,6 +198,7 @@ function InvestorHome() {
           <div className="fy-sales-cards">
             {proof.cases.map((c) => (
               <article className="fy-sales-card" key={c.ref}>
+                <Icon3D name={CASE_ICON[c.propertyType] ?? "house"} size={56} />
                 <span className="fy-sales-eyebrow">
                   {c.ref} · {c.daysAgo} dni temu
                 </span>
@@ -212,13 +224,27 @@ function InvestorHome() {
             cols={5}
             steps={[
               {
+                icon: "calculator",
                 t: "Mówisz, ile chcesz ulokować",
                 d: "Zlecenie kwoty: podajesz kapitał, dla którego szukamy spraw.",
               },
-              { t: "Sprawy przychodzą do Ciebie", d: "Z całej Polski, w Twojej kwocie." },
-              { t: "Analizujesz w ok. 15 minut", d: "Ocena A–E; rezerwacja 24 h + 12 h." },
-              { t: "Ustalasz warunki z firmą", d: "Harmonogram akceptowany przed wypłatą." },
               {
+                icon: "application",
+                t: "Sprawy przychodzą do Ciebie",
+                d: "Z całej Polski, w Twojej kwocie.",
+              },
+              {
+                icon: "ai",
+                t: "Analizujesz w ok. 15 minut",
+                d: "Ocena A–E; rezerwacja 24 h + 12 h.",
+              },
+              {
+                icon: "handshake",
+                t: "Ustalasz warunki z firmą",
+                d: "Harmonogram akceptowany przed wypłatą.",
+              },
+              {
+                icon: "documents",
                 t: "Notariusz, hipoteka i wypłata",
                 d: "Hipoteka na Ciebie, spłaty na Twój rachunek. Gdy rata nie przychodzi — Windykator AI.",
               },
@@ -259,17 +285,20 @@ function InvestorHome() {
           ))}
         </ul>
         <ol className="fy-sales-modules">
-          {[
-            "Wprowadzenie i strategia",
-            "Prawo",
-            "Operacje",
-            "Analiza nieruchomości",
-            "Analiza klienta",
-            "Case study",
-            "Windykacja",
-          ].map((t, i) => (
+          {(
+            [
+              ["Wprowadzenie i strategia", "academy"],
+              ["Prawo", "compliance"],
+              ["Operacje", "procedures"],
+              ["Analiza nieruchomości", "house"],
+              ["Analiza klienta", "investors"],
+              ["Case study", "dossier"],
+              ["Windykacja", "shieldcheck"],
+            ] as const
+          ).map(([t, icon], i) => (
             <li key={t}>
               <span>0{i + 1}</span>
+              <Icon3D name={icon} size={40} />
               <strong>{t}</strong>
               {i === 0 ? <a href={LESSON}>Lekcja 1 za darmo →</a> : <BrandIcon name="lock" />}
             </li>
@@ -290,6 +319,7 @@ function InvestorHome() {
               const m = INVESTOR_MODULES.find((x) => x.name === name);
               return (
                 <article className="fy-sales-card" key={name}>
+                  <Icon3D name={TOOL_ICON[i]} size={48} />
                   <span className="fy-sales-eyebrow">
                     {
                       [
@@ -325,6 +355,7 @@ function InvestorHome() {
         <SectionHead title="Ty decydujesz, na czym zarabiasz. My dostarczamy sprawy." />
         <div className="mt-8">
           <FeatureGrid
+            icon3d
             items={[
               {
                 icon: "application",
@@ -386,10 +417,22 @@ function InvestorHome() {
           <ProcessSteps
             cols={4}
             steps={[
-              { t: "Dzień 1", d: "Płatność, konto, moduł 1." },
-              { t: "Dni 1–7", d: "Weryfikacja tożsamości online, umowa ramowa, NDA, RODO." },
-              { t: "Dni 7–14", d: "Zlecenie kwoty, pierwsze sprawy w panelu." },
-              { t: "Dni 14–30", d: "Pierwsza rozmowa z firmą, umowa, notariusz." },
+              { icon: "access", t: "Dzień 1", d: "Płatność, konto, moduł 1." },
+              {
+                icon: "compliance",
+                t: "Dni 1–7",
+                d: "Weryfikacja tożsamości online, umowa ramowa, NDA, RODO.",
+              },
+              {
+                icon: "application",
+                t: "Dni 7–14",
+                d: "Zlecenie kwoty, pierwsze sprawy w panelu.",
+              },
+              {
+                icon: "handshake",
+                t: "Dni 14–30",
+                d: "Pierwsza rozmowa z firmą, umowa, notariusz.",
+              },
             ]}
           />
         </div>

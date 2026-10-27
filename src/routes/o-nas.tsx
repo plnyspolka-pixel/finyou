@@ -1,8 +1,121 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
+import { Icon3D } from "@/components/marketing/icon-3d";
 import { Section, SectionHead } from "@/components/marketing/sections";
 import { FounderPhoto } from "@/components/marketing/founder-photo";
 import { MktButton } from "@/components/marketing/primitives";
 import { FOUNDATION_SALES_EXPLANATION } from "@/lib/investor-plan/plans";
-export const Route = createFileRoute("/o-nas")({ head: () => ({meta:[{title:"O Finance You — Filip Bielak i 15 lat finansowania | Finance You"},{name:"description",content:"Poznaj Finance You i Filipa Bielaka. Ponad 15 lat finansowania firm pod zabezpieczenie nieruchomości i własnych inwestycji."},{property:"og:title",content:"Piętnaście lat w sprawach, których banki nie biorą."},{property:"og:description",content:"Założyciele, doświadczenie i sposób zarabiania Finance You."},{property:"og:type",content:"website"},{property:"og:url",content:"https://financeyou.pl/o-nas"},{name:"twitter:card",content:"summary"},{name:"twitter:description",content:"Filip Bielak, współzałożyciel Daniel Siwiec i historia Finance You."}],links:[{rel:"canonical",href:"https://financeyou.pl/o-nas"}]}), component: About });
-function About(){return <MarketingShell page="inwestorModul"><Section><SectionHead eyebrow="O Finance You" title="Piętnaście lat w sprawach, których banki nie biorą." sub="Od ponad 15 lat udzielamy pożyczek pod zabezpieczenie nieruchomości. Liczy się dla nas wartość nieruchomości, a nie scoring. Analizujemy zabezpieczenia, negocjujemy warunki i doprowadzamy sprawy do końca, włącznie z odzyskiwaniem należności, gdy coś pójdzie nie tak. Wiedzę budujemy na własnych inwestycjach i rzeczywistych transakcjach."/></Section><Section tint><div className="fy-about-grid"><FounderPhoto/><div><SectionHead title="Filip Bielak — założyciel" sub="Inwestor z ponad 15-letnim doświadczeniem na rynku nieruchomości i pożyczek prywatnych. Absolwent Wydziału Prawa i Administracji UMCS. Przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze rynkowe publikowała m.in. „Rzeczpospolita”."/><a className="fy-sales-link" href="https://regiony.rp.pl/archiwum/art17602811-mekka-dla-inwestorow" target="_blank" rel="noopener noreferrer">Komentarz w „Rzeczpospolitej” →</a><br/><a className="fy-sales-link" href="https://polnoc.pl/tag/filip-bielak/" target="_blank" rel="noopener noreferrer">Więcej wypowiedzi →</a></div></div></Section><Section><div className="fy-about-grid"><div><p>W powstaniu spółki uczestniczył również <a className="underline" href="https://danielsiwiec.pl" target="_blank" rel="noopener noreferrer">Daniel Siwiec</a> — inwestor nieruchomościowy, pierwszy inwestor i współzałożyciel Finance You.</p></div><figure><FounderPhoto joint/><figcaption className="mt-3 text-sm text-muted-foreground">Filip Bielak i Daniel Siwiec, współzałożyciele Finance You</figcaption></figure></div></Section><Section><SectionHead title="Jak zarabiamy" sub="Od pożyczki — prowizję płaci pożyczkobiorca z kwoty wypłaty. Od inwestorów — abonament, bez udziału w ich zysku. Żadnych ukrytych opłat."/></Section><Section tint><SectionHead title="Fundacja" sub={FOUNDATION_SALES_EXPLANATION}/><div className="fy-sales-actions"><MktButton variant="gold" href="/abonament-inwestora?okres=rocznie">Zostań partnerem</MktButton><MktButton variant="outline" href="/pobierz/darmowa-lekcja">Obejrzyj darmową lekcję</MktButton></div><a className="fy-sales-link" href="/dla-klienta">Szukasz pożyczki pod zastaw nieruchomości? →</a></Section></MarketingShell>}
+export const Route = createFileRoute("/o-nas")({
+  head: () => ({
+    meta: [
+      { title: "O Finance You — Filip Bielak i 15 lat finansowania | Finance You" },
+      {
+        name: "description",
+        content:
+          "Poznaj Finance You i Filipa Bielaka. Ponad 15 lat finansowania firm pod zabezpieczenie nieruchomości i własnych inwestycji.",
+      },
+      { property: "og:title", content: "Piętnaście lat w sprawach, których banki nie biorą." },
+      {
+        property: "og:description",
+        content: "Założyciele, doświadczenie i sposób zarabiania Finance You.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://financeyou.pl/o-nas" },
+      { name: "twitter:card", content: "summary" },
+      {
+        name: "twitter:description",
+        content: "Filip Bielak, współzałożyciel Daniel Siwiec i historia Finance You.",
+      },
+    ],
+    links: [{ rel: "canonical", href: "https://financeyou.pl/o-nas" }],
+  }),
+  component: About,
+});
+function About() {
+  return (
+    <MarketingShell page="inwestorModul">
+      <Section>
+        <Icon3D name="shieldcheck" size={64} />
+        <SectionHead
+          eyebrow="O Finance You"
+          title="Piętnaście lat w sprawach, których banki nie biorą."
+          sub="Od ponad 15 lat udzielamy pożyczek pod zabezpieczenie nieruchomości. Liczy się dla nas wartość nieruchomości, a nie scoring. Analizujemy zabezpieczenia, negocjujemy warunki i doprowadzamy sprawy do końca, włącznie z odzyskiwaniem należności, gdy coś pójdzie nie tak. Wiedzę budujemy na własnych inwestycjach i rzeczywistych transakcjach."
+        />
+      </Section>
+      <Section tint>
+        <div className="fy-about-grid">
+          <FounderPhoto />
+          <div>
+            <SectionHead
+              title="Filip Bielak — założyciel"
+              sub="Inwestor z ponad 15-letnim doświadczeniem na rynku nieruchomości i pożyczek prywatnych. Absolwent Wydziału Prawa i Administracji UMCS. Przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze rynkowe publikowała m.in. „Rzeczpospolita”."
+            />
+            <a
+              className="fy-sales-link"
+              href="https://regiony.rp.pl/archiwum/art17602811-mekka-dla-inwestorow"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Komentarz w „Rzeczpospolitej” →
+            </a>
+            <br />
+            <a
+              className="fy-sales-link"
+              href="https://polnoc.pl/tag/filip-bielak/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Więcej wypowiedzi →
+            </a>
+          </div>
+        </div>
+      </Section>
+      <Section>
+        <div className="fy-about-grid">
+          <div>
+            <p>
+              W powstaniu spółki uczestniczył również{" "}
+              <a
+                className="underline"
+                href="https://danielsiwiec.pl"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Daniel Siwiec
+              </a>{" "}
+              — inwestor nieruchomościowy, pierwszy inwestor i współzałożyciel Finance You.
+            </p>
+          </div>
+          <figure>
+            <FounderPhoto joint />
+            <figcaption className="mt-3 text-sm text-muted-foreground">
+              Filip Bielak i Daniel Siwiec, współzałożyciele Finance You
+            </figcaption>
+          </figure>
+        </div>
+      </Section>
+      <Section>
+        <Icon3D name="loan" size={56} />
+        <SectionHead
+          title="Jak zarabiamy"
+          sub="Od pożyczki — prowizję płaci pożyczkobiorca z kwoty wypłaty. Od inwestorów — abonament, bez udziału w ich zysku. Żadnych ukrytych opłat."
+        />
+      </Section>
+      <Section tint>
+        <Icon3D name="handshake" size={56} />
+        <SectionHead title="Fundacja" sub={FOUNDATION_SALES_EXPLANATION} />
+        <div className="fy-sales-actions">
+          <MktButton variant="gold" href="/abonament-inwestora?okres=rocznie">
+            Zostań partnerem
+          </MktButton>
+          <MktButton variant="outline" href="/pobierz/darmowa-lekcja">
+            Obejrzyj darmową lekcję
+          </MktButton>
+        </div>
+        <a className="fy-sales-link" href="/dla-klienta">
+          Szukasz pożyczki pod zastaw nieruchomości? →
+        </a>
+      </Section>
+    </MarketingShell>
+  );
+}

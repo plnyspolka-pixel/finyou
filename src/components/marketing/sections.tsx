@@ -283,7 +283,7 @@ export function ProcessSteps({
   steps,
   cols,
 }: {
-  steps: { t: string; d?: string }[];
+  steps: { t: string; d?: string; icon?: Icon3DName }[];
   cols?: number;
 }) {
   return (
@@ -307,20 +307,24 @@ export function ProcessSteps({
             boxShadow: "var(--shadow-sm)",
           }}
         >
-          <div
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 44,
-              height: 44,
-              borderRadius: "var(--radius-xl)",
-              background: "linear-gradient(135deg, var(--navy-800), var(--navy-950))",
-              color: "#fff",
-              fontWeight: 800,
-              boxShadow: "var(--shadow-md)",
-            }}
-          >
-            {i + 1}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                display: "grid",
+                placeItems: "center",
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                borderRadius: "var(--radius-xl)",
+                background: "linear-gradient(135deg, var(--navy-800), var(--navy-950))",
+                color: "#fff",
+                fontWeight: 800,
+                boxShadow: "var(--shadow-md)",
+              }}
+            >
+              {i + 1}
+            </div>
+            {s.icon && <Icon3D name={s.icon} size={48} />}
           </div>
           <h3 style={{ marginTop: "0.9rem", fontSize: "0.98rem", fontWeight: 700 }}>{s.t}</h3>
           {s.d && (
