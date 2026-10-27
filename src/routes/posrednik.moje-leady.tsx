@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -31,6 +31,10 @@ import { usePanelBase } from "@/lib/panel-base";
 import { RevealContact, RevealsList } from "@/components/broker/reveal-contact";
 
 export const Route = createFileRoute("/posrednik/moje-leady")({
+  // Pośrednicy nie dostają leadów Finance You — pracują na własnych klientach.
+  beforeLoad: () => {
+    throw redirect({ to: "/posrednik/wnioski" });
+  },
   component: MyBrokerLeads,
 });
 

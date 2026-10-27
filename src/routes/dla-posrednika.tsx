@@ -15,6 +15,8 @@ import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { formatPLN } from "@/lib/labels";
 import {
   BROKER_COMMISSION_PERCENT_OF_FEE,
+  BROKER_COMMISSION_PERCENT_OF_LOAN,
+  FINANCE_YOU_FEE_PERCENT,
   brokerCommissionForLoan,
 } from "@/lib/affiliate/engine-pure";
 
@@ -22,7 +24,10 @@ import {
 const JOIN = "/posrednicy/rejestracja";
 // Pośrednik zarabia WYŁĄCZNIE prowizję od uruchomionej pożyczki klienta,
 // którego przyprowadził (osobny program niż partnerski — /program-partnerski).
-const RATE = `${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You`;
+const pct = (n: number) => `${String(n).replace(".", ",")}%`;
+// „3,5% kwoty pożyczki” — połowa wynagrodzenia Finance You (standardowo 7%).
+const RATE = `${pct(BROKER_COMMISSION_PERCENT_OF_LOAN)} kwoty pożyczki`;
+const RATE_EXPLAINED = `${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You, które standardowo wynosi ${pct(FINANCE_YOU_FEE_PERCENT)} kwoty pożyczki — dzielimy się nim z Tobą pół na pół`;
 const EXAMPLES = [100000, 300000, 500000];
 
 export const Route = createFileRoute("/dla-posrednika")({
@@ -32,13 +37,13 @@ export const Route = createFileRoute("/dla-posrednika")({
       {
         name: "description",
         content:
-          "Zostań pośrednikiem Finance You za darmo: wprowadzaj wnioski klientów, przedstawiaj je prywatnym inwestorom i śledź w CRM, jak reagują. 1000 zł za każdego poleconego inwestora.",
+          "Bezpłatne konto pośrednika Finance You dla osób z własnymi klientami: wprowadź wniosek, dostań automatyczny feedback od inwestorów i 3,5% kwoty każdej uruchomionej pożyczki Twojego klienta.",
       },
       { property: "og:title", content: "Dla pośredników — Finance You" },
       {
         property: "og:description",
         content:
-          "Bezpłatne konto pośrednika: wnioski klientów, inwestorzy i CRM reakcji inwestorów.",
+          "Bezpłatne konto pośrednika: wnioski Twoich klientów, feedback od inwestorów i 3,5% od uruchomionej pożyczki.",
       },
       { property: "og:url", content: "https://financeyou.pl/dla-posrednika" },
       { property: "og:type", content: "website" },
@@ -102,8 +107,8 @@ const EARN = [
     d: "Przedstawiamy ją prywatnym i instytucjonalnym inwestorom.",
   },
   {
-    t: "Śledzisz reakcje w CRM",
-    d: "Otwarcia, odpowiedzi, zainteresowanie i propozycje finansowania.",
+    t: "Dostajesz automatyczny feedback",
+    d: "E-mail od nas, gdy inwestor się zainteresuje, złoży propozycję i gdy pożyczka zostanie wypłacona. Całą historię widzisz w CRM.",
   },
   {
     t: "Finance You prowadzi formalności",
@@ -111,7 +116,7 @@ const EARN = [
   },
   {
     t: "Pożyczka uruchomiona — dostajesz prowizję",
-    d: `Po wypłacie środków klientowi naliczamy Ci prowizję: ${RATE} z tej pożyczki.`,
+    d: `Po wypłacie środków klientowi — przez inwestora albo z kapitału Finance You — naliczamy Ci prowizję: ${RATE}.`,
   },
 ];
 
@@ -135,23 +140,23 @@ const FAQS = [
   },
   {
     q: "Skąd wiem, jak inwestorzy reagują na moją ofertę?",
-    a: "W zakładce „Reakcje inwestorów” widzisz dla każdej oferty: wysyłki, otwarcia, odpowiedzi, zainteresowanie i propozycje finansowania. Dane inwestorów są anonimowe.",
+    a: "Automatycznie wysyłamy Ci e-mail, gdy inwestor się zainteresuje, złoży propozycję finansowania i gdy pożyczka zostanie wypłacona. Pełną historię widzisz w panelu w zakładce „Reakcje inwestorów”. Dane inwestorów są anonimowe.",
   },
   {
     q: "Na czym zarabiam jako pośrednik?",
-    a: `Na prowizji od każdej uruchomionej pożyczki klienta, którego przyprowadzisz: ${RATE} z tej pożyczki. Przykładowo przy pożyczce 300 000 zł to ok. ${formatPLN(brokerCommissionForLoan(300000))}.`,
+    a: `Na prowizji od każdej uruchomionej pożyczki klienta, którego przyprowadzisz: ${RATE}. To ${RATE_EXPLAINED}. Przykładowo przy pożyczce 300 000 zł to ${formatPLN(brokerCommissionForLoan(300000))}.`,
   },
   {
     q: "Kiedy prowizja jest należna?",
-    a: "Gdy pożyczka Twojego klienta zostanie uruchomiona, czyli środki zostaną wypłacone klientowi. Sam wniosek, oferta czy zainteresowanie inwestora nie dają jeszcze prowizji. Prowizję zatwierdza Finance You.",
+    a: `Gdy pożyczka Twojego klienta zostanie uruchomiona, czyli środki zostaną wypłacone klientowi — przez inwestora albo bezpośrednio z kapitału Finance You. W obu przypadkach to ${RATE}. Sam wniosek, oferta czy zainteresowanie inwestora nie dają jeszcze prowizji. Prowizję zatwierdza Finance You.`,
   },
   {
     q: "Jak dostaję wypłatę?",
     a: "Na konto podane przy rejestracji, po osiągnięciu progu 500 zł i zatwierdzeniu prowizji. Rozliczasz się jako B2B albo w ramach działalności nierejestrowanej.",
   },
   {
-    q: "Czy mogę obsługiwać własnych klientów?",
-    a: "Tak. Wprowadzasz własnych klientów i prowadzisz ich sprawy w swoim panelu.",
+    q: "Czy dostaję leady od Finance You?",
+    a: "Nie. Program jest dla pośredników, którzy mają własnych klientów. Wprowadzasz ich wnioski, a my przedstawiamy je inwestorom i informujemy Cię o reakcjach.",
   },
 ];
 
@@ -330,7 +335,7 @@ function BrokerLanding() {
           center
           eyebrow="Ile zarabiasz"
           title="Prowizja od każdej uruchomionej pożyczki Twojego klienta"
-          sub={`Otrzymujesz ${RATE} z pożyczki klienta, którego przyprowadziłeś. Prowizja jest należna po wypłacie środków klientowi.`}
+          sub={`Otrzymujesz ${RATE} klienta, którego przyprowadziłeś — to ${RATE_EXPLAINED}. Prowizja jest należna po wypłacie środków klientowi — także gdy pożyczkę finansuje bezpośrednio Finance You.`}
         />
         <div
           className="fy-steps"
@@ -356,15 +361,15 @@ function BrokerLanding() {
             >
               <div style={{ fontSize: "0.82rem", opacity: 0.75 }}>Pożyczka {formatPLN(amount)}</div>
               <div style={{ marginTop: 6, fontSize: "1.5rem", fontWeight: 800 }}>
-                ok. {formatPLN(brokerCommissionForLoan(amount))}
+                {formatPLN(brokerCommissionForLoan(amount))}
               </div>
               <div style={{ fontSize: "0.78rem", opacity: 0.7 }}>Twoja prowizja</div>
             </div>
           ))}
         </div>
         <ComplianceNote style={{ marginTop: "2rem" }}>
-          Kwoty przykładowe — dokładną prowizję wyliczamy od wynagrodzenia Finance You z danej
-          pożyczki. Prowizja nie przysługuje za sam wniosek, ofertę ani zainteresowanie inwestora.
+          Prowizję liczymy od kwoty faktycznie uruchomionej pożyczki. Nie przysługuje za sam
+          wniosek, ofertę ani zainteresowanie inwestora.
         </ComplianceNote>
       </Section>
 

@@ -30,10 +30,10 @@ export const sendInboxEmail = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    // Skrzynka to narzędzie premium: personel wewnętrzny albo pośrednik
-    // z aktywnym płatnym pakietem.
-    const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
-    if (!(await brokerHasPaidAccess(context.userId))) throw new Error("Forbidden");
+    // Skrzynka Finance You — wyłącznie personel wewnętrzny. Pośrednicy
+    // i partnerzy nie mają do niej dostępu (decyzja właściciela 27.10.2026).
+    const { isInternalStaff } = await import("@/lib/access/guards.server");
+    if (!(await isInternalStaff(context.userId))) throw new Error("Forbidden");
 
     // Sama wysyłka (wątkowanie, załączniki, log w skrzynce) żyje w
     // comms-agent.server.ts — tego samego rdzenia używa asystent panelu.
@@ -57,10 +57,10 @@ export const getCommAttachmentUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { path: string }) => input)
   .handler(async ({ data, context }) => {
-    // Skrzynka to narzędzie premium: personel wewnętrzny albo pośrednik
-    // z aktywnym płatnym pakietem.
-    const { brokerHasPaidAccess } = await import("@/lib/access/guards.server");
-    if (!(await brokerHasPaidAccess(context.userId))) throw new Error("Forbidden");
+    // Skrzynka Finance You — wyłącznie personel wewnętrzny. Pośrednicy
+    // i partnerzy nie mają do niej dostępu (decyzja właściciela 27.10.2026).
+    const { isInternalStaff } = await import("@/lib/access/guards.server");
+    if (!(await isInternalStaff(context.userId))) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Załączniki mogą leżeć w "pliki-klienta" (nowe) lub "documents" (legacy).
     const buckets = [CLIENT_FILES_BUCKET, "documents"];

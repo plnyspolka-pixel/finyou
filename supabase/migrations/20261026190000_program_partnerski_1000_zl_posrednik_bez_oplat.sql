@@ -4,7 +4,8 @@
 --    abonament. „Nowy” i „tylko abonament” egzekwuje kod (pierwszy opłacony
 --    abonament; okazje i odnowienia pomijane).
 --  * POŚREDNIK (/dla-posrednika): konto bez opłat; zarabia WYŁĄCZNIE prowizję
---    od uruchomionej (wypłaconej) pożyczki klienta, którego przyprowadził.
+--    od uruchomionej (wypłaconej) pożyczki klienta, którego przyprowadził:
+--    50% wynagrodzenia Finance You (standardowo 7% kwoty) = 3,5% kwoty pożyczki.
 -- Konto jest jednego rodzaju: affiliate_partners.partner_kind.
 
 alter table public.affiliate_partners
@@ -38,13 +39,33 @@ where not exists (
     and settlement_type_filter is null
 );
 
--- Pośrednik: prowizja od uruchomionej pożyczki — tylko poziom 1 (bez sieci).
+-- Pośrednik: 50% wynagrodzenia FY z uruchomionej pożyczki — tylko poziom 1.
 update public.affiliate_commission_rules
-set name = 'Pośrednik — uruchomiona pożyczka klienta (% wynagrodzenia FY)',
+set name = 'Pośrednik — uruchomiona pożyczka klienta — 50% wynagrodzenia FY (3,5% kwoty)',
+    basis_type = 'percent_of_finance_you_fee',
+    percent_rate = 50,
+    fixed_amount = null,
+    min_commission = null,
+    max_commission = null,
     active = true,
     updated_at = now()
 where event_type = 'client_funds_disbursed'
-  and network_level = 1;
+  and network_level = 1
+  and product_id is null
+  and settlement_type_filter is null;
+
+insert into public.affiliate_commission_rules
+  (name, active, event_type, network_level, basis_type, percent_rate,
+   requires_admin_approval, refund_window_days)
+select 'Pośrednik — uruchomiona pożyczka klienta — 50% wynagrodzenia FY (3,5% kwoty)', true,
+       'client_funds_disbursed', 1, 'percent_of_finance_you_fee', 50, true, 14
+where not exists (
+  select 1 from public.affiliate_commission_rules
+  where event_type = 'client_funds_disbursed'
+    and network_level = 1
+    and product_id is null
+    and settlement_type_filter is null
+);
 
 update public.affiliate_commission_rules
 set active = false,
@@ -59,7 +80,7 @@ where (event_type in ('investor_account_paid', 'client_funds_disbursed') and net
 -- od pożyczek; ścieżka przez przypisanego operatora jest usunięta.
 create or replace function public.affiliate_on_loan_disbursed()
 returns trigger language plpgsql security definer set search_path = public as $$
-declare v_partner uuid; v_amount numeric; v_fee numeric; v_t numeric;
+declare v_partner uuid; v_amount numeric; v_fee numeric;
 begin
   if new.status <> 'wyplacony' or old.status is not distinct from new.status then return new; end if;
 
@@ -87,8 +108,9 @@ begin
       and event_status not in ('cancelled','refunded','chargeback','fraud')) then return new; end if;
 
   v_amount := coalesce(new.accepted_loan_amount, new.loan_amount, 0);
-  v_t := greatest(0, least(1, (v_amount - 20000) / nullif(1000000 - 20000, 0)));
-  v_fee := round(v_amount * (10 - 6 * coalesce(v_t, 0)) / 100);
+  -- Standardowe wynagrodzenie Finance You: 7% kwoty uruchomionej pożyczki
+  -- (FINANCE_YOU_FEE_PERCENT w kodzie). Pośrednik dostaje z tego 50% (reguła).
+  v_fee := round(v_amount * 7 / 100);
   if new.referred_by_partner_id is distinct from v_partner then
     update public.loan_applications set referred_by_partner_id = v_partner where id = new.id;
   end if;

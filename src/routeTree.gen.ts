@@ -282,6 +282,7 @@ import { Route as ApiPublicHooksAnalysisPipelineTickRouteImport } from './routes
 import { Route as ApiPublicHooksAniaCallbacksRouteImport } from './routes/api/public/hooks/ania-callbacks'
 import { Route as ApiPublicHooksAutoDistributionTickRouteImport } from './routes/api/public/hooks/auto-distribution-tick'
 import { Route as ApiPublicHooksAutopilotTickRouteImport } from './routes/api/public/hooks/autopilot-tick'
+import { Route as ApiPublicHooksBrokerFeedbackTickRouteImport } from './routes/api/public/hooks/broker-feedback-tick'
 import { Route as ApiPublicHooksDailyBlogTickRouteImport } from './routes/api/public/hooks/daily-blog-tick'
 import { Route as ApiPublicHooksDispatchCampaignsRouteImport } from './routes/api/public/hooks/dispatch-campaigns'
 import { Route as ApiPublicHooksElevenlabsConversationInitRouteImport } from './routes/api/public/hooks/elevenlabs-conversation-init'
@@ -1740,6 +1741,12 @@ const ApiPublicHooksAutopilotTickRoute =
     path: '/api/public/hooks/autopilot-tick',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksBrokerFeedbackTickRoute =
+  ApiPublicHooksBrokerFeedbackTickRouteImport.update({
+    id: '/api/public/hooks/broker-feedback-tick',
+    path: '/api/public/hooks/broker-feedback-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksDailyBlogTickRoute =
   ApiPublicHooksDailyBlogTickRouteImport.update({
     id: '/api/public/hooks/daily-blog-tick',
@@ -2264,6 +2271,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2570,6 +2578,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -2888,6 +2897,7 @@ export interface FileRoutesById {
   '/api/public/hooks/ania-callbacks': typeof ApiPublicHooksAniaCallbacksRoute
   '/api/public/hooks/auto-distribution-tick': typeof ApiPublicHooksAutoDistributionTickRoute
   '/api/public/hooks/autopilot-tick': typeof ApiPublicHooksAutopilotTickRoute
+  '/api/public/hooks/broker-feedback-tick': typeof ApiPublicHooksBrokerFeedbackTickRoute
   '/api/public/hooks/daily-blog-tick': typeof ApiPublicHooksDailyBlogTickRoute
   '/api/public/hooks/dispatch-campaigns': typeof ApiPublicHooksDispatchCampaignsRoute
   '/api/public/hooks/elevenlabs-conversation-init': typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -3207,6 +3217,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3513,6 +3524,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3830,6 +3842,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/ania-callbacks'
     | '/api/public/hooks/auto-distribution-tick'
     | '/api/public/hooks/autopilot-tick'
+    | '/api/public/hooks/broker-feedback-tick'
     | '/api/public/hooks/daily-blog-tick'
     | '/api/public/hooks/dispatch-campaigns'
     | '/api/public/hooks/elevenlabs-conversation-init'
@@ -3979,6 +3992,7 @@ export interface RootRouteChildren {
   ApiPublicHooksAniaCallbacksRoute: typeof ApiPublicHooksAniaCallbacksRoute
   ApiPublicHooksAutoDistributionTickRoute: typeof ApiPublicHooksAutoDistributionTickRoute
   ApiPublicHooksAutopilotTickRoute: typeof ApiPublicHooksAutopilotTickRoute
+  ApiPublicHooksBrokerFeedbackTickRoute: typeof ApiPublicHooksBrokerFeedbackTickRoute
   ApiPublicHooksDailyBlogTickRoute: typeof ApiPublicHooksDailyBlogTickRoute
   ApiPublicHooksDispatchCampaignsRoute: typeof ApiPublicHooksDispatchCampaignsRoute
   ApiPublicHooksElevenlabsConversationInitRoute: typeof ApiPublicHooksElevenlabsConversationInitRoute
@@ -5934,6 +5948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksAutopilotTickRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/broker-feedback-tick': {
+      id: '/api/public/hooks/broker-feedback-tick'
+      path: '/api/public/hooks/broker-feedback-tick'
+      fullPath: '/api/public/hooks/broker-feedback-tick'
+      preLoaderRoute: typeof ApiPublicHooksBrokerFeedbackTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/daily-blog-tick': {
       id: '/api/public/hooks/daily-blog-tick'
       path: '/api/public/hooks/daily-blog-tick'
@@ -6822,6 +6843,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksAutoDistributionTickRoute:
     ApiPublicHooksAutoDistributionTickRoute,
   ApiPublicHooksAutopilotTickRoute: ApiPublicHooksAutopilotTickRoute,
+  ApiPublicHooksBrokerFeedbackTickRoute: ApiPublicHooksBrokerFeedbackTickRoute,
   ApiPublicHooksDailyBlogTickRoute: ApiPublicHooksDailyBlogTickRoute,
   ApiPublicHooksDispatchCampaignsRoute: ApiPublicHooksDispatchCampaignsRoute,
   ApiPublicHooksElevenlabsConversationInitRoute:

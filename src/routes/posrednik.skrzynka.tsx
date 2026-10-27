@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch, useNavigate, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo, useEffect, useRef } from "react";
@@ -32,6 +32,10 @@ import { FancyShell } from "@/components/landing/fancy-shell";
 import { usePanelBase } from "@/lib/panel-base";
 
 export const Route = createFileRoute("/posrednik/skrzynka")({
+  // Skrzynka Finance You jest tylko dla personelu — pośrednik jej nie widzi.
+  beforeLoad: () => {
+    throw redirect({ to: "/posrednik/wnioski" });
+  },
   validateSearch: (s: Record<string, unknown>) => ({ compose: s.compose ? 1 : undefined }),
   component: SkrzynkaPosrednika,
 });

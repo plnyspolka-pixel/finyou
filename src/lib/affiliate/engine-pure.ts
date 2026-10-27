@@ -17,20 +17,24 @@ export const PAYOUT_THRESHOLD_PLN = 500;
 export const INVESTOR_COMMISSION_PLN = 1000;
 
 /**
- * Prowizja pośrednika od uruchomionej pożyczki przyprowadzonego klienta:
- * procent wynagrodzenia Finance You z tej pożyczki (reguła client_funds_disbursed,
- * poziom 1). Stała służy do komunikacji i przykładów — musi być zgodna z regułą.
+ * Standardowe wynagrodzenie Finance You od uruchomionej pożyczki (% kwoty) —
+ * ta sama wartość co w triggerze affiliate_on_loan_disbursed.
  */
-export const BROKER_COMMISSION_PERCENT_OF_FEE = 20;
+export const FINANCE_YOU_FEE_PERCENT = 7;
 
 /**
- * Wynagrodzenie Finance You od pożyczki — ta sama formuła co w triggerze
- * affiliate_on_loan_disbursed: 10% przy 20 000 zł, liniowo do 4% przy 1 000 000 zł.
+ * Pośrednik dostaje połowę wynagrodzenia Finance You z uruchomionej pożyczki
+ * przyprowadzonego klienta (reguła client_funds_disbursed, poziom 1) — czyli
+ * 3,5% kwoty pożyczki. Stałe służą do komunikacji i muszą być zgodne z regułą.
  */
+export const BROKER_COMMISSION_PERCENT_OF_FEE = 50;
+export const BROKER_COMMISSION_PERCENT_OF_LOAN =
+  (FINANCE_YOU_FEE_PERCENT * BROKER_COMMISSION_PERCENT_OF_FEE) / 100;
+
+/** Wynagrodzenie Finance You od pożyczki: 7% kwoty. */
 export function financeYouFeeForLoan(loanAmount: number): number {
   const amount = Math.max(0, Number(loanAmount) || 0);
-  const t = Math.max(0, Math.min(1, (amount - 20000) / (1000000 - 20000)));
-  return Math.round((amount * (10 - 6 * t)) / 100);
+  return Math.round((amount * FINANCE_YOU_FEE_PERCENT) / 100);
 }
 
 /** Przykładowa prowizja pośrednika od uruchomionej pożyczki danej kwoty. */

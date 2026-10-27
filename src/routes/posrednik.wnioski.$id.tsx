@@ -318,66 +318,81 @@ export function BrokerApplicationDetail({
         )}
       </div>
 
-      {/* MEGA CTA — dystrybucja + oferta wewnętrzna */}
-      <div className="relative overflow-hidden rounded-3xl p-[2px] shadow-[0_20px_60px_-20px_oklch(0.40_0.25_268/0.7)]">
-        <span
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
-            animation: "fy-cta-spin 10s linear infinite",
-          }}
-        />
-        <div
-          className="relative rounded-[22px] p-6 md:p-8"
-          style={{
-            background:
-              "radial-gradient(120% 140% at 100% 0%, oklch(0.32 0.16 265) 0%, oklch(0.15 0.05 265) 60%, oklch(0.10 0.03 265) 100%)",
-          }}
-        >
-          <div className="mb-5 flex flex-col gap-1">
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
-              <Send className="h-3.5 w-3.5" />
-              Dystrybucja oferty
+      {/* Pośrednik nie wysyła ofert z naszej skrzynki — ofertę przedstawia
+          inwestorom Finance You, a reakcje widać w karcie poniżej. */}
+      {isExternalBroker ? (
+        <Card>
+          <CardContent className="p-5 text-sm">
+            <b>Ofertę przedstawia inwestorom Finance You.</b> Gdy inwestorzy ją otworzą, odpowiedzą
+            albo złożą propozycję, zobaczysz to w karcie „Reakcje inwestorów”.
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* MEGA CTA — dystrybucja + oferta wewnętrzna */}
+          <div className="relative overflow-hidden rounded-3xl p-[2px] shadow-[0_20px_60px_-20px_oklch(0.40_0.25_268/0.7)]">
+            <span
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                background:
+                  "conic-gradient(from 0deg, oklch(0.40 0.25 268), oklch(0.65 0.18 240), oklch(0.55 0.20 255), oklch(0.30 0.15 265), oklch(0.40 0.25 268))",
+                animation: "fy-cta-spin 10s linear infinite",
+              }}
+            />
+            <div
+              className="relative rounded-[22px] p-6 md:p-8"
+              style={{
+                background:
+                  "radial-gradient(120% 140% at 100% 0%, oklch(0.32 0.16 265) 0%, oklch(0.15 0.05 265) 60%, oklch(0.10 0.03 265) 100%)",
+              }}
+            >
+              <div className="mb-5 flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
+                  <Send className="h-3.5 w-3.5" />
+                  Dystrybucja oferty
+                </div>
+                <h2 className="text-xl font-extrabold text-white md:text-2xl">
+                  Wyślij ofertę do inwestorów
+                </h2>
+                <p className="text-sm text-white/70 md:text-[15px]">
+                  Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
+                  {showInternalOffer &&
+                    " Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora."}
+                </p>
+              </div>
+              <div
+                className={`grid gap-3 ${showInternalOffer ? "md:grid-cols-3" : "md:grid-cols-2"}`}
+              >
+                <CtaButton
+                  onClick={() => setSendOpen("instytucjonalny")}
+                  tone="primary"
+                  icon={<Building2 className="h-6 w-6" />}
+                  title="Inwestorzy instytucjonalni"
+                  hint="Fundusze, spółki, partnerzy strategiczni"
+                />
+                <CtaButton
+                  onClick={() => setSendOpen("indywidualny")}
+                  tone="secondary"
+                  icon={<UserRound className="h-6 w-6" />}
+                  title="Inwestorzy prywatni"
+                  hint="Baza aktywnych inwestorów indywidualnych"
+                />
+                {showInternalOffer && (
+                  <CtaButton
+                    onClick={() => setCalcOpen(true)}
+                    tone="ghost"
+                    icon={<Calculator className="h-6 w-6" />}
+                    title="Oferta wewnętrzna"
+                    hint="Kalkulator z Twoją prowizją operatora 2–5%"
+                  />
+                )}
+              </div>
             </div>
-            <h2 className="text-xl font-extrabold text-white md:text-2xl">
-              Wyślij ofertę do inwestorów
-            </h2>
-            <p className="text-sm text-white/70 md:text-[15px]">
-              Zdjęcia, dokumenty, KW i kwota trafią do wybranych odbiorców z Twoją stopką.
-              {showInternalOffer &&
-                " Możesz też najpierw wygenerować ofertę wewnętrzną z prowizją operatora."}
-            </p>
+            <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-          <div className={`grid gap-3 ${showInternalOffer ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-            <CtaButton
-              onClick={() => setSendOpen("instytucjonalny")}
-              tone="primary"
-              icon={<Building2 className="h-6 w-6" />}
-              title="Inwestorzy instytucjonalni"
-              hint="Fundusze, spółki, partnerzy strategiczni"
-            />
-            <CtaButton
-              onClick={() => setSendOpen("indywidualny")}
-              tone="secondary"
-              icon={<UserRound className="h-6 w-6" />}
-              title="Inwestorzy prywatni"
-              hint="Baza aktywnych inwestorów indywidualnych"
-            />
-            {showInternalOffer && (
-              <CtaButton
-                onClick={() => setCalcOpen(true)}
-                tone="ghost"
-                icon={<Calculator className="h-6 w-6" />}
-                title="Oferta wewnętrzna"
-                hint="Kalkulator z Twoją prowizją operatora 2–5%"
-              />
-            )}
-          </div>
-        </div>
-        <style>{`@keyframes fy-cta-spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
+        </>
+      )}
 
       {isExternalBroker && <ApplicationReactionsCard applicationId={id} />}
 

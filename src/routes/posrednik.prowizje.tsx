@@ -16,6 +16,7 @@ import { Coins } from "lucide-react";
 import { formatPLN, formatDate } from "@/lib/labels";
 import {
   BROKER_COMMISSION_PERCENT_OF_FEE,
+  BROKER_COMMISSION_PERCENT_OF_LOAN,
   INVESTOR_COMMISSION_PLN,
 } from "@/lib/affiliate/engine-pure";
 import {
@@ -63,7 +64,7 @@ export function ProwizjePage({ kind }: { kind: "broker" | "partner" }) {
         </h1>
         <p className="text-sm text-muted-foreground">
           {kind === "broker"
-            ? `Prowizja od każdej uruchomionej pożyczki Twojego klienta: ${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You z tej pożyczki.`
+            ? `Prowizja od każdej uruchomionej pożyczki Twojego klienta: ${String(BROKER_COMMISSION_PERCENT_OF_LOAN).replace(".", ",")}% kwoty pożyczki (${BROKER_COMMISSION_PERCENT_OF_FEE}% wynagrodzenia Finance You).`
             : `${formatPLN(INVESTOR_COMMISSION_PLN)} za każdego nowego inwestora, który zarejestruje się z Twojego linku i kupi abonament.`}
         </p>
       </div>
