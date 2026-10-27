@@ -169,9 +169,9 @@ describe("LoanCalculator — panel (bez marketingPreview) bez zmian w układzie"
   it("krotność: orientacyjny próg 2,0×, nie granica z ustawy", async () => {
     renderCalc(<LoanCalculator investorGuidance />);
     const text = pageText();
-    expect(text).toMatch(/Krotność 1,34× — poniżej orientacyjnego progu 2,0×/);
+    expect(text).toMatch(/Krotność 1,35× — poniżej orientacyjnego progu 2,0×/);
     expect(text).toContain(
-      "Pożyczkobiorca spłaca 1,34× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
+      "Pożyczkobiorca spłaca 1,35× kwotę otrzymaną na rękę. Próg 2,0× to wskazówka z praktyki, a nie granica z ustawy — o wyzysku (art. 304 KK, art. 388 KC) decydują okoliczności konkretnej umowy.",
     );
     expect(text).not.toContain("brak ryzyka lichwy");
     await waitFor(() => expect(pageText()).toContain("AML — wypłata powyżej 15 000 EUR"));

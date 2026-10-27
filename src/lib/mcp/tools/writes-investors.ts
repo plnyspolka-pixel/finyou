@@ -472,7 +472,7 @@ export const submitInvestorOffer = defineTool({
       .boolean()
       .default(false)
       .describe(
-        "Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji.",
+        "Czy doliczyć Prowizję Finance You (7 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji.",
       ),
     note: z.string().max(4000).optional(),
     status: z.enum(["szkic", "zlozona"]).default("zlozona"),
