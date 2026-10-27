@@ -67,7 +67,7 @@ function LocationIndexPage() {
         {pages.length === 0 ? (
           <p style={{ textAlign: "center", color: "var(--muted-foreground)", marginTop: "2rem" }}>
             Podstrony miast są w przygotowaniu. W międzyczasie{" "}
-            <Link to="/dla-klienta">złóż bezpłatny wniosek</Link> — finansujemy nieruchomości w
+            <Link to="/dla-klienta" search={{ kwota: undefined }}>złóż bezpłatny wniosek</Link> — finansujemy nieruchomości w
             całej Polsce.
           </p>
         ) : (

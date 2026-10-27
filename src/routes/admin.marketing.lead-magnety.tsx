@@ -74,6 +74,7 @@ const BUCKET = "lead-magnets";
 
 type Magnet = {
   id: string;
+  material_type: "pdf" | "video";
   slug: string;
   title: string;
   audience: string;
@@ -130,6 +131,7 @@ type PostForm = {
 
 type FormState = {
   id?: string;
+  material_type: "pdf" | "video";
   slug: string;
   title: string;
   audience: LeadMagnetAudience;
@@ -164,6 +166,7 @@ type FormState = {
 };
 
 const emptyForm = (): FormState => ({
+  material_type: "pdf",
   slug: "",
   title: "",
   audience: "klient",
@@ -199,6 +202,7 @@ const emptyForm = (): FormState => ({
 
 const formFromMagnet = (m: Magnet, posts: Post[]): FormState => ({
   id: m.id,
+  material_type: m.material_type ?? "pdf",
   slug: m.slug,
   title: m.title,
   audience: (m.audience as LeadMagnetAudience) ?? "klient",
@@ -248,6 +252,7 @@ function toInput(form: FormState): LeadMagnetInput {
       .filter(Boolean);
   return {
     id: form.id,
+    material_type: form.material_type,
     slug: form.slug.toLowerCase().trim(),
     title: form.title.trim(),
     audience: form.audience,
