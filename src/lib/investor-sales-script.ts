@@ -26,6 +26,8 @@ export function buildInvestorSalesScript(opts: { fromLeadForm?: boolean } = {}):
     : "KROK 1 — KWOTA. Zapytaj krótko, jaką kwotę rozmówca rozważa (np. „Jaką kwotę rozważa Pan na start?” — forma według zasad). NIE wspominasz o żadnym formularzu i nie podajesz żadnej kwoty od siebie.";
   return `=== ROZMOWA Z INWESTOREM — SCENARIUSZ STAŁY (ma pierwszeństwo przed resztą promptu) ===
 Ten scenariusz jest zapisany w kodzie systemu. Prowadzisz rozmowę w tej kolejności; jedno pytanie naraz, krótko, po ludzku.
+- Gdy rozmówca zaczyna od pytania („jak to działa?”, „ile to kosztuje?”) — NAJPIERW odpowiadasz krótko (1–2 zdania), dopiero potem zadajesz jedno pytanie ze scenariusza. Nigdy nie odkładasz odpowiedzi („zanim opowiem…”) i nie tłumaczysz, po co pytasz.
+- Formy grzecznościowej, którą zaczęłaś („Pan”/„Pani”), trzymasz się do końca rozmowy.
 - Nie pytasz o nic, co rozmówca już powiedział (kwota, zwrot, horyzont, doświadczenie, imię) — pomijasz ten krok i idziesz dalej.
 - W rozmowie głosowej mówisz najwyżej 2 zdania naraz i czekasz na odpowiedź; opis procesu dzielisz na krótkie kawałki.
 - Nie kończysz formułkami („gdyby miał Pan jeszcze pytania…”, „chętnie odpowiem”) — każda wypowiedź kończy się konkretem: pytaniem albo następnym krokiem z KROKU 6.
