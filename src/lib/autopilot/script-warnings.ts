@@ -1,18 +1,18 @@
-// Zastrzeżenia w scenariuszu rolki (decyzja właściciela 26.10.2026): tekst
-// mówiony ma DOKŁADNIE jedno zdanie o ryzyku. Pozostałe ostrzeżenia i formułki
-// („nie stanowi oferty/porady”, „zwrot nie jest gwarantowany”, „wynik
-// szacunkowy”, „materiał poglądowy”, drugie zdanie o utracie kapitału…) należą
-// do stopki opisu publikacji i do samego materiału — nie do rolki, w której
-// lektor zamiast edukować ostrzegał widza co drugie zdanie.
+// Zastrzeżenia w scenariuszu rolki (decyzja właściciela 27.10.2026): rolki są
+// sprzedażowe — tekst mówiony przedstawia fakty i mechanizm, bez zdań o
+// ryzyku, koszcie („droższe niż bank”), możliwej stracie kapitału czy majątku
+// i bez formułek („nie stanowi oferty”, „wynik szacunkowy”). Widz to wie, a
+// linia o ryzyku jest w stopce opisu publikacji (RISK_LINES).
 //
-// Moduł liczy zdania-zastrzeżenia (próg dla scenarzysty, bramki i produkcji)
-// i sprawdza wynik „odchudzenia” przez AI (acceptCondensedScript): zastrzeżeń
-// ma ubyć, jedno ma zostać, hasło CTA i długość mają się zgadzać, a reguły
-// twarde nie mogą zgłosić nowych blokad. Czysty moduł – bez I/O.
+// Główny zakaz jest w poleceniu scenarzysty (brief, zasady torów, generator).
+// Ten moduł to zabezpieczenie: liczy zdania-zastrzeżenia i sprawdza wynik ich
+// usunięcia przez AI (acceptCondensedScript): zastrzeżeń ma nie zostać, hasło
+// CTA i długość mają się zgadzać, a reguły twarde nie mogą zgłosić nowych
+// blokad. Czysty moduł – bez I/O.
 import { checkHardRules, type RuleContext } from "./compliance-rules";
 
-/** Ile zdań o ryzyku / zastrzeżeń może mieć scenariusz rolki. */
-export const MAX_WARNING_SENTENCES_PER_REEL = 1;
+/** Ile zdań o ryzyku / zastrzeżeń może mieć scenariusz rolki (sprzedażowej: zero). */
+export const MAX_WARNING_SENTENCES_PER_REEL = 0;
 
 /** Markery zdania-zastrzeżenia: ryzyko, brak gwarancji, formułki prawne, „szacunkowy”. */
 const WARNING_RE = new RegExp(
@@ -56,8 +56,6 @@ function isWarningSentence(sentence: string): boolean {
   return WARNING_RE.test(s) || (NON_REPAYMENT_RE.test(s) && CONSEQUENCE_RE.test(s));
 }
 
-const RISK_WORD_RE = /ryzyk/iu;
-
 /** Podział na zdania: koniec zdania + wielka litera (nie tnie „750 tys. zł”). */
 export function splitSentences(text: string): string[] {
   return text
@@ -77,7 +75,7 @@ export function countWarnings(text: string): number {
   return warningSentences(text).length;
 }
 
-/** Czy scenariusz ma więcej zastrzeżeń niż jedno dozwolone zdanie o ryzyku. */
+/** Czy scenariusz ma zastrzeżenia ponad limit (rolka sprzedażowa: jakiekolwiek). */
 export function overWarns(text: string): boolean {
   return countWarnings(text) > MAX_WARNING_SENTENCES_PER_REEL;
 }
@@ -95,8 +93,9 @@ function wordCount(text: string): number {
 }
 
 /**
- * Czy odchudzona wersja scenariusza nadaje się do użycia zamiast oryginału.
- * Odrzucenie = zostaje oryginał (z nadmiarem zastrzeżeń, ale bez utraty treści).
+ * Czy wersja bez zastrzeżeń nadaje się do użycia zamiast oryginału. Każde
+ * ubycie zastrzeżeń jest zyskiem (zero to cel, ale 4 → 1 też przyjmujemy).
+ * Odrzucenie = zostaje oryginał (z zastrzeżeniami, ale bez utraty treści).
  */
 export function acceptCondensedScript(
   original: string,
@@ -108,14 +107,12 @@ export function acceptCondensedScript(
   const before = countWarnings(original);
   const after = countWarnings(out);
   if (after >= before) return { ok: false, reason: `zastrzeżeń nie ubyło (${before} → ${after})` };
-  if (after < 1) return { ok: false, reason: "zniknęło zdanie o ryzyku" };
-  if (RISK_WORD_RE.test(original) && !RISK_WORD_RE.test(out))
-    return { ok: false, reason: "zniknęło słowo „ryzyko”" };
   const kw = scriptKeyword(original);
   if (kw && !out.includes(kw)) return { ok: false, reason: `brak hasła ${kw}` };
   const wb = wordCount(original);
   const wa = wordCount(out);
-  if (wa < Math.ceil(wb * 0.6)) return { ok: false, reason: `za krótki (${wa}/${wb} słów)` };
+  // Usunięcie kilku zdań-ostrzeżeń skraca tekst nawet o ~40%; krócej to już utrata treści.
+  if (wa < Math.ceil(wb * 0.5)) return { ok: false, reason: `za krótki (${wa}/${wb} słów)` };
   if (wa > wb + 5) return { ok: false, reason: `dłuższy niż oryginał (${wa}/${wb} słów)` };
   const known = new Set(
     checkHardRules(original, ctx)

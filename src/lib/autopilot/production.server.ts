@@ -335,11 +335,11 @@ export async function produceReels(
         });
         continue;
       }
-      // Odchudzenie zastrzeżeń po bramce: poprawki recenzenta potrafiły dołożyć
-      // drugie i trzecie zdanie o ryzyku — w rolce zostaje jedno (decyzja
-      // właściciela 26.10.2026). Wynik sprawdza acceptCondensedScript (reguły
-      // twarde, hasło, długość); gotową rolkę i tak ocenia raz jeszcze bramka
-      // Etapu 0 przed publikacją. Nieudane odchudzenie zostawia tekst z bramki.
+      // Usunięcie zastrzeżeń po bramce: rolki są sprzedażowe, bez zdań o
+      // ryzyku, koszcie i stracie (decyzja właściciela 27.10.2026). Wynik
+      // sprawdza acceptCondensedScript (reguły twarde, hasło, długość); gotową
+      // rolkę i tak ocenia raz jeszcze bramka Etapu 0 przed publikacją.
+      // Nieudana próba zostawia tekst z bramki.
       let script = scriptGate.text;
       const warningsBefore = countWarnings(script);
       if (warningsBefore > MAX_WARNING_SENTENCES_PER_REEL) {
