@@ -191,10 +191,11 @@ export function FreeLessonExperience({
                 autoComplete="email"
               />
             </label>
-            <label className="flex gap-3 text-sm text-muted-foreground">
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
               <input
                 required
                 type="checkbox"
+                className="fy-consent-checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
               />

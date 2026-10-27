@@ -11,7 +11,10 @@ import {
   submitLeadMagnetSignup,
 } from "@/lib/lead-magnets/lead-magnets.functions";
 import type { PublicLeadMagnet } from "@/lib/lead-magnets/core";
-import { FocusShell as Shell, focusFieldStyle as fieldStyle } from "@/components/marketing/focus-shell";
+import {
+  FocusShell as Shell,
+  focusFieldStyle as fieldStyle,
+} from "@/components/marketing/focus-shell";
 import { MktButton, Eyebrow, MktBadge } from "@/components/marketing/primitives";
 import { FreeLessonExperience } from "@/components/marketing/free-lesson-experience";
 import { SITE_URL } from "@/lib/seo/company";
@@ -108,7 +111,12 @@ function LeadMagnetPage() {
   const { data } = useSuspenseQuery(magnetQuery(slug));
   const magnet = data.magnet as PublicLeadMagnet;
 
-  if (magnet.material_type === "video") return <Shell><FreeLessonExperience magnet={magnet} token={Route.useSearch().t}/></Shell>;
+  if (magnet.material_type === "video")
+    return (
+      <Shell>
+        <FreeLessonExperience magnet={magnet} token={Route.useSearch().t} />
+      </Shell>
+    );
 
   return (
     <Shell>
@@ -428,7 +436,7 @@ function SignupCard({ magnet }: { magnet: PublicLeadMagnet }) {
             name="consent"
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
-            style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0 }}
+            className="fy-consent-checkbox"
           />
           <span>
             {magnet.consent_text}{" "}

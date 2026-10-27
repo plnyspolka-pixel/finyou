@@ -21,6 +21,7 @@ import { GoogleAnalytics } from "@/lib/google-analytics";
 import { MicrosoftClarity } from "@/lib/clarity";
 import { CookieBanner } from "@/components/consent/cookie-banner";
 import { ReferralCapture } from "@/components/affiliate/referral-capture";
+import { HashScroll } from "@/components/layout/hash-scroll";
 
 function NotFoundComponent() {
   return (
@@ -174,6 +175,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ReferralCapture />
+        <HashScroll />
         <FacebookPixel />
         <GoogleAnalytics />
         <MicrosoftClarity />

@@ -178,7 +178,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
             Potrzebujesz pożyczki pod zastaw nieruchomości? Przejdź do wniosku →
           </a>
           <span aria-hidden> · </span>
-          <a href="/dla-posrednika">Masz klientów? Zostań pośrednikiem — 3,5% od pożyczki →</a>
+          <a href="/dla-posrednika">Masz klientów? Zostań pośrednikiem →</a>
         </div>
       )}
       <div className="fy-sales-nav">
