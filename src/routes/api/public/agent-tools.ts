@@ -234,6 +234,112 @@ export const Route = createFileRoute("/api/public/agent-tools")({
             });
           }
 
+          // ── Pozostałe narzędzia Ani-presale (inwestor) i wiedza ───────────
+          if (tool === "get_pricing") {
+            const { SUBSCRIPTION_PRICE_SENTENCE, SUBSCRIPTION_PAYMENT_SENTENCE } =
+              await import("@/lib/investor-plan/plans");
+            return Response.json({
+              ok: true,
+              result: {
+                price: SUBSCRIPTION_PRICE_SENTENCE,
+                payment: SUBSCRIPTION_PAYMENT_SENTENCE,
+                pricing_url: "https://financeyou.pl/#cennik",
+                note: "Podawaj wyłącznie te kwoty. Rabaty tylko z kodów z mailingu.",
+              },
+            });
+          }
+
+          if (tool === "get_process_overview") {
+            return Response.json({
+              ok: true,
+              result: {
+                steps: [
+                  "Inwestor składa w aplikacji zlecenie z kwotą.",
+                  "Do tej kwoty przedstawiamy sprawy pożyczkowe.",
+                  "Przy każdej sprawie pełny raport i pełne dane kontaktowe klienta — bez barier.",
+                  "Umowa pożyczki generowana w aplikacji w dwa kliknięcia; można ją podpisać w formie dokumentowej.",
+                  "Klient podpisuje u notariusza i wysyła dokumenty na adres wskazany przez inwestora.",
+                  "Gdy wszystko się zgadza, inwestor wypłaca środki klientowi; Finance You pobiera prowizję z części kwoty pożyczki.",
+                  "Pieniądze inwestora nigdy nie przechodzą przez Finance You — spłaty idą bezpośrednio na konto inwestora.",
+                  "Gdyby coś się sypało: Filip do dyspozycji i moduł windykacyjny (w ok. 90% przypadków zastępuje kancelarię).",
+                ],
+                note: "Mów krótko, własnymi słowami, w kawałkach — nie czytaj całej listy naraz.",
+              },
+            });
+          }
+
+          if (tool === "search_knowledge") {
+            const query = String((args as any)?.query ?? "").trim().slice(0, 500);
+            if (!query) return Response.json({ ok: false, error: "Brak pytania (query)." });
+            const agentKey = String(body?.agent_key ?? "");
+            const audience =
+              (args as any)?.audience === "inwestor" || agentKey.includes("inwestor") ? "inwestor" : "klient";
+            const { retrieveKnowledge } = await import("@/lib/text-agent-knowledge.server");
+            const hits = await retrieveKnowledge(query, 4, audience);
+            return Response.json({
+              ok: true,
+              result: hits.length
+                ? { found: true, items: hits.map((h) => ({ title: h.title, content: h.content.slice(0, 1500) })) }
+                : { found: false, note: "Brak informacji w bazie wiedzy — powiedz, że tego nie wiesz; niczego nie wymyślaj." },
+            });
+          }
+
+          if (tool === "get_offer_teasers") {
+            return Response.json({
+              ok: false,
+              error:
+                "Przykładowych spraw nie pokazujemy w rozmowie — rozmówca zobaczy je w aplikacji po rejestracji i złożeniu zlecenia. Nie wymyślaj spraw ani kwot.",
+            });
+          }
+
+          if (tool === "send_verification_code" && String(body?.agent_key ?? "").includes("inwestor")) {
+            const t = await import("@/lib/ania-investor-tools.server");
+            return Response.json(await t.sendInvestorVerificationCode(convId ?? ""));
+          }
+          if (tool === "verify_identity" && String(body?.agent_key ?? "").includes("inwestor")) {
+            const t = await import("@/lib/ania-investor-tools.server");
+            const code = String((args as any)?.kod ?? (args as any)?.code ?? "").slice(0, 16);
+            return Response.json(await t.verifyInvestorIdentity(convId ?? "", code));
+          }
+          if (tool === "get_investor_state") {
+            const t = await import("@/lib/ania-investor-tools.server");
+            return Response.json(await t.getInvestorAccountStateTool(convId ?? "", null));
+          }
+
+          if (tool === "request_investor_callback") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const db: any = supabaseAdmin;
+            const payload = {
+              conversation_id: convId,
+              channel: body?.channel ?? null,
+              phone: verifiedPhone ?? (typeof (args as any)?.phone === "string" ? (args as any).phone.slice(0, 32) : null),
+              email: typeof (args as any)?.email === "string" ? (args as any).email.slice(0, 200) : null,
+              reason: typeof (args as any)?.reason === "string" ? (args as any).reason.slice(0, 500) : null,
+            };
+            if (!payload.phone && !payload.email) {
+              return Response.json({ ok: false, error: "Brak kontaktu — poproś o numer telefonu albo e-mail." });
+            }
+            await db.from("automation_events").insert({
+              automation_type: "ania_investor_callback_request",
+              status: "pending",
+              sent_payload: payload,
+            });
+            return Response.json({
+              ok: true,
+              result: { saved: true, note: "Prośba zapisana dla zespołu. Nie podawaj konkretnej godziny kontaktu." },
+            });
+          }
+
+          // Windykacja (A4/A4T): narzędzia jeszcze bez obsługi — jawna odmowa, żeby
+          // bot nigdy nie podał danych sprawy ani nie „zapisał” obietnicy spłaty.
+          if (String(body?.agent_key ?? "").startsWith("windykacja")) {
+            return Response.json({
+              ok: false,
+              error:
+                "To narzędzie windykacyjne jest chwilowo niedostępne. Nie podawaj żadnych danych sprawy i niczego nie obiecuj — powiedz, że opiekun sprawy oddzwoni, i zakończ uprzejmie.",
+            });
+          }
+
           // ── Narzędzia zapisu — reuse istniejącego executor-a botów ─────────
           if (WRITE_TOOLS.has(tool)) {
             let leadId = await resolveLeadId(body);
