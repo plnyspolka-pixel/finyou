@@ -208,11 +208,12 @@ Strażnik (`/api/public/hooks/autopilot-tick`, cron co godzinę w 7. minucie) li
 - sygnały platform,
 - odrzucenia kontroli jakości.
 
-Przy anomalii włącza pauzę i wysyła SMS do właściciela: `OWNER_ALERT_PHONE`, fallback na numer
-z `company.ts`, maks. 3 SMS na dobę. Alarmy i raporty idą jako SMS krytyczny (`owner_alert`), a
-numer właściciela jest poza stop-klatką SMS (`docs/limity-sms.md`) — wstrzymanie wysyłek do klientów
-(`voicebot_settings.sms_outbound_paused`) ich nie blokuje. W trybach `off` i `manual_review` strażnik
-nic nie robi.
+Przy anomalii włącza pauzę i wysyła **mail** do właściciela (`autopilot/owner-email.ts`,
+`emailOwner`). Od 27.10.2026 autopilot nie wysyła właścicielowi żadnych SMS-ów — alarmy i raporty
+idą wyłącznie mailem (decyzja właściciela). Adres: zmienna `OWNER_ALERT_EMAIL`, inaczej
+`integration_settings` z `integration_name = 'autopilot_raporty'` i `configuration.owner_email`
+(wiersz włączony). Brak adresu = wpis `owner_email` z ostrzeżeniem w dzienniku. Maks. 6 maili na dobę.
+W trybach `off` i `manual_review` strażnik nic nie robi.
 
 Kolejki mają `idempotency_key` (unikalny), więc ten sam materiał autopilota nie trafi do kolejki
 drugi raz. Wpisy Meta wiszące w `publishing` ponad 60 min przechodzą w `failed` z opisem. Nie są
@@ -222,10 +223,13 @@ ponawiane automatycznie, bo przy Reels groziłby duplikat.
 
 Pełny raport daje `autopilot_report` (MCP).
 
-| Raport     | Kiedy     | Gdzie trafia                                                     |
-| ---------- | --------- | ---------------------------------------------------------------- |
-| Dzienny    | 20:xx     | do dziennika; SMS tylko w trybach `semi_auto` i `full_autopilot` |
-| Tygodniowy | pon. 8:xx | do dziennika; SMS jak wyżej                                      |
+| Raport     | Kiedy     | Gdzie trafia                                                      |
+| ---------- | --------- | ----------------------------------------------------------------- |
+| Dzienny    | 20:xx     | do dziennika; mail tylko w trybach `semi_auto` i `full_autopilot` |
+| Tygodniowy | pon. 8:xx | do dziennika; mail jak wyżej                                      |
+
+Mail ma pełne liczby per tor (publikacje, mediana wyświetleń, zapisy, leady, koszt), legendę i
+link do panelu autopilota. Ręcznie: tick z `force=daily` / `force=weekly`.
 
 ## Lejek
 

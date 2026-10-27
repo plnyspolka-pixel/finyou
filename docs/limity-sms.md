@@ -37,6 +37,8 @@ SMS na numer właściciela (`OWNER_ALERT_PHONE`, domyślnie `889 888 700` z
 `company.ts`) **nie podlega** stop-klatce ani żadnym limitom — niezależnie od
 źródła i od flag `sms_pause_includes_*`. To kanał alarmowy: wstrzymanie wysyłek
 do klientów nie może wyciszyć alarmu o awarii autopilota ani raportu dziennego.
+Od 27.10.2026 autopilot nie korzysta z tego kanału — jego alarmy i raporty idą
+mailem (`docs/agent-publikujacy/AUTOPILOT.md`, „Bezpieczniki”).
 Numer porównujemy po cyfrach (`isOwnerAlertPhone`), więc zapis z spacjami,
 z `+48` czy bez prefiksu to ten sam numer.
 

@@ -81,9 +81,9 @@ async function runTick(force?: string | null): Promise<Response> {
       });
     }
     if (hour === 20 || force === "daily")
-      reports.daily = (await runScheduledReport("daily", now)).sms;
+      reports.daily = (await runScheduledReport("daily", now)).email;
     if ((p.weekday === 1 && hour === 8) || force === "weekly")
-      reports.weekly = (await runScheduledReport("weekly", now)).sms;
+      reports.weekly = (await runScheduledReport("weekly", now)).email;
     return new Response(JSON.stringify({ ok: true, watchdog, reports }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
