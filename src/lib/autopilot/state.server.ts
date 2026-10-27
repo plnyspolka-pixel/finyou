@@ -248,14 +248,29 @@ export async function loadUsage(now: Date = new Date()): Promise<AutopilotUsage>
   };
 }
 
-// ── SMS alarmowy (brief 5.8: tylko alarmy i raport) ───────────────────────────
+// ── Mail do właściciela (alarmy i raporty) ──────────────────────────────────
+// Decyzja właściciela 27.10.2026: raporty i alarmy autopilota idą MAILEM, nie
+// SMS-em. Adres: OWNER_ALERT_EMAIL albo integration_settings „autopilot_raporty”
+// (owner-email.ts). Limit dobowy chroni skrzynkę przed pętlą ticków.
 
-export const OWNER_SMS_MAX_PER_DAY = 3;
+export const OWNER_EMAIL_MAX_PER_DAY = 6;
 
-export { ownerAlertPhone } from "@/lib/sms-guard.server";
+async function ownerEmailAddress(): Promise<string | null> {
+  const { AUTOPILOT_REPORTS_INTEGRATION, ownerReportEmail } = await import("./owner-email");
+  try {
+    const { data } = await db
+      .from("integration_settings")
+      .select("is_enabled, configuration")
+      .eq("integration_name", AUTOPILOT_REPORTS_INTEGRATION)
+      .maybeSingle();
+    return ownerReportEmail(data, process.env.OWNER_ALERT_EMAIL);
+  } catch {
+    return ownerReportEmail(null, process.env.OWNER_ALERT_EMAIL);
+  }
+}
 
-export async function smsOwner(
-  body: string,
+export async function emailOwner(
+  mail: { subject: string; text: string },
   kind: "alarm" | "report",
 ): Promise<{ sent: boolean; reason?: string }> {
   const since = new Date(Date.now() - 86_400_000).toISOString();
@@ -263,34 +278,42 @@ export async function smsOwner(
     .from("ai_growth_action_log")
     .select("id", { count: "exact", head: true })
     .eq("module", AUTOPILOT_LOG_MODULE)
-    .eq("action", "owner_sms")
+    .eq("action", "owner_email")
     .gte("created_at", since);
-  if ((count ?? 0) >= OWNER_SMS_MAX_PER_DAY)
-    return { sent: false, reason: "Limit SMS do właściciela na dobę." };
-  // Alarm i raport idą jako `critical` na numer właściciela, który jest poza
-  // stop-klatką SMS (sms-guard): wstrzymanie wysyłek do klientów ich nie blokuje.
-  const [{ sendSmsInternal }, { ownerAlertPhone }] = await Promise.all([
-    import("@/lib/voicebot.functions"),
-    import("@/lib/sms-guard.server"),
-  ]);
-  const res = await sendSmsInternal({
-    phone: ownerAlertPhone(),
-    body: body.slice(0, 300),
-    source: "owner_alert",
-    category: "critical",
-    metadata: { module: AUTOPILOT_LOG_MODULE, kind },
+  if ((count ?? 0) >= OWNER_EMAIL_MAX_PER_DAY)
+    return { sent: false, reason: "Limit maili do właściciela na dobę." };
+  const to = await ownerEmailAddress();
+  if (!to) {
+    await logAutopilot({
+      action: "owner_email",
+      status: "warning",
+      summary: `Mail (${kind}) nie wysłany: brak adresu (OWNER_ALERT_EMAIL / integration_settings „autopilot_raporty”).`,
+      payload: { subject: mail.subject },
+    });
+    return { sent: false, reason: "Brak adresu e-mail właściciela." };
+  }
+  const { sendResendEmail } = await import("@/lib/resend-send.server");
+  const res = await sendResendEmail({
+    to,
+    subject: mail.subject,
+    text: mail.text,
+    fromName: "Autopilot Finance You",
   });
   await logAutopilot({
-    action: "owner_sms",
+    action: "owner_email",
     status: res.ok ? "ok" : "error",
-    summary: `SMS (${kind}) ${res.ok ? "wysłany" : `nie wysłany: ${res.error ?? res.reason ?? "?"}`}`,
-    payload: { body },
+    summary:
+      `Mail (${kind}) ${res.ok ? "wysłany" : `nie wysłany: ${res.error ?? "?"}`}: ${mail.subject}`.slice(
+        0,
+        500,
+      ),
+    payload: { to, subject: mail.subject, text: mail.text },
   });
-  return { sent: res.ok, reason: res.error ?? res.reason };
+  return { sent: res.ok, reason: res.error };
 }
 
 /**
- * Strażnik anomalii (co tick): anomalia → automatyczna pauza + SMS alarmowy.
+ * Strażnik anomalii (co tick): anomalia → automatyczna pauza + mail alarmowy.
  * Nie wznawia sam – wznowienie jest decyzją właściciela.
  */
 export async function runAutopilotWatchdog(now: Date = new Date()): Promise<{
@@ -312,10 +335,8 @@ export async function runAutopilotWatchdog(now: Date = new Date()): Promise<{
       reason: `Automatyczna pauza: ${reason}`,
       by: "watchdog",
     });
-    await smsOwner(
-      `Finance You: autopilot WSTRZYMANY. ${reason} Wznowienie: panel lub MCP autopilot_kill_switch.`,
-      "alarm",
-    );
+    const { buildAlarmEmail } = await import("./owner-email");
+    await emailOwner(buildAlarmEmail(reason), "alarm");
     return { paused: true, anomalies, usage };
   }
   return { paused: cfg.state.paused, anomalies, usage };

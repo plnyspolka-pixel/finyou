@@ -11,7 +11,8 @@ import {
   type ReportInput,
   type TrackReport,
 } from "./metrics";
-import { loadAutopilotConfig, logAutopilot, reportPeriodLabel, smsOwner } from "./state.server";
+import { buildReportEmail } from "./owner-email";
+import { emailOwner, loadAutopilotConfig, logAutopilot, reportPeriodLabel } from "./state.server";
 import {
   AUTOPILOT_LOG_MODULE,
   STUDIO_FINISHER_FALLBACK_ACTION,
@@ -142,8 +143,9 @@ export async function buildAutopilotReport(opts: { now?: Date; days: number }): 
 }
 
 /**
- * Raport z ticka: dzienny zawsze do dziennika; SMS tylko gdy autopilot
- * faktycznie publikuje (semi_auto / full_autopilot) – bez szumu na starcie.
+ * Raport z ticka: dzienny zawsze do dziennika; mail do właściciela tylko gdy
+ * autopilot faktycznie publikuje (semi_auto / full_autopilot) – bez szumu na
+ * starcie. SMS-ów z raportem nie ma (decyzja właściciela 27.10.2026).
  */
 export async function runScheduledReport(kind: "daily" | "weekly", now: Date = new Date()) {
   const cfg = await loadAutopilotConfig();
@@ -154,10 +156,10 @@ export async function runScheduledReport(kind: "daily" | "weekly", now: Date = n
     payload: { text: r.text, input: r.input },
   });
   const active = cfg.state.mode === "semi_auto" || cfg.state.mode === "full_autopilot";
-  const sms = active
-    ? await smsOwner(r.sms, "report")
+  const email = active
+    ? await emailOwner(buildReportEmail(kind, r.input), "report")
     : { sent: false, reason: "Autopilot nieaktywny – raport tylko w dzienniku." };
-  return { ...r, sms };
+  return { ...r, email };
 }
 
 /** Wpisy Studia z dziennika → sekcja „Produkcja” raportu. */
