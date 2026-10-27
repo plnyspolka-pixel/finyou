@@ -155,8 +155,8 @@ const FAQS = [
     a: "Na konto podane przy rejestracji, po osiągnięciu progu 500 zł i zatwierdzeniu prowizji. Rozliczasz się jako B2B albo w ramach działalności nierejestrowanej.",
   },
   {
-    q: "Czy dostaję leady od Finance You?",
-    a: "Nie. Program jest dla pośredników, którzy mają własnych klientów. Wprowadzasz ich wnioski, a my przedstawiamy je inwestorom i informujemy Cię o reakcjach.",
+    q: "Czy mogę obsługiwać własnych klientów?",
+    a: "Tak. Wprowadzasz wnioski swoich klientów, a my przedstawiamy je inwestorom i informujemy Cię o ich reakcjach.",
   },
 ];
 
