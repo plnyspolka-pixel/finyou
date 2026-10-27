@@ -15,8 +15,10 @@ describe("scenariusz rozmowy z inwestorem", () => {
     expect(s).toMatch(/[Hh]oryzont/);
     expect(s).toMatch(/inwestował/);
   });
-  it("zwrot tylko z kalkulatora, zamiast progów", () => {
-    expect(s).not.toMatch(/30% rocznie|50% rocznie/);
+  it("ocenia oczekiwania słownie, nie wylicza zysku, kalkulator", () => {
+    expect(s).toContain("oceniasz go SŁOWNIE");
+    expect(s).toContain("Nie wyliczasz zysku");
+    expect(s).toContain("/#kalkulator");
     expect(s).toContain("to nie gwarancja");
     expect(s).toContain("/pobierz/darmowa-lekcja");
   });
@@ -37,6 +39,7 @@ describe("scenariusz rozmowy z inwestorem", () => {
   it("na stronie (A2) bez formularza i bez kwot zysku", () => {
     expect(site).not.toContain("Widzę w formularzu");
     expect(site).not.toContain("{{lead_amount}}");
-    expect(site).toContain("Zwrotu NIE liczysz");
+    expect(site).toContain("Nie wyliczasz zysku");
+    expect(site).toContain("Nie kończysz formułkami");
   });
 });

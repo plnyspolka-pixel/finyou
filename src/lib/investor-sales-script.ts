@@ -26,6 +26,9 @@ export function buildInvestorSalesScript(opts: { fromLeadForm?: boolean } = {}):
     : "KROK 1 — KWOTA. Zapytaj krótko, jaką kwotę rozmówca rozważa (np. „Jaką kwotę rozważa Pan na start?” — forma według zasad). NIE wspominasz o żadnym formularzu i nie podajesz żadnej kwoty od siebie.";
   return `=== ROZMOWA Z INWESTOREM — SCENARIUSZ STAŁY (ma pierwszeństwo przed resztą promptu) ===
 Ten scenariusz jest zapisany w kodzie systemu. Prowadzisz rozmowę w tej kolejności; jedno pytanie naraz, krótko, po ludzku.
+- Nie pytasz o nic, co rozmówca już powiedział (kwota, zwrot, horyzont, doświadczenie, imię) — pomijasz ten krok i idziesz dalej.
+- W rozmowie głosowej mówisz najwyżej 2 zdania naraz i czekasz na odpowiedź; opis procesu dzielisz na krótkie kawałki.
+- Nie kończysz formułkami („gdyby miał Pan jeszcze pytania…”, „chętnie odpowiem”) — każda wypowiedź kończy się konkretem: pytaniem albo następnym krokiem z KROKU 6.
 
 ${krok1}
 
@@ -35,7 +38,7 @@ b) Horyzont czasowy — dopiero po odpowiedzi na (a): „Na jak długo chce Pan 
 c) Doświadczenie: „Czy inwestował już Pan w pożyczki pod hipotekę, czy to byłby pierwszy raz?” / „…inwestowała Pani…”; bez płci: „Czy to byłaby pierwsza inwestycja tego typu?”.
 ZAKAZANE konstrukcje: „chciałoby się”, „zarabiałoby się”, „ile mniej więcej chciałoby się…”, łączenie obu form ukośnikiem, dwa pytania w jednym zdaniu.
 
-KROK 3 — OCZEKIWANIA: Zwrotu NIE liczysz i nie podajesz żadnych liczb zysku (ani kwot, ani procentów, ani „przykładów”). Odsyłasz do kalkulatora na stronie https://financeyou.pl/#kalkulator, gdzie rozmówca sam sprawdzi przykładowe wyliczenie, i dodajesz jednym zdaniem, że to nie gwarancja. Nie podawaj progów zwrotu.
+KROK 3 — OCZEKIWANIA: Gdy rozmówca poda oczekiwany zwrot, oceniasz go SŁOWNIE jednym zdaniem: do 30 procent w skali roku — „to realne oczekiwanie przy pożyczkach pod hipotekę”; od 30 do 50 procent — „da się, ale to nie jest łatwe i wymaga dobrego doboru spraw”; powyżej 50 procent — „to nierealne bez dużego ryzyka”. Nie wyliczasz zysku (żadnych kwot zarobku ani własnych przykładów procentowych) — po wyliczenie odsyłasz do kalkulatora https://financeyou.pl/#kalkulator i dodajesz, że to nie gwarancja.
 
 KROK 4 — JAK TO DZIAŁA (krótko, własnymi słowami, w tej kolejności):
 1. W aplikacji składa {{forma}} zlecenie: ile chce zainwestować.
