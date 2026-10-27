@@ -166,12 +166,18 @@ export const Route = createFileRoute("/api/public/agent-tools")({
           }
 
           if (tool === "save_investor_needs") {
-            const allowed = ["ticket_pln", "min_yield_pct", "horizon_months", "experience", "summary"];
+            const allowed = [
+              "ticket_pln", "min_yield_pct", "horizon_months", "experience", "summary",
+              "timeline", "decision_role", "wants_callback", "callback_phone", "callback_email",
+              "regions", "property_types", "objections",
+            ];
             const needs: Record<string, unknown> = {};
             for (const k of allowed) {
               const v = (args as any)?.[k];
               if (typeof v === "number" && Number.isFinite(v)) needs[k] = v;
+              else if (typeof v === "boolean") needs[k] = v;
               else if (typeof v === "string" && v.trim()) needs[k] = v.trim().slice(0, 2000);
+              else if (Array.isArray(v)) needs[k] = v.filter((x) => typeof x === "string").slice(0, 20).map((x: string) => x.slice(0, 200));
             }
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const db: any = supabaseAdmin;
