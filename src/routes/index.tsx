@@ -17,6 +17,11 @@ import { FreeMaterialsSection } from "@/components/marketing/free-materials";
 import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
 import { getInvestorPublicProof } from "@/lib/investor-sales-public.functions";
+import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
+import {
+  LANDING_INVESTOR_VIDEO,
+  LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
+} from "@/lib/landing-video";
 import { PortfolioStories } from "@/components/marketing/portfolio-stories";
 import { FounderPhoto } from "@/components/marketing/founder-photo";
 import {
@@ -41,6 +46,8 @@ export const Route = createFileRoute("/")({
     materials: await getFreeMaterialsFn({ data: { audience: "inwestor" } }).catch(() =>
       EMPTY_FREE_MATERIALS("inwestor"),
     ),
+    // Film z hero (kopia w Storage); null → zapasowy odtwarzacz HeyGen.
+    video: await getLandingInvestorVideo().catch(() => null),
   }),
   head: () => ({
     meta: [
@@ -145,34 +152,57 @@ const PROTECTION = [
   },
 ];
 function InvestorHome() {
-  const { materials } = Route.useLoaderData();
+  const { materials, video } = Route.useLoaderData();
   const { data: proof } = useSuspenseQuery(proofQuery);
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
         <div className="fy-sales-hero-inner">
-          <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
-          <h1>Pożyczaj pod hipotekę jak bank — nawet jeśli nigdy tego nie robiłeś.</h1>
-          <p className="fy-sales-brand">Finance You</p>
-          <ul>
-            {[
-              "Twoje pieniądze nigdy nie przechodzą przez Finance You — przelewasz je bezpośrednio firmie po podpisie u notariusza, z hipoteką na Twoje nazwisko.",
-              "Sprawy z całej Polski trafiają do Ciebie — nie szukasz klientów.",
-              "Umowa, ocena ryzyka i hipoteka przygotowane w systemie.",
-            ].map((t) => (
-              <li key={t}>
-                <BrandIcon name="check" size={20} />
-                <span>{t}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="fy-sales-actions">
-            <MktButton variant="gold" size="lg" href={LESSON}>
-              Obejrzyj darmową lekcję — ok. 35 minut
-            </MktButton>
-            <MktButton variant="outline" size="lg" href="#cennik">
-              Zobacz program i cenę
-            </MktButton>
+          <div className="fy-sales-hero-copy">
+            <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
+            <h1>Pożyczaj pod hipotekę jak bank — nawet jeśli nigdy tego nie robiłeś.</h1>
+            <p className="fy-sales-brand">Finance You</p>
+            <ul>
+              {[
+                "Twoje pieniądze nigdy nie przechodzą przez Finance You — przelewasz je bezpośrednio firmie po podpisie u notariusza, z hipoteką na Twoje nazwisko.",
+                "Sprawy z całej Polski trafiają do Ciebie — nie szukasz klientów.",
+                "Umowa, ocena ryzyka i hipoteka przygotowane w systemie.",
+              ].map((t) => (
+                <li key={t}>
+                  <BrandIcon name="check" size={20} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="fy-sales-actions">
+              <MktButton variant="gold" size="lg" href={LESSON}>
+                Obejrzyj darmową lekcję — ok. 35 minut
+              </MktButton>
+              <MktButton variant="outline" size="lg" href="#cennik">
+                Zobacz program i cenę
+              </MktButton>
+            </div>
+          </div>
+          {/* Film „Twoja droga do prywatnego finansowania nieruchomości” — przeniesiony
+              ze starego /dla-inwestora (przepadł przy przebudowie 26.10). */}
+          <div className="fy-sales-hero-video">
+            {video ? (
+              <video
+                src={video.videoUrl}
+                poster={video.posterUrl ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                aria-label={LANDING_INVESTOR_VIDEO.title}
+              />
+            ) : (
+              <iframe
+                src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL}
+                title={LANDING_INVESTOR_VIDEO.title}
+                allow="autoplay; fullscreen; encrypted-media"
+                allowFullScreen
+              />
+            )}
           </div>
         </div>
       </section>
