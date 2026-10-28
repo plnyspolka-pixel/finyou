@@ -160,13 +160,13 @@ function InvestorHome() {
         <div className="fy-sales-hero-inner">
           <div className="fy-sales-hero-copy">
             <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
-            <h1>Pożyczaj pod hipotekę jak bank — nawet jeśli nigdy tego nie robiłeś.</h1>
+            <h1>Inwestuj w pożyczki pod zastaw nieruchomości</h1>
             <p className="fy-sales-brand">Finance You</p>
             <ul>
               {[
-                "Twoje pieniądze nigdy nie przechodzą przez Finance You — przelewasz je bezpośrednio firmie po podpisie u notariusza, z hipoteką na Twoje nazwisko.",
-                "Sprawy z całej Polski trafiają do Ciebie — nie szukasz klientów.",
-                "Umowa, ocena ryzyka i hipoteka przygotowane w systemie.",
+                "Najwyższe stopy zwrotu w branży nieruchomości.",
+                "Pełne zabezpieczenie kapitału — Twoje nazwisko w księdze wieczystej.",
+                "Bez kupowania, budowania, sprzedawania, remontowania, bez najemców, bez wysiłku, bez stresu i bez czekania na efekty!",
               ].map((t) => (
                 <li key={t}>
                   <BrandIcon name="check" size={20} />
