@@ -135,7 +135,7 @@ export function ChatWidget({
   }
 
   return (
-    <div className="fixed bottom-[calc(10rem+env(safe-area-inset-bottom))] right-3 z-50 sm:bottom-[calc(6rem+env(safe-area-inset-bottom))] sm:right-5">
+    <div className="fy-chat-launcher fixed right-3 z-50 sm:right-5">
       {!open ? (
         <Button
           onClick={() => setOpen(true)}

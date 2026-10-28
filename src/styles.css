@@ -868,3 +868,11 @@
 .fy-article--light th, .fy-article--light td { border-color: var(--border); }
 .fy-article--light tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 60%, transparent); }
 .fy-article--light h2 { border-top: none; padding-top: 0; }
+/* Widżet Ani: na telefonie przy samym dole (nie zasłania hero); nad przyklejonym
+   przyciskiem CTA albo paskiem webinaru, gdy są na stronie. */
+.fy-chat-launcher{bottom:calc(1rem + env(safe-area-inset-bottom))}
+@media (min-width:640px){.fy-chat-launcher{bottom:calc(6rem + env(safe-area-inset-bottom))}}
+@media (max-width:900px){
+  body:has(.fy-sticky) .fy-chat-launcher,
+  body:has(.fy-webinar-widget) .fy-chat-launcher{bottom:calc(5.5rem + env(safe-area-inset-bottom))}
+}
