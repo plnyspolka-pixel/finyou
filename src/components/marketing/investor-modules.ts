@@ -98,7 +98,6 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     highlights: [
       "Program w 7 modułach, od podstaw",
       "Lekcje wideo w panelu, w Twoim tempie",
-      "Teoria połączona z narzędziami do pracy",
       "Indywidualny mentoring inwestora z 15-letnim stażem",
     ],
     featuresTitle: "Wiesz, co robisz, zanim wyłożysz pierwszą złotówkę",
