@@ -58,13 +58,14 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
     expect(text).not.toMatch(/\bPRO\b|Pakiet Podstawowy|0 zł|nieodpłatn/);
     expect(text).not.toMatch(/3 000|5% od|Opłat[ay] Sukcesu/i);
     expect(p.bullets.map((b) => b.cecha)).toEqual([
+      "Ogólnopolska sieć sprzedaży",
+      "Indywidualny mentoring inwestora",
       "Szkolenie inwestora",
       "Analityk AI",
       "Kalkulator compliance",
       "Kancelaria AI",
       "Moduł AML/compliance",
       "Windykator AI",
-      "Ogólnopolska sieć sprzedaży",
     ]);
     for (const b of p.bullets) expect(b.cecha && b.zaleta && b.korzysc).toBeTruthy();
     expect(text).not.toMatch(/Automatyczne wypełnienie i podpisanie/);
@@ -75,7 +76,11 @@ describe("abonament inwestora — cennik", () => {
   it("wyłącznie 12 miesięcy za 7 000 zł", () => {
     expect(SUBSCRIPTION_YEARLY_PLN).toBe(7_000);
     expect(Object.keys(SUBSCRIPTION_OPTIONS)).toEqual(["rocznie"]);
-    expect(SUBSCRIPTION_OPTIONS.rocznie).toMatchObject({ pricePln: 7_000, days: 365, productCode: "investor_access_365d" });
+    expect(SUBSCRIPTION_OPTIONS.rocznie).toMatchObject({
+      pricePln: 7_000,
+      days: 365,
+      productCode: "investor_access_365d",
+    });
   });
   it("orientacyjna rata 583 zł bez kotwicy miesięcznego abonamentu", () => {
     expect(SUBSCRIPTION_YEARLY_PER_MONTH_PLN).toBe(583);

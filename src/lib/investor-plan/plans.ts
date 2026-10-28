@@ -205,9 +205,21 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   periodLabel: "12 miesięcy · bez karty kredytowej",
   tagline:
     "Jeden abonament otwiera szkolenie i wszystkie narzędzia, a po bezpłatnej umowie ramowej — sprawy z ogólnopolskiej sieci sprzedaży. Prowizję Finance You płaci klient z wypłacanej kwoty, więc odsetki i Twoja prowizja w całości zostają u Ciebie.",
-  // Kolejność: Szkolenie (produkt główny), narzędzia w cyklu pożyczki, a na
-  // końcu sieć sprzedaży — BONUS (plakietka w cenniku, patrz investor-modules.ts).
+  // Kolejność (decyzja właściciela 28.10.2026): sieć sprzedaży, mentoring,
+  // szkolenie, potem narzędzia w cyklu pożyczki.
   bullets: [
+    {
+      cecha: "Ogólnopolska sieć sprzedaży",
+      zaleta:
+        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz sprawy z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia kwoty.",
+      korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
+    },
+    {
+      cecha: "Indywidualny mentoring inwestora",
+      zaleta:
+        "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach.",
+      korzysc: "Nie zaczynasz sam.",
+    },
     {
       cecha: "Szkolenie inwestora",
       zaleta:
@@ -243,12 +255,6 @@ export const ACCESS_PRESENTATION: TierPresentation = {
         "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
       korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
     },
-    {
-      cecha: "Ogólnopolska sieć sprzedaży",
-      zaleta:
-        "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz sprawy z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia kwoty.",
-      korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
-    },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,
 };
@@ -258,4 +264,5 @@ export const TIER_PRESENTATION: Record<InvestorTier, TierPresentation> = {
   podstawowy: ACCESS_PRESENTATION,
 };
 
-export const FOUNDATION_SALES_EXPLANATION = "Dlaczego płacę Fundacji? Szkolenie i licencję na nasze systemy sprzedaje Fundacja Krzewienia Edukacji Finansowej im. Pieczaka — to jej działalność statutowa. Dochód z tej sprzedaży przeznaczamy na cele charytatywne (zbiórki na Siepomaga.pl).";
+export const FOUNDATION_SALES_EXPLANATION =
+  "Dlaczego płacę Fundacji? Szkolenie i licencję na nasze systemy sprzedaje Fundacja Krzewienia Edukacji Finansowej im. Pieczaka — to jej działalność statutowa. Dochód z tej sprzedaży przeznaczamy na cele charytatywne (zbiórki na Siepomaga.pl).";

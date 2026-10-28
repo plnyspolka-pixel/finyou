@@ -3,9 +3,9 @@
 // pochodzą z lib/investor-plan/plans.ts (jedno źródło prawdy dla strony,
 // panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
 //
-// Karta od góry: nazwa → suwak okresu → cena i podpowiedź → chip „bez karty"
-// → tagline → punkty oferty → drobny druk (płatność, sprzedawca, regulamin)
-// → przycisk do płatności.
+// Karta od góry: nazwa → cena i podpowiedź → chip „bez karty” → raty →
+// przycisk do płatności (od razu pod niebieskim polem) → kod rabatowy →
+// tagline → punkty oferty → drobny druk (płatność, sprzedawca, regulamin).
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
@@ -98,7 +98,6 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
       <BrandIcon name="check" size={18} />
       <div style={{ lineHeight: 1.45 }}>
         <div style={{ fontWeight: 700, color: "var(--foreground)" }}>
-          
           {href ? (
             <a href={href} style={{ color: "inherit", textDecoration: "underline" }}>
               {b.cecha}
@@ -211,7 +210,25 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
         </div>
 
         <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", flex: 1 }}>
-          <p style={{ fontSize: "0.88rem", lineHeight: 1.55, color: "var(--muted-foreground)" }}>
+          {/* Przycisk od razu pod niebieskim polem z ceną. */}
+          <MktButton variant="gold" href={`${CHECKOUT}?okres=${period}`} style={{ width: "100%" }}>
+            Zostań partnerem
+          </MktButton>
+          <a
+            href="/abonament-inwestora?okres=rocznie&kod="
+            className="underline"
+            style={{ marginTop: "0.6rem", alignSelf: "center", fontSize: "0.85rem" }}
+          >
+            Mam kod rabatowy
+          </a>
+          <p
+            style={{
+              marginTop: "1.2rem",
+              fontSize: "0.88rem",
+              lineHeight: 1.55,
+              color: "var(--muted-foreground)",
+            }}
+          >
             {t.tagline}
           </p>
           <ul
@@ -244,14 +261,6 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
             .
           </p>
           <p className="text-sm text-muted-foreground">{FOUNDATION_SALES_EXPLANATION}</p>
-          <a href="/abonament-inwestora?okres=rocznie&kod=" className="mt-4 underline">Mam kod rabatowy</a>
-          <MktButton
-            variant="gold"
-            href={`${CHECKOUT}?okres=${period}`}
-            style={{ width: "100%", marginTop: "1rem" }}
-          >
-            Zostań partnerem
-          </MktButton>
         </div>
       </div>
     </div>

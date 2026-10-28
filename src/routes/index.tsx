@@ -12,9 +12,6 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { LoanCalculator } from "@/components/loan-calculator";
-import { FreeMaterialsSection } from "@/components/marketing/free-materials";
-import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
-import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
 import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
 import {
   LANDING_INVESTOR_VIDEO,
@@ -33,9 +30,6 @@ export const EMAIL = "kontakt@financeyou.pl";
 const LESSON = "/pobierz/darmowa-lekcja";
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => ({
-    materials: await getFreeMaterialsFn({ data: { audience: "inwestor" } }).catch(() =>
-      EMPTY_FREE_MATERIALS("inwestor"),
-    ),
     // Film z hero (kopia w Storage); null → zapasowy odtwarzacz HeyGen.
     video: await getLandingInvestorVideo().catch(() => null),
   }),
@@ -109,7 +103,46 @@ const FAQS = [
     a: "Obejrzyj darmową lekcję po zapisie e-mail. Poznaj program i cennik. Kody rabatowe wysyłamy w mailingu.",
   },
 ];
-const TOOL_ICON: Icon3DName[] = ["ai", "documents", "complianceAml", "shieldcheck"];
+// „Twoja droga na rynek…”: sieć sprzedaży, cztery narzędzia, mentoring.
+const ROAD_CARDS: {
+  name: string;
+  eyebrow: string;
+  icon: Icon3DName;
+  module?: string;
+  text?: string;
+}[] = [
+  {
+    name: "Ogólnopolska sieć sprzedaży",
+    eyebrow: "Sprawy przychodzą do Ciebie",
+    icon: "investors",
+    module: "Ogólnopolska sieć sprzedaży",
+  },
+  { name: "Analityk AI", eyebrow: "Zanim wyłożysz", icon: "ai", module: "Analityk AI" },
+  {
+    name: "Kancelaria AI",
+    eyebrow: "Zanim podpiszesz",
+    icon: "documents",
+    module: "Kancelaria AI",
+  },
+  {
+    name: "Moduł AML/compliance",
+    eyebrow: "Zanim przyjmiesz spłatę",
+    icon: "complianceAml",
+    module: "Moduł AML/compliance",
+  },
+  {
+    name: "Windykator AI",
+    eyebrow: "Gdy rata nie przychodzi",
+    icon: "shieldcheck",
+    module: "Windykator AI",
+  },
+  {
+    name: "Indywidualny mentoring inwestora",
+    eyebrow: "Na każdym etapie",
+    icon: "handshake",
+    text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie zaczynasz sam.",
+  },
+];
 
 const PROTECTION = [
   {
@@ -134,7 +167,7 @@ const PROTECTION = [
   },
 ];
 function InvestorHome() {
-  const { materials, video } = Route.useLoaderData();
+  const { video } = Route.useLoaderData();
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
@@ -157,7 +190,7 @@ function InvestorHome() {
             </ul>
             <div className="fy-sales-actions">
               <MktButton variant="gold" size="lg" href={LESSON}>
-                Obejrzyj darmową lekcję — ok. 35 minut
+                Obejrzyj darmową lekcję — ok.{"\u00a0"}35 minut
               </MktButton>
               <MktButton variant="outline" size="lg" href="#cennik">
                 Zobacz program i cenę
@@ -298,43 +331,34 @@ function InvestorHome() {
         </div>
       </Section>
       <Section id="narzedzia">
-        <SectionHead title="Cztery narzędzia na cztery momenty, w których inwestor traci pieniądze" />
+        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
         <div className="fy-sales-cards">
-          {["Analityk AI", "Kancelaria AI", "Moduł AML/compliance", "Windykator AI"].map(
-            (name, i) => {
-              const m = INVESTOR_MODULES.find((x) => x.name === name);
-              return (
-                <article className="fy-sales-card" key={name}>
-                  <Icon3D name={TOOL_ICON[i]} size={48} />
-                  <span className="fy-sales-eyebrow">
-                    {
-                      [
-                        "Zanim wyłożysz",
-                        "Zanim podpiszesz",
-                        "Zanim przyjmiesz spłatę",
-                        "Gdy rata nie przychodzi",
-                      ][i]
-                    }
-                  </span>
-                  <h3>{name}</h3>
-                  {m && (
-                    <>
-                      <img
-                        className="fy-sales-tool-image"
-                        src={m.image}
-                        alt={m.imageAlt}
-                        loading="lazy"
-                      />
-                      <p>{m.tagline}</p>
-                      <a className="fy-sales-link" href={investorModulePath(m.slug)}>
-                        Poznaj narzędzie →
-                      </a>
-                    </>
-                  )}
-                </article>
-              );
-            },
-          )}
+          {ROAD_CARDS.map((c) => {
+            const m = c.module ? INVESTOR_MODULES.find((x) => x.name === c.module) : undefined;
+            return (
+              <article className="fy-sales-card" key={c.name}>
+                <Icon3D name={c.icon} size={48} />
+                <span className="fy-sales-eyebrow">{c.eyebrow}</span>
+                <h3>{c.name}</h3>
+                {m ? (
+                  <>
+                    <img
+                      className="fy-sales-tool-image"
+                      src={m.image}
+                      alt={m.imageAlt}
+                      loading="lazy"
+                    />
+                    <p>{m.tagline}</p>
+                    <a className="fy-sales-link" href={investorModulePath(m.slug)}>
+                      Poznaj szczegóły →
+                    </a>
+                  </>
+                ) : (
+                  <p>{c.text}</p>
+                )}
+              </article>
+            );
+          })}
         </div>
       </Section>
       <Section id="korzysci" tint>
@@ -426,7 +450,6 @@ function InvestorHome() {
           Tempo zależy od Ciebie i od spraw w Twojej kwocie.
         </p>
       </Section>
-      <FreeMaterialsSection data={materials} />
       <Section id="faq">
         <SectionHead title="Twoje pytania — konkretne odpowiedzi" />
         <FAQ items={FAQS} />
