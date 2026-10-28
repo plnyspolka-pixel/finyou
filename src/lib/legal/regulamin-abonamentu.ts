@@ -9,6 +9,12 @@
  * generowana z tych samych stałych co cennik (lib/investor-plan/plans.ts),
  * a skrót każdej wersji pilnuje test — zmiana ceny wymaga nowej wersji.
  *
+ * Wersja 1.2 (decyzja właściciela 2026-10-28): § 7 ust. 3–4 — gwarancja
+ * pierwszej pożyczki (przedłużenie bez opłaty aż do skutku; Zlecenie od
+ * 100 000 zł, najwyżej 3 odrzucone Projekty); § 7 ust. 5–6 — gwarancja
+ * windykacji (Windykator AI bez opłaty po wypowiedzeniu pożyczki za 2 raty,
+ * do zakończenia windykacji; dostęp na wniosek, nadawany przez zespół).
+ *
  * Wersja 1.1 (decyzja właściciela 2026-10-28): § 3 ust. 3 — 4 godziny
  * indywidualnych konsultacji w Okresie Abonamentowym, zgłaszane w panelu.
  *
@@ -27,8 +33,13 @@ import {
 /** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (dokumenty-1-0.ts). */
 export const CENA_ABONAMENTU = `${SUBSCRIPTION_YEARLY_PLN.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} zł brutto za 365 dni`;
 
-export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.1";
+export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.2";
 export const REGULAMIN_ABONAMENTU_DATA_PL = "28 października 2026 r.";
+/** Gwarancja pierwszej pożyczki (§ 7 ust. 3): minimalna kwota Zlecenia i limit odrzuconych Projektów. */
+export const GWARANCJA_MIN_ZLECENIE_PLN = 100_000;
+export const GWARANCJA_MAX_ODRZUCONYCH = 3;
+/** Gwarancja windykacji (§ 7 ust. 5): wypowiedzenie po tylu niezapłaconych ratach. */
+export const GWARANCJA_WINDYKACJA_RAT = 2;
 /** Wymiar indywidualnych konsultacji w Okresie Abonamentowym (§ 3 ust. 3) — ten sam limit pilnuje panel. */
 export const KONSULTACJE_GODZIN = 4;
 export const REGULAMIN_ABONAMENTU_PATH = "/regulamin-inwestora";
@@ -45,7 +56,7 @@ export function regulaminAbonamentuInwestora(): string {
   const f = FUNDACJA;
   return `# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-**wersja 1.1 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
+**wersja 1.2 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
 
 ## § 1. Postanowienia ogólne
 
@@ -98,6 +109,13 @@ export function regulaminAbonamentuInwestora(): string {
 
 1. Po upływie Okresu Abonamentowego dostęp do modułów panelu jest wstrzymany do czasu opłacenia kolejnego okresu. Dane i dokumenty Inwestora nie są usuwane.
 2. Inwestor może w każdej chwili opłacić kolejny Okres Abonamentowy; zostanie on doliczony od końca bieżącego.
+3. Gwarancja pierwszej pożyczki. Jeżeli w Okresie Abonamentowym Inwestor nie udzielił i nie wypłacił pierwszej pożyczki Klientowi przedstawionemu mu za pośrednictwem systemu Finance You, Fundacja przedłuża Abonament bez dodatkowej opłaty o kolejne Okresy Abonamentowe, aż do wypłaty pierwszej takiej pożyczki, pod warunkiem że przez cały Okres Abonamentowy Inwestor:
+   a) miał zawarte Umowy o dostęp do Klientów,
+   b) miał aktywne Zlecenie kwoty na co najmniej ${GWARANCJA_MIN_ZLECENIE_PLN.toLocaleString("pl-PL").replace(/\s/g, "\u00a0")} zł,
+   c) nie odrzucił więcej niż ${GWARANCJA_MAX_ODRZUCONYCH} przedstawionych mu Projektów spełniających warunki jego Zlecenia kwoty.
+4. Warunki z ust. 3 obowiązują także w każdym przedłużonym Okresie Abonamentowym. Gwarancja wygasa z chwilą wypłaty pierwszej pożyczki, o której mowa w ust. 3. Gwarancja dotyczy wyłącznie przedłużenia Abonamentu — nie jest gwarancją zysku, spłaty pożyczki ani przedstawienia określonej liczby Projektów, a decyzję o udzieleniu każdej pożyczki Inwestor podejmuje samodzielnie.
+5. Gwarancja windykacji. Jeżeli pożyczka udzielona przez Inwestora w czasie trwania Abonamentu Klientowi przedstawionemu mu za pośrednictwem systemu Finance You zostanie wypowiedziana z powodu nieterminowej zapłaty co najmniej ${GWARANCJA_WINDYKACJA_RAT} rat, Fundacja zapewnia Inwestorowi bez dodatkowej opłaty dostęp do modułu windykacji (Windykator AI) w zakresie tej pożyczki, także po upływie Okresu Abonamentowego — do zakończenia windykacji (spłaty, ugody albo zakończenia postępowania egzekucyjnego). Dostęp przyznawany jest na wniosek Inwestora złożony na adres kontakt@financeyou.pl albo w panelu.
+6. Gwarancja z ust. 5 nie jest gwarancją odzyskania należności. Koszty sądowe, komornicze i inne koszty postępowania ponoszą strony zgodnie z przepisami prawa.
 
 ## § 8. Zmiany ceny i Regulaminu
 

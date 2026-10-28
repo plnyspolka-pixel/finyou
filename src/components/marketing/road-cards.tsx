@@ -29,7 +29,7 @@ const ROAD_CARDS: RoadCard[] = [
       src: "/marketing/moduly/mentoring-1.webp",
       alt: "Mentor z 15-letnim stażem omawia z inwestorką dokumenty sprawy",
     },
-    text: "7 modułów szkolenia i wsparcie inwestora z 15-letnim stażem w pożyczkach pod zastaw nieruchomości. Nie jesteś sam — wspieramy Cię od początku do końca.",
+    text: "7 modułów szkolenia i wsparcie inwestora z 15-letnim stażem. Nie jesteś sam — wspieramy Cię od początku do końca.",
   },
 ];
 
@@ -40,7 +40,7 @@ export function RoadCards({ exclude }: { exclude?: string }) {
         const m = investorModuleBySlug(c.slug);
         if (!m) return null;
         return (
-          <article className="fy-sales-card" key={c.slug}>
+          <article className="fy-sales-card fy-road-card" key={c.slug}>
             <Icon3D name={c.icon} size={48} />
             <span className="fy-sales-eyebrow">{c.eyebrow}</span>
             <h3>{m.name}</h3>

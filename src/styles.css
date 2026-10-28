@@ -841,3 +841,19 @@
 .fy-webinar-widget__text{display:grid;font-size:.82rem;line-height:1.35}.fy-webinar-widget__text strong{color:var(--sales-gold,#f0c667)}
 .fy-webinar-widget__close{position:absolute;top:.25rem;right:.25rem;padding:.2rem;opacity:.7}.fy-webinar-widget__close:hover{opacity:1}
 @media(max-width:640px){.fy-webinar-widget{left:0;right:0;bottom:0;max-width:none;border-radius:0;border-width:1px 0 0;padding:.6rem 2rem .6rem .9rem;justify-content:space-between}}
+/* Karty „Twoja droga na rynek…”: tytuł na 2 linie, opis rozciągnięty, link na dole — grafiki i linki w jednej linii. */
+.fy-road-card h3{min-height:2.6em;display:flex;align-items:flex-end}
+.fy-road-card p{flex:1}
+.fy-road-card .fy-sales-link{margin-top:auto}
+@media(max-width:640px){.fy-road-card h3{min-height:0}}
+/* „Podwójna gwarancja satysfakcji” pod cennikiem. */
+.fy-guarantee{max-width:56rem;margin:2.5rem auto 0;padding:2rem 1.75rem;border-radius:1.25rem;border:1px solid oklch(0.78 0.18 85 / 0.55);background:linear-gradient(135deg,rgba(240,198,103,.10),rgba(95,162,246,.06));text-align:center}
+.fy-guarantee h3{font-size:1.7rem;font-weight:900;letter-spacing:.02em;text-transform:uppercase;background:linear-gradient(95deg,#f0c667,#f6dc9c 45%,#f0c667);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fy-guarantee-lead{margin:.8rem auto 0;max-width:40rem;line-height:1.6}
+.fy-guarantee-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem;margin-top:1.6rem;text-align:left}
+.fy-guarantee-grid article{display:flex;flex-direction:column;gap:.55rem;padding:1.4rem;border-radius:1rem;border:1px solid var(--border);background:var(--card)}
+.fy-guarantee-grid h4{font-size:1.15rem;font-weight:800}
+.fy-guarantee-grid p{color:var(--muted-foreground);line-height:1.6;font-size:.94rem}
+.fy-guarantee-terms{margin-top:1.2rem;font-size:.75rem;line-height:1.55;color:var(--muted-foreground)}
+.fy-guarantee-terms a{text-decoration:underline}
+@media(max-width:640px){.fy-guarantee{padding:1.5rem 1.1rem}.fy-guarantee h3{font-size:1.3rem}}

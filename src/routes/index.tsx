@@ -1,38 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
-import {
-  Section,
-  SectionHead,
-  FeatureGrid,
-  ProcessSteps,
-  FAQ,
-} from "@/components/marketing/sections";
+import { Section, SectionHead, ProcessSteps, FAQ } from "@/components/marketing/sections";
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
-import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { LoanCalculator } from "@/components/loan-calculator";
-import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
-import {
-  LANDING_INVESTOR_VIDEO,
-  LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
-} from "@/lib/landing-video";
 import { PortfolioStories } from "@/components/marketing/portfolio-stories";
-import { FounderPhoto } from "@/components/marketing/founder-photo";
 import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
 } from "@/lib/investor-plan/plans";
 import { RoadCards } from "@/components/marketing/road-cards";
+import { DoubleGuarantee } from "@/components/marketing/double-guarantee";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
 const LESSON = "/pobierz/darmowa-lekcja";
+// Film w hero: „Kompleksowa prezentacja” (dawniej Wistia, od 2.10.2026 w naszym
+// Storage) — ten sam, który był w hero /dla-inwestora. Plakat z 1. sekundy, bo
+// film zaczyna się ciemnym kadrem.
+const HERO_VIDEO_URL =
+  "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/marketing-materials/Finance You - Kompleksowa Prezentacja (Merged)_1080p_caption (2).mp4";
+const HERO_VIDEO_TITLE = "Finance You — kompleksowa prezentacja";
 export const Route = createFileRoute("/")({
-  loader: async ({ context }) => ({
-    // Film z hero (kopia w Storage); null → zapasowy odtwarzacz HeyGen.
-    video: await getLandingInvestorVideo().catch(() => null),
-  }),
   head: () => ({
     meta: [
       { title: "Pożyczaj pod hipotekę — szkolenie i narzędzia inwestora | Finance You" },
@@ -104,30 +94,7 @@ const FAQS = [
   },
 ];
 
-const PROTECTION = [
-  {
-    icon: "shield" as const,
-    t: "Czy to nie oszustwo?",
-    d: "Pieniądze nie przechodzą przez nas. Umowa bezpośrednio z firmą, podpis u notariusza i hipoteka na Twoje nazwisko.",
-  },
-  {
-    icon: "application" as const,
-    t: "Skąd wezmę klientów?",
-    d: "Sprawy z całej Polski trafiają do Ciebie według kwoty ze Zlecenia kwoty — podajesz, ile chcesz ulokować.",
-  },
-  {
-    icon: "academy" as const,
-    t: "Nigdy tego nie robiłem",
-    d: "Dostajesz szkolenie w 7 modułach, Analityka AI z oceną A–E i gotową umowę.",
-  },
-  {
-    icon: "shieldcheck" as const,
-    t: "A jak nie zapłaci?",
-    d: "Hipoteka do 60% LTV i Windykator AI. Poznaj historię spłaty przy sprzedaży zabezpieczenia poniżej.",
-  },
-];
 function InvestorHome() {
-  const { video } = Route.useLoaderData();
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
@@ -157,26 +124,16 @@ function InvestorHome() {
               </MktButton>
             </div>
           </div>
-          {/* Film „Twoja droga do prywatnego finansowania nieruchomości” — przeniesiony
-              ze starego /dla-inwestora (przepadł przy przebudowie 26.10). */}
+          {/* Film „Kompleksowa prezentacja” — ten sam, który był w hero /dla-inwestora. */}
           <div className="fy-sales-hero-video">
-            {video ? (
-              <video
-                src={video.videoUrl}
-                poster={video.posterUrl ?? undefined}
-                controls
-                playsInline
-                preload="metadata"
-                aria-label={LANDING_INVESTOR_VIDEO.title}
-              />
-            ) : (
-              <iframe
-                src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL}
-                title={LANDING_INVESTOR_VIDEO.title}
-                allow="autoplay; fullscreen; encrypted-media"
-                allowFullScreen
-              />
-            )}
+            <video
+              src={encodeURI(HERO_VIDEO_URL)}
+              poster="/marketing/prezentacja-poster.webp"
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={HERO_VIDEO_TITLE}
+            />
           </div>
         </div>
       </section>
@@ -187,50 +144,6 @@ function InvestorHome() {
       <Section id="narzedzia">
         <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
         <RoadCards />
-      </Section>
-      <Section id="ochrona">
-        <SectionHead title="Boisz się? Słusznie. Oto co Cię chroni." />
-        <div className="mt-8">
-          <FeatureGrid items={PROTECTION} icon3d />
-        </div>
-        <a className="fy-sales-link" href="#historie">
-          Zobacz, jak hipoteka zadziałała →
-        </a>
-      </Section>
-      <Section id="jak-dziala">
-        <SectionHead title="Jak to działa — 5 kroków" />
-        <div className="mt-8">
-          <ProcessSteps
-            cols={5}
-            steps={[
-              {
-                icon: "calculator",
-                t: "Mówisz, ile chcesz ulokować",
-                d: "Zlecenie kwoty: podajesz kapitał, dla którego szukamy spraw.",
-              },
-              {
-                icon: "application",
-                t: "Sprawy przychodzą do Ciebie",
-                d: "Z całej Polski, w Twojej kwocie.",
-              },
-              {
-                icon: "ai",
-                t: "Analizujesz w ok. 15 minut",
-                d: "Ocena A–E; rezerwacja 24 h + 12 h.",
-              },
-              {
-                icon: "handshake",
-                t: "Ustalasz warunki z firmą",
-                d: "Harmonogram akceptowany przed wypłatą.",
-              },
-              {
-                icon: "documents",
-                t: "Notariusz, hipoteka i wypłata",
-                d: "Hipoteka na Ciebie, spłaty na Twój rachunek. Gdy rata nie przychodzi — Windykator AI.",
-              },
-            ]}
-          />
-        </div>
       </Section>
       <Section id="historie" tint>
         <SectionHead
@@ -248,67 +161,12 @@ function InvestorHome() {
           <LoanCalculator marketingPreview initialMaxPayment={0} />
         </div>
       </Section>
-      <Section id="korzysci" tint>
-        <SectionHead title="Ty decydujesz, na czym zarabiasz. My dostarczamy sprawy." />
-        <div className="mt-8">
-          <FeatureGrid
-            icon3d
-            items={[
-              {
-                icon: "application",
-                t: "Sprawy trafiają do Ciebie",
-                d: "Podajesz maksymalną kwotę w Zleceniu kwoty. My przedstawiamy sprawy firm z całej Polski.",
-              },
-              {
-                icon: "procedures",
-                t: "Decydujesz bez pośpiechu",
-                d: "Rezerwujesz na 24 h i raz przedłużasz o 12 h.",
-              },
-              {
-                icon: "chat",
-                t: "Rozmawiasz z firmą bezpośrednio",
-                d: "Po akceptacji dokumentów sprawy dostajesz kontakt i sam negocjujesz warunki.",
-              },
-              {
-                icon: "status",
-                t: "Spłaty znasz z góry",
-                d: "Harmonogram widzisz przed wypłatą. Firma spłaca na Twój rachunek.",
-              },
-              {
-                icon: "shieldcheck",
-                t: "Formalności raz i zdalnie",
-                d: "Weryfikacja online, umowy wypełnione Twoimi danymi.",
-              },
-              {
-                icon: "loan",
-                t: "Odsetki i Twoja prowizja dla Ciebie",
-                d: "Bez opłaty sukcesu. Prowizję Finance You płaci firma z kwoty wypłaty.",
-              },
-            ]}
-          />
-        </div>
-      </Section>
-      <Section id="zespol">
-        <SectionHead title="Kto za tym stoi" />
-        <div className="fy-sales-founder-line">
-          <FounderPhoto small />
-          <div>
-            <h3>Filip Bielak</h3>
-            <p>
-              Inwestor z ponad 15-letnim doświadczeniem. Absolwent Wydziału Prawa i Administracji
-              UMCS. Jego komentarze publikowała „Rzeczpospolita”.
-            </p>
-            <a className="fy-sales-link" href="/o-nas">
-              Poznaj nas →
-            </a>
-          </div>
-        </div>
-      </Section>
       <Section id="cennik" tint>
         <SectionHead center title="Abonament inwestora — 12 miesięcy" />
         <div className="mt-8">
           <InvestorPricing />
         </div>
+        <DoubleGuarantee />
         <h3 className="fy-sales-subtitle">Twoje pierwsze 30 dni</h3>
         <div className="mt-8">
           <ProcessSteps

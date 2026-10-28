@@ -20,9 +20,18 @@ const tekst = regulaminAbonamentuInwestora();
 const sha = createHash("sha256").update(tekst, "utf8").digest("hex");
 
 describe("regulamin abonamentu inwestora", () => {
-  it("wersja 1.1 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
-    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.1");
-    expect(sha).toBe("e5d9d457a1c00ee5e407755ac270efa22a5517b432fb91170d42248afd250ecb");
+  it("wersja 1.2 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
+    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.2");
+    expect(sha).toBe("f79b1eac4dfc16b59764f3950f714c30fd18c4dee0ee1b8e5151528258407222");
+  });
+
+  it("podwójna gwarancja (od 1.2): pierwsza pożyczka i windykacja — z warunkami", () => {
+    expect(tekst).toContain("Gwarancja pierwszej pożyczki.");
+    expect(tekst).toContain("aktywne Zlecenie kwoty na co najmniej 100\u00a0000 zł");
+    expect(tekst).toContain("nie odrzucił więcej niż 3 przedstawionych mu Projektów");
+    expect(tekst).toContain("Gwarancja windykacji.");
+    expect(tekst).toContain("co najmniej 2 rat");
+    expect(tekst).toContain("nie jest gwarancją odzyskania należności");
   });
 
   it("4 godziny indywidualnych konsultacji w ramach szkolenia (od 1.1)", () => {
