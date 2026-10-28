@@ -5,11 +5,6 @@ import { MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { LoanCalculator } from "@/components/loan-calculator";
-import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
-import {
-  LANDING_INVESTOR_VIDEO,
-  LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
-} from "@/lib/landing-video";
 import { PortfolioStories } from "@/components/marketing/portfolio-stories";
 import {
   SUBSCRIPTION_PRICE_SENTENCE,
@@ -20,11 +15,13 @@ export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
 const LESSON = "/pobierz/darmowa-lekcja";
+// Film w hero: „Kompleksowa prezentacja” (dawniej Wistia, od 2.10.2026 w naszym
+// Storage) — ten sam, który był w hero /dla-inwestora. Plakat z 1. sekundy, bo
+// film zaczyna się ciemnym kadrem.
+const HERO_VIDEO_URL =
+  "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/marketing-materials/Finance You - Kompleksowa Prezentacja (Merged)_1080p_caption (2).mp4";
+const HERO_VIDEO_TITLE = "Finance You — kompleksowa prezentacja";
 export const Route = createFileRoute("/")({
-  loader: async ({ context }) => ({
-    // Film z hero (kopia w Storage); null → zapasowy odtwarzacz HeyGen.
-    video: await getLandingInvestorVideo().catch(() => null),
-  }),
   head: () => ({
     meta: [
       { title: "Pożyczaj pod hipotekę — szkolenie i narzędzia inwestora | Finance You" },
@@ -97,7 +94,6 @@ const FAQS = [
 ];
 
 function InvestorHome() {
-  const { video } = Route.useLoaderData();
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
@@ -127,26 +123,16 @@ function InvestorHome() {
               </MktButton>
             </div>
           </div>
-          {/* Film „Twoja droga do prywatnego finansowania nieruchomości” — przeniesiony
-              ze starego /dla-inwestora (przepadł przy przebudowie 26.10). */}
+          {/* Film „Kompleksowa prezentacja” — ten sam, który był w hero /dla-inwestora. */}
           <div className="fy-sales-hero-video">
-            {video ? (
-              <video
-                src={video.videoUrl}
-                poster={video.posterUrl ?? undefined}
-                controls
-                playsInline
-                preload="metadata"
-                aria-label={LANDING_INVESTOR_VIDEO.title}
-              />
-            ) : (
-              <iframe
-                src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL}
-                title={LANDING_INVESTOR_VIDEO.title}
-                allow="autoplay; fullscreen; encrypted-media"
-                allowFullScreen
-              />
-            )}
+            <video
+              src={encodeURI(HERO_VIDEO_URL)}
+              poster="/marketing/prezentacja-poster.webp"
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={HERO_VIDEO_TITLE}
+            />
           </div>
         </div>
       </section>
