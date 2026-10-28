@@ -11,6 +11,7 @@ import {
   FOUNDATION_SALES_EXPLANATION,
 } from "@/lib/investor-plan/plans";
 import { RoadCards } from "@/components/marketing/road-cards";
+import { DoubleGuarantee } from "@/components/marketing/double-guarantee";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
@@ -165,6 +166,7 @@ function InvestorHome() {
         <div className="mt-8">
           <InvestorPricing />
         </div>
+        <DoubleGuarantee />
         <h3 className="fy-sales-subtitle">Twoje pierwsze 30 dni</h3>
         <div className="mt-8">
           <ProcessSteps
