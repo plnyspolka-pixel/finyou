@@ -164,8 +164,8 @@ function InvestorHome() {
             <p className="fy-sales-brand">Finance You</p>
             <ul>
               {[
-                "Najwyższe stopy zwrotu w branży nieruchomości.",
-                "Pełne zabezpieczenie kapitału — Twoje nazwisko w księdze wieczystej.",
+                "Osiągaj ponadprzeciętne stopy zwrotu z nieruchomości.",
+                "Dbaj o bezpieczeństwo kapitału tak jak banki — Twoje nazwisko w księdze wieczystej.",
                 "Bez kupowania, budowania, sprzedawania, remontowania, bez najemców, bez wysiłku, bez stresu i bez czekania na efekty!",
               ].map((t) => (
                 <li key={t}>
