@@ -82,16 +82,16 @@ export type InvestorModule = {
 export const INVESTOR_MODULES: InvestorModule[] = [
   {
     slug: "szkolenie",
-    name: "Szkolenie inwestora",
-    nameLead: "Szkolenie",
-    nameAccent: "inwestora",
-    menuLabel: "Szkolenie inwestora",
+    name: "Szkolenie i indywidualny mentoring",
+    nameLead: "Szkolenie i",
+    nameAccent: "indywidualny mentoring",
+    menuLabel: "Szkolenie i indywidualny mentoring",
     tagline: "7 modułów: od strategii i prawa po analizę, umowę i windykację",
     image: "/marketing/moduly/szkolenie-1.webp",
     slides: ["/marketing/moduly/szkolenie-2.webp", "/marketing/moduly/szkolenie-3.webp"],
     imageAlt:
       "Szkolenie inwestora — inwestor przy biurku ogląda lekcję wideo, obok program siedmiu modułów",
-    metaTitle: "Szkolenie inwestora — pożyczki zabezpieczone hipoteką od podstaw | Finance You",
+    metaTitle: "Szkolenie i indywidualny mentoring inwestora — pożyczki pod hipotekę | Finance You",
     metaDescription:
       "Szkolenie w 7 modułach: strategia, prawo, operacje, analiza nieruchomości i klienta, case study i windykacja. Uczysz się na narzędziach, z których korzystasz.",
     lead: "Szkolenie jest sercem abonamentu partnera Finance You. Prowadzi Cię od zasad rynku prywatnych pożyczek zabezpieczonych na nieruchomościach, przez prawo i analizę, po umowę i windykację — a każdy temat od razu przećwiczysz na narzędziach z tego samego abonamentu.",
@@ -99,6 +99,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
       "Program w 7 modułach, od podstaw",
       "Lekcje wideo w panelu, w Twoim tempie",
       "Teoria połączona z narzędziami do pracy",
+      "Indywidualny mentoring inwestora z 15-letnim stażem",
     ],
     featuresTitle: "Wiesz, co robisz, zanim wyłożysz pierwszą złotówkę",
     fab: [
@@ -158,7 +159,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     steps: [
       {
         t: "Zostajesz partnerem",
-        d: "Wybierasz abonament miesięczny albo roczny — także w ratach.",
+        d: "Kupujesz roczny abonament — także w ratach.",
       },
       { t: "Otwierasz szkolenie", d: "Lekcje wideo czekają w panelu od pierwszego dnia." },
       {
@@ -181,8 +182,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Ocena ryzyka A–E i wycena w ok. 15 minut",
     image: "/marketing/moduly/analityk-ai-1.webp",
     slides: ["/marketing/moduly/analityk-ai-2.webp", "/marketing/moduly/analityk-ai-3.webp"],
-    imageAlt:
-      "Analityk — ocena ryzyka A–E i wycena nieruchomości na tablecie inwestora",
+    imageAlt: "Analityk — ocena ryzyka A–E i wycena nieruchomości na tablecie inwestora",
     metaTitle: "Analityk AI — analiza zabezpieczenia i ryzyka dla inwestora | Finance You",
     metaDescription:
       "Ocena ryzyka i wycena w ok. 15 minut: ponad 400 punktów danych, księga wieczysta, LTV, płynność, klasa A–E i raport PDF. Poznaj Analityka AI.",
@@ -287,8 +287,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Umowa pożyczki i 30 wzorów — od aneksu po wniosek do komornika",
     image: "/marketing/moduly/kancelaria-ai-1.webp",
     slides: ["/marketing/moduly/kancelaria-ai-2.webp", "/marketing/moduly/kancelaria-ai-3.webp"],
-    imageAlt:
-      "Kancelaria — umowa pożyczki i wzory dokumentów na biurku z wagą Temidy",
+    imageAlt: "Kancelaria — umowa pożyczki i wzory dokumentów na biurku z wagą Temidy",
     metaTitle: "Kancelaria AI — 30 wzorów dokumentów i umowa pożyczki dla inwestora | Finance You",
     metaDescription:
       "Umowa pożyczki z biblioteki klauzul i 30 wzorów — od aneksu i wezwania po wniosek do komornika — z danymi z GUS i KRS oraz e-podpisem. Poznaj Kancelarię AI.",
@@ -367,8 +366,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Obowiązki AML w jednym miejscu — od weryfikacji klienta po GIIF",
     image: "/marketing/moduly/aml-compliance-1.webp",
     slides: ["/marketing/moduly/aml-compliance-2.webp", "/marketing/moduly/aml-compliance-3.webp"],
-    imageAlt:
-      "Moduł AML — weryfikacja klienta: KYC, listy sankcyjne i PEP",
+    imageAlt: "Moduł AML — weryfikacja klienta: KYC, listy sankcyjne i PEP",
     metaTitle: "Moduł AML/compliance — GIIF, sankcje i rejestr ponadprogowy | Finance You",
     metaDescription:
       "Wsparcie raportowania do GIIF, screening list sankcyjnych i PEP oraz rejestr transakcji powyżej 15 000 EUR — w jednym miejscu. Poznaj moduł AML/compliance.",
@@ -463,8 +461,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Od pierwszego upomnienia aż na biurko komornika — jednym kliknięciem",
     image: "/marketing/moduly/windykator-ai-1.webp",
     slides: ["/marketing/moduly/windykator-ai-2.webp", "/marketing/moduly/windykator-ai-3.webp"],
-    imageAlt:
-      "Windykator — etapy windykacji od upomnienia po egzekucję",
+    imageAlt: "Windykator — etapy windykacji od upomnienia po egzekucję",
     metaTitle: "Windykator AI — windykacja pożyczek jednym kliknięciem dla inwestora | Finance You",
     metaDescription:
       "Wszystkie procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Poznaj Windykatora AI.",
@@ -561,8 +558,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Projekty z całej Polski dopasowane do Twojej kwoty",
     image: "/marketing/moduly/siec-sprzedazy-1.webp",
     slides: ["/marketing/moduly/siec-sprzedazy-2.webp", "/marketing/moduly/siec-sprzedazy-3.webp"],
-    imageAlt:
-      "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",
+    imageAlt: "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",
     metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
     metaDescription:
       "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty z całej Polski dopasowane do Twojego Zlecenia — bez opłat za Projekt.",

@@ -195,6 +195,8 @@ export interface BenefitBullet {
   zaleta: string;
   /** Co z tego masz ty — język korzyści, domyka akapit. */
   korzysc: string;
+  /** Podstrona modułu /dla-inwestora/<slug> — nazwa punktu w cenniku staje się linkiem. */
+  moduleSlug?: string;
 }
 
 /** Jeden abonament inwestora — pełny dostęp. Do UI (panel + strona marketingowa). */
@@ -210,6 +212,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
   bullets: [
     {
       cecha: "Ogólnopolska sieć sprzedaży",
+      moduleSlug: "siec-sprzedazy",
       zaleta:
         "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty dostajesz sprawy z całej Polski, które mieszczą się w kwocie z Twojego Zlecenia kwoty.",
       korzysc: "Nie szukasz klientów i nie płacisz za reklamę.",
@@ -218,16 +221,18 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       cecha: "Indywidualny mentoring inwestora",
       zaleta:
         "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach.",
-      korzysc: "Nie zaczynasz sam.",
+      korzysc: "Nie jesteś sam — wspieramy Cię od początku do końca.",
     },
     {
       cecha: "Szkolenie inwestora",
+      moduleSlug: "szkolenie",
       zaleta:
         "Serce abonamentu: 7 modułów — strategia, prawo, operacje, analiza nieruchomości i klienta, case study i windykacja — oparte na 15 latach doświadczenia.",
       korzysc: "Uczysz się na cudzym doświadczeniu, a nie na własnych błędach.",
     },
     {
       cecha: "Analityk AI",
+      moduleSlug: "analityk-ai",
       zaleta: "Ocena ryzyka A–E i wycena w ok. 15 minut — ponad 400 punktów danych i raport PDF.",
       korzysc: "Wiesz, co zabezpiecza Twój kapitał, zanim go wyłożysz.",
     },
@@ -235,25 +240,28 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       cecha: "Kalkulator compliance",
       zaleta:
         "Od razu pokazuje zysk, ratę i harmonogram oraz ostrzega, gdy oprocentowanie przekracza odsetki maksymalne.",
-      korzysc: "Nie przekroczysz limitu odsetek przez nieuwagę.",
+      korzysc: "Łatwo pilnujesz limitu kosztów pożyczki.",
     },
     {
       cecha: "Kancelaria AI",
+      moduleSlug: "kancelaria-ai",
       zaleta:
         "Umowa pożyczki ze sprawdzonych klauzul i 30 wzorów — od aneksu po wniosek do komornika — z podpisem elektronicznym.",
       korzysc: "Oszczędzasz czas i koszt przygotowania dokumentów.",
     },
     {
       cecha: "Moduł AML/compliance",
+      moduleSlug: "aml-compliance",
       zaleta:
         "Screening list sankcyjnych i PEP, rejestr transakcji powyżej 15 000 EUR i wsparcie raportowania do GIIF.",
-      korzysc: "Obowiązki AML wypełniasz w jednym miejscu, bez osobnego systemu.",
+      korzysc: "Obowiązki sprawozdawcze wypełniasz w jednym miejscu, bez osobnego systemu.",
     },
     {
       cecha: "Windykator AI",
+      moduleSlug: "windykator-ai",
       zaleta:
         "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
-      korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
+      korzysc: "Gotowy zestaw procedur i dokumentów na każdą okazję.",
     },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,

@@ -23,7 +23,7 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
 } from "@/lib/investor-plan/plans";
-import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
+import { RoadCards } from "@/components/marketing/road-cards";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
@@ -101,51 +101,6 @@ const FAQS = [
   {
     q: "Jak zacząć?",
     a: "Obejrzyj darmową lekcję po zapisie e-mail. Poznaj program i cennik. Kody rabatowe wysyłamy w mailingu.",
-  },
-];
-// „Twoja droga na rynek…”: sieć sprzedaży, cztery narzędzia, mentoring.
-const ROAD_CARDS: {
-  name: string;
-  eyebrow: string;
-  icon: Icon3DName;
-  module?: string;
-  text?: string;
-  image?: { src: string; alt: string };
-}[] = [
-  {
-    name: "Ogólnopolska sieć sprzedaży",
-    eyebrow: "Sprawy przychodzą do Ciebie",
-    icon: "investors",
-    module: "Ogólnopolska sieć sprzedaży",
-  },
-  { name: "Analityk AI", eyebrow: "Zanim wyłożysz", icon: "ai", module: "Analityk AI" },
-  {
-    name: "Kancelaria AI",
-    eyebrow: "Zanim podpiszesz",
-    icon: "documents",
-    module: "Kancelaria AI",
-  },
-  {
-    name: "Moduł AML/compliance",
-    eyebrow: "Zanim przyjmiesz spłatę",
-    icon: "complianceAml",
-    module: "Moduł AML/compliance",
-  },
-  {
-    name: "Windykator AI",
-    eyebrow: "Gdy rata nie przychodzi",
-    icon: "shieldcheck",
-    module: "Windykator AI",
-  },
-  {
-    name: "Indywidualny mentoring inwestora",
-    eyebrow: "Na każdym etapie",
-    icon: "handshake",
-    image: {
-      src: "/marketing/moduly/mentoring-1.webp",
-      alt: "Mentor z 15-letnim stażem omawia z inwestorką dokumenty sprawy",
-    },
-    text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie zaczynasz sam.",
   },
 ];
 
@@ -229,6 +184,10 @@ function InvestorHome() {
         Finance You sp. z o.o. · 15 lat finansowania pod hipotekę · założyciel cytowany w
         „Rzeczpospolitej”
       </div>
+      <Section id="narzedzia">
+        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
+        <RoadCards />
+      </Section>
       <Section id="ochrona">
         <SectionHead title="Boisz się? Słusznie. Oto co Cię chroni." />
         <div className="mt-8">
@@ -287,93 +246,6 @@ function InvestorHome() {
         <SectionHead title="Policz przykład dla swojego kapitału" />
         <div className="mt-8">
           <LoanCalculator marketingPreview initialMaxPayment={0} />
-        </div>
-      </Section>
-      <Section id="szkolenie" tint>
-        <SectionHead title="Szkolenie, po którym sam ocenisz zabezpieczenie, umowę i ryzyko" />
-        <ul className="fy-sales-checks">
-          {[
-            "Po szkoleniu potrafisz ocenić księgę wieczystą i hipotekę.",
-            "Porównać kwotę finansowania z wartością zabezpieczenia.",
-            "Rozpoznać ryzyka klienta i źródło spłaty.",
-            "Ustalić warunki, umowę i harmonogram.",
-            "Poprowadzić działania, gdy rata nie przychodzi.",
-          ].map((t) => (
-            <li key={t}>
-              <BrandIcon name="check" />
-              {t}
-            </li>
-          ))}
-        </ul>
-        <ol className="fy-sales-modules">
-          {(
-            [
-              ["Wprowadzenie i strategia", "academy"],
-              ["Prawo", "compliance"],
-              ["Operacje", "procedures"],
-              ["Analiza nieruchomości", "house"],
-              ["Analiza klienta", "investors"],
-              ["Case study", "dossier"],
-              ["Windykacja", "shieldcheck"],
-            ] as const
-          ).map(([t, icon], i) => (
-            <li key={t}>
-              <span>0{i + 1}</span>
-              <Icon3D name={icon} size={40} />
-              <strong>{t}</strong>
-              {i === 0 ? <a href={LESSON}>Lekcja 1 za darmo →</a> : <BrandIcon name="lock" />}
-            </li>
-          ))}
-        </ol>
-        <div className="fy-sales-founder-line">
-          <FounderPhoto small />
-          <span>
-            Prowadzi: <strong>Filip Bielak</strong> — inwestor z ponad 15-letnim doświadczeniem na
-            rynku nieruchomości i pożyczek prywatnych. Absolwent Wydziału Prawa i Administracji
-            UMCS, przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze
-            rynkowe publikowała m.in. „Rzeczpospolita”. <a href="/o-nas">Więcej o nas →</a>
-          </span>
-        </div>
-      </Section>
-      <Section id="narzedzia">
-        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
-        <div className="fy-sales-cards">
-          {ROAD_CARDS.map((c) => {
-            const m = c.module ? INVESTOR_MODULES.find((x) => x.name === c.module) : undefined;
-            return (
-              <article className="fy-sales-card" key={c.name}>
-                <Icon3D name={c.icon} size={48} />
-                <span className="fy-sales-eyebrow">{c.eyebrow}</span>
-                <h3>{c.name}</h3>
-                {m ? (
-                  <>
-                    <img
-                      className="fy-sales-tool-image"
-                      src={m.image}
-                      alt={m.imageAlt}
-                      loading="lazy"
-                    />
-                    <p>{m.tagline}</p>
-                    <a className="fy-sales-link" href={investorModulePath(m.slug)}>
-                      Poznaj szczegóły →
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    {c.image && (
-                      <img
-                        className="fy-sales-tool-image"
-                        src={c.image.src}
-                        alt={c.image.alt}
-                        loading="lazy"
-                      />
-                    )}
-                    <p>{c.text}</p>
-                  </>
-                )}
-              </article>
-            );
-          })}
         </div>
       </Section>
       <Section id="korzysci" tint>
@@ -472,28 +344,6 @@ function InvestorHome() {
           Masz inne pytanie? Zapytaj Anię na czacie albo napisz na{" "}
           <a href="mailto:kontakt@financeyou.pl">kontakt@financeyou.pl</a>.
         </p>
-      </Section>
-      <Section tint>
-        <SectionHead title="Twój kapitał, Twoje decyzje, Twoje odsetki." />
-        <div className="fy-sales-actions">
-          <MktButton variant="gold" href="/abonament-inwestora?okres=rocznie">
-            Zostań partnerem
-          </MktButton>
-          <MktButton variant="outline" href={LESSON}>
-            Obejrzyj darmową lekcję
-          </MktButton>
-        </div>
-        <details className="fy-sales-legal">
-          <summary>Ważne informacje</summary>
-          <p>
-            Abonament jest odpłatnym programem szkoleniowym z narzędziami, sprzedawanym przez
-            Fundację. Dostęp do spraw wynika z odrębnej, bezpłatnej umowy ramowej z Finance You. Nie
-            gwarantujemy przedstawienia sprawy, zawarcia transakcji ani zysku. Hipoteka ogranicza
-            ryzyko, ale go nie eliminuje. Decyzje podejmujesz samodzielnie. Kalkulator ma charakter
-            informacyjny i nie stanowi oferty ani porady prawnej lub finansowej. Warunki historyczne
-            nie są aktualną ofertą.
-          </p>
-        </details>
       </Section>
     </MarketingShell>
   );

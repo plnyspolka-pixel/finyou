@@ -16,17 +16,15 @@ import {
 } from "@/components/marketing/sections";
 import { MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
-import { FeatureCards, GradeScale, ModuleCards } from "@/components/marketing/investor-module-ui";
+import { FeatureCards, GradeScale } from "@/components/marketing/investor-module-ui";
+import { RoadCards } from "@/components/marketing/road-cards";
+import { TrainingProgram } from "@/components/marketing/training-program";
 import {
-  INVESTOR_MODULES,
   investorModuleBySlug,
   investorModulePath,
   type InvestorModule,
 } from "@/components/marketing/investor-modules";
-import {
-  plnLabel,
-  SUBSCRIPTION_YEARLY_PLN,
-} from "@/lib/investor-plan/plans";
+import { plnLabel, SUBSCRIPTION_YEARLY_PLN } from "@/lib/investor-plan/plans";
 import { breadcrumbLd, SITE_URL } from "@/lib/seo/company";
 
 const PRICING = "/#cennik";
@@ -88,10 +86,16 @@ function InvestorModulePage() {
   const { slug } = Route.useLoaderData();
   const m = investorModuleBySlug(slug);
   if (!m) return null;
-  const others = INVESTOR_MODULES.filter((o) => o.slug !== m.slug);
   return (
     <MarketingShell page="inwestorModul" sticky={{ label: "Zostań partnerem", href: PRICING }}>
       <ModuleHero m={m} />
+
+      {m.slug === "szkolenie" && (
+        <Section id="program" tint>
+          <SectionHead title="Szkolenie, po którym sam ocenisz zabezpieczenie, umowę i ryzyko" />
+          <TrainingProgram />
+        </Section>
+      )}
 
       <Section id="co-zyskujesz">
         <SectionHead center eyebrow="Co zyskujesz" title={m.featuresTitle} />
@@ -121,7 +125,7 @@ function InvestorModulePage() {
       <Section id="pozostale-moduly">
         <SectionHead center title="Pozostałe elementy abonamentu" />
         <div style={{ marginTop: "2rem" }}>
-          <ModuleCards modules={others} compact />
+          <RoadCards exclude={m.slug} />
         </div>
       </Section>
 
