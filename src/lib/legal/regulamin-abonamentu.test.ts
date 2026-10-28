@@ -20,9 +20,16 @@ const tekst = regulaminAbonamentuInwestora();
 const sha = createHash("sha256").update(tekst, "utf8").digest("hex");
 
 describe("regulamin abonamentu inwestora", () => {
-  it("wersja 1.0 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
-    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.0");
-    expect(sha).toBe("14efebaacefc3dabc6c24647464c9a61fe45c1c0d6b2223fe666e07970fbd309");
+  it("wersja 1.1 ma przypięty skrót treści (zmiana treści = nowa wersja)", () => {
+    expect(REGULAMIN_ABONAMENTU_VERSION).toBe("regulamin-abonamentu-inwestora-1.1");
+    expect(sha).toBe("e5d9d457a1c00ee5e407755ac270efa22a5517b432fb91170d42248afd250ecb");
+  });
+
+  it("4 godziny indywidualnych konsultacji w ramach szkolenia (od 1.1)", () => {
+    expect(tekst).toContain(
+      "indywidualnych konsultacji z prowadzącym szkolenie w łącznym wymiarze 4 godzin",
+    );
+    expect(tekst).toContain("zakładka Indywidualna konsultacja");
   });
 
   it("całość jako szkolenie w treściach cyfrowych — bez prawa odstąpienia (art. 38 ust. 1 pkt 13)", () => {

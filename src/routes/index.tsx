@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -13,34 +12,26 @@ import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { Icon3D, type Icon3DName } from "@/components/marketing/icon-3d";
 import { LoanCalculator } from "@/components/loan-calculator";
-import { FreeMaterialsSection } from "@/components/marketing/free-materials";
-import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
-import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
-import { getInvestorPublicProof } from "@/lib/investor-sales-public.functions";
+import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
+import {
+  LANDING_INVESTOR_VIDEO,
+  LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL,
+} from "@/lib/landing-video";
 import { PortfolioStories } from "@/components/marketing/portfolio-stories";
 import { FounderPhoto } from "@/components/marketing/founder-photo";
 import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
-  plnLabel,
 } from "@/lib/investor-plan/plans";
 import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
 const LESSON = "/pobierz/darmowa-lekcja";
-const proofQuery = queryOptions({
-  queryKey: ["investor-public-proof"],
-  queryFn: () => getInvestorPublicProof(),
-  staleTime: 3600000,
-  refetchInterval: 3600000,
-});
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => ({
-    proof: await context.queryClient.ensureQueryData(proofQuery),
-    materials: await getFreeMaterialsFn({ data: { audience: "inwestor" } }).catch(() =>
-      EMPTY_FREE_MATERIALS("inwestor"),
-    ),
+    // Film z hero (kopia w Storage); null → zapasowy odtwarzacz HeyGen.
+    video: await getLandingInvestorVideo().catch(() => null),
   }),
   head: () => ({
     meta: [
@@ -112,15 +103,51 @@ const FAQS = [
     a: "Obejrzyj darmową lekcję po zapisie e-mail. Poznaj program i cennik. Kody rabatowe wysyłamy w mailingu.",
   },
 ];
-// Ikona 3D karty sprawy wg typu nieruchomości (pkt 14).
-const CASE_ICON: Record<string, Icon3DName> = {
-  Mieszkanie: "propApartment",
-  Dom: "propHouse",
-  "Lokal użytkowy": "propStore",
-  "Działka budowlana": "propPlot",
-  "Grunt rolny": "propField",
-};
-const TOOL_ICON: Icon3DName[] = ["ai", "documents", "complianceAml", "shieldcheck"];
+// „Twoja droga na rynek…”: sieć sprzedaży, cztery narzędzia, mentoring.
+const ROAD_CARDS: {
+  name: string;
+  eyebrow: string;
+  icon: Icon3DName;
+  module?: string;
+  text?: string;
+  image?: { src: string; alt: string };
+}[] = [
+  {
+    name: "Ogólnopolska sieć sprzedaży",
+    eyebrow: "Sprawy przychodzą do Ciebie",
+    icon: "investors",
+    module: "Ogólnopolska sieć sprzedaży",
+  },
+  { name: "Analityk AI", eyebrow: "Zanim wyłożysz", icon: "ai", module: "Analityk AI" },
+  {
+    name: "Kancelaria AI",
+    eyebrow: "Zanim podpiszesz",
+    icon: "documents",
+    module: "Kancelaria AI",
+  },
+  {
+    name: "Moduł AML/compliance",
+    eyebrow: "Zanim przyjmiesz spłatę",
+    icon: "complianceAml",
+    module: "Moduł AML/compliance",
+  },
+  {
+    name: "Windykator AI",
+    eyebrow: "Gdy rata nie przychodzi",
+    icon: "shieldcheck",
+    module: "Windykator AI",
+  },
+  {
+    name: "Indywidualny mentoring inwestora",
+    eyebrow: "Na każdym etapie",
+    icon: "handshake",
+    image: {
+      src: "/marketing/moduly/mentoring-1.webp",
+      alt: "Mentor z 15-letnim stażem omawia z inwestorką dokumenty sprawy",
+    },
+    text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie zaczynasz sam.",
+  },
+];
 
 const PROTECTION = [
   {
@@ -145,34 +172,56 @@ const PROTECTION = [
   },
 ];
 function InvestorHome() {
-  const { materials } = Route.useLoaderData();
-  const { data: proof } = useSuspenseQuery(proofQuery);
+  const { video } = Route.useLoaderData();
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
         <div className="fy-sales-hero-inner">
-          <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
-          <h1>Pożyczaj pod hipotekę jak bank — nawet jeśli nigdy tego nie robiłeś.</h1>
-          <p className="fy-sales-brand">Finance You</p>
-          <ul>
-            {[
-              "Twoje pieniądze nigdy nie przechodzą przez Finance You — przelewasz je bezpośrednio firmie po podpisie u notariusza, z hipoteką na Twoje nazwisko.",
-              "Sprawy z całej Polski trafiają do Ciebie — nie szukasz klientów.",
-              "Umowa, ocena ryzyka i hipoteka przygotowane w systemie.",
-            ].map((t) => (
-              <li key={t}>
-                <BrandIcon name="check" size={20} />
-                <span>{t}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="fy-sales-actions">
-            <MktButton variant="gold" size="lg" href={LESSON}>
-              Obejrzyj darmową lekcję — ok. 35 minut
-            </MktButton>
-            <MktButton variant="outline" size="lg" href="#cennik">
-              Zobacz program i cenę
-            </MktButton>
+          <div className="fy-sales-hero-copy">
+            <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
+            <h1>Inwestuj w pożyczki pod zastaw nieruchomości</h1>
+            <p className="fy-sales-brand">Finance You</p>
+            <ul>
+              {[
+                "Osiągaj ponadprzeciętne stopy zwrotu z nieruchomości.",
+                "Dbaj o bezpieczeństwo kapitału tak jak banki — Twoje nazwisko w księdze wieczystej.",
+                "Bez kupowania, budowania, sprzedawania, remontowania, bez najemców, bez wysiłku, bez stresu i bez czekania na efekty!",
+              ].map((t) => (
+                <li key={t}>
+                  <BrandIcon name="check" size={20} />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="fy-sales-actions">
+              <MktButton variant="gold" size="lg" href={LESSON}>
+                Obejrzyj darmową lekcję — ok.{"\u00a0"}35 minut
+              </MktButton>
+              <MktButton variant="outline" size="lg" href="#cennik">
+                Zobacz program i cenę
+              </MktButton>
+            </div>
+          </div>
+          {/* Film „Twoja droga do prywatnego finansowania nieruchomości” — przeniesiony
+              ze starego /dla-inwestora (przepadł przy przebudowie 26.10). */}
+          <div className="fy-sales-hero-video">
+            {video ? (
+              <video
+                src={video.videoUrl}
+                poster={video.posterUrl ?? undefined}
+                controls
+                playsInline
+                preload="metadata"
+                aria-label={LANDING_INVESTOR_VIDEO.title}
+              />
+            ) : (
+              <iframe
+                src={LANDING_INVESTOR_VIDEO_HEYGEN_EMBED_URL}
+                title={LANDING_INVESTOR_VIDEO.title}
+                allow="autoplay; fullscreen; encrypted-media"
+                allowFullScreen
+              />
+            )}
           </div>
         </div>
       </section>
@@ -188,40 +237,6 @@ function InvestorHome() {
         <a className="fy-sales-link" href="#historie">
           Zobacz, jak hipoteka zadziałała →
         </a>
-      </Section>
-      <Section id="sprawy" tint>
-        <SectionHead
-          title="Popyt na pieniądze jest nieograniczony. Wąskim gardłem jest kapitał."
-          sub="Przez 15 lat nie było miesiąca, w którym brakowało spraw — brakowało kapitału, żeby wszystkie sfinansować. Finansujemy je także własnymi pieniędzmi, więc każdą sprawę oceniamy tak, jakbyśmy sami mieli wyłożyć kapitał. Spraw jest wielokrotnie więcej, niż udźwignie jeden portfel — dlatego szukamy partnerów."
-        />
-        {proof.cases.length > 0 && (
-          <div className="fy-sales-cards">
-            {proof.cases.map((c) => (
-              <article className="fy-sales-card" key={c.ref}>
-                <Icon3D name={CASE_ICON[c.propertyType] ?? "house"} size={56} />
-                <span className="fy-sales-eyebrow">
-                  {c.ref} · {c.daysAgo} dni temu
-                </span>
-                <h3>{c.propertyType}</h3>
-                <p>{c.voivodeship}</p>
-                <strong className="fy-sales-number">{plnLabel(c.amount)}</strong>
-                <p>
-                  {c.months ? `${c.months} miesięcy · ` : ""}
-                  {c.status}
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-        <p className="mt-5 text-sm text-muted-foreground">
-          Pełne dane sprawy widzą partnerzy z aktywnym abonamentem.
-        </p>
-        {/* Tylko gdy lead magnet „raporty-spraw” jest opublikowany (pkt 7). */}
-        {materials.materials.some((m) => m.slug === "raporty-spraw") && (
-          <a className="fy-sales-link" href="/pobierz/raporty-spraw">
-            Zobacz przykładowe raporty spraw →
-          </a>
-        )}
       </Section>
       <Section id="jak-dziala">
         <SectionHead title="Jak to działa — 5 kroków" />
@@ -313,48 +328,52 @@ function InvestorHome() {
         <div className="fy-sales-founder-line">
           <FounderPhoto small />
           <span>
-            Prowadzi: <strong>Filip Bielak</strong>
+            Prowadzi: <strong>Filip Bielak</strong> — inwestor z ponad 15-letnim doświadczeniem na
+            rynku nieruchomości i pożyczek prywatnych. Absolwent Wydziału Prawa i Administracji
+            UMCS, przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze
+            rynkowe publikowała m.in. „Rzeczpospolita”. <a href="/o-nas">Więcej o nas →</a>
           </span>
         </div>
       </Section>
       <Section id="narzedzia">
-        <SectionHead title="Cztery narzędzia na cztery momenty, w których inwestor traci pieniądze" />
+        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
         <div className="fy-sales-cards">
-          {["Analityk AI", "Kancelaria AI", "Moduł AML/compliance", "Windykator AI"].map(
-            (name, i) => {
-              const m = INVESTOR_MODULES.find((x) => x.name === name);
-              return (
-                <article className="fy-sales-card" key={name}>
-                  <Icon3D name={TOOL_ICON[i]} size={48} />
-                  <span className="fy-sales-eyebrow">
-                    {
-                      [
-                        "Zanim wyłożysz",
-                        "Zanim podpiszesz",
-                        "Zanim przyjmiesz spłatę",
-                        "Gdy rata nie przychodzi",
-                      ][i]
-                    }
-                  </span>
-                  <h3>{name}</h3>
-                  {m && (
-                    <>
+          {ROAD_CARDS.map((c) => {
+            const m = c.module ? INVESTOR_MODULES.find((x) => x.name === c.module) : undefined;
+            return (
+              <article className="fy-sales-card" key={c.name}>
+                <Icon3D name={c.icon} size={48} />
+                <span className="fy-sales-eyebrow">{c.eyebrow}</span>
+                <h3>{c.name}</h3>
+                {m ? (
+                  <>
+                    <img
+                      className="fy-sales-tool-image"
+                      src={m.image}
+                      alt={m.imageAlt}
+                      loading="lazy"
+                    />
+                    <p>{m.tagline}</p>
+                    <a className="fy-sales-link" href={investorModulePath(m.slug)}>
+                      Poznaj szczegóły →
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    {c.image && (
                       <img
                         className="fy-sales-tool-image"
-                        src={m.image}
-                        alt={m.imageAlt}
+                        src={c.image.src}
+                        alt={c.image.alt}
                         loading="lazy"
                       />
-                      <p>{m.tagline}</p>
-                      <a className="fy-sales-link" href={investorModulePath(m.slug)}>
-                        Poznaj narzędzie →
-                      </a>
-                    </>
-                  )}
-                </article>
-              );
-            },
-          )}
+                    )}
+                    <p>{c.text}</p>
+                  </>
+                )}
+              </article>
+            );
+          })}
         </div>
       </Section>
       <Section id="korzysci" tint>
@@ -446,7 +465,6 @@ function InvestorHome() {
           Tempo zależy od Ciebie i od spraw w Twojej kwocie.
         </p>
       </Section>
-      <FreeMaterialsSection data={materials} />
       <Section id="faq">
         <SectionHead title="Twoje pytania — konkretne odpowiedzi" />
         <FAQ items={FAQS} />

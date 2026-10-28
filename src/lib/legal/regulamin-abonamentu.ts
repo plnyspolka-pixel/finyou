@@ -9,6 +9,9 @@
  * generowana z tych samych stałych co cennik (lib/investor-plan/plans.ts),
  * a skrót każdej wersji pilnuje test — zmiana ceny wymaga nowej wersji.
  *
+ * Wersja 1.1 (decyzja właściciela 2026-10-28): § 3 ust. 3 — 4 godziny
+ * indywidualnych konsultacji w Okresie Abonamentowym, zgłaszane w panelu.
+ *
  * Wersja 1.0 (decyzja właściciela 2026-10-19 — dokumenty bez wersji
  * historycznych; treść jak dotąd): Abonament w całości jest
  * szkoleniem w formie treści cyfrowych — po wyraźnym żądaniu rozpoczęcia
@@ -22,10 +25,12 @@ import {
 } from "@/lib/investor-plan/plans";
 
 /** Cena w brzmieniu umów — test pilnuje zgodności z ABONAMENT_UMOWA (dokumenty-1-0.ts). */
-export const CENA_ABONAMENTU = `${SUBSCRIPTION_YEARLY_PLN.toLocaleString("pl-PL", {minimumFractionDigits: 2})} zł brutto za 365 dni`;
+export const CENA_ABONAMENTU = `${SUBSCRIPTION_YEARLY_PLN.toLocaleString("pl-PL", { minimumFractionDigits: 2 })} zł brutto za 365 dni`;
 
-export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.0";
-export const REGULAMIN_ABONAMENTU_DATA_PL = "19 października 2026 r.";
+export const REGULAMIN_ABONAMENTU_VERSION = "regulamin-abonamentu-inwestora-1.1";
+export const REGULAMIN_ABONAMENTU_DATA_PL = "28 października 2026 r.";
+/** Wymiar indywidualnych konsultacji w Okresie Abonamentowym (§ 3 ust. 3) — ten sam limit pilnuje panel. */
+export const KONSULTACJE_GODZIN = 4;
 export const REGULAMIN_ABONAMENTU_PATH = "/regulamin-inwestora";
 
 export const FUNDACJA = {
@@ -40,7 +45,7 @@ export function regulaminAbonamentuInwestora(): string {
   const f = FUNDACJA;
   return `# REGULAMIN ABONAMENTU INWESTORA FINANCE YOU
 
-**wersja 1.0 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
+**wersja 1.1 — obowiązuje od dnia ${REGULAMIN_ABONAMENTU_DATA_PL}**
 
 ## § 1. Postanowienia ogólne
 
@@ -63,8 +68,9 @@ export function regulaminAbonamentuInwestora(): string {
 
 1. Abonament jest szkoleniem inwestora dostarczanym w formie treści cyfrowych, niezapisanych na nośniku materialnym, w rozumieniu ustawy z dnia 30 maja 2014 r. o prawach konsumenta.
 2. W ramach szkolenia, w Okresie Abonamentowym, Inwestor ma dostęp do Akademii oraz do modułów panelu inwestora, w szczególności: analityki (księga wieczysta, właściciele, analiza księgi, ocena ryzyka), dokumentów i kreatora umów, windykacji, modułu AML i kalkulatora compliance. Moduły te są narzędziami szkoleniowymi i stanowią część szkolenia, a nie odrębną usługę. Abonament obejmuje także dostęp do pipeline'u inwestora, w którym Inwestor uzupełnia dane, przechodzi weryfikację tożsamości i zawiera Umowy o dostęp do Klientów.
-3. Dostęp do Klientów, Projektów i ofert (moduł ofert: Zlecenia, dopasowane Projekty, dane Klientów i oferty) wymaga ponadto zawarcia Umów o dostęp do Klientów. Inwestor akceptuje je w panelu po zakupie Abonamentu, gdy chce korzystać z modułu ofert. Umowy o dostęp do Klientów nie przewidują wynagrodzenia Finance You od Inwestora.
-4. Abonament nie obejmuje finansowania żadnego Projektu, nie gwarantuje przedstawienia Projektu ani zawarcia transakcji i nie stanowi doradztwa inwestycyjnego.
+3. W ramach szkolenia, w Okresie Abonamentowym, Inwestor może skorzystać z indywidualnych konsultacji z prowadzącym szkolenie w łącznym wymiarze ${KONSULTACJE_GODZIN} godzin. Inwestor zgłasza preferowany termin w panelu inwestora (zakładka Indywidualna konsultacja); termin i formę konsultacji (spotkanie online albo rozmowa telefoniczna) Fundacja potwierdza Inwestorowi. Konsultacje dotyczą treści szkolenia i nie stanowią doradztwa inwestycyjnego, prawnego ani podatkowego. Niewykorzystane godziny nie przechodzą na kolejny Okres Abonamentowy i nie podlegają wymianie na świadczenie pieniężne.
+4. Dostęp do Klientów, Projektów i ofert (moduł ofert: Zlecenia, dopasowane Projekty, dane Klientów i oferty) wymaga ponadto zawarcia Umów o dostęp do Klientów. Inwestor akceptuje je w panelu po zakupie Abonamentu, gdy chce korzystać z modułu ofert. Umowy o dostęp do Klientów nie przewidują wynagrodzenia Finance You od Inwestora.
+5. Abonament nie obejmuje finansowania żadnego Projektu, nie gwarantuje przedstawienia Projektu ani zawarcia transakcji i nie stanowi doradztwa inwestycyjnego.
 
 ## § 4. Cena i płatność
 

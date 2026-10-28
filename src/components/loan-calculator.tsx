@@ -1385,12 +1385,6 @@ export function LoanCalculator({
         <>
           {resultBlock}
           {paramsBlock}
-          <p className="text-sm text-muted-foreground">
-            Prowizja Finance You — płaci firma z kwoty wypłaty
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Kalkulator pilnuje za Ciebie limitu odsetek i kosztów.
-          </p>
         </>
       ) : (
         <>
