@@ -229,6 +229,47 @@ function InvestorHome() {
         Finance You sp. z o.o. · 15 lat finansowania pod hipotekę · założyciel cytowany w
         „Rzeczpospolitej”
       </div>
+      <Section id="narzedzia">
+        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
+        <div className="fy-sales-cards">
+          {ROAD_CARDS.map((c) => {
+            const m = c.module ? INVESTOR_MODULES.find((x) => x.name === c.module) : undefined;
+            return (
+              <article className="fy-sales-card" key={c.name}>
+                <Icon3D name={c.icon} size={48} />
+                <span className="fy-sales-eyebrow">{c.eyebrow}</span>
+                <h3>{c.name}</h3>
+                {m ? (
+                  <>
+                    <img
+                      className="fy-sales-tool-image"
+                      src={m.image}
+                      alt={m.imageAlt}
+                      loading="lazy"
+                    />
+                    <p>{m.tagline}</p>
+                    <a className="fy-sales-link" href={investorModulePath(m.slug)}>
+                      Poznaj szczegóły →
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    {c.image && (
+                      <img
+                        className="fy-sales-tool-image"
+                        src={c.image.src}
+                        alt={c.image.alt}
+                        loading="lazy"
+                      />
+                    )}
+                    <p>{c.text}</p>
+                  </>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </Section>
       <Section id="ochrona">
         <SectionHead title="Boisz się? Słusznie. Oto co Cię chroni." />
         <div className="mt-8">
@@ -333,47 +374,6 @@ function InvestorHome() {
             UMCS, przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze
             rynkowe publikowała m.in. „Rzeczpospolita”. <a href="/o-nas">Więcej o nas →</a>
           </span>
-        </div>
-      </Section>
-      <Section id="narzedzia">
-        <SectionHead title="Twoja droga na rynek pożyczek pod zastaw nieruchomości" />
-        <div className="fy-sales-cards">
-          {ROAD_CARDS.map((c) => {
-            const m = c.module ? INVESTOR_MODULES.find((x) => x.name === c.module) : undefined;
-            return (
-              <article className="fy-sales-card" key={c.name}>
-                <Icon3D name={c.icon} size={48} />
-                <span className="fy-sales-eyebrow">{c.eyebrow}</span>
-                <h3>{c.name}</h3>
-                {m ? (
-                  <>
-                    <img
-                      className="fy-sales-tool-image"
-                      src={m.image}
-                      alt={m.imageAlt}
-                      loading="lazy"
-                    />
-                    <p>{m.tagline}</p>
-                    <a className="fy-sales-link" href={investorModulePath(m.slug)}>
-                      Poznaj szczegóły →
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    {c.image && (
-                      <img
-                        className="fy-sales-tool-image"
-                        src={c.image.src}
-                        alt={c.image.alt}
-                        loading="lazy"
-                      />
-                    )}
-                    <p>{c.text}</p>
-                  </>
-                )}
-              </article>
-            );
-          })}
         </div>
       </Section>
       <Section id="korzysci" tint>
