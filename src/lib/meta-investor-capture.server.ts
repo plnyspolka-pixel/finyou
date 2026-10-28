@@ -4,7 +4,9 @@
 //  - bez klienta, wniosku, konta pożyczkobiorcy i kadencji follow-up,
 //  - SMS powitalny inwestora zamiast SMS-a pożyczkowego (raz na numer),
 //  - telefon agenta A2P (głos) z kontekstem leada; godziny, throttle 24 h
-//    i opt-out pilnuje placeOutboundCallInternal / sendSmsInternal.
+//    i opt-out pilnuje placeOutboundCallInternal / sendSmsInternal,
+//  - per formularz: welcome_sms_enabled wyłącza SMS, subscriber_tags dopisuje
+//    leada do listy mailingowej (tryb „tylko mailing” = oba + voicebot_enabled false).
 // Działa wyłącznie dla nowych leadów — nic nie robi z historycznymi.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
@@ -41,7 +43,8 @@ export async function sendInvestorWelcomeSms(opts: {
   amount: string | number | null | undefined;
   createdAt: string | null | undefined;
 }): Promise<{ ok: boolean; reason?: string; skipped?: boolean; error?: string }> {
-  if (await investorSmsAlreadySent(opts.phone)) return { ok: false, skipped: true, reason: "already_sent" };
+  if (await investorSmsAlreadySent(opts.phone))
+    return { ok: false, skipped: true, reason: "already_sent" };
   try {
     const { sendSmsInternal } = await import("@/lib/voicebot.functions");
     const vars = leadDynamicVariables({
@@ -59,7 +62,8 @@ export async function sendInvestorWelcomeSms(opts: {
       metadata: { source: INVESTOR_WELCOME_SMS_SOURCE, lead_role: "inwestor" },
     });
     if (!r.ok && (r.reason === "quiet_hours" || r.reason === "sunday") && opts.leadId) {
-      const { WELCOME_SMS_STEP_INDEX, nextWindowOpenAt } = await import("@/lib/follow-up-plan.server");
+      const { WELCOME_SMS_STEP_INDEX, nextWindowOpenAt } =
+        await import("@/lib/follow-up-plan.server");
       await supabaseAdmin.from("lead_follow_up_schedule").upsert(
         {
           lead_id: opts.leadId,
@@ -87,6 +91,73 @@ export interface InvestorLeadInput {
   fieldData: PoleFormularza[];
   /** Pozwolenie na telefon (globalny call_trigger + voicebot_enabled formularza). */
   allowCall: boolean;
+  /** SMS powitalny (welcome_sms_enabled formularza); domyślnie tak. */
+  allowSms?: boolean;
+  /** Tagi listy mailingowej (subscriber_tags formularza); puste = bez zapisu na listę. */
+  subscriberTags?: string[];
+}
+
+/** Tagi subskrybenta: dotychczasowe + tagi formularza, bez duplikatów i pustych. */
+export function mergeSubscriberTags(
+  existing: string[] | null | undefined,
+  add: string[],
+): string[] {
+  const out: string[] = [];
+  for (const t of [...(existing ?? []), ...add]) {
+    const tag = t?.trim();
+    if (tag && !out.includes(tag)) out.push(tag);
+  }
+  return out;
+}
+
+/**
+ * Dopisuje leada do listy mailingowej. Wypisanych i odbitych nie przywracamy —
+ * dopinamy tylko tagi, a status zostaje.
+ */
+async function upsertInvestorSubscriber(opts: {
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  formId: string | null;
+  campaignId: string | null;
+  tags: string[];
+}): Promise<boolean> {
+  try {
+    const email = opts.email.trim().toLowerCase();
+    const { data: sub } = await supabaseAdmin
+      .from("email_subscribers")
+      .select("id, tags, first_name, last_name")
+      .eq("email", email)
+      .maybeSingle();
+    if (sub) {
+      await supabaseAdmin
+        .from("email_subscribers")
+        .update({
+          tags: mergeSubscriberTags(sub.tags, opts.tags),
+          first_name: sub.first_name ?? opts.firstName,
+          last_name: sub.last_name ?? opts.lastName,
+        })
+        .eq("id", sub.id);
+      return true;
+    }
+    const { error } = await supabaseAdmin.from("email_subscribers").insert({
+      email,
+      first_name: opts.firstName,
+      last_name: opts.lastName,
+      source: "meta_lead_form",
+      source_id: opts.formId,
+      tags: mergeSubscriberTags([], opts.tags),
+      status: "active",
+      utm_source: "facebook",
+      utm_medium: "lead_form",
+      utm_campaign: opts.campaignId,
+    });
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error("[meta-investor] subscriber upsert", e);
+    return false;
+  }
 }
 
 export interface InvestorCaptureResult {
@@ -95,6 +166,7 @@ export interface InvestorCaptureResult {
   leadId: string | null;
   smsSent: boolean;
   callResult: string;
+  subscribed?: boolean;
 }
 
 async function investorSmsAlreadySent(phone: string): Promise<boolean> {
@@ -120,7 +192,13 @@ export async function captureMetaInvestorLead(
     .eq("meta_lead_id", input.leadgenId)
     .maybeSingle();
   if (dup) {
-    return { handled: true, duplicate: true, leadId: null, smsSent: false, callResult: "duplicate" };
+    return {
+      handled: true,
+      duplicate: true,
+      leadId: null,
+      smsSent: false,
+      callResult: "duplicate",
+    };
   }
 
   const email = extractField(fd, ["email"]);
@@ -191,9 +269,29 @@ export async function captureMetaInvestorLead(
     }
   }
 
-  const smsResult = phoneNorm
-    ? await sendInvestorWelcomeSms({ phone: phoneNorm, leadId: leadId ?? null, firstName: first, amount, createdAt })
-    : { ok: false };
+  const tags = input.subscriberTags ?? [];
+  const subscribed =
+    email && tags.length
+      ? await upsertInvestorSubscriber({
+          email,
+          firstName: first || null,
+          lastName: last === "—" ? null : last || null,
+          formId: input.formId,
+          campaignId: input.campaignId,
+          tags,
+        })
+      : false;
+
+  const smsResult =
+    phoneNorm && input.allowSms !== false
+      ? await sendInvestorWelcomeSms({
+          phone: phoneNorm,
+          leadId: leadId ?? null,
+          firstName: first,
+          amount,
+          createdAt,
+        })
+      : { ok: false };
   const smsSent = smsResult.ok;
 
   let callResult = "skipped";
@@ -231,10 +329,10 @@ export async function captureMetaInvestorLead(
     automation_type: "meta_lead_capture",
     status: "sent",
     sent_payload: { leadgenId: input.leadgenId, formId: input.formId, lead_role: "inwestor" },
-    response_payload: { lead_id: leadId, sms_sent: smsSent, call: callResult },
+    response_payload: { lead_id: leadId, sms_sent: smsSent, call: callResult, subscribed },
   });
 
-  return { handled: true, duplicate: false, leadId, smsSent, callResult };
+  return { handled: true, duplicate: false, leadId, smsSent, callResult, subscribed };
 }
 
 /** Wczytuje formularz i rozstrzyga rolę leada. */
@@ -244,12 +342,17 @@ export async function loadFormRole(
 ): Promise<{
   role: "klient" | "inwestor";
   voicebotEnabled: boolean;
+  welcomeSmsEnabled: boolean;
+  subscriberTags: string[];
 }> {
   const { resolveLeadRole } = await import("@/lib/ania-lead-context");
-  if (!formId) return { role: "klient", voicebotEnabled: true };
+  if (!formId)
+    return { role: "klient", voicebotEnabled: true, welcomeSmsEnabled: true, subscriberTags: [] };
   const { data } = await supabaseAdmin
     .from("meta_lead_forms")
-    .select("lead_role, assigned_role, form_name, voicebot_enabled")
+    .select(
+      "lead_role, assigned_role, form_name, voicebot_enabled, welcome_sms_enabled, subscriber_tags",
+    )
     .eq("meta_form_id", String(formId))
     .maybeSingle();
   let form: any = data;
@@ -260,5 +363,7 @@ export async function loadFormRole(
   return {
     role: resolveLeadRole(form),
     voicebotEnabled: (data as any)?.voicebot_enabled !== false,
+    welcomeSmsEnabled: (data as any)?.welcome_sms_enabled !== false,
+    subscriberTags: (data as any)?.subscriber_tags ?? [],
   };
 }

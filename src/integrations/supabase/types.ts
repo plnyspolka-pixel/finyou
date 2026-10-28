@@ -10665,9 +10665,11 @@ export type Database = {
           meta_form_id: string
           meta_page_id: string | null
           page_name: string | null
+          subscriber_tags: string[]
           total_leads_pulled: number
           updated_at: string
           voicebot_enabled: boolean
+          welcome_sms_enabled: boolean
         }
         Insert: {
           assigned_role?: Database["public"]["Enums"]["app_role"]
@@ -10687,9 +10689,11 @@ export type Database = {
           meta_form_id: string
           meta_page_id?: string | null
           page_name?: string | null
+          subscriber_tags?: string[]
           total_leads_pulled?: number
           updated_at?: string
           voicebot_enabled?: boolean
+          welcome_sms_enabled?: boolean
         }
         Update: {
           assigned_role?: Database["public"]["Enums"]["app_role"]
@@ -10709,9 +10713,11 @@ export type Database = {
           meta_form_id?: string
           meta_page_id?: string | null
           page_name?: string | null
+          subscriber_tags?: string[]
           total_leads_pulled?: number
           updated_at?: string
           voicebot_enabled?: boolean
+          welcome_sms_enabled?: boolean
         }
         Relationships: []
       }
