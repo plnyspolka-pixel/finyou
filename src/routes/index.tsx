@@ -110,6 +110,7 @@ const ROAD_CARDS: {
   icon: Icon3DName;
   module?: string;
   text?: string;
+  image?: { src: string; alt: string };
 }[] = [
   {
     name: "Ogólnopolska sieć sprzedaży",
@@ -140,6 +141,10 @@ const ROAD_CARDS: {
     name: "Indywidualny mentoring inwestora",
     eyebrow: "Na każdym etapie",
     icon: "handshake",
+    image: {
+      src: "/marketing/moduly/mentoring-1.webp",
+      alt: "Mentor z 15-letnim stażem omawia z inwestorką dokumenty sprawy",
+    },
     text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie zaczynasz sam.",
   },
 ];
@@ -354,7 +359,17 @@ function InvestorHome() {
                     </a>
                   </>
                 ) : (
-                  <p>{c.text}</p>
+                  <>
+                    {c.image && (
+                      <img
+                        className="fy-sales-tool-image"
+                        src={c.image.src}
+                        alt={c.image.alt}
+                        loading="lazy"
+                      />
+                    )}
+                    <p>{c.text}</p>
+                  </>
                 )}
               </article>
             );
