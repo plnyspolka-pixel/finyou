@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
-import { Section, SectionHead, ProcessSteps, FAQ } from "@/components/marketing/sections";
+import { Section, SectionHead, FAQ } from "@/components/marketing/sections";
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
@@ -167,33 +167,6 @@ function InvestorHome() {
           <InvestorPricing />
         </div>
         <DoubleGuarantee />
-        <h3 className="fy-sales-subtitle">Twoje pierwsze 30 dni</h3>
-        <div className="mt-8">
-          <ProcessSteps
-            cols={4}
-            steps={[
-              { icon: "access", t: "Dzień 1", d: "Płatność, konto, moduł 1." },
-              {
-                icon: "compliance",
-                t: "Dni 1–7",
-                d: "Weryfikacja tożsamości online, umowa ramowa, NDA, RODO.",
-              },
-              {
-                icon: "application",
-                t: "Dni 7–14",
-                d: "Zlecenie kwoty, pierwsze sprawy w panelu.",
-              },
-              {
-                icon: "handshake",
-                t: "Dni 14–30",
-                d: "Pierwsza rozmowa z firmą, umowa, notariusz.",
-              },
-            ]}
-          />
-        </div>
-        <p className="mt-6 text-sm text-muted-foreground">
-          Tempo zależy od Ciebie i od spraw w Twojej kwocie.
-        </p>
       </Section>
       <Section id="faq">
         <SectionHead title="Twoje pytania — konkretne odpowiedzi" />
