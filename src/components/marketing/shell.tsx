@@ -145,21 +145,18 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const client = page === "klient" || page === "kalkulator";
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (st) => st.location.pathname });
+  // Menu górne (decyzja właściciela 28.10.2026): trzy ścieżki — Inwestor
+  // (strona główna), Klient, Pośrednik — potem Cennik, O nas, Blog, FAQ.
   const nav = [
-    { label: "Szkolenie", href: "/dla-inwestora/szkolenie" },
-    { label: "Case study", href: "/historie" },
+    { label: "Inwestor", href: "/" },
+    { label: "Klient", href: "/dla-klienta" },
+    { label: "Pośrednik", href: "/dla-posrednika" },
     { label: "Cennik", href: "/#cennik" },
     { label: "O nas", href: "/o-nas" },
     { label: "Blog", href: "/blog" },
     { label: "FAQ", href: "/#faq" },
   ];
   const current = (href: string) => (href === pathname ? ("page" as const) : undefined);
-  // „Narzędzia” = wyłącznie płatne moduły. Darmowe materiały (lekcja, PDF-y,
-  // kalkulatory) są w stopce — osobna kolumna.
-  const tools = INVESTOR_MODULES.filter((m) => !m.bonus).map((m) => ({
-    label: m.menuLabel,
-    href: investorModulePath(m.slug),
-  }));
   return (
     <header className="fy-sales-header">
       {page === "home" && (
@@ -195,18 +192,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
         ) : (
           <>
             <nav className="fy-sales-nav-desktop" aria-label="Menu inwestora">
-              <a href={nav[0].href}>{nav[0].label}</a>
-              <details className="fy-sales-dropdown">
-                <summary>Narzędzia</summary>
-                <div>
-                  {tools.map((l) => (
-                    <a href={l.href} key={l.href}>
-                      {l.label}
-                    </a>
-                  ))}
-                </div>
-              </details>
-              {nav.slice(1).map((n) => (
+              {nav.map((n) => (
                 <a key={n.href} href={n.href} aria-current={current(n.href)}>
                   {n.label}
                 </a>
@@ -240,14 +226,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               {n.label}
             </a>
           ))}
-          <details>
-            <summary>Narzędzia</summary>
-            {tools.map((l) => (
-              <a key={l.href} href={l.href}>
-                {l.label}
-              </a>
-            ))}
-          </details>
           <a href="/logowanie">Zaloguj</a>
         </nav>
       )}
