@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -16,7 +15,6 @@ import { LoanCalculator } from "@/components/loan-calculator";
 import { FreeMaterialsSection } from "@/components/marketing/free-materials";
 import { getFreeMaterialsFn } from "@/lib/lead-magnets/free-materials.functions";
 import { EMPTY_FREE_MATERIALS } from "@/lib/lead-magnets/free-materials";
-import { getInvestorPublicProof } from "@/lib/investor-sales-public.functions";
 import { getLandingInvestorVideo } from "@/lib/landing-video.functions";
 import {
   LANDING_INVESTOR_VIDEO,
@@ -27,22 +25,14 @@ import { FounderPhoto } from "@/components/marketing/founder-photo";
 import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
-  plnLabel,
 } from "@/lib/investor-plan/plans";
 import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
 const LESSON = "/pobierz/darmowa-lekcja";
-const proofQuery = queryOptions({
-  queryKey: ["investor-public-proof"],
-  queryFn: () => getInvestorPublicProof(),
-  staleTime: 3600000,
-  refetchInterval: 3600000,
-});
 export const Route = createFileRoute("/")({
   loader: async ({ context }) => ({
-    proof: await context.queryClient.ensureQueryData(proofQuery),
     materials: await getFreeMaterialsFn({ data: { audience: "inwestor" } }).catch(() =>
       EMPTY_FREE_MATERIALS("inwestor"),
     ),
@@ -119,14 +109,6 @@ const FAQS = [
     a: "Obejrzyj darmową lekcję po zapisie e-mail. Poznaj program i cennik. Kody rabatowe wysyłamy w mailingu.",
   },
 ];
-// Ikona 3D karty sprawy wg typu nieruchomości (pkt 14).
-const CASE_ICON: Record<string, Icon3DName> = {
-  Mieszkanie: "propApartment",
-  Dom: "propHouse",
-  "Lokal użytkowy": "propStore",
-  "Działka budowlana": "propPlot",
-  "Grunt rolny": "propField",
-};
 const TOOL_ICON: Icon3DName[] = ["ai", "documents", "complianceAml", "shieldcheck"];
 
 const PROTECTION = [
@@ -153,7 +135,6 @@ const PROTECTION = [
 ];
 function InvestorHome() {
   const { materials, video } = Route.useLoaderData();
-  const { data: proof } = useSuspenseQuery(proofQuery);
   return (
     <MarketingShell page="home">
       <section className="fy-sales-hero">
@@ -218,40 +199,6 @@ function InvestorHome() {
         <a className="fy-sales-link" href="#historie">
           Zobacz, jak hipoteka zadziałała →
         </a>
-      </Section>
-      <Section id="sprawy" tint>
-        <SectionHead
-          title="Popyt na pieniądze jest nieograniczony. Wąskim gardłem jest kapitał."
-          sub="Przez 15 lat nie było miesiąca, w którym brakowało spraw — brakowało kapitału, żeby wszystkie sfinansować. Finansujemy je także własnymi pieniędzmi, więc każdą sprawę oceniamy tak, jakbyśmy sami mieli wyłożyć kapitał. Spraw jest wielokrotnie więcej, niż udźwignie jeden portfel — dlatego szukamy partnerów."
-        />
-        {proof.cases.length > 0 && (
-          <div className="fy-sales-cards">
-            {proof.cases.map((c) => (
-              <article className="fy-sales-card" key={c.ref}>
-                <Icon3D name={CASE_ICON[c.propertyType] ?? "house"} size={56} />
-                <span className="fy-sales-eyebrow">
-                  {c.ref} · {c.daysAgo} dni temu
-                </span>
-                <h3>{c.propertyType}</h3>
-                <p>{c.voivodeship}</p>
-                <strong className="fy-sales-number">{plnLabel(c.amount)}</strong>
-                <p>
-                  {c.months ? `${c.months} miesięcy · ` : ""}
-                  {c.status}
-                </p>
-              </article>
-            ))}
-          </div>
-        )}
-        <p className="mt-5 text-sm text-muted-foreground">
-          Pełne dane sprawy widzą partnerzy z aktywnym abonamentem.
-        </p>
-        {/* Tylko gdy lead magnet „raporty-spraw” jest opublikowany (pkt 7). */}
-        {materials.materials.some((m) => m.slug === "raporty-spraw") && (
-          <a className="fy-sales-link" href="/pobierz/raporty-spraw">
-            Zobacz przykładowe raporty spraw →
-          </a>
-        )}
       </Section>
       <Section id="jak-dziala">
         <SectionHead title="Jak to działa — 5 kroków" />
@@ -343,7 +290,10 @@ function InvestorHome() {
         <div className="fy-sales-founder-line">
           <FounderPhoto small />
           <span>
-            Prowadzi: <strong>Filip Bielak</strong>
+            Prowadzi: <strong>Filip Bielak</strong> — inwestor z ponad 15-letnim doświadczeniem na
+            rynku nieruchomości i pożyczek prywatnych. Absolwent Wydziału Prawa i Administracji
+            UMCS, przez lata kierował lubelskim oddziałem PÓŁNOC Nieruchomości. Jego komentarze
+            rynkowe publikowała m.in. „Rzeczpospolita”. <a href="/o-nas">Więcej o nas →</a>
           </span>
         </div>
       </Section>
