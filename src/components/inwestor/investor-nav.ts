@@ -19,6 +19,7 @@ import {
   Undo2,
   PenLine,
   FileSignature,
+  CalendarClock,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
@@ -58,6 +59,8 @@ const MAIN_ITEMS: NavItem[] = [
   { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
   { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
   { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
+  // 4 h indywidualnych konsultacji w okresie abonamentu (Regulamin 1.1, § 3 ust. 3).
+  { to: "/inwestor/konsultacja", label: "Indywidualna konsultacja", icon: CalendarClock },
   { to: "/inwestor/kalkulator", label: "Kalkulator compliance", icon: Calculator },
   // Cennik abonamentu, stan dostępu oraz historia płatności i faktur.
   { to: "/inwestor/abonament", label: "Dostęp i płatności", icon: CreditCard },
