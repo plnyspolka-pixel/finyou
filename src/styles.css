@@ -841,3 +841,8 @@
 .fy-webinar-widget__text{display:grid;font-size:.82rem;line-height:1.35}.fy-webinar-widget__text strong{color:var(--sales-gold,#f0c667)}
 .fy-webinar-widget__close{position:absolute;top:.25rem;right:.25rem;padding:.2rem;opacity:.7}.fy-webinar-widget__close:hover{opacity:1}
 @media(max-width:640px){.fy-webinar-widget{left:0;right:0;bottom:0;max-width:none;border-radius:0;border-width:1px 0 0;padding:.6rem 2rem .6rem .9rem;justify-content:space-between}}
+/* Karty „Twoja droga na rynek…”: tytuł na 2 linie, opis rozciągnięty, link na dole — grafiki i linki w jednej linii. */
+.fy-road-card h3{min-height:2.6em;display:flex;align-items:flex-end}
+.fy-road-card p{flex:1}
+.fy-road-card .fy-sales-link{margin-top:auto}
+@media(max-width:640px){.fy-road-card h3{min-height:0}}
