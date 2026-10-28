@@ -85,7 +85,7 @@ function bulletModule(b: BenefitBullet) {
 }
 
 // Punkt oferty: nazwa jako pogrubiony nagłówek (link do podstrony modułu,
-// jeśli jest), pod nią JEDEN akapit — zaleta wyciszona, korzyść wyróżniona.
+// jeśli jest), pod nią sama korzyść — jedno zdanie (decyzja właściciela 28.10.2026).
 // Bez etykiet części formuły i bez formy „Nazwa — Zdanie".
 function BenefitItem({ b }: { b: BenefitBullet }) {
   const m = bulletModule(b);
@@ -103,10 +103,7 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
             b.cecha
           )}
         </div>
-        <p style={{ margin: "0.15rem 0 0", color: "var(--muted-foreground)" }}>
-          {b.zaleta}{" "}
-          <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{b.korzysc}</span>
-        </p>
+        <p style={{ margin: "0.15rem 0 0", color: "var(--muted-foreground)" }}>{b.korzysc}</p>
       </div>
     </li>
   );

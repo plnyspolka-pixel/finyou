@@ -145,7 +145,7 @@ const ROAD_CARDS: {
       src: "/marketing/moduly/mentoring-1.webp",
       alt: "Mentor z 15-letnim stażem omawia z inwestorką dokumenty sprawy",
     },
-    text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie zaczynasz sam.",
+    text: "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach. Nie jesteś sam — wspieramy Cię od początku do końca.",
   },
 ];
 
@@ -472,28 +472,6 @@ function InvestorHome() {
           Masz inne pytanie? Zapytaj Anię na czacie albo napisz na{" "}
           <a href="mailto:kontakt@financeyou.pl">kontakt@financeyou.pl</a>.
         </p>
-      </Section>
-      <Section tint>
-        <SectionHead title="Twój kapitał, Twoje decyzje, Twoje odsetki." />
-        <div className="fy-sales-actions">
-          <MktButton variant="gold" href="/abonament-inwestora?okres=rocznie">
-            Zostań partnerem
-          </MktButton>
-          <MktButton variant="outline" href={LESSON}>
-            Obejrzyj darmową lekcję
-          </MktButton>
-        </div>
-        <details className="fy-sales-legal">
-          <summary>Ważne informacje</summary>
-          <p>
-            Abonament jest odpłatnym programem szkoleniowym z narzędziami, sprzedawanym przez
-            Fundację. Dostęp do spraw wynika z odrębnej, bezpłatnej umowy ramowej z Finance You. Nie
-            gwarantujemy przedstawienia sprawy, zawarcia transakcji ani zysku. Hipoteka ogranicza
-            ryzyko, ale go nie eliminuje. Decyzje podejmujesz samodzielnie. Kalkulator ma charakter
-            informacyjny i nie stanowi oferty ani porady prawnej lub finansowej. Warunki historyczne
-            nie są aktualną ofertą.
-          </p>
-        </details>
       </Section>
     </MarketingShell>
   );

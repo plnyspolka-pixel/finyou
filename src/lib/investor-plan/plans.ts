@@ -218,7 +218,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       cecha: "Indywidualny mentoring inwestora",
       zaleta:
         "Wspiera Cię inwestor z 15-letnim stażem w pożyczkach pod zastaw nieruchomości — przy pierwszych sprawach i decyzjach.",
-      korzysc: "Nie zaczynasz sam.",
+      korzysc: "Nie jesteś sam — wspieramy Cię od początku do końca.",
     },
     {
       cecha: "Szkolenie inwestora",
@@ -235,7 +235,7 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       cecha: "Kalkulator compliance",
       zaleta:
         "Od razu pokazuje zysk, ratę i harmonogram oraz ostrzega, gdy oprocentowanie przekracza odsetki maksymalne.",
-      korzysc: "Nie przekroczysz limitu odsetek przez nieuwagę.",
+      korzysc: "Łatwo pilnujesz limitu kosztów pożyczki.",
     },
     {
       cecha: "Kancelaria AI",
@@ -247,13 +247,13 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       cecha: "Moduł AML/compliance",
       zaleta:
         "Screening list sankcyjnych i PEP, rejestr transakcji powyżej 15 000 EUR i wsparcie raportowania do GIIF.",
-      korzysc: "Obowiązki AML wypełniasz w jednym miejscu, bez osobnego systemu.",
+      korzysc: "Obowiązki sprawozdawcze wypełniasz w jednym miejscu, bez osobnego systemu.",
     },
     {
       cecha: "Windykator AI",
       zaleta:
         "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
-      korzysc: "Nie zostajesz sam z niespłaconą pożyczką.",
+      korzysc: "Gotowy zestaw procedur i dokumentów na każdą okazję.",
     },
   ],
   note: SUBSCRIPTION_PAYMENT_SENTENCE,
