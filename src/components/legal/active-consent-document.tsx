@@ -53,7 +53,7 @@ export function ActiveConsentDocumentPage({
         <p className="mt-6 text-sm text-muted-foreground">
           {heading} — wersja {wersjaDokumentu(doc.version)}
         </p>
-        <article className="fy-article mt-4">
+        <article className="fy-article fy-article--light mt-4">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown>
         </article>
       </div>

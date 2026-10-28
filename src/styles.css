@@ -857,3 +857,14 @@
 .fy-guarantee-terms{margin-top:1.2rem;font-size:.75rem;line-height:1.55;color:var(--muted-foreground)}
 .fy-guarantee-terms a{text-decoration:underline}
 @media(max-width:640px){.fy-guarantee{padding:1.5rem 1.1rem}.fy-guarantee h3{font-size:1.3rem}}
+/* Dokumenty prawne (/regulamin, /polityka-prywatnosci) — ten sam układ co
+   artykuł bloga, ale na jasnym tle: ciemny tekst, czytelne linki i tabele. */
+.fy-article--light { color: var(--foreground); }
+.fy-article--light a { color: var(--primary); text-decoration-color: color-mix(in oklab, var(--primary) 40%, transparent); }
+.fy-article--light a:hover { color: var(--primary); text-decoration-color: currentColor; }
+.fy-article--light blockquote { background: var(--muted); color: var(--foreground); }
+.fy-article--light pre, .fy-article--light code { background: var(--muted); border-color: var(--border); color: var(--foreground); }
+.fy-article--light th { background: var(--muted); color: var(--foreground); }
+.fy-article--light th, .fy-article--light td { border-color: var(--border); }
+.fy-article--light tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 60%, transparent); }
+.fy-article--light h2 { border-top: none; padding-top: 0; }
