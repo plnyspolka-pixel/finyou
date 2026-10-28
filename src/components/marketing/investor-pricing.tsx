@@ -79,9 +79,9 @@ export function InstallmentBonus({
   );
 }
 
-/** Moduł o tej samej nazwie co punkt oferty (o ile ma podstronę). */
+/** Podstrona modułu dla punktu oferty (o ile ma). */
 function bulletModule(b: BenefitBullet) {
-  return INVESTOR_MODULES.find((mod) => mod.name === b.cecha);
+  return b.moduleSlug ? INVESTOR_MODULES.find((mod) => mod.slug === b.moduleSlug) : undefined;
 }
 
 // Punkt oferty: nazwa jako pogrubiony nagłówek (link do podstrony modułu,

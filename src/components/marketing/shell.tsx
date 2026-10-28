@@ -146,7 +146,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (st) => st.location.pathname });
   const nav = [
-    { label: "Szkolenie", href: "/#szkolenie" },
+    { label: "Szkolenie", href: "/dla-inwestora/szkolenie" },
     { label: "Case study", href: "/historie" },
     { label: "Cennik", href: "/#cennik" },
     { label: "O nas", href: "/o-nas" },
