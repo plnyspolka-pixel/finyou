@@ -4,20 +4,17 @@
 // panelu i botów). Prowizję od Pożyczkobiorcy płaci klient.
 //
 // Karta od góry: nazwa → cena i podpowiedź → chip „bez karty” → raty →
-// przycisk do płatności (od razu pod niebieskim polem) → kod rabatowy →
-// tagline → punkty oferty → drobny druk (płatność, sprzedawca, regulamin).
+// przycisk do płatności (od razu pod niebieskim polem) → punkty oferty.
+// Sprzedawca, regulamin, kod rabatowy i warunki rat są na stronie zakupu.
 import type { AccessProduct } from "@/lib/access/core";
 import {
   ACCESS_PRESENTATION,
-  FOUNDATION_SALES_EXPLANATION,
-  SUBSCRIPTION_INSTALLMENT_NOTE,
   SUBSCRIPTION_OPTIONS,
   installmentEstimatePln,
   plnLabel,
   type BenefitBullet,
   type BillingPeriod,
 } from "@/lib/investor-plan/plans";
-import { FUNDACJA, REGULAMIN_ABONAMENTU_PATH } from "@/lib/legal/regulamin-abonamentu";
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
 import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
@@ -214,26 +211,9 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
           <MktButton variant="gold" href={`${CHECKOUT}?okres=${period}`} style={{ width: "100%" }}>
             Zostań partnerem
           </MktButton>
-          <a
-            href="/abonament-inwestora?okres=rocznie&kod="
-            className="underline"
-            style={{ marginTop: "0.6rem", alignSelf: "center", fontSize: "0.85rem" }}
-          >
-            Mam kod rabatowy
-          </a>
-          <p
-            style={{
-              marginTop: "1.2rem",
-              fontSize: "0.88rem",
-              lineHeight: 1.55,
-              color: "var(--muted-foreground)",
-            }}
-          >
-            {t.tagline}
-          </p>
           <ul
             style={{
-              marginTop: "1rem",
+              marginTop: "1.4rem",
               padding: 0,
               listStyle: "none",
               display: "grid",
@@ -245,22 +225,6 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
               <BenefitItem key={b.cecha} b={b} />
             ))}
           </ul>
-          <p
-            style={{
-              marginTop: "1rem",
-              fontSize: "0.74rem",
-              lineHeight: 1.5,
-              color: "var(--muted-foreground)",
-            }}
-          >
-            Płatność przez Tpay — przelew, BLIK albo raty. {SUBSCRIPTION_INSTALLMENT_NOTE} Ceny
-            brutto. Sprzedawca: {FUNDACJA.nazwa} (bez VAT),{" "}
-            <a href={REGULAMIN_ABONAMENTU_PATH} style={{ textDecoration: "underline" }}>
-              regulamin abonamentu
-            </a>
-            .
-          </p>
-          <p className="text-sm text-muted-foreground">{FOUNDATION_SALES_EXPLANATION}</p>
         </div>
       </div>
     </div>
