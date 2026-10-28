@@ -97,7 +97,7 @@ const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
   { label: "Szkolenie — program", hash: "#akademia", hidden: true },
   { label: "7 warstw ochrony inwestycji", hash: "#ochrona", hidden: true },
   { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
-  { label: "Co zyskujesz", hash: "#korzysci" },
+  { label: "Co zyskujesz", hash: "#korzysci", hidden: true },
   { label: "Cennik", hash: "#cennik" },
   // Darmowe materiały są w stopce (osobna kolumna), nie w menu.
   { label: "Darmowe materiały", hash: "#materialy", hidden: true },
@@ -318,7 +318,6 @@ export function SiteFooter() {
     {
       h: "Finance You",
       links: [
-        { t: "Jak działa", href: "/#jak-dziala" },
         { t: "O nas", href: "/o-nas" },
         { t: "Historie", href: "/historie" },
         { t: "Blog", href: "/blog" },
