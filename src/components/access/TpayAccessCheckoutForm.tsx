@@ -26,6 +26,9 @@ import {
   type BuyerType,
 } from "@/lib/access/core";
 
+/** Decyzja właściciela 28.10.2026: TubaPay nie jest pokazywany przy zakupie (integracja zostaje). */
+const TUBAPAY_IN_CHECKOUT = false;
+
 interface Props {
   product: AccessProduct;
   /** Wymagane dla produktu „unlock" — okazja, którą odblokowuje ta płatność. */
@@ -113,8 +116,9 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod, initialD
 
   // Raty TubaPay — tylko dla dostępu czasowego, gdy TubaPay zwróci ofertę
   // dla ceny produktu (bez oferty formularz działa wyłącznie z Tpay).
+  // Ukryte w formularzu (TUBAPAY_IN_CHECKOUT) — integracja zostaje w systemie.
   useEffect(() => {
-    if (product.kind === "unlock") return;
+    if (!TUBAPAY_IN_CHECKOUT || product.kind === "unlock") return;
     let cancelled = false;
     tubapayOfferFn({ data: { productCode: product.code, discountCode: discount?.code ?? null } })
       .then((res) => {

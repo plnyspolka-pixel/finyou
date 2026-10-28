@@ -148,7 +148,7 @@ export const SUBSCRIPTION_PAYMENT_SENTENCE =
 // ── Raty przy zakupie abonamentu ────────────────────────────────────────────
 // Kanały ratalne są w bramce Tpay (włączone w Panelu Akceptanta): PragmaPay
 // dla firm (3, 6, 9 albo 12 rat lub odroczenie o 14/30/60 dni), Raty Pekao,
-// PayPo i Twisto dla osób prywatnych, a obok nich TubaPay w naszym formularzu.
+// PayPo i Twisto dla osób prywatnych (TubaPay ukryty w formularzu od 28.10.2026).
 // Kod nie wybiera kanału — klient wybiera go w bramce. Ratę na stronie
 // liczymy orientacyjnie: cena / liczba rat, bez kosztów finansowania, które
 // ustala dostawca.
@@ -170,7 +170,7 @@ export function installmentEstimatePln(pricePln: number, installments: number): 
 
 /** Zastrzeżenie przy każdej orientacyjnej racie. */
 export const SUBSCRIPTION_INSTALLMENT_NOTE =
-  "Rata orientacyjna: cena podzielona przez liczbę rat. Dostępność rat, ostateczny harmonogram i ewentualny koszt finansowania określa dostawca (PragmaPay, Raty Pekao, TubaPay) po decyzji, przed zawarciem umowy.";
+  "Rata orientacyjna: cena podzielona przez liczbę rat. Dostępność rat, ostateczny harmonogram i ewentualny koszt finansowania określa dostawca (PragmaPay, Raty Pekao) po decyzji, przed zawarciem umowy.";
 
 export interface TierPresentation {
   tier: InvestorTier;
