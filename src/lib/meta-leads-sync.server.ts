@@ -250,6 +250,7 @@ export async function runMetaLeadsSync(): Promise<{
                 createdTime: lead.created_time ?? null,
                 fieldData: fd,
                 allowCall: !!autoCall && (form as any).voicebot_enabled !== false,
+                allowSms: (form as any).voicebot_enabled !== false,
               });
               if (r.callResult === "dispatched") summary.calls_queued += 1;
             } catch (e: any) {

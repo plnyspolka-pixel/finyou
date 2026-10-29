@@ -2,7 +2,8 @@
 // Wspólna dla webhooka i pull-synca. Lead inwestorski:
 //  - zapis w meta_leads (bez wniosku) i w leads z type = "inwestorski",
 //  - bez klienta, wniosku, konta pożyczkobiorcy i kadencji follow-up,
-//  - SMS powitalny inwestora zamiast SMS-a pożyczkowego (raz na numer),
+//  - SMS powitalny inwestora zamiast SMS-a pożyczkowego (raz na numer) — tylko
+//    gdy formularz ma włączony automatyczny kontakt (voicebot_enabled),
 //  - telefon agenta A2P (głos) z kontekstem leada; godziny, throttle 24 h
 //    i opt-out pilnuje placeOutboundCallInternal / sendSmsInternal.
 // Działa wyłącznie dla nowych leadów — nic nie robi z historycznymi.
@@ -41,7 +42,8 @@ export async function sendInvestorWelcomeSms(opts: {
   amount: string | number | null | undefined;
   createdAt: string | null | undefined;
 }): Promise<{ ok: boolean; reason?: string; skipped?: boolean; error?: string }> {
-  if (await investorSmsAlreadySent(opts.phone)) return { ok: false, skipped: true, reason: "already_sent" };
+  if (await investorSmsAlreadySent(opts.phone))
+    return { ok: false, skipped: true, reason: "already_sent" };
   try {
     const { sendSmsInternal } = await import("@/lib/voicebot.functions");
     const vars = leadDynamicVariables({
@@ -59,7 +61,8 @@ export async function sendInvestorWelcomeSms(opts: {
       metadata: { source: INVESTOR_WELCOME_SMS_SOURCE, lead_role: "inwestor" },
     });
     if (!r.ok && (r.reason === "quiet_hours" || r.reason === "sunday") && opts.leadId) {
-      const { WELCOME_SMS_STEP_INDEX, nextWindowOpenAt } = await import("@/lib/follow-up-plan.server");
+      const { WELCOME_SMS_STEP_INDEX, nextWindowOpenAt } =
+        await import("@/lib/follow-up-plan.server");
       await supabaseAdmin.from("lead_follow_up_schedule").upsert(
         {
           lead_id: opts.leadId,
@@ -87,6 +90,11 @@ export interface InvestorLeadInput {
   fieldData: PoleFormularza[];
   /** Pozwolenie na telefon (globalny call_trigger + voicebot_enabled formularza). */
   allowCall: boolean;
+  /**
+   * Pozwolenie na SMS powitalny. Formularz z wyłączonym automatycznym kontaktem
+   * (voicebot_enabled = false, np. kampania „tylko mailing”) nie wysyła SMS-a.
+   */
+  allowSms: boolean;
 }
 
 export interface InvestorCaptureResult {
@@ -120,7 +128,13 @@ export async function captureMetaInvestorLead(
     .eq("meta_lead_id", input.leadgenId)
     .maybeSingle();
   if (dup) {
-    return { handled: true, duplicate: true, leadId: null, smsSent: false, callResult: "duplicate" };
+    return {
+      handled: true,
+      duplicate: true,
+      leadId: null,
+      smsSent: false,
+      callResult: "duplicate",
+    };
   }
 
   const email = extractField(fd, ["email"]);
@@ -191,9 +205,16 @@ export async function captureMetaInvestorLead(
     }
   }
 
-  const smsResult = phoneNorm
-    ? await sendInvestorWelcomeSms({ phone: phoneNorm, leadId: leadId ?? null, firstName: first, amount, createdAt })
-    : { ok: false };
+  const smsResult =
+    phoneNorm && input.allowSms
+      ? await sendInvestorWelcomeSms({
+          phone: phoneNorm,
+          leadId: leadId ?? null,
+          firstName: first,
+          amount,
+          createdAt,
+        })
+      : { ok: false };
   const smsSent = smsResult.ok;
 
   let callResult = "skipped";
