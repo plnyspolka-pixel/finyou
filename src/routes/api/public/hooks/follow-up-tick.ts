@@ -10,6 +10,7 @@ import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
+import { isCallRequest } from "@/lib/call-request";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
 const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
@@ -85,7 +86,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // 1) Wszyscy adresaci z outboundami w ostatnich 31 dniach na obsługiwanych kanałach.
         const { data: comms, error } = await supabaseAdmin
           .from("lead_communications")
-          .select("lead_id, channel, direction, created_at")
+          .select("lead_id, channel, direction, created_at, content")
           .in("channel", SUPPORTED_CHANNELS as unknown as string[])
           .gte("created_at", cutoff)
           .order("created_at", { ascending: false })
@@ -103,6 +104,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: number;
             lastOutboundAt: number;
             lastInboundAt: number;
+            lastInboundText: string | null;
           }
         >();
         for (const c of comms ?? []) {
@@ -115,13 +117,17 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: 0,
             lastOutboundAt: 0,
             lastInboundAt: 0,
+            lastInboundText: null,
           };
           const t = new Date(c.created_at).getTime();
           if (c.direction === "outbound") {
             g.outboundCount += 1;
             if (t > g.lastOutboundAt) g.lastOutboundAt = t;
           } else if (c.direction === "inbound") {
-            if (t > g.lastInboundAt) g.lastInboundAt = t;
+            if (t > g.lastInboundAt) {
+              g.lastInboundAt = t;
+              g.lastInboundText = c.content ?? null;
+            }
           }
           groups.set(key, g);
         }
@@ -131,6 +137,9 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         for (const g of groups.values()) {
           if (g.outboundCount === 0) continue;
           if (g.lastInboundAt >= g.lastOutboundAt) continue;
+          // Klient poprosił o telefon — czeka na człowieka, nie na przypomnienia
+          // na czacie (zespół dostał już powiadomienie o wiadomości przychodzącej).
+          if (isCallRequest(g.lastInboundText)) continue;
           // Outboundy *po* ostatnim inboundzie:
           // upraszczamy — outboundCount globalny w oknie 31d. Jeśli był inbound,
           // przeliczymy dokładniej poniżej osobnym zapytaniem.
