@@ -11,6 +11,8 @@ import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 import { isCallRequest } from "@/lib/call-request";
+import { messengerAgentFor } from "@/lib/ania-lead-context";
+import { isInternalRoutingNote } from "@/lib/ania-text-policy";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
 const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
@@ -154,7 +156,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         const { data: leadsRows } = await supabaseAdmin
           .from("leads")
           .select(
-            "id, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id",
+            "id, type, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id, client_id, meta_lead_id",
           )
           .in("id", leadIds);
         const leadMap = new Map<string, any>();
@@ -207,10 +209,14 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           let replyText = "";
           try {
+            // Ten sam agent co przy zwykłej odpowiedzi na Messengerze
+            // (inwestor → A2P, nierozpoznany → A0), inaczej przypomnienie
+            // pisze inna „Ania” niż ta, która prowadzi rozmowę.
             const agent = await runAgentTurn({
               leadId: g.leadId,
               channel: g.channel,
               userMessage: nudgePrompt,
+              agentIdOverride: g.channel === "messenger" ? messengerAgentFor(lead) : null,
             });
             replyText = (agent.reply ?? "").trim();
             const linkCall = agent.toolCalls.find((c) => c.name === "send_application_link");
@@ -222,6 +228,13 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             continue;
           }
           if (!replyText) continue;
+          // Agent recepcji potrafi odpowiedzieć na polecenie systemowe notatką
+          // o przekazaniu („Paweł wypełnił formularz — przekazuję go na
+          // ścieżkę inwestorów”). To nie jest wiadomość do klienta.
+          if (isInternalRoutingNote(replyText)) {
+            console.warn("[follow-up-tick] pominięto notatkę wewnętrzną", g.leadId, replyText);
+            continue;
+          }
 
           // 6) Wyślij właściwym kanałem (tylko Messenger/Instagram — e-mail obsługuje
           //    wyłącznie brandowany drip loan-reminder-emails, żeby nie było dwóch

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractInboundFacts } from "./lead-enrichment.server";
+import {
+  extractInboundFacts,
+  extractInvestorAmount,
+  isInvestorFormMessage,
+} from "./lead-enrichment.server";
 
 describe("extractInboundFacts — kwota", () => {
   it("nie bierze koloru hex z CSS phishingowego maila za kwotę (#951246)", () => {
@@ -210,5 +214,25 @@ describe("extractInboundFacts — telefon poza formularzem", () => {
 
   it("numer w środku zdania bez kontekstu nie jest telefonem", () => {
     expect(extractInboundFacts("działka ma 123 456 789 m2 powierzchni").phone).toBeNull();
+  });
+});
+
+describe("formularz inwestorski z Click-to-Messenger", () => {
+  const form =
+    "Cześć! Wypełniłem(am) formularz i chcę dowiedzieć się więcej o Twojej firmie. Jaki zwrot z inwestycji w skali roku uznasz za atrakcyjny ?: powyżej 50% First name: Paweł Email: paulo7076@wp.pl Inwesotwałeś/aś już w pożyczki pod zastaw nieruchomości ?: Nie Phone number: 793 250 876 Jaką kwotę chcesz zainwestować w ciągu tego roku?: 300 000 zł do 500 000 zł";
+
+  it("rozpoznaje formularz inwestorski i kwotę inwestycji", () => {
+    expect(isInvestorFormMessage(form)).toBe(true);
+    expect(extractInvestorAmount(form)).toBe("300 000 zł do 500 000 zł");
+  });
+
+  it("nie myli formularza pożyczkowego ani zwykłej wiadomości", () => {
+    expect(
+      isInvestorFormMessage(
+        "Cześć! Wypełniłem(am) formularz.\nFull name: Ewelina Flis\nPhone number: 730 397 993",
+      ),
+    ).toBe(false);
+    expect(isInvestorFormMessage("Potrzebuję 150 000 zł pożyczki pod dom")).toBe(false);
+    expect(isInvestorFormMessage("Chcę zainwestować w remont domu, ile mogę dostać?")).toBe(false);
   });
 });

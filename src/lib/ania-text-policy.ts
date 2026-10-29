@@ -25,3 +25,12 @@ export function investorFirstMessage(vars: Record<string, unknown>, now = new Da
   const question = forma ? `Jak dziś inwestuje ${forma} wolne środki?` : "Jak obecnie wygląda inwestowanie wolnych środków?";
   return `Dzień dobry${greeting}, tu Ania z Finance You. Dziękuję za ${when}zgłoszenie w formularzu o inwestowaniu${amountPart}. ${question}`;
 }
+/**
+ * Notatka o przekazaniu rozmowy zamiast wiadomości do klienta: „przekazuję
+ * go na ścieżkę inwestorów”, „przełączam do…”, echo polecenia „[SYSTEM…”.
+ */
+export function isInternalRoutingNote(text: string): boolean {
+  return /\[SYSTEM|przekazuj[eę]\s+(go|j[aąe]|rozmow|klient|lead)|przełączam|ścieżk[eęiaą]\s+inwestor|transfer_to_agent/i.test(
+    text,
+  );
+}
