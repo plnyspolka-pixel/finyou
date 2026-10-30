@@ -1,4 +1,4 @@
-# Finance You — indywidualne pośrednictwo, bez automatycznej dystrybucji
+# Finance You — dwa odrębne kanały finansowania: ręczny Tinder 1:1 i automatyczna dystrybucja instytucjonalna
 
 Decyzja biznesowa: 30 października 2026 r. — operator ma realnie wykonywać indywidualne pośrednictwo przy konkretnych pożyczkach B2B, nie prowadzić automatycznej internetowej giełdy projektów.
 
@@ -9,17 +9,17 @@ Decyzja biznesowa: 30 października 2026 r. — operator ma realnie wykonywać i
 3. Inwestor nie może sam utworzyć dopasowania z nieprzypisanego projektu.
 4. Ręczne dopasowanie przez administratora wymaga uzasadnienia (min. 20 znaków) i jest zapisywane w dzienniku zdarzeń, z identyfikatorem operatora.
 5. Endpoint „Dobierz projekty dla mnie” jest wyłączony po stronie serwera.
-6. Cron, synchronizacja oraz zatwierdzanie propozycji auto-dystrybucji do instytucji są wyłączone po stronie serwera niezależnie od zapisanych ustawień.
-7. Ręczny e-mail z kartą sprawy można wysłać tylko do **jednego wskazanego inwestora**; wysyłka masowa i domyślne „wszyscy” są blokowane także w API.
+6. **Wyjątek: instytucje.** Cron automatycznie wysyła każdy kwalifikujący się wniosek B2B do wszystkich aktywnych inwestorów instytucjonalnych z e-mailem przy rzeczywistej ocenie lokalizacji **ściśle > 50 pkt**. Bez ręcznego zatwierdzania i bez dopasowywania według kwot. Brak score lub wynik 50 nie uruchamia wysyłki.
+7. Moduł instytucjonalnych ofert e-mail zachowuje możliwość wysyłki do wszystkich aktywnych instytucji albo ręcznie wybranej grupy. Nie jest to Tinder prywatnych inwestorów.
 8. Funkcje RPC udostępniające listę propozycji dowolnemu zalogowanemu inwestorowi są wyłączane migracją SQL, podobnie jak automatyczny przydział RPC dla osób bez uprawnień service_role.
 9. Dane, archiwum transakcji, analiza nieruchomości, kalkulator, umowy i komunikacja w sprawach już indywidualnie skojarzonych pozostają dostępne.
 
 ## Zasady operacyjne (nie tylko UI)
 
-- Zlecenie inwestora może zawierać parametry poszukiwanego finansowania. Nie stanowi automatycznej zgody na prezentowanie mu projektów z bazy.
+- W module Tindera zlecenie inwestora może zawierać parametry poszukiwanego finansowania. Nie stanowi automatycznej zgody na prezentowanie mu projektów z bazy.
 - Operator analizuje konkretną sprawę, wybiera konkretnego inwestora i dokumentuje dlaczego właśnie on jest adresatem indywidualnego kontaktu. Dostęp do dokumentacji i negocjacji jest następstwem takiego przypisania, nie wynikiem samodzielnego wyszukiwania przez użytkownika.
-- Nie prowadzimy publicznego katalogu ofert ani automatycznego przydzielania kart projektów według rankingu lub kolejki.
-- Wysyłka e-mail do jednej osoby nie stanowi sama w sobie gwarancji, że działalność jest poza regulacją. W szczególności powtarzalne automatyczne kojarzenie przez operatora i rekrutacja nieograniczonej liczby inwestorów mogą zmienić kwalifikację prawną.
+- W module prywatnego Tindera nie prowadzimy publicznego katalogu ofert ani automatycznego przydzielania kart projektów według rankingu lub kolejki. Nie dotyczy to odrębnej dystrybucji e-mail do inwestorów instytucjonalnych.
+- Ani ręczny dobór w Tinderze, ani masowa wysyłka instytucjonalna nie stanowią gwarancji działania poza nadzorem. W szczególności automatyczna dystrybucja do grupy instytucji wymaga osobnej oceny prawnej i respektowania uprawnień odbiorców.
 - Zmienione funkcje serwerowe są skuteczne dopiero po wdrożeniu aplikacji; kontrola RPC wymaga wykonania nowej migracji w środowisku docelowym.
 
 ## Otwarte ryzyka prawne — nie stanowi potwierdzenia zwolnienia z licencji
@@ -31,7 +31,18 @@ Nie przyjmujemy, że samo wyłączenie automatu wyłącza art. 2 ECSPR albo art.
 - [ ] Test TypeScript, testy i build w CI na gałęzi.
 - [ ] Wdrożenie migracji `manual_mediation_security` w bazie docelowej.
 - [ ] Wdrożenie aplikacji z gałęzi po przeglądzie zmian.
-- [ ] Próba uruchomienia automatycznego matchingu, auto-crona, wysyłki do wszystkich i pobrania nieprzypisanego projektu: wszystkie mają zostać odrzucone.
+- [ ] Próba automatycznego matchingu w Tinderze i pobrania nieprzypisanego projektu: odrzucone. Oddzielnie: cron instytucjonalny wysyła przy score > 50 do wszystkich aktywnych instytucji, respektując deduplikację i limit spraw na przebieg.
 - [ ] Sprawdzenie archiwalnych kart/udostępnień i wstrzymanie jeszcze aktywnych automatycznych procesów poza repozytorium (np. Make/cron/agent AI).
 - [ ] Aktualizacja regulaminów, treści strony i umów do rzeczywistego modelu indywidualnego pośrednictwa.
 - [ ] Opinia prawna o obowiązku zezwolenia i art. 38 przed komercyjnym uruchomieniem.
+
+## Szczegóły automatu instytucjonalnego (decyzja uzupełniająca)
+
+- Minimalny score lokalizacji: **powyżej 50**; 50, wynik niższy lub NULL nie kwalifikują.
+- Odbiorcy: każda aktywna instytucja w bazie (`investor_type = instytucjonalny`, `is_active = true`) posiadająca adres e-mail, bez filtrów widełek kwotowych czy indywidualnego rankingu.
+- Konieczny cel gospodarczy pożyczki (`business_purpose_declared = true`) i dodatnia kwota. Wniosek musi pozostawać w dopuszczonym statusie procesu i nie może być usunięty.
+- Nie trzeba ręcznej akceptacji ani kompletnego briefu dokumentów; po obliczeniu score automat może rozesłać nieukończoną jeszcze sprawę. Jest to świadoma decyzja operacyjna, wymagająca kontroli prawnej i jakości danych.
+- Technicznie zadanie działa co 30 minut; maksymalnie trzy nowe sprawy na przebieg i ograniczenie liczby spraw/dobę według ustawień. Odbiorcy nie są dzieleni na podgrupy z uwagi na score czy kwotę.
+- Historyczne wysyłki nie są ponawiane. Jeżeli e-mail dla danej instytucji zakończył się błędem, mechanizm może go ponowić w tej samej dystrybucji.
+- Raport z wysyłki jest utrzymywany w `auto_distribution_proposals` i `offer_distributions`. Ręczny przycisk wysyłki do wszystkich instytucji pozostaje dostępny w panelu administratora.
+- **Uwaga regulacyjna:** publicznie udostępniana Karta oferty, masowy charakter kontaktu i status odbiorców wymagają oceny m.in. pod kątem art. 37–38 ustawy crowdfundingowej oraz przepisów o komunikacji elektronicznej. Nie traktować tego wyjątku jako automatycznie licencyjnie bezpiecznego.
