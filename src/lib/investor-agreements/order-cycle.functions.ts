@@ -66,15 +66,9 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
         }
       }
     }
-    // Najpierw wygaszamy przeterminowane teasery/rezerwacje — dopiero wtedy
-    // automat widzi Zlecenie jako wolne i może dobrać kolejny Projekt.
+    // Odczyt panelu nie tworzy automatycznych dopasowań.
+    // Projekt widoczny dopiero po ręcznym przypisaniu przez operatora.
     await (await srv()).expireStaleMatches(supabaseAdmin);
-    // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
-    try {
-      await (await srv()).autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
-    } catch (e) {
-      console.error("[auto-match] nieudane:", e);
-    }
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
     let matches: any[] = [];
