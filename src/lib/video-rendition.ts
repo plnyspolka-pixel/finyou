@@ -200,6 +200,33 @@ export function isRenditionCandidateUrl(url: string | null | undefined): url is 
   return !url.includes(`/${VIDEO_RENDITION_DIR}/`);
 }
 
+/**
+ * Gotowa rolka Studia: wykończenie Remotion na AWS Lambda (albo zapasowo
+ * caption-burner) zapisuje MP4 H.264 w `studio-media/mcp/studio-napisy/`.
+ * Taki plik jest już w profilu publikacji — kompresja potrzebna tylko, gdy
+ * przekracza limit rozmiaru (decyzja 30.10.2026: publikacja rolek nie zależy
+ * od usługi FFmpeg na Render; kompresja zostaje dla surowych filmów z biblioteki).
+ */
+export function isStudioFinishedReelUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return /\/storage\/v1\/object\/public\/studio-media\/mcp\/studio-napisy\/[^?#]+\.mp4(?:[?#].*)?$/i.test(
+    url,
+  );
+}
+
+/** Czy rolkę Studia o tym rozmiarze wysyłamy bez kompresji (rozmiar znany i w limicie profilu). */
+export function studioReelSkipsCompression(
+  url: string | null | undefined,
+  bytes: number | null | undefined,
+): boolean {
+  return (
+    isStudioFinishedReelUrl(url) &&
+    typeof bytes === "number" &&
+    bytes > 0 &&
+    bytes <= VIDEO_RENDITION_TARGET.max_bytes
+  );
+}
+
 /** Unikalne adresy wideo z wpisów kolejek, które jeszcze nie mają renditionu. */
 export function renditionSourcesToDiscover(
   queuedUrls: readonly (string | null | undefined)[],
