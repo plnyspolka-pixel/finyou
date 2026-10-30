@@ -23,7 +23,6 @@ export const Route = createFileRoute("/sklep")({
     meta: [
       { title: "Narzędzia inwestora i Akademia | Finance You" },
       { name: "description", content: "Akademia inwestora, Kancelaria AI, Analityk AI, zarządzanie pożyczkami i dostęp do spraw — rozwiązania Finance You." },
-      { name: "robots", content: "noindex" },
     ],
   }),
   component: FinanceYouSklep,
