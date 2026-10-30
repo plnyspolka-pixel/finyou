@@ -119,7 +119,8 @@ export function qualifiesForInstitutionalDistribution(loan: {
 /**
  * Wysyłamy do wszystkich AKTYWNYCH instytucji, lecz honorujemy ich wyraźne
  * wyłączenie auto-maili, odmowę przyjmowania i czasowe zawieszenie.
- * Widełki min/max kwoty nie filtrują automatycznych wysyłek.
+ * Widełki min/max kwoty SĄ respektowane osobno dla każdej instytucji
+ * podczas wyboru odbiorców konkretnego wniosku.
  */
 export function institutionAcceptsAutomaticEmails(
   c: { auto_send_enabled: boolean; accepting_applications: boolean; paused_until: string | null } | null,
@@ -138,14 +139,16 @@ async function institutionalAutoRecipients() {
         .select("id, company_name, first_name, last_name, email")
         .eq("investor_type", "instytucjonalny").eq("is_active", true),
       (supabaseAdmin as any).from("investor_distribution_criteria")
-        .select("investor_id, auto_send_enabled, accepting_applications, paused_until"),
+        .select("investor_id, min_amount, max_amount, auto_send_enabled, accepting_applications, paused_until"),
     ]);
   if (investorsErr) throw new Error(investorsErr.message);
   if (criteriaErr) throw new Error(criteriaErr.message);
   const byId = new Map((criteriaRows ?? []).map((c: any) => [c.investor_id, c]));
-  return (investors ?? []).filter((i: any) =>
-    Boolean(i.email?.trim()) && institutionAcceptsAutomaticEmails(byId.get(i.id) ?? null),
-  );
+  return (investors ?? [])
+    .filter((i: any) =>
+      Boolean(i.email?.trim()) && institutionAcceptsAutomaticEmails(byId.get(i.id) ?? null),
+    )
+    .map((i: any) => ({ ...i, distributionCriteria: byId.get(i.id) ?? null }));
 }
 
 /** Limit spraw obsłużonych w jednym przebiegu cron (nie limit odbiorców). */
@@ -210,7 +213,12 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
           d.email_status !== "error",
         )
         .map((d: any) => d.investor_id));
-      const missing = recipients.filter((i: any) => !alreadySent.has(i.id));
+      // Próg >50 dotyczy WNIOSKU, a widełki kwotowe — każdej INSTYTUCJI.
+      // JanVest (min 100 tys.) nie dostaje np. wniosku na 70 tys. zł.
+      const missing = recipients.filter((i: any) =>
+        !alreadySent.has(i.id) &&
+        matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).ok,
+      );
       if (missing.length === 0) {
         result.skipped_no_matches += 1;
         continue;
@@ -234,7 +242,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
       const matches: ProposalMatch[] = missing.map((i: any) => ({
         investor_id: i.id,
         name: i.company_name || [i.first_name, i.last_name].filter(Boolean).join(" ") || i.id,
-        reason: "aktywny inwestor instytucjonalny; lokalizacja > 50 pkt",
+        reason: `lokalizacja > 50 pkt; ${matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).reason}`,
       }));
       const eligibility = {
         loan_amount: Number(loan.loan_amount),
@@ -336,10 +344,12 @@ export async function approveProposal(
 
   try {
     const { distributeOfferToInvestors } = await import("@/lib/offer-distribution-core.server");
-    // Do WSZYSTKICH aktywnych instytucji przyjmujących auto-oferty.
-    // Ograniczenie odbiorców dotyczy wyłącznie wyraźnych rezygnacji/pauz.
-    const recipients = await institutionalAutoRecipients();
-    if (recipients.length === 0) throw new Error("Brak aktywnych instytucji przyjmujących oferty.");
+    // Ponownie sprawdzamy aktualne widełki tuż przed wysyłką (mogły się zmienić
+    // pomiędzy utworzeniem propozycji a zatwierdzeniem jej przez cron).
+    const recipients = (await institutionalAutoRecipients()).filter((i: any) =>
+      matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).ok,
+    );
+    if (recipients.length === 0) throw new Error("Brak instytucji spełniających widełki kwotowe i warunki przyjmowania ofert.");
     const sendResult = await distributeOfferToInvestors({
       applicationId: proposal.loan_application_id,
       investorIds: recipients.map((i: any) => i.id),
