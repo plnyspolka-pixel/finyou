@@ -66,15 +66,9 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
         }
       }
     }
-    // Najpierw wygaszamy przeterminowane teasery/rezerwacje — dopiero wtedy
-    // automat widzi Zlecenie jako wolne i może dobrać kolejny Projekt.
+    // Odczyt panelu nie tworzy automatycznych dopasowań.
+    // Projekt widoczny dopiero po ręcznym przypisaniu przez operatora.
     await (await srv()).expireStaleMatches(supabaseAdmin);
-    // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
-    try {
-      await (await srv()).autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
-    } catch (e) {
-      console.error("[auto-match] nieudane:", e);
-    }
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
     let matches: any[] = [];
@@ -645,6 +639,7 @@ export const createMatch = createServerFn({ method: "POST" })
         orderId: z.string().uuid(),
         applicationId: z.string().uuid(),
         releaseTeaser: z.boolean().default(true),
+        reason: z.string().trim().min(20).max(2000),
         passedFromMatchId: z.string().uuid().optional(),
       })
       .parse(d),
@@ -652,7 +647,8 @@ export const createMatch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await (await srv()).assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return (await srv()).insertMatch(supabaseAdmin, {
+    const s = await srv();
+    const result = await s.insertMatch(supabaseAdmin, {
       orderId: data.orderId,
       applicationId: data.applicationId,
       releaseTeaser: data.releaseTeaser,
@@ -660,6 +656,15 @@ export const createMatch = createServerFn({ method: "POST" })
       actorId: context.userId,
       actorKind: "admin",
     });
+    await s.logCycleEvent(supabaseAdmin, {
+      matchId: result.matchId,
+      orderId: data.orderId,
+      type: "indywidualny_dobor_przez_operatora",
+      payload: { application_id: data.applicationId, uzasadnienie: data.reason },
+      actor: context.userId,
+      actorKind: "admin",
+    });
+    return result;
   });
 
 export const releaseTeaser = createServerFn({ method: "POST" })

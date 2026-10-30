@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchInvestorToAmount } from "./engine.server";
+import { matchInvestorToAmount, qualifiesForInstitutionalDistribution, institutionAcceptsAutomaticEmails, institutionEligibleForAutomaticLoan } from "./engine.server";
 
 const base = {
   min_amount: null as number | null,
@@ -51,5 +51,70 @@ describe("matchInvestorToAmount", () => {
     expect(matchInvestorToAmount(c, 99999).ok).toBe(false);
     expect(matchInvestorToAmount(c, 200000).ok).toBe(true);
     expect(matchInvestorToAmount(c, 400000).ok).toBe(false);
+  });
+});
+
+
+describe("instytucjonalna automatyczna wysyłka respektuje widełki kwotowe", () => {
+  const loan = { location_potential_score: 51, business_purpose_declared: true, loan_amount: 100_000 };
+
+  it("JanVest: 70 tys. zł pomija, 100 tys. zł i 150 tys. zł przyjmuje", () => {
+    const janVest = { ...base, min_amount: 100_000 };
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 70_000 })).toBe(false);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 100_000 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 150_000 })).toBe(true);
+  });
+
+  it("Korona: 350 tys. zł przyjmuje, 400 tys. zł pomija", () => {
+    const korona = { ...base, max_amount: 350_000 };
+    expect(institutionEligibleForAutomaticLoan(korona, { ...loan, loan_amount: 350_000 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(korona, { ...loan, loan_amount: 400_000 })).toBe(false);
+  });
+
+  it("nawet kwota w widełkach nie wystarcza, gdy lokalizacja <= 50", () => {
+    const janVest = { ...base, min_amount: 100_000 };
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: 50 })).toBe(false);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: 50.01 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: null })).toBe(false);
+  });
+
+  it("brak kryteriów kwotowych nie odrzuca sprawy, ale wyłączenie auto-ofert już tak", () => {
+    expect(institutionEligibleForAutomaticLoan(null, loan)).toBe(true);
+    expect(institutionEligibleForAutomaticLoan({ ...base, auto_send_enabled: false }, loan)).toBe(false);
+  });
+});
+
+describe("automatyczna dystrybucja instytucjonalna: score > 50", () => {
+  const loan = { location_potential_score: 51, business_purpose_declared: true, loan_amount: 100_000 };
+
+  it("wysyła przy 50.01 i 51, ale nie przy 50 ani 49.99", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 50.01 })).toBe(true);
+    expect(qualifiesForInstitutionalDistribution(loan)).toBe(true);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 50 })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 49.99 })).toBe(false);
+  });
+
+  it("brak wyniku lokalizacji nigdy nie uruchamia wysyłki", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: null })).toBe(false);
+  });
+
+  it("zachowuje wymóg celu gospodarczego i dodatniej kwoty", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, business_purpose_declared: false })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: null })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: 0 })).toBe(false);
+  });
+});
+
+
+describe("instytucje: wysyłka do wszystkich poza jawnymi opt-outami", () => {
+  const state = { auto_send_enabled: true, accepting_applications: true, paused_until: null as string | null };
+  it("brak kryteriów i dowolna kwota nie blokują", () => {
+    expect(institutionAcceptsAutomaticEmails(null)).toBe(true);
+    expect(institutionAcceptsAutomaticEmails(state)).toBe(true);
+  });
+  it("nie wysyła przy świadomym wyłączeniu lub czasowej pauzie", () => {
+    expect(institutionAcceptsAutomaticEmails({ ...state, auto_send_enabled: false })).toBe(false);
+    expect(institutionAcceptsAutomaticEmails({ ...state, accepting_applications: false })).toBe(false);
+    expect(institutionAcceptsAutomaticEmails({ ...state, paused_until: "2026-11-01T00:00:00Z" }, new Date("2026-10-30T00:00:00Z"))).toBe(false);
   });
 });

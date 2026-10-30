@@ -72,15 +72,27 @@ export async function distributeOfferToInvestors(input: {
   if (!investors?.length) throw new Error("Brak aktywnych inwestorów instytucjonalnych do wysyłki");
 
   // Nie wysyłaj drugi raz do instytucji, która już dostała ten temat
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: existingErr } = await supabaseAdmin
     .from("offer_distributions")
-    .select("investor_id, distribution_status")
+    .select("id, investor_id, distribution_status, email_status")
     .eq("loan_application_id", input.applicationId);
+  if (existingErr) throw new Error(existingErr.message);
+  // Nie powtarzaj wysyłek udanych ani trwających. Wysyłki z błędem e-mail
+  // mogą zostać ponowione na TEJ SAMEJ dystrybucji i wątku korespondencji.
   const alreadySent = new Set(
     (existing ?? [])
-      .filter((d: any) => !["szkic", "gotowe_do_wysylki"].includes(d.distribution_status))
+      .filter((d: any) =>
+        !["szkic", "gotowe_do_wysylki"].includes(d.distribution_status) &&
+        d.email_status !== "error",
+      )
       .map((d: any) => d.investor_id),
   );
+  const retryableByInvestor = new Map<string, string>();
+  for (const d of existing ?? []) {
+    if (d.email_status === "error" && !alreadySent.has(d.investor_id)) {
+      retryableByInvestor.set(d.investor_id, d.id);
+    }
+  }
 
   // 4) Treść maila
   const p: any = Array.isArray((app as any).properties)
@@ -146,19 +158,24 @@ export async function distributeOfferToInvestors(input: {
       continue;
     }
 
-    const { data: dist, error: distErr } = await supabaseAdmin
-      .from("offer_distributions")
-      .insert({
-        loan_application_id: input.applicationId,
-        investor_id: inv.id,
-        distribution_status: "wyslane" as any,
-        sent_at: new Date().toISOString(),
-        email_status: "sending",
-      })
-      .select("id")
-      .single();
+    // Przy błędzie e-mail ponów istniejącą dystrybucję; w pozostałych
+    // przypadkach utwórz nową. Rezerwacja statusu zapobiega podwójnej próbie
+    // w ramach dwóch nakładających się ponowień.
+    const retryId = retryableByInvestor.get(inv.id);
+    const write = retryId
+      ? supabaseAdmin.from("offer_distributions")
+          .update({ email_status: "sending", email_error: null, sent_at: new Date().toISOString() })
+          .eq("id", retryId).eq("email_status", "error")
+      : supabaseAdmin.from("offer_distributions").insert({
+          loan_application_id: input.applicationId,
+          investor_id: inv.id,
+          distribution_status: "wyslane" as any,
+          sent_at: new Date().toISOString(),
+          email_status: "sending",
+        });
+    const { data: dist, error: distErr } = await write.select("id").maybeSingle();
     if (distErr || !dist) {
-      failed.push({ investorId: inv.id, error: `${invName}: ${distErr?.message ?? "błąd"}` });
+      failed.push({ investorId: inv.id, error: `${invName}: ${distErr?.message ?? "w trakcie innej próby wysyłki"}` });
       continue;
     }
 

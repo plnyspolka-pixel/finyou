@@ -1,5 +1,5 @@
-// Auto-dystrybucja — kolejka propozycji wysyłek do instytucji (zatwierdź /
-// odrzuć), kryteria kwotowe per instytucja i ustawienia globalne silnika.
+// Auto-dystrybucja instytucjonalna: score lokalizacji > 50, wysyłka automatyczna
+// do aktywnych instytucji według ich widełek kwotowych, bez ręcznego zatwierdzania.
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -46,7 +46,7 @@ const STATUS_BADGE: Record<
   string,
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
 > = {
-  proposed: { label: "Do zatwierdzenia", variant: "default" },
+  proposed: { label: "Oczekuje na automat", variant: "default" },
   sending: { label: "Wysyłanie…", variant: "secondary" },
   approved_sent: { label: "Wysłane", variant: "secondary" },
   rejected: { label: "Odrzucone", variant: "outline" },
@@ -87,7 +87,7 @@ function AutoDystrybucjaPage() {
         toast.success(
           res?.sent?.length
             ? `Wysłano do: ${res.sent.join(", ")}`
-            : "Zatwierdzono (brak nowych odbiorców — wszyscy już mieli ten temat)",
+            : "Nie było nowych odbiorców — wszystkie instytucje już otrzymały ten temat",
         );
       } else {
         toast.success("Propozycja odrzucona");
@@ -107,7 +107,7 @@ function AutoDystrybucjaPage() {
       if (res?.disabled) toast.info("Silnik auto-dystrybucji jest wyłączony w ustawieniach");
       else
         toast.success(
-          `Przejrzano ${res.scanned} wniosków, kwalifikuje się ${res.eligible}, nowych propozycji: ${res.proposed}`,
+          `Przejrzano ${res.scanned} wniosków, kwalifikuje się ${res.eligible}, wysłano spraw: ${res.sent_cases}, e-maili: ${res.sent}, błędów: ${res.failed}`,
         );
       void qc.invalidateQueries({ queryKey: ["auto-dist-queue"] });
     } catch (e: any) {
@@ -126,8 +126,9 @@ function AutoDystrybucjaPage() {
         <div>
           <h1 className="text-2xl font-bold">Auto-dystrybucja</h1>
           <p className="text-sm text-muted-foreground">
-            Kompletne wnioski z sensowną lokalizacją są automatycznie dopasowywane do instytucji wg
-            ich kryteriów. Wysyłka rusza dopiero po Twoim zatwierdzeniu.
+            Każdy wniosek B2B z oceną lokalizacji powyżej 50 pkt jest wysyłany automatycznie
+            do aktywnych instytucji, których indywidualne widełki kwotowe obejmują
+            wnioskowaną kwotę (cron co 30 minut).
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRunSync} disabled={syncing}>
@@ -135,15 +136,15 @@ function AutoDystrybucjaPage() {
         </Button>
       </div>
 
-      {/* Kolejka do zatwierdzenia */}
+      {/* Kolejka techniczna: automatycznie obsługiwana, bez wymaganej akceptacji */}
       <Card>
         <CardHeader>
-          <CardTitle>Do zatwierdzenia ({proposals.length})</CardTitle>
+          <CardTitle>Oczekujące w kolejce automatu ({proposals.length})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {proposals.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Brak oczekujących propozycji. Silnik przegląda wnioski co 30 minut.
+              Brak oczekujących wysyłek. Silnik działa automatycznie co 30 minut.
             </p>
           )}
           {proposals.map((p: any) => (
@@ -161,12 +162,13 @@ function AutoDystrybucjaPage() {
       {/* Kryteria instytucji */}
       <Card>
         <CardHeader>
-          <CardTitle>Kryteria instytucji</CardTitle>
+          <CardTitle>Widełki kwotowe i preferencje instytucji</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Widełki kwotowe i zawieszenia. Instytucja bez kryteriów dostaje wszystkie kompletne
-            wnioski.
+            Automat wysyła ofertę tylko instytucjom, których widełki kwotowe obejmują
+            kwotę pożyczki. Respektuje także wyłączenie auto-wysyłki, odmowę
+            przyjmowania ofert i czasową pauzę. Np. JanVest od 100 tys. zł.
           </p>
           {(criteria ?? []).map((row: any) => (
             <CriteriaRow
@@ -544,7 +546,7 @@ function ProposalRow({
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={onApprove} disabled={busy}>
-          {busy ? "Wysyłam…" : "Zatwierdź i wyślij"}
+          {busy ? "Wysyłam…" : "Wyślij teraz (awaryjnie)"}
         </Button>
         <Button size="sm" variant="outline" onClick={onReject} disabled={busy}>
           Odrzuć
@@ -648,7 +650,6 @@ function SettingsForm({
   }) => Promise<void>;
 }) {
   const [enabled, setEnabled] = useState(settings.enabled);
-  const [minScore, setMinScore] = useState(String(settings.min_location_score));
   const [limit, setLimit] = useState(String(settings.daily_send_limit));
   const [saving, setSaving] = useState(false);
 
@@ -659,13 +660,8 @@ function SettingsForm({
         Silnik włączony
       </label>
       <div>
-        <div className="mb-1 text-xs text-muted-foreground">Min. potencjał lokalizacji (0–100)</div>
-        <Input
-          className="w-32"
-          inputMode="numeric"
-          value={minScore}
-          onChange={(e) => setMinScore(e.target.value)}
-        />
+        <div className="mb-1 text-xs text-muted-foreground">Próg lokalizacji (stały)</div>
+        <Input className="w-32" value="> 50 punktów" disabled />
       </div>
       <div>
         <div className="mb-1 text-xs text-muted-foreground">Limit wysyłek / dobę</div>
@@ -683,8 +679,8 @@ function SettingsForm({
           setSaving(true);
           await onSave({
             enabled,
-            minLocationScore: Number(minScore) || 40,
-            dailySendLimit: Number(limit) || 20,
+            minLocationScore: 50,
+            dailySendLimit: Number(limit) || 500,
           });
           setSaving(false);
         }}

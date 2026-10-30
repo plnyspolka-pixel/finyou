@@ -166,7 +166,7 @@ export const updateAutoDistributionSettings = createServerFn({ method: "POST" })
       .from("auto_distribution_settings")
       .update({
         enabled: data.enabled,
-        min_location_score: data.minLocationScore,
+        min_location_score: 50, // dla instytucji zawsze score > 50
         daily_send_limit: data.dailySendLimit,
         updated_by: context.userId,
         updated_at: new Date().toISOString(),

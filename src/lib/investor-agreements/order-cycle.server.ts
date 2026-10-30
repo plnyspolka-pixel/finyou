@@ -5,11 +5,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import {
   buildKartaLeada,
   canTransition,
-  ACTIVE_MATCH_STATUSES,
-  amountMatchesOrder,
   isMatchStale,
-  projectFreshAt,
-  projectWindowStart,
   TEASER_HOURS,
   type MatchStatus,
 } from "./order-cycle-core";
@@ -213,84 +209,6 @@ export async function latestMergedAt(db: any, sinceIso: string): Promise<Map<str
   const out = new Map<string, string>();
   for (const r of data ?? []) out.set(r.merged_into_id, r.created_at);
   return out;
-}
-
-/** Automat: dla przyjętych, nieprzeterminowanych Zleceń inwestora bez aktywnego
- *  obiegu dobiera najstarszy wolny Projekt mieszczący się w kwocie i oknie
- *  Zlecenia (od 3 dni przed złożeniem; scalony nowszy duplikat odświeża datę)
- *  z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu i od razu
- *  udostępnia teaser. Wyłączność sekwencyjna pilnowana indeksem w bazie. */
-export async function autoMatchInvestorOrders(db: any, orders: any[]) {
-  const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
-  const now = Date.now();
-  const eligible = orders.filter(
-    (o) => o.status === "przyjete" && (!o.expires_at || new Date(o.expires_at).getTime() >= now),
-  );
-  if (eligible.length === 0) return;
-
-  const { data: orderMatches } = await loose(db)
-    .from("investor_order_matches")
-    .select("order_id, application_id, status")
-    .in(
-      "order_id",
-      eligible.map((o) => o.id),
-    );
-  const { data: busy } = await loose(db)
-    .from("investor_order_matches")
-    .select("application_id")
-    .in("status", ACTIVE_MATCH_STATUSES);
-  const busyApps = new Set((busy ?? []).map((m: any) => m.application_id));
-
-  const earliest = new Date(
-    Math.min(...eligible.map((o) => projectWindowStart(o).getTime())),
-  ).toISOString();
-  const merged = await latestMergedAt(db, earliest);
-  const { data: fresh } = await loose(db)
-    .from("loan_applications")
-    .select("id, loan_amount, created_at")
-    .in("status", CANDIDATE_DB_STATUSES)
-    .is("deleted_at", null)
-    .gte("created_at", earliest)
-    .limit(300);
-  const freshIds = new Set((fresh ?? []).map((a: any) => a.id));
-  const mergedIds = [...merged.keys()].filter((id) => !freshIds.has(id));
-  const { data: revived } = mergedIds.length
-    ? await loose(db)
-        .from("loan_applications")
-        .select("id, loan_amount, created_at")
-        .in("status", CANDIDATE_DB_STATUSES)
-        .is("deleted_at", null)
-        .in("id", mergedIds)
-    : { data: [] };
-  const apps = [...(fresh ?? []), ...(revived ?? [])]
-    .map((a: any) => ({ ...a, fresh_at: projectFreshAt(a.created_at, merged.get(a.id)) }))
-    .sort((a, b) => a.fresh_at.localeCompare(b.fresh_at));
-
-  const taken = new Set<string>();
-  for (const o of eligible) {
-    const mine = (orderMatches ?? []).filter((m: any) => m.order_id === o.id);
-    if (mine.some((m: any) => ACTIVE_MATCH_STATUSES.includes(m.status))) continue;
-    const seen = new Set(mine.map((m: any) => m.application_id));
-    const windowFrom = projectWindowStart(o).getTime();
-    for (const a of apps) {
-      if (busyApps.has(a.id) || taken.has(a.id) || seen.has(a.id)) continue;
-      if (new Date(a.fresh_at).getTime() < windowFrom) continue;
-      if (!amountMatchesOrder(Number(o.amount_pln), Number(a.loan_amount ?? 0))) continue;
-      try {
-        await insertMatch(db, {
-          orderId: o.id,
-          applicationId: a.id,
-          releaseTeaser: true,
-          actorId: null,
-          actorKind: "system",
-        });
-        taken.add(a.id);
-        break;
-      } catch {
-        // wyścig o Projekt albo błąd teasera — próbujemy następny
-      }
-    }
-  }
 }
 
 /** Karta Transferu Danych (Moduł RODO) per Projekt — wystawiana automatycznie
