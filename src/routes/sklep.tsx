@@ -111,6 +111,74 @@ const OFFERS: Offer[] = [
   },
 ];
 
+
+/** Tytuły opublikowanych lekcji i używanych wzorów z katalogu produkcyjnego.
+ * To wyłącznie publiczne nazwy produktów — bez udostępniania treści lub plików. */
+const LESSONS = [
+  "Wprowadzenie do rynku pożyczek pod hipotekę",
+  "Zarabianie na pożyczkach",
+  "Strategie inwestycyjne w pożyczkach",
+  "Pośrednictwo inwestycyjne — klucze do skuteczności",
+  "Pozyskiwanie klientów — zalety i wady",
+  "Aspekty prawne udzielania pożyczek",
+  "Interpretacja wyłączeń z ustawy o kredycie konsumenckim",
+  "Art. 304 Kodeksu Karnego — wykład",
+  "Lichwa — analiza przepisów i orzecznictwa",
+  "Zarządzanie umowami i klientami w nieruchomościach",
+  "Możliwości spłaty pożyczek dla inwestorów",
+  "Wymagane dokumenty do umowy pożyczki",
+  "Analiza nieruchomości jako zabezpieczenia pożyczki",
+  "Jak zawrzeć umowę pożyczki",
+  "Różnice w rodzajach nieruchomości",
+  "Analiza umowy pożyczki dla firm",
+  "Analiza klientów i decyzji kredytowych",
+  "Oferta dla klientów premium",
+  "Optymalizowanie oferty dla klienta",
+  "Case study: mieszkanie w Świebodzicach",
+  "Miękka windykacja — jak podejść do klientów",
+  "Case study: nieruchomość w Siemionce",
+  "Wykup nieruchomości od dłużnika",
+  "Case study: nieruchomość w Lipinach",
+  "Droga cywilno-prawna w praktyce",
+  "Case study: działka w Żelewie",
+  "Case study: działka w Strzyżewicach",
+  "Case study: Lubań",
+] as const;
+
+const TEMPLATES = [
+  "Aneks — przedłużenie terminu i prowizja",
+  "Monit — przypomnienie o płatności",
+  "Wezwanie do zapłaty — standardowe",
+  "Ostateczne przedsądowe wezwanie do zapłaty",
+  "Wezwanie do zapłaty do poręczyciela",
+  "Wezwanie z ostrzeżeniem BIG/KRD",
+  "Oświadczenie o uznaniu długu",
+  "Ugoda — rozłożenie na raty",
+  "Protokół z negocjacji windykacyjnych",
+  "Oświadczenie o potrąceniu wierzytelności",
+  "Umowa przelewu wierzytelności (cesja)",
+  "Zawiadomienie o cesji wierzytelności",
+  "Oświadczenie wierzyciela (art. 786 KPC)",
+  "Wniosek o nadanie klauzuli wykonalności (art. 777)",
+  "Wniosek o przyspieszenie klauzuli",
+  "Skarga na przewlekłość postępowania",
+  "Pozew o zapłatę",
+  "Wniosek o zabezpieczenie roszczenia",
+  "Wniosek egzekucyjny do komornika",
+  "Wniosek o wyjawienie majątku",
+  "Promesa wykreślenia hipoteki",
+  "Zgoda na wykreślenie hipoteki",
+  "Załącznik 3 — Tabela opłat windykacyjnych",
+  "Rejestr kosztów windykacyjnych",
+  "Zawiadomienie o możliwości popełnienia przestępstwa",
+  "Oświadczenie 777 — instrukcja dla notariusza",
+  "Hipoteka — oświadczenie i wniosek o wpis",
+  "Pokwitowanie wypłaty pożyczki",
+  "Klauzula informacyjna RODO",
+  "Karta AML/KYC — ocena ryzyka",
+  "Procedura wewnętrzna AML/CFT — firma pożyczkowa B2B",
+] as const;
+
 const GOLD = "#f0c667";
 const card: React.CSSProperties = {
   background: "var(--card)",
@@ -142,6 +210,12 @@ function ProductCard({ offer, choose, active }: { offer: Offer; choose: (id: str
 }
 
 function ProductDetail({ offer }: { offer: Offer }) {
+  const variants: readonly string[] = offer.id === "akademia" ? LESSONS : offer.id === "kancelaria" ? TEMPLATES : [];
+  const [selected, setSelected] = useState("pakiet");
+  const variantName = selected === "pakiet" ? offer.title : selected;
+  const mailto = "mailto:kontakt@financeyou.pl?subject=" + encodeURIComponent("Zakup produktu Finance You: " + offer.title) +
+    "&body=" + encodeURIComponent("Dzień dobry, interesuje mnie zakup: " + variantName +
+      ".\nProszę o potwierdzenie ceny i możliwości zakupu pojedynczego produktu.\n\nDane kontaktowe:");
   return (
     <div id="szczegoly" style={{ ...card, marginTop: "2rem", overflow: "hidden" }} aria-live="polite">
       <div style={{ height: 4, background: "linear-gradient(90deg,#c48d2a,#f0c667,#5fa2f6)" }} />
@@ -158,8 +232,21 @@ function ProductDetail({ offer }: { offer: Offer }) {
           <div style={{ fontSize: ".75rem", color: "var(--muted-foreground)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em" }}>Planowana sprzedaż indywidualna</div>
           <div style={{ color: GOLD, fontSize: "2.15rem", fontWeight: 900, marginTop: ".65rem" }}>{offer.price}</div>
           <div style={{ color: "var(--muted-foreground)", fontSize: ".8rem", marginTop: 4 }}>{offer.priceSub}</div>
-          <div style={{ marginTop: "1.3rem" }}>
-            <MktButton variant="gold" size="lg" href={offer.target} style={{ width: "100%", height: "auto", whiteSpace: "normal", textAlign: "center", minHeight: 48, lineHeight: 1.4, padding: "1rem" }}>
+          {variants.length > 0 && (
+            <div style={{ marginTop: "1.35rem" }}>
+              <label htmlFor={offer.id + "-wariant"} style={{ fontSize: ".85rem", fontWeight: 700 }}>Wybierz {offer.id === "akademia" ? "lekcję" : "dokument"}</label>
+              <select id={offer.id + "-wariant"} value={selected} onChange={(e) => setSelected(e.target.value)}
+                style={{ display: "block", marginTop: ".5rem", padding: ".8rem", width: "100%", maxWidth: "100%", color: "var(--foreground)", background: "#0d1638", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: ".78rem" }}>
+                <option value="pakiet">{offer.id === "akademia" ? "Cały program" : "Pakiet dokumentów"}</option>
+                {variants.map((t, i) => <option key={t} value={t}>{i + 1}. {t}</option>)}
+              </select>
+            </div>
+          )}
+          <div style={{ marginTop: "1.3rem", display: "grid", gap: ".7rem" }}>
+            <MktButton variant="gold" size="lg" href={mailto} style={{ width: "100%", height: "auto", whiteSpace: "normal", textAlign: "center", minHeight: 48, lineHeight: 1.4, padding: "1rem" }}>
+              Zapytaj o zakup →
+            </MktButton>
+            <MktButton variant="outline" size="lg" href={offer.target} style={{ width: "100%", height: "auto", whiteSpace: "normal", textAlign: "center", minHeight: 48, lineHeight: 1.4, padding: "1rem" }}>
               {offer.action} →
             </MktButton>
           </div>
@@ -226,7 +313,7 @@ function FinanceYouSklep() {
         <div className="fy-sales-cards">
           {OFFERS.map((offer) => <ProductCard key={offer.id} offer={offer} choose={choose} active={chosen === offer.id} />)}
         </div>
-        <ProductDetail offer={current} />
+        <ProductDetail key={current.id} offer={current} />
       </Section>
 
       <Section id="kompletny" tint>
