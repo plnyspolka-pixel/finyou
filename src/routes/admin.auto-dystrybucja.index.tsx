@@ -1,5 +1,5 @@
 // Auto-dystrybucja instytucjonalna: score lokalizacji > 50, wysyłka automatyczna
-// do wszystkich aktywnych instytucji, bez ręcznego zatwierdzania.
+// do aktywnych instytucji według ich widełek kwotowych, bez ręcznego zatwierdzania.
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -127,7 +127,8 @@ function AutoDystrybucjaPage() {
           <h1 className="text-2xl font-bold">Auto-dystrybucja</h1>
           <p className="text-sm text-muted-foreground">
             Każdy wniosek B2B z oceną lokalizacji powyżej 50 pkt jest wysyłany automatycznie
-            do wszystkich aktywnych instytucji z adresem e-mail (cron co 30 minut).
+            do aktywnych instytucji, których indywidualne widełki kwotowe obejmują
+            wnioskowaną kwotę (cron co 30 minut).
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRunSync} disabled={syncing}>
@@ -161,12 +162,13 @@ function AutoDystrybucjaPage() {
       {/* Kryteria instytucji */}
       <Card>
         <CardHeader>
-          <CardTitle>Preferencje instytucji (wyłączenia i pauzy są wiążące)</CardTitle>
+          <CardTitle>Widełki kwotowe i preferencje instytucji</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Automat obejmuje wszystkie aktywne instytucje, niezależnie od widełek kwotowych.
-            Respektuje jednak wyłączenie auto-wysyłki, odmowę przyjmowania i czasową pauzę.
+            Automat wysyła ofertę tylko instytucjom, których widełki kwotowe obejmują
+            kwotę pożyczki. Respektuje także wyłączenie auto-wysyłki, odmowę
+            przyjmowania ofert i czasową pauzę. Np. JanVest od 100 tys. zł.
           </p>
           {(criteria ?? []).map((row: any) => (
             <CriteriaRow
