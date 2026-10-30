@@ -87,7 +87,7 @@ function AutoDystrybucjaPage() {
         toast.success(
           res?.sent?.length
             ? `Wysłano do: ${res.sent.join(", ")}`
-            : "Zatwierdzono (brak nowych odbiorców — wszyscy już mieli ten temat)",
+            : "Nie było nowych odbiorców — wszystkie instytucje już otrzymały ten temat",
         );
       } else {
         toast.success("Propozycja odrzucona");
@@ -544,7 +544,7 @@ function ProposalRow({
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={onApprove} disabled={busy}>
-          {busy ? "Wysyłam…" : "Zatwierdź i wyślij"}
+          {busy ? "Wysyłam…" : "Wyślij teraz (awaryjnie)"}
         </Button>
         <Button size="sm" variant="outline" onClick={onReject} disabled={busy}>
           Odrzuć
