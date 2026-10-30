@@ -3,7 +3,7 @@ Data: 2026-10-30
 Status: zatwierdzony kierunek biznesowy; **nie jest potwierdzeniem legalności ani zgodą na uruchomienie**.
 
 ## Decyzja
-Rezygnujemy z automatycznej dystrybucji projektów do inwestorów w wariancie usługi indywidualnego pośrednictwa. Docelowo Finance You przyjmuje indywidualne zlecenie i rzeczywiście kojarzy strony w konkretnej sprawie. Po indywidualnym skojarzeniu aplikacja może wspierać negocjacje, kalkulator, analitykę, dokumenty, podpisy i obsługę pożyczki. Każda pożyczka: jeden inwestor i jeden pożyczkobiorca, przelewy bezpośrednie między stronami.
+Rezygnujemy z automatycznej dystrybucji projektów w **Tinderze prywatnych inwestorów** w wariancie usługi indywidualnego pośrednictwa. **Wyjątek: nie ograniczamy dotychczasowej dystrybucji instytucjonalnej; automatycznie wysyła ona wnioski B2B do wszystkich aktywnych instytucji z e-mailem, gdy faktyczny wynik lokalizacji wynosi powyżej 50 punktów (ściśle > 50).** Docelowo Finance You przyjmuje indywidualne zlecenie i rzeczywiście kojarzy strony w konkretnej sprawie. Po indywidualnym skojarzeniu aplikacja może wspierać negocjacje, kalkulator, analitykę, dokumenty, podpisy i obsługę pożyczki. Każda pożyczka: jeden inwestor i jeden pożyczkobiorca, przelewy bezpośrednie między stronami.
 
 ## Krytyczne wymagania przed uruchomieniem
 1. Nie uruchamiać automatycznego przydzielania, wyszukiwania, rankingu i sekwencyjnego przesyłania projektów inwestorom w wariancie pozalicencyjnym.
@@ -17,7 +17,8 @@ Rezygnujemy z automatycznej dystrybucji projektów do inwestorów w wariancie us
 - `src/lib/investor-agreements/order-cycle.functions.ts`: `getMyOrderCycle` wywołuje `autoMatchInvestorOrders` podczas wejścia inwestora; wyłączyć dla wariantu pośrednictwa.
 - `src/lib/investor-agreements/order-cycle.server.ts`: `autoMatchInvestorOrders` tworzy dopasowanie i teaser; wymaga bramki serwerowej i testu braku nieautoryzowanego wywołania.
 - `src/lib/investor-agreements/order-projects.functions.ts`: przejrzeć listowanie i dostęp do projektów; pokazywać wyłącznie już indywidualnie przypisane sprawy.
-- Sprawdzić wszystkie inne ścieżki dystrybucji i funkcje `auto-distribution`, RLS oraz publiczne endpointy.
+- Sprawdzić wszystkie ścieżki Tindera i RLS; **nie wyłączać `src/lib/auto-distribution/` ani instytucjonalnej wysyłki e-mail**. Wyjątek instytucjonalny musi być oceniony prawnie osobno i mieć deduplikację.
+- Implementacja rozdzielenia kanałów: [PR #338](https://github.com/plnyspolka-pixel/finyou/pull/338).
 
 ## Warunek wdrożenia
 **Nie włączać wariantu pozalicencyjnego na produkcji przed pozytywną opinią prawną i testami end-to-end.** Ten dokument nie przesądza, że licencja KNF jest zbędna.
