@@ -21,6 +21,9 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
+  RENDITION_CLAIM_STALE_MS,
+  TRANSCODE_UNSUPPORTED_SKIPPED,
+  unsupportedCooldownActive,
   VIDEO_PREPARING_RETRY_MIN,
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_PROFILE,
@@ -159,7 +162,13 @@ async function submitRendition(
       last_error: reason,
     })
     .eq("id", row.id)
-    .in("status", ["pending", "failed"])
+    // pending / failed albo porzucone zlecenie (processing bez id zadania,
+    // starsze niż RENDITION_CLAIM_STALE_MS) — inaczej taki wiersz wisiał na zawsze.
+    .or(
+      `status.in.(pending,failed),and(status.eq.processing,job_id.is.null,job_started_at.lt."${new Date(
+        Date.now() - RENDITION_CLAIM_STALE_MS,
+      ).toISOString()}")`,
+    )
     .select("id");
   if (claimErr) throw new Error(`video_renditions: ${claimErr.message}`);
   if (!claimed?.length) return { claimed: false, unsupported: null };
@@ -198,6 +207,7 @@ async function submitRendition(
           last_error: TRANSCODE_UNSUPPORTED_REASON,
         })
         .eq("id", row.id);
+      unsupportedMemo = { at: Date.now(), value: new Date().toISOString() };
       console.warn(`[renditions] ${TRANSCODE_UNSUPPORTED_REASON} (${row.id})`);
       return { claimed: true, unsupported: TRANSCODE_UNSUPPORTED_REASON };
     }
@@ -270,10 +280,60 @@ type SettleOutcome =
   | { state: "original"; url: string; reason: string };
 
 /**
+ * Czas ostatniej PRAWDZIWEJ odpowiedzi „stara wersja usługi” (zapamiętany
+ * na minutę, żeby przebieg z kilkoma publikacjami pytał bazę raz).
+ */
+let unsupportedMemo: { at: number; value: string | null } | null = null;
+async function lastUnsupportedAt(): Promise<string | null> {
+  if (unsupportedMemo && Date.now() - unsupportedMemo.at < 60_000) return unsupportedMemo.value;
+  const { data } = await table()
+    .select("updated_at")
+    .eq("last_error", TRANSCODE_UNSUPPORTED_REASON)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const value = (data as { updated_at?: string } | null)?.updated_at ?? null;
+  unsupportedMemo = { at: Date.now(), value };
+  return value;
+}
+
+/**
+ * Przerwa po „starej wersji usługi”: nie budzimy usługi, oryginał od razu.
+ * Dotyczy wierszy, które i tak trafiłyby do usługi (pending / failed /
+ * porzucone zlecenie) — zadanie w toku z id domykamy normalnie.
+ */
+async function skipDuringUnsupportedCooldown(
+  row: VideoRenditionRow,
+): Promise<SettleOutcome | null> {
+  if (row.status === "ready" || (row.status === "processing" && row.job_id)) return null;
+  let active = false;
+  try {
+    active = unsupportedCooldownActive(await lastUnsupportedAt(), new Date());
+  } catch {
+    return null;
+  }
+  if (!active) return null;
+  const known = row.last_error === TRANSCODE_UNSUPPORTED_REASON;
+  if (!(row.status === "failed" && (known || row.last_error === TRANSCODE_UNSUPPORTED_SKIPPED))) {
+    await table()
+      .update({
+        status: "failed",
+        job_id: null,
+        job_started_at: null,
+        last_error: TRANSCODE_UNSUPPORTED_SKIPPED,
+      })
+      .eq("id", row.id);
+  }
+  return { state: "original", url: row.source_url, reason: TRANSCODE_UNSUPPORTED_SKIPPED };
+}
+
+/**
  * Jedno przejście decyzji dla wiersza: odpytanie usługi (gdy trwa), zapis
  * wyniku, ponowienie albo rezygnacja. Wspólne dla ticka i publikatorów.
  */
 async function settleRendition(row: VideoRenditionRow): Promise<SettleOutcome> {
+  const skipped = await skipDuringUnsupportedCooldown(row);
+  if (skipped) return skipped;
   let probe: RenditionJobProbe | null = null;
   if (row.status === "processing" && row.job_id) {
     try {
@@ -483,6 +543,14 @@ export async function runVideoRenditionTick(): Promise<{
   }
 
   // 3. Nowe zlecenia (usługa koduje jedno naraz — nie zalewamy jej kolejki).
+  // W przerwie po „starej wersji usługi” nie zlecamy — publikatory wyślą oryginał.
+  let cooldown = false;
+  try {
+    cooldown = unsupportedCooldownActive(await lastUnsupportedAt(), new Date());
+  } catch {
+    cooldown = false;
+  }
+  if (cooldown) return result;
   try {
     const { data: rows, error } = await table()
       .select("*")

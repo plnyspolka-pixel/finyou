@@ -1261,6 +1261,38 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
 }
 
 // Pełny przebieg ticka: przetwórz kolejkę + domknij rendery.
+/** Po tylu minutach w przygotowaniu (scenariusz → głos → zlecenie HeyGen) zadanie uznajemy za przerwane. */
+export const STUDIO_STALLED_PRE_RENDER_MIN = 30;
+
+/**
+ * Zadania przerwane przed zleceniem renderu (przebieg ucięty w trakcie
+ * `generating_script` / `generating_audio` / `uploading`) wisiały w tym
+ * stanie na zawsze (25.10.2026: rolka 2 dni w „uploading” blokowała zapas
+ * autopilota). Przechodzą w `failed` z jasnym powodem: nie ponawiamy ich
+ * sami, bo render w HeyGen mógł już zostać zlecony i zapłacony — `retry_studio_job`
+ * zrobi to świadomie, a autopilot uzupełni zapas nową rolką.
+ */
+export async function failStalledStudioJobs(now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - STUDIO_STALLED_PRE_RENDER_MIN * 60_000).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("studio_video_jobs")
+    .update({
+      status: "failed",
+      last_error:
+        `Przygotowanie przerwane – zadanie wisiało ponad ${STUDIO_STALLED_PRE_RENDER_MIN} min przed ` +
+        "zleceniem renderu (przebieg ucięty w trakcie). Ponów (retry_studio_job), jeśli rolka jest potrzebna.",
+    })
+    .in("status", ["generating_script", "generating_audio", "uploading"])
+    .is("heygen_video_id", null)
+    .lt("updated_at", cutoff)
+    .select("id");
+  if (error) {
+    console.warn(`[Studio] failStalledStudioJobs: ${error.message}`);
+    return 0;
+  }
+  return data?.length ?? 0;
+}
+
 export async function runStudioVideoTick(): Promise<{
   processed: number;
   failed: number;
@@ -1269,8 +1301,11 @@ export async function runStudioVideoTick(): Promise<{
   deferred: string | null;
   completed: number;
   autoPublished: number;
+  /** Zadania przerwane przed zleceniem renderu → failed. */
+  stalled: number;
 }> {
+  const stalled = await failStalledStudioJobs();
   const queue = await processStudioVideoQueue(2);
   const poll = await pollStudioRenderingJobs();
-  return { ...queue, ...poll };
+  return { ...queue, ...poll, stalled };
 }
