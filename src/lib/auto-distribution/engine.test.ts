@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchInvestorToAmount } from "./engine.server";
+import { matchInvestorToAmount, qualifiesForInstitutionalDistribution } from "./engine.server";
 
 const base = {
   min_amount: null as number | null,
@@ -51,5 +51,27 @@ describe("matchInvestorToAmount", () => {
     expect(matchInvestorToAmount(c, 99999).ok).toBe(false);
     expect(matchInvestorToAmount(c, 200000).ok).toBe(true);
     expect(matchInvestorToAmount(c, 400000).ok).toBe(false);
+  });
+});
+
+
+describe("automatyczna dystrybucja instytucjonalna: score > 50", () => {
+  const loan = { location_potential_score: 51, business_purpose_declared: true, loan_amount: 100_000 };
+
+  it("wysyła przy 50.01 i 51, ale nie przy 50 ani 49.99", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 50.01 })).toBe(true);
+    expect(qualifiesForInstitutionalDistribution(loan)).toBe(true);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 50 })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: 49.99 })).toBe(false);
+  });
+
+  it("brak wyniku lokalizacji nigdy nie uruchamia wysyłki", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, location_potential_score: null })).toBe(false);
+  });
+
+  it("zachowuje wymóg celu gospodarczego i dodatniej kwoty", () => {
+    expect(qualifiesForInstitutionalDistribution({ ...loan, business_purpose_declared: false })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: null })).toBe(false);
+    expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: 0 })).toBe(false);
   });
 });
