@@ -73,6 +73,31 @@ describe("elevenLabsTextTurn", () => {
     expect(r).toEqual({ ok: true, reply: "Otwarcie" });
   });
 
+  it("zawsze wysyła thread_key wymagany przez narzędzia agentów", async () => {
+    let sent: any = null;
+    class Spy extends FakeAgentSocket {
+      send(raw: string) {
+        const msg = JSON.parse(raw);
+        if (msg.type === "conversation_initiation_client_data") sent = msg.dynamic_variables;
+        super.send(raw);
+      }
+    }
+    vi.stubGlobal("WebSocket", Spy);
+    await elevenLabsTextTurn({
+      agentId: "a",
+      userMessage: "Hej",
+      dynamicVariables: { channel: "messenger" },
+    });
+    expect(sent.thread_key).toMatch(/^text:/);
+    expect(sent.channel).toBe("messenger");
+    await elevenLabsTextTurn({
+      agentId: "a",
+      userMessage: "Hej",
+      dynamicVariables: { thread_key: "messenger:1" },
+    });
+    expect(sent.thread_key).toBe("messenger:1");
+  });
+
   it("pusty first_message — od razu odpowiedź", async () => {
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej", firstMessage: "" });
     expect(r).toEqual({ ok: true, reply: "ODP: Hej" });

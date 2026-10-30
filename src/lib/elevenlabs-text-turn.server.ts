@@ -104,7 +104,13 @@ export async function elevenLabsTextTurn(opts: {
         ws.send(
           JSON.stringify({
             type: "conversation_initiation_client_data",
-            dynamic_variables: opts.dynamicVariables ?? {},
+            // Narzędzia agentów (fy2_*) wymagają `thread_key` — bez niego
+            // ElevenLabs zamyka sesję zaraz po powitaniu (1008 „Missing
+            // required dynamic variables in tools: {'thread_key'}”).
+            dynamic_variables: {
+              thread_key: `text:${crypto.randomUUID()}`,
+              ...(opts.dynamicVariables ?? {}),
+            },
             conversation_config_override: {
               conversation: { text_only: true },
               ...(opts.firstMessage !== undefined ? { agent: { first_message: opts.firstMessage } } : {}),
