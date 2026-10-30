@@ -28,3 +28,30 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
+      - name: Install browser for desktop and mobile reference screenshots
+        run: npx --yes playwright@1.56.1 install chromium --with-deps
+      - name: Run draft app for screenshot
+        shell: bash
+        run: |
+          nohup bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/financeyou-dev.log 2>&1 &
+          for attempt in {1..60}; do
+            code=$(curl -s -o /tmp/sklep-response.html -w '%{http_code}' http://127.0.0.1:4173/sklep || true)
+            if [ "$code" = "200" ]; then break; fi
+            sleep 2
+          done
+          test "$code" = "200" || (cat /tmp/financeyou-dev.log && exit 1)
+      - name: Capture new page and current brand reference
+        shell: bash
+        continue-on-error: true
+        run: |
+          mkdir -p preview-shots
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4000 --full-page http://127.0.0.1:4173/sklep preview-shots/sklep-desktop.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4000 --full-page http://127.0.0.1:4173/sklep preview-shots/sklep-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4000 https://financeyou.pl/ preview-shots/produkcja-referencja.png
+      - name: Archive screenshot comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: financeyou-brand-native-preview
+          path: preview-shots/
+          if-no-files-found: warn
