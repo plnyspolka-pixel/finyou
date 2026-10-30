@@ -28,14 +28,10 @@ export interface DistributionSendResult {
 
 export async function distributeOfferToInvestors(input: {
   applicationId: string;
-  /** Dokładnie jeden ręcznie wybrany odbiorca. */
-  investorIds: string[];
+  /** Puste/nieprzekazane => wysyłka do WSZYSTKICH aktywnych instytucji. */
+  investorIds?: string[];
   note?: string;
 }): Promise<DistributionSendResult> {
-  // Indywidualne pośrednictwo: wyłącznie jeden wskazany odbiorca.
-  if (!input.investorIds || input.investorIds.length !== 1) {
-    throw new Error("Wymagany jest jeden wskazany inwestor. Wysyłka masowa jest wyłączona.");
-  }
   const { sendResendEmail } = await import("@/lib/resend-send.server");
   const { offerReplyAddress, offerCardUrl } = await import("@/lib/offer-replies.server");
 
