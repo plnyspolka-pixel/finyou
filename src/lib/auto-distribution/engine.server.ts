@@ -116,6 +116,38 @@ export function qualifiesForInstitutionalDistribution(loan: {
     score > INSTITUTIONAL_LOCATION_SCORE_THRESHOLD;
 }
 
+/**
+ * Wysyłamy do wszystkich AKTYWNYCH instytucji, lecz honorujemy ich wyraźne
+ * wyłączenie auto-maili, odmowę przyjmowania i czasowe zawieszenie.
+ * Widełki min/max kwoty nie filtrują automatycznych wysyłek.
+ */
+export function institutionAcceptsAutomaticEmails(
+  c: { auto_send_enabled: boolean; accepting_applications: boolean; paused_until: string | null } | null,
+  now = new Date(),
+): boolean {
+  if (!c) return true;
+  if (!c.auto_send_enabled || !c.accepting_applications) return false;
+  if (c.paused_until && new Date(c.paused_until) > now) return false;
+  return true;
+}
+
+async function institutionalAutoRecipients() {
+  const [{ data: investors, error: investorsErr }, { data: criteriaRows, error: criteriaErr }] =
+    await Promise.all([
+      supabaseAdmin.from("investors")
+        .select("id, company_name, first_name, last_name, email")
+        .eq("investor_type", "instytucjonalny").eq("is_active", true),
+      (supabaseAdmin as any).from("investor_distribution_criteria")
+        .select("investor_id, auto_send_enabled, accepting_applications, paused_until"),
+    ]);
+  if (investorsErr) throw new Error(investorsErr.message);
+  if (criteriaErr) throw new Error(criteriaErr.message);
+  const byId = new Map((criteriaRows ?? []).map((c: any) => [c.investor_id, c]));
+  return (investors ?? []).filter((i: any) =>
+    Boolean(i.email?.trim()) && institutionAcceptsAutomaticEmails(byId.get(i.id) ?? null),
+  );
+}
+
 /** Limit spraw obsłużonych w jednym przebiegu cron (nie limit odbiorców). */
 const MAX_AUTO_CASES_PER_TICK = 3;
 
@@ -135,13 +167,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
     scanned: 0, eligible: 0, proposed: 0, refreshed: 0,
     skipped_no_matches: 0, sent: 0, sent_cases: 0, failed: 0, skipped_in_progress: 0,
   };
-  const { data: investors, error: investorsErr } = await supabaseAdmin
-    .from("investors")
-    .select("id, company_name, first_name, last_name, email")
-    .eq("investor_type", "instytucjonalny")
-    .eq("is_active", true);
-  if (investorsErr) throw new Error(investorsErr.message);
-  const recipients = (investors ?? []).filter((i: any) => Boolean(i.email?.trim()));
+  const recipients = await institutionalAutoRecipients();
   if (recipients.length === 0) return result;
 
   // Ograniczamy liczbę spraw (nie adresatów) wysyłanych w jednym wywołaniu.
@@ -308,9 +334,13 @@ export async function approveProposal(
 
   const { distributeOfferToInvestors } = await import("@/lib/offer-distribution-core.server");
   try {
-    // Brak investorIds oznacza WSZYSTKIE aktywne instytucje, nie pojedynczego inwestora.
+    // Do WSZYSTKICH aktywnych instytucji przyjmujących auto-oferty.
+    // Ograniczenie odbiorców dotyczy wyłącznie wyraźnych rezygnacji/pauz.
+    const recipients = await institutionalAutoRecipients();
+    if (recipients.length === 0) throw new Error("Brak aktywnych instytucji przyjmujących oferty.");
     const sendResult = await distributeOfferToInvestors({
       applicationId: proposal.loan_application_id,
+      investorIds: recipients.map((i: any) => i.id),
     });
     await (supabaseAdmin as any)
       .from("auto_distribution_proposals")
