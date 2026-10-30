@@ -161,6 +161,7 @@ export const updateAutoDistributionSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdminOrOperator(context.supabase as any, context.userId);
+    if (data.enabled) throw new Error("Automatyczna dystrybucja jest wyłączona w trybie pośrednictwa indywidualnego.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await (supabaseAdmin as any)
       .from("auto_distribution_settings")
