@@ -1,6 +1,17 @@
--- Tryb indywidualnego pośrednictwa: wyłączenie publicznej giełdy ofert
--- i automatycznej dystrybucji na poziomie bazy (wdrożenie wymaga migracji).
-UPDATE public.auto_distribution_settings SET enabled = false WHERE id = 1;
+-- Oddzielne kanały: Tinder = pośrednictwo ręczne 1:1, dystrybucja do
+-- instytucji = AUTOMATYCZNA wysyłka, gdy rzeczywisty score lokalizacji > 50.
+-- Próg wysyłki i B2B są egzekwowane także w kodzie serwera.
+INSERT INTO public.auto_distribution_settings (id, enabled, min_location_score, daily_send_limit)
+VALUES (1, true, 50, 500)
+ON CONFLICT (id) DO UPDATE
+SET enabled = true, min_location_score = 50, daily_send_limit = 500;
+
+-- W czasie wysyłki (status sending) nie wolno utworzyć drugiej propozycji
+-- dla tego samego wniosku. Chroni przed nakładającymi się wywołaniami cron.
+DROP INDEX IF EXISTS public.auto_distribution_open_proposal_idx;
+CREATE UNIQUE INDEX IF NOT EXISTS auto_distribution_open_proposal_idx
+  ON public.auto_distribution_proposals (loan_application_id)
+  WHERE status IN ('proposed', 'sending');
 
 -- Dawna „publiczna” lista propozycji (dla wszystkich zalogowanych inwestorów)
 -- nie może pozostać alternatywnym kanałem przeglądania dostępnych finansowań.
