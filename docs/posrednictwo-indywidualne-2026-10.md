@@ -39,7 +39,7 @@ Nie przyjmujemy, że samo wyłączenie automatu wyłącza art. 2 ECSPR albo art.
 ## Szczegóły automatu instytucjonalnego (decyzja uzupełniająca)
 
 - Minimalny score lokalizacji: **powyżej 50**; 50, wynik niższy lub NULL nie kwalifikują.
-- Odbiorcy: każda aktywna instytucja w bazie (`investor_type = instytucjonalny`, `is_active = true`) posiadająca adres e-mail, bez filtrów widełek kwotowych czy indywidualnego rankingu.
+- Odbiorcy: każda aktywna instytucja w bazie (`investor_type = instytucjonalny`, `is_active = true`) posiadająca adres e-mail, bez filtrów widełek kwotowych czy indywidualnego rankingu; respektujemy jednak wyraźną rezygnację z automatycznych ofert, odmowę przyjmowania lub aktywną pauzę.
 - Konieczny cel gospodarczy pożyczki (`business_purpose_declared = true`) i dodatnia kwota. Wniosek musi pozostawać w dopuszczonym statusie procesu i nie może być usunięty.
 - Nie trzeba ręcznej akceptacji ani kompletnego briefu dokumentów; po obliczeniu score automat może rozesłać nieukończoną jeszcze sprawę. Jest to świadoma decyzja operacyjna, wymagająca kontroli prawnej i jakości danych.
 - Technicznie zadanie działa co 30 minut; maksymalnie trzy nowe sprawy na przebieg i ograniczenie liczby spraw/dobę według ustawień. Odbiorcy nie są dzieleni na podgrupy z uwagi na score czy kwotę.
