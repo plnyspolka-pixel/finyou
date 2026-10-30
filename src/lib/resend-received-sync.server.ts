@@ -220,6 +220,10 @@ async function preserveOfferThread(mail: ResendReceivedMessage): Promise<boolean
 
 function relevantExcerpt(mail: ResendReceivedMessage): string {
   const text = textBody(mail);
+  // A partner's name may appear deep in a long reply thread; prioritize the
+  // surrounding passage instead of blindly returning the first 2400 chars.
+  const partnerAt = text.search(/mango|magnum|partner|przekierow|kierowa[cć]|zwraca[cć]\s+si[eę]/i);
+  if (partnerAt >= 0) return text.slice(Math.max(0, partnerAt - 350), partnerAt + 2050);
   if (PARTNER_HINT_RE.test(mail.from + " " + mail.subject)) return text.slice(0, 2400);
   const at = text.search(PARTNER_HINT_RE);
   return at < 0 ? "" : text.slice(Math.max(0, at - 350), at + 2050);
@@ -284,8 +288,10 @@ export async function synchronizeResendReceived(
           : null;
         // Don't call Resend for messages already fully persisted. The user can
         // still search them in the existing Finance You inbox.
+        const offerAlias = [...(item.to ?? []), ...(item.cc ?? [])]
+          .some((address) => OFFER_ALIAS_RE.test(address));
         if (existing && (existing.content ?? "").trim().length > 80 &&
-            existing.metadata?.email_id === item.id) {
+            existing.metadata?.email_id === item.id && !offerAlias) {
           result.skipped += 1;
           moveOn();
           continue;
