@@ -46,7 +46,7 @@ export async function loadAutoDistributionSettings(): Promise<AutoDistributionSe
     .eq("id", 1)
     .maybeSingle();
   return {
-    enabled: data?.enabled ?? true,
+    enabled: false, // Automatyczna dystrybucja zablokowana niezależnie od ustawień bazy.
     min_location_score: Number(data?.min_location_score ?? 40),
     daily_send_limit: Number(data?.daily_send_limit ?? 20),
   };
