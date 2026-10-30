@@ -10,8 +10,12 @@ const EL_BASE = "https://api.elevenlabs.io/v1";
 import { isTextFiller } from "./ania-text-policy";
 const DEFAULT_TIMEOUT_MS = 40_000;
 const GREETING_WAIT_MS = 4_000;
-/** Cisza po ostatniej wypowiedzi agenta, po której tura się kończy. */
-const REPLY_IDLE_MS = 3_000;
+/**
+ * Cisza po ostatniej wypowiedzi agenta, po której tura się kończy. Agent
+ * często mówi zdanie, woła narzędzie (webhook potrafi trwać 7 s i dłużej)
+ * i dopiero potem odpowiada — przy 3 s tura urywała się po pierwszym zdaniu.
+ */
+const REPLY_IDLE_MS = 10_000;
 
 export interface ElTextToolCall {
   name: string;
@@ -190,6 +194,12 @@ export async function elevenLabsTextTurn(opts: {
           // przepadła; trafi do kontekstu następnej tury.
           else if (!opts.firstMessage) sendUser();
         }
+        return;
+      }
+      // Start narzędzia (agent_tool_request, mcp_tool_call…) — czekamy na wynik.
+      if (typeof type === "string" && type.includes("tool") && type !== "agent_tool_response") {
+        awaitingAfterTool = true;
+        if (idleTimer) clearTimeout(idleTimer);
         return;
       }
       if (type === "agent_tool_response") {

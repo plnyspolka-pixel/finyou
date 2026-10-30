@@ -82,13 +82,13 @@ describe("elevenLabsTextTurn", () => {
       reply: "ODP: Proszę zadzwonić",
       conversationId: "conv_test",
     });
-  }, 15_000);
+  }, 40_000);
 
   it("odpowiada także agent bez powitania", async () => {
     FakeAgentSocket.greeting = null;
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej" });
     expect(r).toMatchObject({ ok: true, reply: "ODP: Hej" });
-  }, 15_000);
+  }, 40_000);
 
   it("jawne powitanie zlecone przez wywołującego zostaje odpowiedzią (otwarcie A2P)", async () => {
     const r = await elevenLabsTextTurn({
@@ -97,20 +97,21 @@ describe("elevenLabsTextTurn", () => {
       firstMessage: "Otwarcie",
     });
     expect(r).toMatchObject({ ok: true, reply: "Otwarcie" });
-  }, 15_000);
+  }, 40_000);
 
   it("pusty first_message — od razu odpowiedź", async () => {
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej", firstMessage: "" });
     expect(r).toMatchObject({ ok: true, reply: "ODP: Hej" });
-  }, 15_000);
+  }, 40_000);
 
   it("zbiera całą odpowiedź: zdanie przed narzędziem i resztę po jego wyniku", async () => {
     FakeAgentSocket.script = (s) => {
+      // Jak na produkcji 30.10: zdanie, narzędzie, wynik narzędzia po ~9 s.
       s.later(() => s.agent("Chętnie opowiem o modelu, który oferujemy."), 5);
-      s.later(() => s.tool("fy2_get_process_overview__inwestor_presale"), 1_000);
+      s.later(() => s.tool("fy2_identify_caller__inwestor_presale"), 9_000);
       s.later(
         () => s.agent("Inwestor pożycza pod hipotekę, a umowę podpisuje u notariusza."),
-        4_500,
+        10_500,
       );
     };
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Jak to działa?" });
@@ -119,9 +120,9 @@ describe("elevenLabsTextTurn", () => {
       "Chętnie opowiem o modelu, który oferujemy.\nInwestor pożycza pod hipotekę, a umowę podpisuje u notariusza.",
     );
     expect(r.toolCalls).toEqual([
-      { name: "fy2_get_process_overview__inwestor_presale", isError: false },
+      { name: "fy2_identify_caller__inwestor_presale", isError: false },
     ]);
-  }, 15_000);
+  }, 40_000);
 
   it("zerwanie sesji przez ElevenLabs zwraca powód, a nie powitanie", async () => {
     FakeAgentSocket.closeAfterGreeting = {
@@ -134,7 +135,7 @@ describe("elevenLabsTextTurn", () => {
     expect(r.reply).toBeUndefined();
     expect(r.error).toContain("1008");
     expect(r.error).toContain("thread_key");
-  }, 15_000);
+  }, 40_000);
 
   it("zawsze wysyła thread_key wymagany przez narzędzia agentów", async () => {
     await elevenLabsTextTurn({
@@ -150,5 +151,5 @@ describe("elevenLabsTextTurn", () => {
       dynamicVariables: { thread_key: "messenger:1" },
     });
     expect(FakeAgentSocket.lastInit.dynamic_variables.thread_key).toBe("messenger:1");
-  }, 20_000);
+  }, 60_000);
 });
