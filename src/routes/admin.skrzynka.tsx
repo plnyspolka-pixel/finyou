@@ -46,6 +46,19 @@ type Msg = {
   thread_external_id: string | null;
 };
 
+type ResendSyncReport = {
+  scanned: number;
+  matchedFilter: number;
+  imported: number;
+  enriched: number;
+  skipped: number;
+  offerLinked: number;
+  errors: string[];
+  nextAfter: string | null;
+  hasMore: boolean;
+  relevant: Array<{ id: string; from: string; date: string; subject: string; excerpt: string }>;
+};
+
 function SkrzynkaPage() {
   const [tab, setTab] = useState<"inbound" | "outbound">("inbound");
   const [q, setQ] = useState("");
@@ -55,6 +68,55 @@ function SkrzynkaPage() {
   const [composeInitial, setComposeInitial] = useState<ComposeEmailInitial | undefined>(undefined);
   const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
+  const [resendSyncBusy, setResendSyncBusy] = useState(false);
+  const [resendSyncState, setResendSyncState] = useState<{
+    filter: string;
+    report: ResendSyncReport;
+  } | null>(null);
+
+  // Passive reconciliation only. This is authenticated with the admin's
+  // Supabase access token, not a public API key or Lovable gateway.
+  const syncResend = async (filter: string, after?: string) => {
+    if (resendSyncBusy) return;
+    setResendSyncBusy(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Najpierw zaloguj się jako administrator.");
+      const response = await fetch("/api/admin/resend-inbox", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({
+          senderFilter: filter || undefined,
+          after: after || undefined,
+          pageSize: 20,
+          maxPages: 1,
+        }),
+      });
+      const result = (await response.json()) as ResendSyncReport & {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Nie udało się pobrać wiadomości z Resend.");
+      }
+      setResendSyncState({ filter, report: result });
+      setTab("inbound");
+      void qc.invalidateQueries({ queryKey: ["admin-inbox"] });
+      toast.success(
+        "Resend: odczytano " + result.scanned + " wiadomości; nowych " +
+          result.imported + ", uzupełnionych " + result.enriched + ".",
+      );
+      if (result.errors.length) toast.warning(result.errors[0]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Błąd synchronizacji Resend.");
+    } finally {
+      setResendSyncBusy(false);
+    }
+  };
   const refetchBodyFn = useServerFn(refetchInboundEmailBody);
   const refetchBody = useMutation({
     mutationFn: (id: string) => refetchBodyFn({ data: { id } }),
@@ -140,12 +202,74 @@ function SkrzynkaPage() {
             <PenSquare className="h-4 w-4 mr-2" />
             Nowa wiadomość
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={resendSyncBusy}
+            onClick={() => void syncResend("funduszkorona.pl")}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {resendSyncBusy ? "Pobieram…" : "Resend: Korona"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={resendSyncBusy}
+            onClick={() => void syncResend("")}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Resend: wszystkie
+          </Button>
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
             Odśwież
           </Button>
         </div>
       </div>
+
+      {resendSyncState && (
+        <Card className="p-3 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm">
+              <strong>Resend — synchronizacja</strong>
+              {" · "}sprawdzono {resendSyncState.report.scanned},
+              {" "}nowych {resendSyncState.report.imported},
+              {" "}uzupełnionych {resendSyncState.report.enriched},
+              {" "}przypisanych do wątków ofert {resendSyncState.report.offerLinked}.
+            </div>
+            {resendSyncState.report.hasMore && resendSyncState.report.nextAfter && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={resendSyncBusy}
+                onClick={() =>
+                  void syncResend(resendSyncState.filter, resendSyncState.report.nextAfter!)
+                }
+              >
+                Pobierz kolejną stronę
+              </Button>
+            )}
+          </div>
+          {resendSyncState.report.errors.length > 0 && (
+            <p className="text-sm text-destructive">
+              {resendSyncState.report.errors.join("; ")}
+            </p>
+          )}
+          {resendSyncState.report.relevant.map((mail) => (
+            <div key={mail.id} className="rounded-md border p-2 text-sm">
+              <div className="font-medium">{mail.from} — {mail.subject}</div>
+              <div className="text-xs text-muted-foreground">{mail.date}</div>
+              <div className="whitespace-pre-wrap break-words max-h-56 overflow-y-auto">
+                {mail.excerpt}
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Synchronizacja nie wysyła wiadomości ani nie uruchamia automatycznych odpowiedzi.
+            Starszą korespondencję pobieraj przyciskiem „Pobierz kolejną stronę”.
+          </p>
+        </Card>
+      )}
 
       <div className="flex gap-2">
         <Button
