@@ -39,6 +39,13 @@ describe("indywidualne pośrednictwo — ograniczenia kanałów ofertowych", () 
       .toContain("result.sent_cases || result.failed");
   });
 
+  it("silnik instytucjonalny respektuje aktualne min/max kwoty w obu momentach", () => {
+    expect(distribution).toContain("investor_id, min_amount, max_amount");
+    expect((distribution.match(/institutionEligibleForAutomaticLoan\(i\.distributionCriteria, loan\)/g) ?? [])
+      .length).toBe(2);
+    expect(distribution).toContain("matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).reason");
+  });
+
   it("odbiera authenticated dostęp do dawnego katalogu ofert; migracje mają lustro", () => {
     expect(sql).toContain("list_public_loan_proposals() FROM PUBLIC, anon, authenticated");
     expect(sql).toContain("get_public_loan_proposal(uuid) FROM PUBLIC, anon, authenticated");
