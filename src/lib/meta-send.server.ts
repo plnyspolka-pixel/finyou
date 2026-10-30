@@ -10,6 +10,7 @@ import {
   type MetaPlatform,
 } from "@/lib/messenger-opt-out.server";
 import type { SendCategory } from "@/lib/opt-out";
+import { isE2eId, recordE2eOutbound } from "@/lib/e2e-sandbox";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -29,6 +30,15 @@ export async function sendMetaMessage(opts: {
   proactive?: boolean;
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
   const category: SendCategory = opts.category ?? "automated";
+  // Odbiorca testowy (run_ania_e2e) — nic nie wychodzi do Facebooka.
+  if (isE2eId(opts.recipientId)) {
+    return recordE2eOutbound({
+      kind: "messenger",
+      to: opts.recipientId,
+      text: opts.proactive ? withOptOutHint(opts.text) : opts.text,
+      proactive: opts.proactive,
+    });
+  }
   try {
     const decision = await canSendMetaMessage(opts.platform, opts.recipientId, category);
     if (!decision.allowed) {

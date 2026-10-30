@@ -266,6 +266,31 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     }
   }
 
+  // 2.8) PROŚBA O TELEFON — bez modelu: zapis, status wymaga_kontaktu, push
+  //      do zespołu i potwierdzenie numeru (albo prośba o numer).
+  if (userText) {
+    try {
+      const { handleCallRequest } = await import("@/lib/call-request.server");
+      const call = await handleCallRequest({ leadId, text: userText, senderId });
+      if (call.handled) {
+        const sent = await sendMetaMessage({ recipientId: senderId, text: call.reply, platform });
+        await logLeadCommunication({
+          leadId,
+          channel: "messenger",
+          direction: "outbound",
+          content: call.reply,
+          externalId: sent.messageId ?? null,
+          metadata: { platform, sender_id: senderId, kind: call.kind },
+          status: sent.ok ? "sent" : "error",
+          errorMessage: sent.ok ? null : sent.error,
+        });
+        return;
+      }
+    } catch (e) {
+      console.error("[messenger] call request error", e);
+    }
+  }
+
   // 3) Odpowiedź agenta
   // Messenger: inwestor → A2P (tekst), nierozpoznany → A0 (recepcja),
   // rozpoznany pożyczkobiorca → dotychczasowy agent.
@@ -300,7 +325,17 @@ export async function handleMessagingEvent(ev: any, platform: "messenger" | "ins
     direction: "outbound",
     content: replyText,
     externalId: send.messageId ?? null,
-    metadata: { platform, sender_id: senderId, tool_calls: agent.toolCalls },
+    metadata: {
+      platform,
+      sender_id: senderId,
+      tool_calls: agent.toolCalls,
+      // Kto naprawdę odpowiedział i z jakim skutkiem — bez tego zerwana sesja
+      // ElevenLabs (np. brak thread_key) wyglądała jak zwykła odpowiedź.
+      engine: agent.engine ?? null,
+      el_conversation_id: agent.elConversationId ?? null,
+      el_error: agent.elError ?? null,
+      el_tools: agent.elToolCalls ?? [],
+    },
     status: send.ok ? "sent" : "error",
     errorMessage: send.ok ? null : send.error,
     agentId: messengerAgentId ?? process.env.ELEVENLABS_TEXT_AGENT_ID ?? null,
@@ -524,6 +559,10 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
       comment_id: commentId,
       post_id: postId,
       tool_calls: agent.toolCalls,
+      engine: agent.engine ?? null,
+      el_conversation_id: agent.elConversationId ?? null,
+      el_error: agent.elError ?? null,
+      el_tools: agent.elToolCalls ?? [],
     },
     status: pm.ok ? "sent" : "error",
     errorMessage: pm.ok ? null : pm.error,

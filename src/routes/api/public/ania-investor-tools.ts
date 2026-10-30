@@ -16,6 +16,17 @@ function secretOk(provided: string | null): boolean {
 
 const str = (v: unknown, max = 500) => (typeof v === "string" ? v.slice(0, max) : "");
 
+async function isE2eConversation(conversationId: string): Promise<boolean> {
+  try {
+    const { getConversation } = await import("@/lib/elevenlabs-api.server");
+    const { isE2eThread } = await import("@/lib/e2e-sandbox");
+    const conv: any = await getConversation(conversationId);
+    return isE2eThread(conv?.conversation_initiation_client_data?.dynamic_variables?.thread_key);
+  } catch {
+    return false;
+  }
+}
+
 export const Route = createFileRoute("/api/public/ania-investor-tools")({
   server: {
     handlers: {
@@ -32,6 +43,23 @@ export const Route = createFileRoute("/api/public/ania-investor-tools")({
         const tool = str(body?.tool, 64);
         const conversationId = str(body?.conversation_id, 128);
         const accessToken = str(body?.investor_access_token, 128) || null;
+        // Rozmowa testowa (run_ania_e2e): SMS z kodem i prawdziwy telefon
+        // zwrotny tylko się notują. Test rozpoznajemy po numerze testowym
+        // albo po `thread_key` rozmowy.
+        const { isE2ePhone } = await import("@/lib/e2e-sandbox");
+        if (
+          (tool === "send_investor_verification_code" || tool === "schedule_investor_callback") &&
+          (isE2ePhone(str(body?.phone, 32)) ||
+            (conversationId !== "" && (await isE2eConversation(conversationId))))
+        ) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin.from("automation_events").insert({
+            automation_type: "e2e_tool_call",
+            status: "skipped",
+            sent_payload: { conversation_id: conversationId, tool, reason: str(body?.reason, 300) },
+          });
+          return json({ ok: true, test: true, scheduled_at_local: str(body?.requested_at, 64) });
+        }
         const t = await import("@/lib/ania-investor-tools.server");
         let result: Record<string, unknown>;
         try {
