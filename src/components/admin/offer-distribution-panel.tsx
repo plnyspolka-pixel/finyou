@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -142,7 +144,8 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
   const doReply = useServerFn(replyToDistribution);
 
   const [investors, setInvestors] = useState<Investor[]>([]);
-  const [selectedInvestorId, setSelectedInvestorId] = useState("");
+  const [sendToAll, setSendToAll] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
   const [threads, setThreads] = useState<{ distributions: any[]; messages: any[] }>({
@@ -182,9 +185,9 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
   }, [applicationId]);
 
   const send = async () => {
-    const investorIds = selectedInvestorId ? [selectedInvestorId] : [];
-    if (investorIds.length !== 1) {
-      toast.error("Wybierz jednego inwestora do indywidualnego kontaktu.");
+    const investorIds = sendToAll ? undefined : Array.from(selected);
+    if (!sendToAll && (investorIds?.length ?? 0) === 0) {
+      toast.error("Zaznacz co najmniej jednego inwestora albo włącz wysyłkę do wszystkich");
       return;
     }
     setSending(true);
@@ -201,7 +204,7 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
         });
       }
       for (const f of res.failed) toast.error("Błąd wysyłki", { description: f.error });
-      setSelectedInvestorId("");
+      setSelected(new Set());
       setNote("");
       await loadThreads();
     } catch (e: any) {
@@ -281,23 +284,48 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="institution-target">Inwestor wybrany do indywidualnej sprawy</Label>
-            <select
-              id="institution-target"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={selectedInvestorId}
-              onChange={(e) => setSelectedInvestorId(e.target.value)}
-            >
-              <option value="">Wybierz jednego inwestora…</option>
-              {investors.filter((i) => i.email).map((i) => (
-                <option value={i.id} key={i.id}>
-                  {investorName(i)} — {i.email}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">Bez wysyłki do całej bazy i bez automatycznej dystrybucji.</p>
+          <div className="flex items-center gap-3">
+            <Switch id="send-all" checked={sendToAll} onCheckedChange={setSendToAll} />
+            <Label htmlFor="send-all">
+              Wyślij do <b>wszystkich</b> aktywnych inwestorów instytucjonalnych ({investors.length}
+              )
+            </Label>
           </div>
+
+          {!sendToAll && (
+            <div className="space-y-2 max-h-72 overflow-y-auto border rounded-md p-2">
+              {investors.length === 0 && (
+                <p className="text-sm text-muted-foreground p-2">
+                  Brak aktywnych inwestorów instytucjonalnych.
+                </p>
+              )}
+              {investors.map((i) => {
+                const checked = selected.has(i.id);
+                return (
+                  <label
+                    key={i.id}
+                    className="flex items-center gap-2 text-sm border rounded-md px-3 py-2 cursor-pointer hover:bg-accent"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => {
+                        setSelected((s) => {
+                          const n = new Set(s);
+                          if (v) n.add(i.id);
+                          else n.delete(i.id);
+                          return n;
+                        });
+                      }}
+                    />
+                    <span className="flex-1">{investorName(i)}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {i.email ?? "brak e-mail"}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label>Dodatkowa wiadomość (opcjonalnie)</Label>
@@ -314,7 +342,7 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Wyślij indywidualnie
+            Wyślij e-mailem {sendToAll ? `(${investors.length})` : `(${selected.size})`}
           </Button>
         </CardContent>
       </Card>
