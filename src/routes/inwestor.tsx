@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { getMyInvestorFlags } from "@/lib/investor-agreements/legal-pack.functions";
 import { ConsentGate } from "@/components/consent/consent-gate";
 import { PanelShell } from "@/components/layout/panel-shell";
-import { InvestorAssistantWidget } from "@/components/inwestor/assistant-widget";
 import { investorNavGroups } from "@/components/inwestor/investor-nav";
 import { InvestorSubscriptionGate } from "@/components/inwestor/subscription-gate";
 
@@ -23,18 +22,15 @@ function InwestorLayout() {
   });
   const groups = investorNavGroups(flags);
   return (
-    <>
-      <PanelShell
-        title="Panel inwestora"
-        allow={["inwestor", "administrator"]}
-        groups={groups}
-        wrapOutlet={(outlet) => (
-          <ConsentGate audience="inwestor">
-            <InvestorSubscriptionGate>{outlet}</InvestorSubscriptionGate>
-          </ConsentGate>
-        )}
-      />
-      <InvestorAssistantWidget />
-    </>
+    <PanelShell
+      title="Panel inwestora"
+      allow={["inwestor", "administrator"]}
+      groups={groups}
+      wrapOutlet={(outlet) => (
+        <ConsentGate audience="inwestor">
+          <InvestorSubscriptionGate>{outlet}</InvestorSubscriptionGate>
+        </ConsentGate>
+      )}
+    />
   );
 }
