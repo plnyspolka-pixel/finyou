@@ -271,7 +271,7 @@ function FinanceYouSklep() {
     window.requestAnimationFrame(() => document.getElementById("szczegoly")?.scrollIntoView({ behavior: "smooth", block: "center" }));
   };
   return (
-    <MarketingShell page="home" sticky={{ label: "Złóż bezpłatny wniosek pożyczkowy", href: "#wniosek" }}>
+    <MarketingShell page="home">
       <section className="fy-hero" style={{ color: "#fff" }}>
         <div aria-hidden className="fy-hero-fx" />
         <div className="fy-sales-hero-inner" style={{ position: "relative", maxWidth: "80rem", paddingTop: "4rem", paddingBottom: "4rem" }}>
