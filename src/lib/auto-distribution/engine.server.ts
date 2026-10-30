@@ -151,6 +151,23 @@ async function institutionalAutoRecipients() {
     .map((i: any) => ({ ...i, distributionCriteria: byId.get(i.id) ?? null }));
 }
 
+/**
+ * Wspólny warunek dla kolejki automatu i kontroli tuż przed wysłaniem.
+ * JanVest: min 100 tys. zł, Korona: max 350 tys. zł — wg aktualnych
+ * rekordów `investor_distribution_criteria`, bez nadpisywania przez automat.
+ */
+export function institutionEligibleForAutomaticLoan(
+  criteria: Parameters<typeof matchInvestorToAmount>[0],
+  loan: {
+    location_potential_score: number | null;
+    business_purpose_declared: boolean;
+    loan_amount: number | null;
+  },
+): boolean {
+  return qualifiesForInstitutionalDistribution(loan) &&
+    matchInvestorToAmount(criteria, Number(loan.loan_amount)).ok;
+}
+
 /** Limit spraw obsłużonych w jednym przebiegu cron (nie limit odbiorców). */
 const MAX_AUTO_CASES_PER_TICK = 3;
 
@@ -217,7 +234,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
       // JanVest (min 100 tys.) nie dostaje np. wniosku na 70 tys. zł.
       const missing = recipients.filter((i: any) =>
         !alreadySent.has(i.id) &&
-        matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).ok,
+        institutionEligibleForAutomaticLoan(i.distributionCriteria, loan),
       );
       if (missing.length === 0) {
         result.skipped_no_matches += 1;
@@ -347,7 +364,7 @@ export async function approveProposal(
     // Ponownie sprawdzamy aktualne widełki tuż przed wysyłką (mogły się zmienić
     // pomiędzy utworzeniem propozycji a zatwierdzeniem jej przez cron).
     const recipients = (await institutionalAutoRecipients()).filter((i: any) =>
-      matchInvestorToAmount(i.distributionCriteria, Number(loan.loan_amount)).ok,
+      institutionEligibleForAutomaticLoan(i.distributionCriteria, loan),
     );
     if (recipients.length === 0) throw new Error("Brak instytucji spełniających widełki kwotowe i warunki przyjmowania ofert.");
     const sendResult = await distributeOfferToInvestors({
