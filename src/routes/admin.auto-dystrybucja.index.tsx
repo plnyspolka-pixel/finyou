@@ -161,12 +161,12 @@ function AutoDystrybucjaPage() {
       {/* Kryteria instytucji */}
       <Card>
         <CardHeader>
-          <CardTitle>Preferencje instytucji (informacyjne)</CardTitle>
+          <CardTitle>Preferencje instytucji (wyłączenia i pauzy są wiążące)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Aktualna automatyczna dystrybucja obejmuje wszystkie aktywne instytucje i nie filtruje
-            odbiorców według widełek kwotowych. Ustawienia poniżej są zapisane informacyjnie.
+            Automat obejmuje wszystkie aktywne instytucje, niezależnie od widełek kwotowych.
+            Respektuje jednak wyłączenie auto-wysyłki, odmowę przyjmowania i czasową pauzę.
           </p>
           {(criteria ?? []).map((row: any) => (
             <CriteriaRow
