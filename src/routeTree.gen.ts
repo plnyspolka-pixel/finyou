@@ -46,6 +46,7 @@ import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SklepRouteImport } from './routes/sklep'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
@@ -518,6 +519,11 @@ const RejestracjaRoute = RejestracjaRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SklepRoute = SklepRouteImport.update({
+  id: '/sklep',
+  path: '/sklep',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StartRoute = StartRouteImport.update({
@@ -2065,6 +2071,7 @@ export interface FileRoutesByFullPath {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
@@ -2382,6 +2389,7 @@ export interface FileRoutesByTo {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
@@ -2701,6 +2709,7 @@ export interface FileRoutesById {
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
@@ -3026,6 +3035,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/sklep'
     | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
@@ -3343,6 +3353,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/sklep'
     | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
@@ -3661,6 +3672,7 @@ export interface FileRouteTypes {
     | '/regulamin-inwestora'
     | '/rejestracja'
     | '/sitemap.xml'
+    | '/sklep'
     | '/start'
     | '/wybor-panelu'
     | '/wybor-roli'
@@ -3985,6 +3997,7 @@ export interface RootRouteChildren {
   RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SklepRoute: typeof SklepRoute
   StartRoute: typeof StartRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
@@ -4358,6 +4371,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sklep': {
+      id: '/sklep'
+      path: '/sklep'
+      fullPath: '/sklep'
+      preLoaderRoute: typeof SklepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/start': {
@@ -6873,6 +6893,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminInwestoraRoute: RegulaminInwestoraRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SklepRoute: SklepRoute,
   StartRoute: StartRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
