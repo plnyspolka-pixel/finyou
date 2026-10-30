@@ -9,6 +9,7 @@
 const EL_BASE = "https://api.elevenlabs.io/v1";
 import { isTextFiller } from "./ania-text-policy";
 const DEFAULT_TIMEOUT_MS = 25_000;
+const GREETING_WAIT_MS = 4_000;
 
 export interface ElTextTurnResult {
   ok: boolean;
@@ -52,6 +53,7 @@ export async function elevenLabsTextTurn(opts: {
   return new Promise<ElTextTurnResult>((resolve) => {
     let settled = false;
     let ws: WebSocket | null = null;
+    let greetingTimer: ReturnType<typeof setTimeout> | null = null;
     const finish = (result: ElTextTurnResult) => {
       if (settled) return;
       settled = true;
@@ -61,6 +63,7 @@ export async function elevenLabsTextTurn(opts: {
         /* ignore */
       }
       clearTimeout(timer);
+      if (greetingTimer) clearTimeout(greetingTimer);
       resolve(result);
     };
     const timer = setTimeout(
@@ -78,6 +81,22 @@ export async function elevenLabsTextTurn(opts: {
     let initSent = false;
     let userSent = false;
     const replyParts: string[] = [];
+    // Bez jawnego first_message agent zaczyna sesję własnym powitaniem
+    // („W czym mogę pomóc?”). Sesja żyje jedną turę, więc to powitanie
+    // przychodziło przy KAŻDEJ wiadomości i szło do klienta zamiast
+    // odpowiedzi. Czekamy na nie i wysyłamy wiadomość klienta dopiero po nim
+    // (albo po krótkim czasie, gdy agent nie ma powitania).
+    const awaitGreeting = opts.firstMessage === undefined;
+    const sendUser = () => {
+      if (userSent) return;
+      userSent = true;
+      if (greetingTimer) clearTimeout(greetingTimer);
+      try {
+        ws?.send(JSON.stringify({ type: "user_message", text: opts.userMessage }));
+      } catch (e: any) {
+        finish({ ok: false, error: e?.message ?? "user send failed" });
+      }
+    };
 
     ws.addEventListener("open", () => {
       try {
@@ -85,7 +104,13 @@ export async function elevenLabsTextTurn(opts: {
         ws.send(
           JSON.stringify({
             type: "conversation_initiation_client_data",
-            dynamic_variables: opts.dynamicVariables ?? {},
+            // Narzędzia agentów (fy2_*) wymagają `thread_key` — bez niego
+            // ElevenLabs zamyka sesję zaraz po powitaniu (1008 „Missing
+            // required dynamic variables in tools: {'thread_key'}”).
+            dynamic_variables: {
+              thread_key: `text:${crypto.randomUUID()}`,
+              ...(opts.dynamicVariables ?? {}),
+            },
             conversation_config_override: {
               conversation: { text_only: true },
               ...(opts.firstMessage !== undefined ? { agent: { first_message: opts.firstMessage } } : {}),
@@ -117,12 +142,13 @@ export async function elevenLabsTextTurn(opts: {
         return;
       }
       if (type === "conversation_initiation_metadata" && initSent && !userSent) {
-        userSent = true;
-        try {
-          ws?.send(JSON.stringify({ type: "user_message", text: opts.userMessage }));
-        } catch (e: any) {
-          finish({ ok: false, error: e?.message ?? "user send failed" });
-        }
+        if (awaitGreeting) greetingTimer = setTimeout(sendUser, GREETING_WAIT_MS);
+        else sendUser();
+        return;
+      }
+      if (type === "agent_response" && !userSent) {
+        // Powitanie agenta przed wiadomością klienta — nie jest odpowiedzią.
+        sendUser();
         return;
       }
       if (type === "agent_response") {

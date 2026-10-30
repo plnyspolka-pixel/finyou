@@ -216,6 +216,28 @@ export function extractInboundFacts(rawText: string | null | undefined): Extract
  * dopisuje tylko nowe KW/amount/city do application_data. Następnie próbuje
  * awansować leada do loan_application, jeżeli komplet warunków jest spełniony.
  */
+// Formularz inwestorski z reklamy Click-to-Messenger („Jaką kwotę chcesz
+// zainwestować…?”, „Jaki zwrot z inwestycji…?”). Bez tego taki lead zostawał
+// pożyczkowym z kwotą inwestycji wpisaną jako kwota pożyczki i trafiał do
+// recepcji zamiast do Ani inwestorskiej.
+const INVESTOR_FORM_RE =
+  /zainwestowa[ćc]|zwrot\s+z\s+inwestycji|inwes\p{L}*\s+(?:ju[żz]\s+)?w\s+po[żz]yczki/iu;
+const INVESTOR_AMOUNT_RE =
+  /zainwestowa[ćc][^?:]*\?\s*:\s*((?:powy[żz]ej\s+|do\s+|od\s+)?[\d][\d\s.,]*(?:tys\.?|mln)?\s*(?:z[łl]|pln)?(?:\s*(?:do|-|–)\s*[\d][\d\s.,]*(?:tys\.?|mln)?\s*(?:z[łl]|pln)?)?)/iu;
+
+export function isInvestorFormMessage(text: string | null | undefined): boolean {
+  // Tylko blok formularza („pytanie?: odpowiedź”) — samo „zainwestować w dom”
+  // w rozmowie pożyczkobiorcy nie zmienia typu leada.
+  const t = text ?? "";
+  return /\?\s*:/.test(t) && INVESTOR_FORM_RE.test(t);
+}
+
+/** Kwota inwestycji z formularza w brzmieniu klienta („300 000 zł do 500 000 zł”). */
+export function extractInvestorAmount(text: string | null | undefined): string | null {
+  const m = INVESTOR_AMOUNT_RE.exec(text ?? "");
+  return m ? m[1].replace(/\s+/g, " ").trim() : null;
+}
+
 export async function enrichLeadFromInbound(opts: {
   leadId: string;
   text?: string | null;
@@ -228,11 +250,17 @@ export async function enrichLeadFromInbound(opts: {
   const { data: lead } = await s
     .from("leads")
     .select(
-      "id, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data",
+      "id, type, first_name, last_name, email, phone_normalized, phone_raw, source, client_id, loan_application_id, application_data",
     )
     .eq("id", leadId)
     .maybeSingle();
   if (!lead) return { updated: false, promoted: null };
+
+  // Formularz inwestorski → lead inwestorski; kwota to kwota inwestycji, nie
+  // pożyczki. Lead z wnioskiem albo klientem zostaje, jak był.
+  const investor =
+    lead.type === "inwestorski" ||
+    (!lead.loan_application_id && !lead.client_id && isInvestorFormMessage(opts.text));
 
   const appData = { ...((lead.application_data as Record<string, any>) ?? {}) };
   const existingKw: string[] = Array.isArray(appData.kw_numbers) ? [...appData.kw_numbers] : [];
@@ -244,7 +272,17 @@ export async function enrichLeadFromInbound(opts: {
     appData.kw_numbers = existingKw;
     touched = true;
   }
-  if (facts.loanAmount && !appData.loan_amount) {
+  const typePatch: Record<string, string> = {};
+  if (investor && lead.type !== "inwestorski") {
+    typePatch.type = "inwestorski";
+    touched = true;
+  }
+  const investorAmount = investor ? extractInvestorAmount(opts.text) : null;
+  if (investorAmount && !appData.lead_amount) {
+    appData.lead_amount = investorAmount;
+    touched = true;
+  }
+  if (!investor && facts.loanAmount && !appData.loan_amount) {
     appData.loan_amount = facts.loanAmount;
     touched = true;
   }
@@ -273,7 +311,7 @@ export async function enrichLeadFromInbound(opts: {
     appData.enriched_at = new Date().toISOString();
     await s
       .from("leads")
-      .update({ ...namePatch, application_data: appData as any })
+      .update({ ...namePatch, ...typePatch, application_data: appData as any })
       .eq("id", leadId);
   }
 
@@ -282,6 +320,9 @@ export async function enrichLeadFromInbound(opts: {
     await backfillApplicationFromFacts(lead.loan_application_id, appData, facts);
     return { updated: touched, promoted: null };
   }
+
+  // Inwestor nie dostaje wniosku pożyczkowego.
+  if (investor) return { updated: touched, promoted: null };
 
   const promoted = await maybePromoteLeadToApplication(leadId);
   return { updated: touched, promoted };

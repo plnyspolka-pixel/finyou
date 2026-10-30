@@ -445,6 +445,7 @@ export async function runAgentTurn(opts: {
             createdAt: lead.created_at,
           }),
           lead_id: lead.id,
+          thread_key: `${opts.channel}:${lead.id}`,
           first_name: lead.first_name ?? "",
           last_name: lead.last_name ?? "",
           email: lead.email ?? "",

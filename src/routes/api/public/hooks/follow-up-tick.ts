@@ -2,7 +2,8 @@
 // Kadencja mail/SMS/telefon z `lead_follow_up_schedule` ma osobny tick:
 // `/api/public/hooks/follow-up-plan-tick`.
 // Kadencja od ostatniego outboundu (bez nowego inboundu od klienta):
-//   +2h, +6h, +24h, +3d, +7d, +14d, +21d, +30d → potem stop.
+//   jedno przypomnienie +24h → potem stop (wcześniej 8 przypomnień od +2h
+//   do +30d, o każdej porze — klienci odbierali to jako spam).
 // Wywoływane przez pg_cron co 15 min na /api/public/hooks/follow-up-tick.
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -10,10 +11,13 @@ import { runAgentTurn } from "@/lib/elevenlabs-text-agent.server";
 import { sendMetaMessage } from "@/lib/meta-send.server";
 import { logLeadCommunication } from "@/lib/lead-comms.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
+import { isCallRequest } from "@/lib/call-request";
+import { messengerAgentFor } from "@/lib/ania-lead-context";
+import { isInternalRoutingNote } from "@/lib/ania-text-policy";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
-const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
-const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // initial + 8 follow-ups = 9
+const FOLLOWUP_OFFSETS_HOURS = [24];
+const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // odpowiedź + 1 przypomnienie
 // E-mail celowo POMINIĘTY — kanał mailowy prowadzi wyłącznie brandowany drip
 // (loan-reminder-emails, 120 szablonów). Tu tylko czaty (Messenger/Instagram).
 const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
@@ -80,12 +84,24 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // pg_net zrywa połączenie po 5 s i kadencja nie dochodziła do głosu.
 
         const now = Date.now();
+        // Przypomnienia tylko w ciągu dnia (8–20 czasu polskiego) — bot pisał
+        // do klienta o 2:45 w nocy.
+        const warsawHour = Number(
+          new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/Warsaw",
+            hour: "2-digit",
+            hourCycle: "h23",
+          }).format(new Date(now)),
+        );
+        if (warsawHour < 8 || warsawHour >= 20) {
+          return Response.json({ ok: true, processed: 0, sent: 0, quiet_hours: true });
+        }
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
         // 1) Wszyscy adresaci z outboundami w ostatnich 31 dniach na obsługiwanych kanałach.
         const { data: comms, error } = await supabaseAdmin
           .from("lead_communications")
-          .select("lead_id, channel, direction, created_at")
+          .select("lead_id, channel, direction, created_at, content")
           .in("channel", SUPPORTED_CHANNELS as unknown as string[])
           .gte("created_at", cutoff)
           .order("created_at", { ascending: false })
@@ -103,6 +119,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: number;
             lastOutboundAt: number;
             lastInboundAt: number;
+            callRequested: boolean;
           }
         >();
         for (const c of comms ?? []) {
@@ -115,6 +132,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: 0,
             lastOutboundAt: 0,
             lastInboundAt: 0,
+            callRequested: false,
           };
           const t = new Date(c.created_at).getTime();
           if (c.direction === "outbound") {
@@ -122,6 +140,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             if (t > g.lastOutboundAt) g.lastOutboundAt = t;
           } else if (c.direction === "inbound") {
             if (t > g.lastInboundAt) g.lastInboundAt = t;
+            if (isCallRequest(c.content)) g.callRequested = true;
           }
           groups.set(key, g);
         }
@@ -131,6 +150,10 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         for (const g of groups.values()) {
           if (g.outboundCount === 0) continue;
           if (g.lastInboundAt >= g.lastOutboundAt) continue;
+          // Klient poprosił o telefon (kiedykolwiek w oknie, nie tylko ostatnią
+          // wiadomością — po „Ok.” nadal czeka na telefon) — czeka na człowieka,
+          // nie na przypomnienia na czacie.
+          if (g.callRequested) continue;
           // Outboundy *po* ostatnim inboundzie:
           // upraszczamy — outboundCount globalny w oknie 31d. Jeśli był inbound,
           // przeliczymy dokładniej poniżej osobnym zapytaniem.
@@ -145,7 +168,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         const { data: leadsRows } = await supabaseAdmin
           .from("leads")
           .select(
-            "id, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id",
+            "id, type, status, email, messenger_psid, instagram_igsid, application_data, loan_application_id, client_id, meta_lead_id",
           )
           .in("id", leadIds);
         const leadMap = new Map<string, any>();
@@ -158,6 +181,8 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           const lead = leadMap.get(g.leadId);
           if (!lead) continue;
           if (lead.status && TERMINAL_STATUSES.has(String(lead.status))) continue;
+          // Lead oznaczony do kontaktu przez zespół — rozmowę przejmuje człowiek.
+          if (lead.status === "wymaga_kontaktu") continue;
           if (lead.application_data?.followup_paused) continue;
           // Lead z utworzonym wnioskiem (komplet danych zebrany, np. na czacie)
           // nie dostaje już „dokończ wniosek" — sprawą zajmuje się analityk.
@@ -198,10 +223,14 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
 
           let replyText = "";
           try {
+            // Ten sam agent co przy zwykłej odpowiedzi na Messengerze
+            // (inwestor → A2P, nierozpoznany → A0), inaczej przypomnienie
+            // pisze inna „Ania” niż ta, która prowadzi rozmowę.
             const agent = await runAgentTurn({
               leadId: g.leadId,
               channel: g.channel,
               userMessage: nudgePrompt,
+              agentIdOverride: g.channel === "messenger" ? messengerAgentFor(lead) : null,
             });
             replyText = (agent.reply ?? "").trim();
             const linkCall = agent.toolCalls.find((c) => c.name === "send_application_link");
@@ -213,6 +242,13 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             continue;
           }
           if (!replyText) continue;
+          // Agent recepcji potrafi odpowiedzieć na polecenie systemowe notatką
+          // o przekazaniu („Paweł wypełnił formularz — przekazuję go na
+          // ścieżkę inwestorów”). To nie jest wiadomość do klienta.
+          if (isInternalRoutingNote(replyText)) {
+            console.warn("[follow-up-tick] pominięto notatkę wewnętrzną", g.leadId, replyText);
+            continue;
+          }
 
           // 6) Wyślij właściwym kanałem (tylko Messenger/Instagram — e-mail obsługuje
           //    wyłącznie brandowany drip loan-reminder-emails, żeby nie było dwóch

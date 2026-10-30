@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { investorFirstMessage, isTextFiller } from "./ania-text-policy";
+import { investorFirstMessage, isInternalRoutingNote, isTextFiller } from "./ania-text-policy";
 
 describe("text channel policy", () => {
   it("drops only the soft timeout filler, not substantive answers", () => {
@@ -24,5 +24,15 @@ describe("text channel policy", () => {
     const text = investorFirstMessage({ lead_source: "meta_ads", forma: "", lead_amount: "50000" });
     expect(text).toContain("podana kwota to 50000 zł");
     expect(text).not.toMatch(/Pan|Pani/);
+  });
+});
+describe("isInternalRoutingNote", () => {
+  it("łapie notatkę o przekazaniu rozmowy", () => {
+    expect(isInternalRoutingNote("Paweł wypełnił formularz inwestorski — przekazuję go na ścieżkę inwestorów.")).toBe(true);
+    expect(isInternalRoutingNote("[SYSTEM FOLLOW-UP nr 2] ...")).toBe(true);
+  });
+
+  it("przepuszcza zwykłe przypomnienie", () => {
+    expect(isInternalRoutingNote("Panie Pawle, chciałam się upewnić, że moja wiadomość dotarła. Czy ma Pan pytania?")).toBe(false);
   });
 });
