@@ -8,13 +8,24 @@
 // do dotychczasowego silnika — kanał nigdy nie milknie przez migrację.
 const EL_BASE = "https://api.elevenlabs.io/v1";
 import { isTextFiller } from "./ania-text-policy";
-const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_TIMEOUT_MS = 40_000;
 const GREETING_WAIT_MS = 4_000;
+/** Cisza po ostatniej wypowiedzi agenta, po której tura się kończy. */
+const REPLY_IDLE_MS = 3_000;
+
+export interface ElTextToolCall {
+  name: string;
+  isError: boolean;
+}
 
 export interface ElTextTurnResult {
   ok: boolean;
   reply?: string;
   error?: string;
+  /** Id rozmowy w ElevenLabs — do transkryptu i powodu zakończenia. */
+  conversationId?: string;
+  /** Narzędzia wywołane przez agenta w tej turze. */
+  toolCalls?: ElTextToolCall[];
 }
 
 /** Podpisany URL sesji (agenty tworzone przez API są prywatne). */
@@ -54,6 +65,19 @@ export async function elevenLabsTextTurn(opts: {
     let settled = false;
     let ws: WebSocket | null = null;
     let greetingTimer: ReturnType<typeof setTimeout> | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let conversationId: string | undefined;
+    const toolCalls: ElTextToolCall[] = [];
+    const replyParts: string[] = [];
+    // Po wyniku narzędzia agent zawsze dopowiada — nie kończymy tury, dopóki
+    // nie przyjdzie ta wypowiedź.
+    let awaitingAfterTool = false;
+
+    const withMeta = (r: ElTextTurnResult): ElTextTurnResult => ({
+      ...r,
+      conversationId,
+      toolCalls,
+    });
     const finish = (result: ElTextTurnResult) => {
       if (settled) return;
       settled = true;
@@ -64,10 +88,17 @@ export async function elevenLabsTextTurn(opts: {
       }
       clearTimeout(timer);
       if (greetingTimer) clearTimeout(greetingTimer);
-      resolve(result);
+      if (idleTimer) clearTimeout(idleTimer);
+      resolve(withMeta(result));
     };
+    const finishWithParts = (fallbackError: string) =>
+      finish(
+        replyParts.length > 0
+          ? { ok: true, reply: replyParts.join("\n") }
+          : { ok: false, error: fallbackError },
+      );
     const timer = setTimeout(
-      () => finish({ ok: false, error: "timeout" }),
+      () => finishWithParts("timeout"),
       opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     );
 
@@ -80,12 +111,10 @@ export async function elevenLabsTextTurn(opts: {
 
     let initSent = false;
     let userSent = false;
-    const replyParts: string[] = [];
     // Bez jawnego first_message agent zaczyna sesję własnym powitaniem
-    // („W czym mogę pomóc?”). Sesja żyje jedną turę, więc to powitanie
-    // przychodziło przy KAŻDEJ wiadomości i szło do klienta zamiast
-    // odpowiedzi. Czekamy na nie i wysyłamy wiadomość klienta dopiero po nim
-    // (albo po krótkim czasie, gdy agent nie ma powitania).
+    // („W czym mogę pomóc?”). Sesja żyje jedną turę, więc wiadomość klienta
+    // wysyłamy dopiero po powitaniu (albo po krótkim czasie, gdy agent go nie
+    // ma), a samo powitanie pomijamy — nie jest odpowiedzią.
     const awaitGreeting = opts.firstMessage === undefined;
     const sendUser = () => {
       if (userSent) return;
@@ -96,6 +125,14 @@ export async function elevenLabsTextTurn(opts: {
       } catch (e: any) {
         finish({ ok: false, error: e?.message ?? "user send failed" });
       }
+    };
+    // Odpowiedź agenta bywa w kilku wypowiedziach (zdanie przed narzędziem,
+    // reszta po jego wyniku) — kończymy turę po chwili ciszy, nie na pierwszej.
+    const armIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (!awaitingAfterTool) finishWithParts("empty agent_response");
+      }, REPLY_IDLE_MS);
     };
 
     ws.addEventListener("open", () => {
@@ -113,7 +150,9 @@ export async function elevenLabsTextTurn(opts: {
             },
             conversation_config_override: {
               conversation: { text_only: true },
-              ...(opts.firstMessage !== undefined ? { agent: { first_message: opts.firstMessage } } : {}),
+              ...(opts.firstMessage !== undefined
+                ? { agent: { first_message: opts.firstMessage } }
+                : {}),
             },
           }),
         );
@@ -141,12 +180,28 @@ export async function elevenLabsTextTurn(opts: {
         }
         return;
       }
-      if (type === "conversation_initiation_metadata" && initSent && !userSent) {
-        if (awaitGreeting) greetingTimer = setTimeout(sendUser, GREETING_WAIT_MS);
-        else sendUser();
+      if (type === "conversation_initiation_metadata") {
+        const id = msg?.conversation_initiation_metadata_event?.conversation_id;
+        if (typeof id === "string") conversationId = id;
+        if (initSent && !userSent) {
+          if (awaitGreeting) greetingTimer = setTimeout(sendUser, GREETING_WAIT_MS);
+          // Jawne otwarcie (A2P przy pierwszym kontakcie) jest całą odpowiedzią
+          // — wiadomości klienta nie wysyłamy, bo odpowiedź na nią i tak by
+          // przepadła; trafi do kontekstu następnej tury.
+          else if (!opts.firstMessage) sendUser();
+        }
         return;
       }
-      if (type === "agent_response" && !userSent) {
+      if (type === "agent_tool_response") {
+        const ev = msg?.agent_tool_response_event ?? {};
+        if (typeof ev.tool_name === "string") {
+          toolCalls.push({ name: ev.tool_name, isError: ev.is_error === true });
+        }
+        awaitingAfterTool = true;
+        if (idleTimer) clearTimeout(idleTimer);
+        return;
+      }
+      if (type === "agent_response" && !userSent && awaitGreeting) {
         // Powitanie agenta przed wiadomością klienta — nie jest odpowiedzią.
         sendUser();
         return;
@@ -155,26 +210,29 @@ export async function elevenLabsTextTurn(opts: {
         const text = msg?.agent_response_event?.agent_response;
         if (typeof text === "string" && isTextFiller(text)) return;
         if (typeof text === "string" && text.trim()) replyParts.push(text.trim());
-        // Odpowiedź agenta kończy turę tekstową.
-        finish(
-          replyParts.length > 0
-            ? { ok: true, reply: replyParts.join("\n") }
-            : { ok: false, error: "empty agent_response" },
-        );
+        awaitingAfterTool = false;
+        // Jawne powitanie zlecone przez wywołującego (otwarcie A2P) jest
+        // całą odpowiedzią tej tury.
+        if (!awaitGreeting && opts.firstMessage && replyParts.length === 1) {
+          finishWithParts("empty agent_response");
+          return;
+        }
+        armIdle();
         return;
       }
       // Zdarzenia audio/transkrypcji ignorujemy (tryb tekstowy).
     });
 
-    ws.addEventListener("error", () => finish({ ok: false, error: "websocket error" }));
-    ws.addEventListener("close", () => {
-      if (!settled) {
-        finish(
-          replyParts.length > 0
-            ? { ok: true, reply: replyParts.join("\n") }
-            : { ok: false, error: "closed before agent_response" },
-        );
-      }
+    ws.addEventListener("error", () => finishWithParts("websocket error"));
+    ws.addEventListener("close", (ev: CloseEvent) => {
+      if (settled) return;
+      // Powód zerwania (np. 1008 „Missing required dynamic variables…”) musi
+      // być widoczny — bez niego błąd konfiguracji agenta ginął po cichu.
+      const reason = ev?.reason
+        ? `closed ${ev.code}: ${ev.reason}`
+        : "closed before agent_response";
+      if (replyParts.length > 0) finish({ ok: true, reply: replyParts.join("\n") });
+      else finish({ ok: false, error: reason });
     });
   });
 }

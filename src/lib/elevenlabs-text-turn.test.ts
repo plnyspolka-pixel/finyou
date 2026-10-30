@@ -3,9 +3,18 @@ import { elevenLabsTextTurn } from "./elevenlabs-text-turn.server";
 
 const GREETING = "Dzień dobry, tu Ania z Finance You. W czym mogę pomóc?";
 
-/** Atrapa sesji agenta: po inicjacji wysyła powitanie, na wiadomość klienta odpowiada. */
+type Script = (socket: FakeAgentSocket, userText: string) => void;
+
+/**
+ * Atrapa sesji agenta wg protokołu ElevenLabs: metadane, powitanie (gdy
+ * agent je ma), potem odpowiedź na wiadomość klienta wg `script`.
+ */
 class FakeAgentSocket {
   static greeting: string | null = GREETING;
+  static script: Script = (s, text) => s.later(() => s.agent(`ODP: ${text}`));
+  /** Sesja zrywana zaraz po powitaniu (np. brak wymaganej zmiennej). */
+  static closeAfterGreeting: { code: number; reason: string } | null = null;
+  static lastInit: any = null;
   listeners: Record<string, Array<(e: any) => void>> = {};
   constructor() {
     setTimeout(() => this.emit("open", {}), 0);
@@ -16,27 +25,38 @@ class FakeAgentSocket {
   emit(type: string, e: any) {
     for (const fn of this.listeners[type] ?? []) fn(e);
   }
+  later(fn: () => void, ms = 5) {
+    setTimeout(fn, ms);
+  }
+  raw(obj: unknown) {
+    this.emit("message", { data: JSON.stringify(obj) });
+  }
   agent(text: string) {
-    this.emit("message", {
-      data: JSON.stringify({
-        type: "agent_response",
-        agent_response_event: { agent_response: text },
-      }),
+    this.raw({ type: "agent_response", agent_response_event: { agent_response: text } });
+  }
+  tool(name: string) {
+    this.raw({
+      type: "agent_tool_response",
+      agent_tool_response_event: { tool_name: name, is_error: false },
     });
   }
   send(raw: string) {
     const msg = JSON.parse(raw);
     if (msg.type === "conversation_initiation_client_data") {
+      FakeAgentSocket.lastInit = msg;
       const override = msg.conversation_config_override?.agent?.first_message;
       const greeting = override !== undefined ? override : FakeAgentSocket.greeting;
       setTimeout(() => {
-        if (greeting) setTimeout(() => this.agent(greeting), 1);
-        this.emit("message", {
-          data: JSON.stringify({ type: "conversation_initiation_metadata" }),
+        if (greeting) this.later(() => this.agent(greeting), 1);
+        this.raw({
+          type: "conversation_initiation_metadata",
+          conversation_initiation_metadata_event: { conversation_id: "conv_test" },
         });
+        const close = FakeAgentSocket.closeAfterGreeting;
+        if (close) this.later(() => this.emit("close", close), 3);
       }, 0);
     }
-    if (msg.type === "user_message") setTimeout(() => this.agent(`ODP: ${msg.text}`), 5);
+    if (msg.type === "user_message") FakeAgentSocket.script(this, msg.text);
   }
   close() {}
 }
@@ -50,19 +70,25 @@ describe("elevenLabsTextTurn", () => {
       vi.fn(async () => new Response("{}", { status: 500 })),
     );
     FakeAgentSocket.greeting = GREETING;
+    FakeAgentSocket.script = (s, text) => s.later(() => s.agent(`ODP: ${text}`));
+    FakeAgentSocket.closeAfterGreeting = null;
   });
   afterEach(() => vi.unstubAllGlobals());
 
   it("nie odsyła powitania agenta zamiast odpowiedzi na wiadomość klienta", async () => {
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Proszę zadzwonić" });
-    expect(r).toEqual({ ok: true, reply: "ODP: Proszę zadzwonić" });
-  });
+    expect(r).toMatchObject({
+      ok: true,
+      reply: "ODP: Proszę zadzwonić",
+      conversationId: "conv_test",
+    });
+  }, 15_000);
 
   it("odpowiada także agent bez powitania", async () => {
     FakeAgentSocket.greeting = null;
     const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej" });
-    expect(r).toEqual({ ok: true, reply: "ODP: Hej" });
-  }, 10_000);
+    expect(r).toMatchObject({ ok: true, reply: "ODP: Hej" });
+  }, 15_000);
 
   it("jawne powitanie zlecone przez wywołującego zostaje odpowiedzią (otwarcie A2P)", async () => {
     const r = await elevenLabsTextTurn({
@@ -70,36 +96,59 @@ describe("elevenLabsTextTurn", () => {
       userMessage: "Hej",
       firstMessage: "Otwarcie",
     });
-    expect(r).toEqual({ ok: true, reply: "Otwarcie" });
-  });
+    expect(r).toMatchObject({ ok: true, reply: "Otwarcie" });
+  }, 15_000);
+
+  it("pusty first_message — od razu odpowiedź", async () => {
+    const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej", firstMessage: "" });
+    expect(r).toMatchObject({ ok: true, reply: "ODP: Hej" });
+  }, 15_000);
+
+  it("zbiera całą odpowiedź: zdanie przed narzędziem i resztę po jego wyniku", async () => {
+    FakeAgentSocket.script = (s) => {
+      s.later(() => s.agent("Chętnie opowiem o modelu, który oferujemy."), 5);
+      s.later(() => s.tool("fy2_get_process_overview__inwestor_presale"), 1_000);
+      s.later(
+        () => s.agent("Inwestor pożycza pod hipotekę, a umowę podpisuje u notariusza."),
+        4_500,
+      );
+    };
+    const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Jak to działa?" });
+    expect(r.ok).toBe(true);
+    expect(r.reply).toBe(
+      "Chętnie opowiem o modelu, który oferujemy.\nInwestor pożycza pod hipotekę, a umowę podpisuje u notariusza.",
+    );
+    expect(r.toolCalls).toEqual([
+      { name: "fy2_get_process_overview__inwestor_presale", isError: false },
+    ]);
+  }, 15_000);
+
+  it("zerwanie sesji przez ElevenLabs zwraca powód, a nie powitanie", async () => {
+    FakeAgentSocket.closeAfterGreeting = {
+      code: 1008,
+      reason: "Missing required dynamic variables in tools: {'thread_key'}",
+    };
+    FakeAgentSocket.script = () => {};
+    const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Proszę zadzwonić" });
+    expect(r.ok).toBe(false);
+    expect(r.reply).toBeUndefined();
+    expect(r.error).toContain("1008");
+    expect(r.error).toContain("thread_key");
+  }, 15_000);
 
   it("zawsze wysyła thread_key wymagany przez narzędzia agentów", async () => {
-    let sent: any = null;
-    class Spy extends FakeAgentSocket {
-      send(raw: string) {
-        const msg = JSON.parse(raw);
-        if (msg.type === "conversation_initiation_client_data") sent = msg.dynamic_variables;
-        super.send(raw);
-      }
-    }
-    vi.stubGlobal("WebSocket", Spy);
     await elevenLabsTextTurn({
       agentId: "a",
       userMessage: "Hej",
       dynamicVariables: { channel: "messenger" },
     });
-    expect(sent.thread_key).toMatch(/^text:/);
-    expect(sent.channel).toBe("messenger");
+    expect(FakeAgentSocket.lastInit.dynamic_variables.thread_key).toMatch(/^text:/);
+    expect(FakeAgentSocket.lastInit.dynamic_variables.channel).toBe("messenger");
     await elevenLabsTextTurn({
       agentId: "a",
       userMessage: "Hej",
       dynamicVariables: { thread_key: "messenger:1" },
     });
-    expect(sent.thread_key).toBe("messenger:1");
-  });
-
-  it("pusty first_message — od razu odpowiedź", async () => {
-    const r = await elevenLabsTextTurn({ agentId: "a", userMessage: "Hej", firstMessage: "" });
-    expect(r).toEqual({ ok: true, reply: "ODP: Hej" });
-  });
+    expect(FakeAgentSocket.lastInit.dynamic_variables.thread_key).toBe("messenger:1");
+  }, 20_000);
 });

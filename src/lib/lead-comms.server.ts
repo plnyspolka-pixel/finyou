@@ -141,7 +141,10 @@ export async function logLeadCommunication(args: LogCommArgs): Promise<string | 
   // Push dla operatorów o każdej wiadomości przychodzącej (czat / e-mail /
   // Messenger / SMS / telefon) — z linkiem do właściwej skrzynki w panelu.
   // Best-effort: błąd wysyłki nie może zablokować zalogowania komunikacji.
-  if ((args.direction ?? "outbound") === "inbound") {
+  // Rozmowa testowa (run_ania_e2e) nie budzi zespołu powiadomieniem.
+  const { isE2eId } = await import("./e2e-sandbox");
+  const testSender = isE2eId(args.metadata?.sender_id) || isE2eId(args.metadata?.from_id);
+  if ((args.direction ?? "outbound") === "inbound" && !testSender) {
     try {
       const { pushInboundCommNotification } = await import("./operator-push.server");
       await pushInboundCommNotification({

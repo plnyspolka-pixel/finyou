@@ -13,6 +13,8 @@ describe("isCallRequest", () => {
     "Proszę oddzwonić",
     "Tak ,dotarła i jestem zainteresowany .Oczywiście pytań jest dużo i dlatego powinniśmy się zdzwonić i porozmawiać .",
     "Możemy porozmawiać telefonicznie?",
+    "proszę o kontakt",
+    "o której godzinie możemy porozmawiać?",
   ])("rozpoznaje prośbę o telefon: %s", (t) => {
     expect(isCallRequest(t)).toBe(true);
   });

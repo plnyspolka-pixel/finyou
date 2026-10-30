@@ -1,4 +1,5 @@
 import { ensureMetaTokens } from "@/lib/meta-tokens.server";
+import { isE2eId, recordE2eOutbound } from "@/lib/e2e-sandbox";
 // Publiczna odpowiedź pod komentarzem + Private Reply (Messenger) na komentarz.
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -6,6 +7,10 @@ export async function replyToCommentPublic(opts: {
   commentId: string;
   text: string;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (isE2eId(opts.commentId)) {
+    const r = recordE2eOutbound({ kind: "comment_public", to: opts.commentId, text: opts.text });
+    return { ok: true, id: r.messageId };
+  }
   await ensureMetaTokens();
   const token = process.env.META_PAGE_ACCESS_TOKEN ?? process.env.META_ACCESS_TOKEN;
   if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };
@@ -61,6 +66,9 @@ export async function sendPrivateReplyToComment(opts: {
   commentId: string;
   text: string;
 }): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  if (isE2eId(opts.commentId)) {
+    return recordE2eOutbound({ kind: "comment_private", to: opts.commentId, text: opts.text });
+  }
   await ensureMetaTokens();
   const token = process.env.META_PAGE_ACCESS_TOKEN ?? process.env.META_ACCESS_TOKEN;
   if (!token) return { ok: false, error: "META_PAGE_ACCESS_TOKEN / META_ACCESS_TOKEN missing" };

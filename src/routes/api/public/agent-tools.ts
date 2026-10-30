@@ -15,6 +15,17 @@ const WRITE_TOOLS = new Set([
   "request_invoice",
 ]);
 
+/** Narzędzia tylko do odczytu — w rozmowie testowej działają naprawdę. */
+const E2E_REAL_TOOLS = new Set([
+  "identify_caller",
+  "get_pricing",
+  "get_process_overview",
+  "search_knowledge",
+  "get_offer_teasers",
+  "get_application_status",
+  "get_missing_info_brief",
+]);
+
 function unauthorized(): Response {
   return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
 }
@@ -36,6 +47,11 @@ function contactFromBody(body: any): { phone: string | null; email: string | nul
 async function resolveLeadId(body: any): Promise<string | null> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   if (typeof body.lead_id === "string" && body.lead_id) return body.lead_id;
+  // Narzędzia fy2_* nie dostają `lead_id` — tura tekstowa podaje go
+  // w `thread_key` (`messenger:<lead_id>`, `e2e:<lead_id>`).
+  const { leadIdFromThreadKey } = await import("@/lib/thread-key");
+  const fromThread = leadIdFromThreadKey(body.thread_key);
+  if (fromThread) return fromThread;
 
   const { phone, email } = contactFromBody(body);
   if (phone) {
@@ -106,6 +122,22 @@ export const Route = createFileRoute("/api/public/agent-tools")({
         }
         const tool = String(body?.tool ?? "");
         const args = body?.args ?? {};
+
+        // Rozmowa testowa (run_ania_e2e): odczyty działają naprawdę, a wszystko
+        // z prawdziwym skutkiem (SMS, zapis, prośba o kontakt) tylko się notuje.
+        const { isE2eThread } = await import("@/lib/e2e-sandbox");
+        if (isE2eThread(body?.thread_key) && !E2E_REAL_TOOLS.has(tool)) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          await supabaseAdmin.from("automation_events").insert({
+            automation_type: "e2e_tool_call",
+            status: "skipped",
+            sent_payload: { thread_key: body.thread_key, tool, args },
+          });
+          return Response.json({
+            ok: true,
+            result: { saved: true, note: "Zapisane. Nie podawaj konkretnej godziny kontaktu." },
+          });
+        }
 
         // Połączenie telefoniczne: numer KLIENTA bierzemy z metadanych rozmowy
         // (external_number), bo przy połączeniach wychodzących system__caller_id

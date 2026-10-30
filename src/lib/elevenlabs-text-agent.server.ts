@@ -33,6 +33,7 @@ import {
 } from "./agent-channel-rules";
 import { guardOutboundContactDetails } from "./bot-contact-guard";
 import { leadDynamicVariables } from "./ania-lead-context";
+import { E2E_THREAD_PREFIX, isE2eId } from "./e2e-sandbox";
 import { SUBSCRIPTION_PAYMENT_SENTENCE, SUBSCRIPTION_PRICE_SENTENCE } from "./investor-plan/plans";
 
 const EL_BASE = "https://api.elevenlabs.io/v1";
@@ -309,6 +310,14 @@ const INVESTOR_TOOLS = [
 export type AgentReply = {
   reply: string;
   toolCalls: Array<{ name: string; args: any; result: any }>;
+  /** Kto odpowiedział: agent ElevenLabs czy silnik zapasowy (po błędzie). */
+  engine?: "elevenlabs" | "fallback";
+  /** Rozmowa w ElevenLabs (także nieudana) — transkrypt i powód zakończenia. */
+  elConversationId?: string;
+  /** Powód, dla którego tura ElevenLabs nie dała odpowiedzi. */
+  elError?: string;
+  /** Narzędzia wywołane przez agenta ElevenLabs. */
+  elToolCalls?: Array<{ name: string; isError: boolean }>;
 };
 
 /**
@@ -385,6 +394,7 @@ export async function runAgentTurn(opts: {
     .order("created_at", { ascending: true })
     .limit(40);
 
+  let elDiag: { elConversationId?: string; elError?: string } = {};
   // ── Ścieżka ElevenLabs (decyzja: wszystkie boty procesowe na ElevenLabs) ──
   // Gdy agent dla powierzchni istnieje, tura idzie do niego (tryb tekstowy);
   // narzędzia wykonuje webhook /api/public/agent-tools po stronie ElevenLabs.
@@ -445,7 +455,9 @@ export async function runAgentTurn(opts: {
             createdAt: lead.created_at,
           }),
           lead_id: lead.id,
-          thread_key: `${opts.channel}:${lead.id}`,
+          // Rozmowa testowa (run_ania_e2e) — webhooki narzędzi nie wykonują
+          // wtedy nic z prawdziwym skutkiem (SMS, telefon, powiadomienia).
+          thread_key: `${isE2eId(lead.messenger_psid) ? E2E_THREAD_PREFIX : `${opts.channel}:`}${lead.id}`,
           first_name: lead.first_name ?? "",
           last_name: lead.last_name ?? "",
           email: lead.email ?? "",
@@ -462,13 +474,21 @@ export async function runAgentTurn(opts: {
           // Link do wniosku wysłany wcześniej (send_application_link) — bot może go powtórzyć.
           (lead as { return_link?: string | null }).return_link,
         ]);
-        return { reply: safeReply, toolCalls: [] };
+        return {
+          reply: safeReply,
+          toolCalls: [],
+          engine: "elevenlabs",
+          elConversationId: turn.conversationId,
+          elToolCalls: turn.toolCalls,
+        };
       }
+      elDiag = { elConversationId: turn.conversationId, elError: turn.error ?? "unknown" };
       console.warn(
         `[el-text-agent] ElevenLabs turn fallback (${surface}): ${turn.error ?? "unknown"}`,
       );
     }
   } catch (e) {
+    elDiag = { elError: e instanceof Error ? e.message : String(e) };
     console.error("[el-text-agent] ElevenLabs path error — fallback", e);
   }
 
@@ -662,7 +682,7 @@ export async function runAgentTurn(opts: {
         applicationLink,
         (lead as { return_link?: string | null }).return_link,
       ]);
-      return { reply: safeReply, toolCalls: toolResults };
+      return { reply: safeReply, toolCalls: toolResults, engine: "fallback", ...elDiag };
     }
 
     messages.push({ role: "assistant", content: msg.content ?? "", tool_calls: calls });
@@ -688,7 +708,12 @@ export async function runAgentTurn(opts: {
     }
   }
 
-  return { reply: "Dziękuję! Wracam za chwilę.", toolCalls: toolResults };
+  return {
+    reply: "Dziękuję! Wracam za chwilę.",
+    toolCalls: toolResults,
+    engine: "fallback",
+    ...elDiag,
+  };
 }
 
 // Bot zapisuje dane różnymi kluczami (po polsku i po angielsku). Normalizacja
