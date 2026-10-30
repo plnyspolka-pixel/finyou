@@ -1,12 +1,6 @@
 name: Finance You — kontrola strony /sklep
 
 on:
-  push:
-    branches:
-      - feat/financeyou-sklep-brand-native
-    paths:
-      - 'src/routes/sklep.tsx'
-      - '.github/workflows/sklep-preview.yml'
   pull_request:
     paths:
       - 'src/routes/sklep.tsx'
@@ -30,6 +24,12 @@ jobs:
         run: bun run build
       - name: Install browser for desktop and mobile reference screenshots
         run: npx --yes playwright@1.56.1 install chromium --with-deps
+      - name: Serve official Lovable logo from local mirror
+        shell: bash
+        run: |
+          mkdir -p public/__l5e/assets-v1/4ba3ac38-c33f-4163-aeef-c2d2bb118ce2
+          curl -fsSL "https://financeyou.pl/__l5e/assets-v1/4ba3ac38-c33f-4163-aeef-c2d2bb118ce2/financeyou-logo.png" -o public/__l5e/assets-v1/4ba3ac38-c33f-4163-aeef-c2d2bb118ce2/financeyou-logo.png
+          test $(wc -c < public/__l5e/assets-v1/4ba3ac38-c33f-4163-aeef-c2d2bb118ce2/financeyou-logo.png) -gt 10000
       - name: Run draft app for screenshot
         shell: bash
         run: |
@@ -40,14 +40,17 @@ jobs:
             sleep 2
           done
           test "$code" = "200" || (cat /tmp/financeyou-dev.log && exit 1)
-      - name: Capture new page and current brand reference
+      - name: Capture viewport screenshots (fixed backgrounds stay accurate)
         shell: bash
         continue-on-error: true
         run: |
           mkdir -p preview-shots
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4000 --full-page http://127.0.0.1:4173/sklep preview-shots/sklep-desktop.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4000 --full-page http://127.0.0.1:4173/sklep preview-shots/sklep-mobile.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4000 https://financeyou.pl/ preview-shots/produkcja-referencja.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 http://127.0.0.1:4173/sklep preview-shots/sklep-hero-desktop.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#produkty" preview-shots/sklep-produkty-desktop.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#szczegoly" preview-shots/sklep-szczegoly-desktop.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4500 http://127.0.0.1:4173/sklep preview-shots/sklep-hero-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#produkty" preview-shots/sklep-produkty-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 https://financeyou.pl/ preview-shots/produkcja-referencja.png
       - name: Archive screenshot comparison
         if: always()
         uses: actions/upload-artifact@v4
