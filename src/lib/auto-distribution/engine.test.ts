@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchInvestorToAmount, qualifiesForInstitutionalDistribution, institutionAcceptsAutomaticEmails } from "./engine.server";
+import { matchInvestorToAmount, qualifiesForInstitutionalDistribution, institutionAcceptsAutomaticEmails, institutionEligibleForAutomaticLoan } from "./engine.server";
 
 const base = {
   min_amount: null as number | null,
@@ -54,6 +54,35 @@ describe("matchInvestorToAmount", () => {
   });
 });
 
+
+describe("instytucjonalna automatyczna wysyłka respektuje widełki kwotowe", () => {
+  const loan = { location_potential_score: 51, business_purpose_declared: true, loan_amount: 100_000 };
+
+  it("JanVest: 70 tys. zł pomija, 100 tys. zł i 150 tys. zł przyjmuje", () => {
+    const janVest = { ...base, min_amount: 100_000 };
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 70_000 })).toBe(false);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 100_000 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, loan_amount: 150_000 })).toBe(true);
+  });
+
+  it("Korona: 350 tys. zł przyjmuje, 400 tys. zł pomija", () => {
+    const korona = { ...base, max_amount: 350_000 };
+    expect(institutionEligibleForAutomaticLoan(korona, { ...loan, loan_amount: 350_000 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(korona, { ...loan, loan_amount: 400_000 })).toBe(false);
+  });
+
+  it("nawet kwota w widełkach nie wystarcza, gdy lokalizacja <= 50", () => {
+    const janVest = { ...base, min_amount: 100_000 };
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: 50 })).toBe(false);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: 50.01 })).toBe(true);
+    expect(institutionEligibleForAutomaticLoan(janVest, { ...loan, location_potential_score: null })).toBe(false);
+  });
+
+  it("brak kryteriów kwotowych nie odrzuca sprawy, ale wyłączenie auto-ofert już tak", () => {
+    expect(institutionEligibleForAutomaticLoan(null, loan)).toBe(true);
+    expect(institutionEligibleForAutomaticLoan({ ...base, auto_send_enabled: false }, loan)).toBe(false);
+  });
+});
 
 describe("automatyczna dystrybucja instytucjonalna: score > 50", () => {
   const loan = { location_potential_score: 51, business_purpose_declared: true, loan_amount: 100_000 };
