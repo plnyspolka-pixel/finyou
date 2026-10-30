@@ -2,7 +2,8 @@
 // Kadencja mail/SMS/telefon z `lead_follow_up_schedule` ma osobny tick:
 // `/api/public/hooks/follow-up-plan-tick`.
 // Kadencja od ostatniego outboundu (bez nowego inboundu od klienta):
-//   +2h, +6h, +24h, +3d, +7d, +14d, +21d, +30d → potem stop.
+//   jedno przypomnienie +24h → potem stop (wcześniej 8 przypomnień od +2h
+//   do +30d, o każdej porze — klienci odbierali to jako spam).
 // Wywoływane przez pg_cron co 15 min na /api/public/hooks/follow-up-tick.
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -15,8 +16,8 @@ import { messengerAgentFor } from "@/lib/ania-lead-context";
 import { isInternalRoutingNote } from "@/lib/ania-text-policy";
 
 // Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
-const FOLLOWUP_OFFSETS_HOURS = [2, 6, 24, 72, 168, 336, 504, 720];
-const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // initial + 8 follow-ups = 9
+const FOLLOWUP_OFFSETS_HOURS = [24];
+const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // odpowiedź + 1 przypomnienie
 // E-mail celowo POMINIĘTY — kanał mailowy prowadzi wyłącznie brandowany drip
 // (loan-reminder-emails, 120 szablonów). Tu tylko czaty (Messenger/Instagram).
 const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
