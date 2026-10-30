@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchInvestorToAmount, qualifiesForInstitutionalDistribution } from "./engine.server";
+import { matchInvestorToAmount, qualifiesForInstitutionalDistribution, institutionAcceptsAutomaticEmails } from "./engine.server";
 
 const base = {
   min_amount: null as number | null,
@@ -73,5 +73,19 @@ describe("automatyczna dystrybucja instytucjonalna: score > 50", () => {
     expect(qualifiesForInstitutionalDistribution({ ...loan, business_purpose_declared: false })).toBe(false);
     expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: null })).toBe(false);
     expect(qualifiesForInstitutionalDistribution({ ...loan, loan_amount: 0 })).toBe(false);
+  });
+});
+
+
+describe("instytucje: wysyłka do wszystkich poza jawnymi opt-outami", () => {
+  const state = { auto_send_enabled: true, accepting_applications: true, paused_until: null as string | null };
+  it("brak kryteriów i dowolna kwota nie blokują", () => {
+    expect(institutionAcceptsAutomaticEmails(null)).toBe(true);
+    expect(institutionAcceptsAutomaticEmails(state)).toBe(true);
+  });
+  it("nie wysyła przy świadomym wyłączeniu lub czasowej pauzie", () => {
+    expect(institutionAcceptsAutomaticEmails({ ...state, auto_send_enabled: false })).toBe(false);
+    expect(institutionAcceptsAutomaticEmails({ ...state, accepting_applications: false })).toBe(false);
+    expect(institutionAcceptsAutomaticEmails({ ...state, paused_until: "2026-11-01T00:00:00Z" }, new Date("2026-10-30T00:00:00Z"))).toBe(false);
   });
 });
