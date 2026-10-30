@@ -9,12 +9,6 @@
 // widoczna w panelu admina na karcie wniosku (zakładka Dystrybucja).
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
-import { resolveAppBaseUrl } from "@/lib/access/urls.server";
-
-/** Publiczny adres Karty oferty dla danego tokenu. */
-export function offerCardUrl(token: string): string {
-  return `${resolveAppBaseUrl()}/karta/${token}`;
-}
 
 const OFFER_ALIAS_RE = /oferta\+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@/i;
 

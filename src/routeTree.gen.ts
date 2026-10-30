@@ -75,7 +75,6 @@ import { Route as AdminGoogleSearchRouteImport } from './routes/admin.google-sea
 import { Route as AdminIntegracjeRouteImport } from './routes/admin.integracje'
 import { Route as AdminInwestorzyRouteImport } from './routes/admin.inwestorzy'
 import { Route as AdminInwestycjeRouteImport } from './routes/admin.inwestycje'
-import { Route as AdminKartyOfertRouteImport } from './routes/admin.karty-ofert'
 import { Route as AdminKlienciRouteImport } from './routes/admin.klienci'
 import { Route as AdminKomunikacjaRouteImport } from './routes/admin.komunikacja'
 import { Route as AdminKonfiguracjaRouteImport } from './routes/admin.konfiguracja'
@@ -142,7 +141,6 @@ import { Route as InwestorUmowyRouteImport } from './routes/inwestor.umowy'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
 import { Route as InwestorWindykacjaRouteImport } from './routes/inwestor.windykacja'
 import { Route as InwestorZleceniaRouteImport } from './routes/inwestor.zlecenia'
-import { Route as KartaTokenRouteImport } from './routes/karta.$token'
 import { Route as KlientIndexRouteImport } from './routes/klient.index'
 import { Route as KlientPodpisyRouteImport } from './routes/klient.podpisy'
 import { Route as KlientPowiadomieniaRouteImport } from './routes/klient.powiadomienia'
@@ -667,11 +665,6 @@ const AdminInwestycjeRoute = AdminInwestycjeRouteImport.update({
   path: '/inwestycje',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminKartyOfertRoute = AdminKartyOfertRouteImport.update({
-  id: '/karty-ofert',
-  path: '/karty-ofert',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminKlienciRoute = AdminKlienciRouteImport.update({
   id: '/klienci',
   path: '/klienci',
@@ -1004,11 +997,6 @@ const InwestorZleceniaRoute = InwestorZleceniaRouteImport.update({
   id: '/zlecenia',
   path: '/zlecenia',
   getParentRoute: () => InwestorRoute,
-} as any)
-const KartaTokenRoute = KartaTokenRouteImport.update({
-  id: '/karta/$token',
-  path: '/karta/$token',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const KlientIndexRoute = KlientIndexRouteImport.update({
   id: '/',
@@ -2093,7 +2081,6 @@ export interface FileRoutesByFullPath {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
-  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/komunikacja': typeof AdminKomunikacjaRoute
   '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
@@ -2158,7 +2145,6 @@ export interface FileRoutesByFullPath {
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
-  '/karta/$token': typeof KartaTokenRoute
   '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -2410,7 +2396,6 @@ export interface FileRoutesByTo {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
-  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/komunikacja': typeof AdminKomunikacjaRoute
   '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
@@ -2472,7 +2457,6 @@ export interface FileRoutesByTo {
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
-  '/karta/$token': typeof KartaTokenRoute
   '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -2729,7 +2713,6 @@ export interface FileRoutesById {
   '/admin/integracje': typeof AdminIntegracjeRoute
   '/admin/inwestorzy': typeof AdminInwestorzyRouteWithChildren
   '/admin/inwestycje': typeof AdminInwestycjeRoute
-  '/admin/karty-ofert': typeof AdminKartyOfertRoute
   '/admin/klienci': typeof AdminKlienciRouteWithChildren
   '/admin/komunikacja': typeof AdminKomunikacjaRoute
   '/admin/konfiguracja': typeof AdminKonfiguracjaRoute
@@ -2794,7 +2777,6 @@ export interface FileRoutesById {
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
   '/inwestor/windykacja': typeof InwestorWindykacjaRouteWithChildren
   '/inwestor/zlecenia': typeof InwestorZleceniaRoute
-  '/karta/$token': typeof KartaTokenRoute
   '/klient/podpisy': typeof KlientPodpisyRoute
   '/klient/powiadomienia': typeof KlientPowiadomieniaRoute
   '/klient/profil': typeof KlientProfilRoute
@@ -3054,7 +3036,6 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
-    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/komunikacja'
     | '/admin/konfiguracja'
@@ -3119,7 +3100,6 @@ export interface FileRouteTypes {
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
-    | '/karta/$token'
     | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -3371,7 +3351,6 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
-    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/komunikacja'
     | '/admin/konfiguracja'
@@ -3433,7 +3412,6 @@ export interface FileRouteTypes {
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
     | '/inwestor/zlecenia'
-    | '/karta/$token'
     | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -3689,7 +3667,6 @@ export interface FileRouteTypes {
     | '/admin/integracje'
     | '/admin/inwestorzy'
     | '/admin/inwestycje'
-    | '/admin/karty-ofert'
     | '/admin/klienci'
     | '/admin/komunikacja'
     | '/admin/konfiguracja'
@@ -3754,7 +3731,6 @@ export interface FileRouteTypes {
     | '/inwestor/wiadomosci'
     | '/inwestor/windykacja'
     | '/inwestor/zlecenia'
-    | '/karta/$token'
     | '/klient/podpisy'
     | '/klient/powiadomienia'
     | '/klient/profil'
@@ -3999,7 +3975,6 @@ export interface RootRouteChildren {
   EmbedLeadyRoute: typeof EmbedLeadyRoute
   EmbedWniosekRoute: typeof EmbedWniosekRoute
   FakturaIdRoute: typeof FakturaIdRoute
-  KartaTokenRoute: typeof KartaTokenRoute
   LSlugRoute: typeof LSlugRoute
   NarzedzieSlugRoute: typeof NarzedzieSlugRoute
   PobierzPlikTokenRoute: typeof PobierzPlikTokenRoute
@@ -4563,13 +4538,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInwestycjeRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/karty-ofert': {
-      id: '/admin/karty-ofert'
-      path: '/karty-ofert'
-      fullPath: '/admin/karty-ofert'
-      preLoaderRoute: typeof AdminKartyOfertRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/klienci': {
       id: '/admin/klienci'
       path: '/klienci'
@@ -5031,13 +4999,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/inwestor/zlecenia'
       preLoaderRoute: typeof InwestorZleceniaRouteImport
       parentRoute: typeof InwestorRoute
-    }
-    '/karta/$token': {
-      id: '/karta/$token'
-      path: '/karta/$token'
-      fullPath: '/karta/$token'
-      preLoaderRoute: typeof KartaTokenRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/klient/': {
       id: '/klient/'
@@ -6398,7 +6359,6 @@ interface AdminRouteChildren {
   AdminIntegracjeRoute: typeof AdminIntegracjeRoute
   AdminInwestorzyRoute: typeof AdminInwestorzyRouteWithChildren
   AdminInwestycjeRoute: typeof AdminInwestycjeRoute
-  AdminKartyOfertRoute: typeof AdminKartyOfertRoute
   AdminKlienciRoute: typeof AdminKlienciRouteWithChildren
   AdminKomunikacjaRoute: typeof AdminKomunikacjaRoute
   AdminKonfiguracjaRoute: typeof AdminKonfiguracjaRoute
@@ -6487,7 +6447,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIntegracjeRoute: AdminIntegracjeRoute,
   AdminInwestorzyRoute: AdminInwestorzyRouteWithChildren,
   AdminInwestycjeRoute: AdminInwestycjeRoute,
-  AdminKartyOfertRoute: AdminKartyOfertRoute,
   AdminKlienciRoute: AdminKlienciRouteWithChildren,
   AdminKomunikacjaRoute: AdminKomunikacjaRoute,
   AdminKonfiguracjaRoute: AdminKonfiguracjaRoute,
@@ -6888,7 +6847,6 @@ const rootRouteChildren: RootRouteChildren = {
   EmbedLeadyRoute: EmbedLeadyRoute,
   EmbedWniosekRoute: EmbedWniosekRoute,
   FakturaIdRoute: FakturaIdRoute,
-  KartaTokenRoute: KartaTokenRoute,
   LSlugRoute: LSlugRoute,
   NarzedzieSlugRoute: NarzedzieSlugRoute,
   PobierzPlikTokenRoute: PobierzPlikTokenRoute,

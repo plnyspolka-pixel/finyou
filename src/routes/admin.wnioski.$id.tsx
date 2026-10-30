@@ -34,7 +34,6 @@ import { leadSourceLabel } from "@/lib/lead-source";
 
 import { RiskAssessmentSection } from "@/components/risk-assessment/risk-assessment-section";
 import { OfferDistributionPanel } from "@/components/admin/offer-distribution-panel";
-import { OfferCardSection } from "@/components/admin/offer-card-section";
 import { CoOwnersSection } from "@/components/coowners/coowners-section";
 import { KwContentSection } from "@/components/kw-content-section";
 import { KwAnalysisSection } from "@/components/kw-analysis/kw-analysis-section";
@@ -365,7 +364,6 @@ export function WniosekDetail({
             Historia kontaktu ({contacts.length + comms.length})
           </TabsTrigger>
           <TabsTrigger value="dystrybucja">Dystrybucja ({distributions.length})</TabsTrigger>
-          <TabsTrigger value="karta-oferty">Karta oferty</TabsTrigger>
           <TabsTrigger value="oferty">Oferty ({offers.length})</TabsTrigger>
           <TabsTrigger value="automatyzacje">Automatyzacje ({automations.length})</TabsTrigger>
           <TabsTrigger value="historia">Historia zmian ({audit.length})</TabsTrigger>
@@ -951,10 +949,6 @@ export function WniosekDetail({
             </CardContent>
           </Card>
           <OfferDistributionPanel applicationId={id} />
-        </TabsContent>
-
-        <TabsContent value="karta-oferty" className="space-y-4">
-          <OfferCardSection applicationId={id} />
         </TabsContent>
 
         <TabsContent value="oferty">

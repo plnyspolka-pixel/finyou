@@ -35,7 +35,6 @@ import {
   Building2,
   MapPinned,
   MessageCircle,
-  IdCard,
   Youtube,
   Clapperboard,
   Handshake,
@@ -429,13 +428,6 @@ export const adminSections: AdminSection[] = [
         icon: Send,
         description: "Wysyłka ofert do inwestorów i śledzenie odpowiedzi.",
         synonyms: ["dystrybucja", "wysylka ofert"],
-      },
-      {
-        to: "/admin/karty-ofert",
-        label: "Karty ofert",
-        icon: IdCard,
-        description: "Graficzne karty ofert do udostępniania.",
-        synonyms: ["karty", "pdf oferty"],
       },
       {
         to: "/admin/szkolenia",

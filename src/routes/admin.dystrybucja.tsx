@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPLN, loanStatusLabels } from "@/lib/labels";
 import { OfferDistributionPanel } from "@/components/admin/offer-distribution-panel";
-import { OfferCardSection } from "@/components/admin/offer-card-section";
 
 export const Route = createFileRoute("/admin/dystrybucja")({
   component: DystrybucjaPage,
@@ -74,12 +73,7 @@ function DystrybucjaPage() {
         </CardContent>
       </Card>
 
-      {selectedApp && (
-        <>
-          <OfferCardSection applicationId={selectedApp} />
-          <OfferDistributionPanel applicationId={selectedApp} />
-        </>
-      )}
+      {selectedApp && <OfferDistributionPanel applicationId={selectedApp} />}
     </div>
   );
 }

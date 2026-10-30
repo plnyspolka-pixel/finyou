@@ -1,9 +1,0 @@
-export type PublicCase = { ref: string; propertyType: string; voivodeship: string; amount: number; months: number | null; status: string; daysAgo: number };
-export function publicCase(row: { project_ref?: string | null; match_seq?: number; status: string; created_at: string; teaser?: Record<string, unknown> | null }, now = Date.now()): PublicCase | null {
-  const t = row.teaser;
-  if (!t || !Number.isFinite(Number(t.loan_amount)) || Number(t.loan_amount) <= 0) return null;
-  const region = String(t.voivodeship ?? "").toLocaleLowerCase("pl").replace(/^woj[. ]*/, "");
-  const allowedRegions = ["dolnośląskie", "kujawsko-pomorskie", "lubelskie", "lubuskie", "łódzkie", "małopolskie", "mazowieckie", "opolskie", "podkarpackie", "podlaskie", "pomorskie", "śląskie", "świętokrzyskie", "warmińsko-mazurskie", "wielkopolskie", "zachodniopomorskie"];
-  const types: Record<string, string> = { mieszkanie: "Mieszkanie", dom: "Dom", lokal_uslugowy: "Lokal użytkowy", dzialka_budowlana: "Działka budowlana", grunt_rolny: "Grunt rolny" };
-  return { ref: /^FY-P-\d+$/.test(row.project_ref ?? "") ? String(row.project_ref) : `FY-P-${row.match_seq ?? 0}`, propertyType: types[String(t.property_type)] ?? "Nieruchomość", voivodeship: allowedRegions.includes(region) ? region : "Województwo niepodane", amount: Math.round(Number(t.loan_amount) / 5000) * 5000, months: Number(t.period_months) > 0 ? Number(t.period_months) : null, status: ["teaser", "dopasowane", "karta_leada"].includes(row.status) ? "Do analizy" : "W procesie", daysAgo: Math.max(0, Math.floor((now - new Date(row.created_at).getTime()) / 86400000)) };
-}

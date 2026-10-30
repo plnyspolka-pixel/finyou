@@ -23,7 +23,6 @@ export interface DistributionSendResult {
   sent: string[];
   failed: Array<{ investorId: string; error: string }>;
   skipped: string[];
-  cardUrl: string;
 }
 
 export async function distributeOfferToInvestors(input: {
@@ -33,32 +32,18 @@ export async function distributeOfferToInvestors(input: {
   note?: string;
 }): Promise<DistributionSendResult> {
   const { sendResendEmail } = await import("@/lib/resend-send.server");
-  const { offerReplyAddress, offerCardUrl } = await import("@/lib/offer-replies.server");
+  const { offerReplyAddress } = await import("@/lib/offer-replies.server");
 
   // 1) Wniosek + nieruchomość + klient
   const { data: app, error: appErr } = await supabaseAdmin
     .from("loan_applications")
     .select(
-      "id, status, deleted_at, loan_amount, preferred_period_months, offer_card_token, client:clients(first_name,last_name), properties(property_type,street,address,city,voivodeship,land_register_number,area_sqm,estimated_value)",
+      "id, status, deleted_at, loan_amount, preferred_period_months, client:clients(first_name,last_name), properties(property_type,street,address,city,voivodeship,land_register_number,area_sqm,estimated_value)",
     )
     .eq("id", input.applicationId)
     .maybeSingle();
   if (appErr || !app) throw new Error("Nie znaleziono wniosku");
   if ((app as any).deleted_at) throw new Error("Ten wniosek został usunięty");
-
-  // 2) Publiczna Karta oferty — token generowany przy pierwszej wysyłce
-  let cardToken = (app as any).offer_card_token as string | null;
-  if (!cardToken) {
-    const bytes = new Uint8Array(24);
-    crypto.getRandomValues(bytes);
-    cardToken = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    const { error: tokErr } = await supabaseAdmin
-      .from("loan_applications")
-      .update({ offer_card_token: cardToken })
-      .eq("id", input.applicationId);
-    if (tokErr) throw new Error(`Nie udało się utworzyć linku Karty oferty: ${tokErr.message}`);
-  }
-  const cardUrl = offerCardUrl(cardToken);
 
   // 3) Odbiorcy — wszystkie aktywne instytucje lub tylko zaznaczone
   let invQuery = supabaseAdmin
@@ -113,12 +98,6 @@ export async function distributeOfferToInvestors(input: {
           <tr><td style="padding:6px 0;color:#64748b">Szacowana wartość</td><td style="padding:6px 0;text-align:right">${value}</td></tr>
         </table>
         ${noteHtml}
-        <p style="margin:20px 0">
-          <a href="${cardUrl}" style="display:inline-block;background:#0f172a;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600">
-            Zobacz pełną Kartę oferty
-          </a>
-        </p>
-        <p style="color:#64748b;font-size:13px">Karta oferty zawiera pełną treść księgi wieczystej, lokalizację z mapą, dane o okolicy i wycenę z analizy ryzyka.</p>
         <p>Aby złożyć ofertę finansowania lub zadać pytanie, wystarczy <b>odpowiedzieć na tego maila</b> — odpowiedź trafi bezpośrednio do opiekuna tematu.</p>
       </div>
     `;
@@ -126,7 +105,7 @@ export async function distributeOfferToInvestors(input: {
     `Dzień dobry,\n\nprzesyłamy temat pożyczkowy pod zabezpieczenie hipoteczne.\n\n` +
     `Kwota: ${kwota}\nOkres: ${okres}\nKW: ${kw}\nAdres: ${address}\nTyp: ${p?.property_type ?? "—"}\nSzacowana wartość: ${value}\n` +
     (input.note ? `\n${input.note}\n` : "") +
-    `\nPełna Karta oferty: ${cardUrl}\n\n` +
+    `\n` +
     `Aby złożyć ofertę finansowania lub zadać pytanie, wystarczy odpowiedzieć na tego maila.`;
 
   // 5) Wysyłka per inwestor: dystrybucja -> mail (Reply-To: alias) -> log wątku
@@ -209,5 +188,5 @@ export async function distributeOfferToInvestors(input: {
     if (stErr) failed.push({ investorId: "", error: `status: ${stErr.message}` });
   }
 
-  return { sent, failed, skipped, cardUrl };
+  return { sent, failed, skipped };
 }

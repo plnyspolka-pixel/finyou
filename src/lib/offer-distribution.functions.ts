@@ -2,7 +2,6 @@
 //
 // Z panelu admina wysyłamy temat pożyczkowy do WSZYSTKICH aktywnych inwestorów
 // instytucjonalnych albo do zaznaczonych. Każdy mail:
-//   - zawiera link do publicznej Karty oferty (/karta/<token>),
 //   - wychodzi z Reply-To: oferta+<distribution_id>@<domena> (dedykowany alias),
 //     dzięki czemu odpowiedź instytucji wraca inbound webhookiem prosto na
 //     kartę wniosku (offer_distribution_messages) — patrz offer-replies.server.ts.

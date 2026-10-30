@@ -279,8 +279,8 @@ export function OfferDistributionPanel({ applicationId }: { applicationId: strin
             <Send className="h-5 w-5" /> Wyślij ofertę do inwestorów instytucjonalnych
           </CardTitle>
           <CardDescription>
-            Każdy mail zawiera link do Karty oferty. Odpowiedzi instytucji wracają automatycznie na
-            tę kartę wniosku (dedykowany adres zwrotny).
+            Odpowiedzi instytucji wracają automatycznie na tę kartę wniosku (dedykowany adres
+            zwrotny).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
