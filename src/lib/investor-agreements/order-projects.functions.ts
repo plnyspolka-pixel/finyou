@@ -1,8 +1,7 @@
 // „Moje zlecenia" — tylko indywidualnie wskazane projekty, bez dostępu do puli.
 //
-// Dla każdego przyjętego Zlecenia pokazujemy Projekty (wnioski) w kwocie do
-// kwoty Zlecenia, utworzone nie wcześniej niż 3 dni przed złożeniem Zlecenia,
-// razem ze zdjęciami/dokumentami, potencjałem lokalizacyjnym i zamaskowaną KW.
+// Dla każdego przyjętego Zlecenia pokazujemy tylko Projekty wcześniej
+// indywidualnie przypisane przez operatora, wraz z ich dokumentacją.
 // Inwestor zamawia raport analityczny (pipeline; gotowy przebieg jest
 // reużywany — księga nie jest pobierana ponownie) i jednym przyciskiem
 // pobiera dane kontaktowe i rezerwuje Projekt (Dopasowanie → Karta Leada →
