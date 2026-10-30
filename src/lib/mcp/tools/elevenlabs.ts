@@ -1037,6 +1037,58 @@ export const askVoiceAgent = defineTool({
     }),
 });
 
+export const runAniaE2eTool = defineTool({
+  name: "run_ania_e2e",
+  title: "Run Ania end-to-end test",
+  description:
+    "Test end-to-end Ani na produkcji — URUCHAMIAJ PRZED KAŻDĄ PUBLIKACJĄ zmian w botach. Scenariusze z prawdziwych rozmów (formularz inwestorski, „Proszę zadzwonić”, „Dzięki”, informacje ogólne, komentarze) idą przez ten sam kod co wiadomość z Facebooka i przez prawdziwych agentów ElevenLabs; nic nie wychodzi do klientów (nadawca testowy e2e-…, narzędzia z prawdziwym skutkiem tylko się notują). Sprawdza: odpowiedź zamiast powitania, brak zerwania rozmowy w ElevenLabs, właściwego agenta, typ i status leada, całą wypowiedź (bez ucinania), formę żeńską, brak emoji i notatek wewnętrznych oraz trafność (model oceniający). Po teście dane są usuwane. Trwa ok. 1–2 min, ok. 15 tur ElevenLabs. Tylko administrator.",
+  inputSchema: {
+    only: z
+      .array(z.string())
+      .optional()
+      .describe("Id scenariuszy do uruchomienia (domyślnie wszystkie)."),
+    keep_data: z
+      .boolean()
+      .default(false)
+      .describe("Zostaw testowe leady i wiadomości do obejrzenia (PSID e2e-…)."),
+  },
+  annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: true },
+  handler: (a, ctx: ToolContext) =>
+    handle(async () => {
+      await requireRolesAdmin(ctx, ADMIN_ONLY);
+      const { runAniaE2e } = await import("@/lib/ania-e2e/run.server");
+      const report = await runAniaE2e({ only: a.only, keepData: a.keep_data });
+      const lines: string[] = [
+        `# Test Ani: ${report.pass ? "ZALICZONY" : "NIEZALICZONY"} — ${report.passed}/${report.passed + report.failed} scenariuszy (${report.durationSec} s)`,
+        "",
+      ];
+      for (const sc of report.scenarios) {
+        lines.push(`## ${sc.pass ? "✅" : "❌"} ${sc.title}`);
+        if (sc.error) lines.push(`Błąd testu: ${sc.error}`);
+        for (const st of sc.steps) {
+          lines.push(`- **Klient:** ${st.client.slice(0, 300)}`);
+          lines.push(`- **Bot:** ${st.bot ?? "(brak odpowiedzi)"}`);
+          const meta = [
+            st.agent && `agent: ${st.agent}`,
+            st.source && `obsługa: ${st.source}`,
+            st.elTools.length > 0 && `narzędzia: ${st.elTools.join(", ")}`,
+            st.elConversationId && `rozmowa: ${st.elConversationId}`,
+          ].filter(Boolean);
+          if (meta.length) lines.push(`- ${meta.join(" · ")}`);
+          for (const c of st.checks) {
+            lines.push(`  - ${c.pass ? "✓" : "✗"} ${c.name}${c.detail ? ` — ${c.detail}` : ""}`);
+          }
+        }
+        lines.push("");
+      }
+      lines.push(`Ocena trafności: ${report.judge}.`);
+      lines.push(
+        `Sprzątanie: ${typeof report.cleanup === "string" ? report.cleanup : `${report.cleanup?.leads ?? 0} leadów usuniętych${report.cleanup?.errors.length ? `; błędy: ${report.cleanup.errors.join("; ")}` : ""}`}.`,
+      );
+      return ok(report, undefined, [{ type: "text", text: lines.join("\n") }]);
+    }),
+});
+
 // ── Media: TTS, STT, efekty, muzyka ─────────────────────────────────────────
 
 async function defaultVoiceId(): Promise<string> {
@@ -1466,6 +1518,7 @@ export const elevenLabsTools = [
   elevenAddKnowledgeUrl,
   placeVoiceCall,
   askVoiceAgent,
+  runAniaE2eTool,
   textToSpeechTool,
   speechToTextTool,
   generateSoundEffectTool,

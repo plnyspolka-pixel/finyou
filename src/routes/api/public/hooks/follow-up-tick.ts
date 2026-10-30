@@ -14,26 +14,17 @@ import { requireCronSecret } from "@/lib/cron-auth.server";
 import { isCallRequest } from "@/lib/call-request";
 import { messengerAgentFor } from "@/lib/ania-lead-context";
 import { isInternalRoutingNote } from "@/lib/ania-text-policy";
+import { isE2eId } from "@/lib/e2e-sandbox";
+import {
+  MAX_OUTBOUND,
+  isFollowUpQuietHour,
+  messengerFollowUpDecision,
+} from "@/lib/messenger-follow-up-policy";
 
-// Hours from last outbound to next follow-up, indexed by (#outbound since last inbound) - 1
-const FOLLOWUP_OFFSETS_HOURS = [24];
-const MAX_OUTBOUND = FOLLOWUP_OFFSETS_HOURS.length + 1; // odpowiedź + 1 przypomnienie
 // E-mail celowo POMINIĘTY — kanał mailowy prowadzi wyłącznie brandowany drip
 // (loan-reminder-emails, 120 szablonów). Tu tylko czaty (Messenger/Instagram).
 const SUPPORTED_CHANNELS = ["messenger", "instagram"] as const;
 type Channel = (typeof SUPPORTED_CHANNELS)[number];
-const TERMINAL_STATUSES = new Set([
-  "zamkniety",
-  "closed",
-  "won",
-  "lost",
-  "odrzucony",
-  "rezygnacja",
-  "wyplacony",
-  "spłacony",
-  "do_not_contact",
-  "blacklist",
-]);
 
 export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
   server: {
@@ -86,14 +77,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         const now = Date.now();
         // Przypomnienia tylko w ciągu dnia (8–20 czasu polskiego) — bot pisał
         // do klienta o 2:45 w nocy.
-        const warsawHour = Number(
-          new Intl.DateTimeFormat("en-GB", {
-            timeZone: "Europe/Warsaw",
-            hour: "2-digit",
-            hourCycle: "h23",
-          }).format(new Date(now)),
-        );
-        if (warsawHour < 8 || warsawHour >= 20) {
+        if (isFollowUpQuietHour(now)) {
           return Response.json({ ok: true, processed: 0, sent: 0, quiet_hours: true });
         }
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
@@ -180,14 +164,6 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           processed += 1;
           const lead = leadMap.get(g.leadId);
           if (!lead) continue;
-          if (lead.status && TERMINAL_STATUSES.has(String(lead.status))) continue;
-          // Lead oznaczony do kontaktu przez zespół — rozmowę przejmuje człowiek.
-          if (lead.status === "wymaga_kontaktu") continue;
-          if (lead.application_data?.followup_paused) continue;
-          // Lead z utworzonym wnioskiem (komplet danych zebrany, np. na czacie)
-          // nie dostaje już „dokończ wniosek" — sprawą zajmuje się analityk.
-          if (lead.loan_application_id) continue;
-
           // Dokładny step: licz outboundy PO ostatnim inboundzie (lub wszystkie, jeśli inboundu nie było).
           const sinceIso =
             g.lastInboundAt > 0 ? new Date(g.lastInboundAt).toISOString() : "1970-01-01T00:00:00Z";
@@ -198,12 +174,21 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             .eq("channel", g.channel)
             .eq("direction", "outbound")
             .gt("created_at", sinceIso);
-          const step = outSince ?? 1; // liczba dotychczasowych outboundów w bieżącej serii
-          if (step >= MAX_OUTBOUND) continue;
-          const offsetH = FOLLOWUP_OFFSETS_HOURS[step - 1];
-          if (offsetH == null) continue;
-          const dueAt = g.lastOutboundAt + offsetH * 3600_000;
-          if (now < dueAt) continue;
+          const decision = messengerFollowUpDecision({
+            now,
+            lastOutboundAt: g.lastOutboundAt,
+            lastInboundAt: g.lastInboundAt,
+            outboundSinceInbound: outSince ?? 1,
+            callRequested: g.callRequested,
+            leadStatus: lead.status ? String(lead.status) : null,
+            paused: Boolean(lead.application_data?.followup_paused),
+            // Lead z utworzonym wnioskiem (komplet danych zebrany, np. na czacie)
+            // nie dostaje już „dokończ wniosek" — sprawą zajmuje się analityk.
+            hasApplication: Boolean(lead.loan_application_id),
+            isTest: isE2eId(lead.messenger_psid) || isE2eId(lead.instagram_igsid),
+          });
+          if (!decision.send) continue;
+          const step = decision.step;
 
           // Sprawdź, czy nie pingowaliśmy już w ostatnich 60 minutach (anty-duplikat między tickami).
           if (now - g.lastOutboundAt < 60 * 60_000) continue;
