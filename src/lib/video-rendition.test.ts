@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  RENDITION_CLAIM_STALE_MS,
+  TRANSCODE_UNSUPPORTED_COOLDOWN_MS,
+  unsupportedCooldownActive,
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_TIMEOUT_MS,
   isRenditionCandidateUrl,
@@ -124,8 +127,52 @@ describe("resolveVideoRendition", () => {
     ).toEqual({ state: "give_up", reason: "za długi materiał" });
   });
 
-  it("processing bez id zadania nie wisi", () => {
-    expect(resolve(row({ job_id: null }), null).state).toBe("retry");
+  it("processing bez id zadania: świeże przejęcie czeka, porzucone wraca do zlecenia", () => {
+    // Ktoś właśnie zleca (2 min temu) — nie dublujemy.
+    expect(
+      resolve(
+        row({ job_id: null, job_started_at: new Date(NOW.getTime() - 2 * 60_000).toISOString() }),
+        null,
+      ).state,
+    ).toBe("waiting");
+    // Przebieg padł w trakcie zlecania (28.10: wiersz wisiał 2 dni) — ponowienie.
+    const stale = resolve(
+      row({
+        job_id: null,
+        job_started_at: new Date(NOW.getTime() - RENDITION_CLAIM_STALE_MS - 1).toISOString(),
+      }),
+      null,
+    );
+    expect(stale.state).toBe("retry");
+    // Po limicie prób — oryginał, nie wieczne czekanie.
+    expect(
+      resolve(
+        row({
+          job_id: null,
+          attempt_count: VIDEO_RENDITION_MAX_ATTEMPTS,
+          job_started_at: new Date(NOW.getTime() - RENDITION_CLAIM_STALE_MS - 1).toISOString(),
+        }),
+        null,
+      ).state,
+    ).toBe("give_up");
+    expect(resolve(row({ job_id: null, job_started_at: null }), null).state).toBe("retry");
+  });
+});
+
+describe("przerwa po „starej wersji” usługi", () => {
+  it("aktywna przez 6 h od ostatniej prawdziwej odpowiedzi, potem jedna próba", () => {
+    expect(TRANSCODE_UNSUPPORTED_COOLDOWN_MS).toBe(6 * 60 * 60_000);
+    expect(unsupportedCooldownActive(new Date(NOW.getTime() - 60_000).toISOString(), NOW)).toBe(
+      true,
+    );
+    expect(
+      unsupportedCooldownActive(
+        new Date(NOW.getTime() - TRANSCODE_UNSUPPORTED_COOLDOWN_MS - 1).toISOString(),
+        NOW,
+      ),
+    ).toBe(false);
+    expect(unsupportedCooldownActive(null, NOW)).toBe(false);
+    expect(unsupportedCooldownActive("nie-data", NOW)).toBe(false);
   });
 });
 

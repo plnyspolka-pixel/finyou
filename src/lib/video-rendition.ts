@@ -54,6 +54,31 @@ export const VIDEO_RENDITION_MAX_ATTEMPTS = 2;
 export const VIDEO_RENDITION_TIMEOUT_MS = 120 * 60_000;
 /** Po ilu minutach wpis kolejki próbuje ponownie, gdy wideo jest w przygotowaniu. */
 export const VIDEO_PREPARING_RETRY_MIN = 5;
+/**
+ * Zlecenie bez id zadania starsze niż tyle uznajemy za porzucone: worker padł
+ * między przejęciem wiersza a zapisem id (np. czekając, aż uśpiona usługa na
+ * Render się obudzi). Wcześniej taki wiersz wisiał w `processing` na zawsze
+ * i blokował publikację (28–30.10.2026: „Bank odmówił” 2 dni bez FB i YT).
+ */
+export const RENDITION_CLAIM_STALE_MS = 10 * 60_000;
+/**
+ * Po odpowiedzi „stara wersja usługi” nie budzimy jej przez tyle czasu —
+ * publikacje idą od razu z oryginałem. Budzenie uśpionej usługi trwało do
+ * minuty przy KAŻDEJ publikacji i przerywało przebieg w trakcie wysyłki
+ * (wpisy FB Reels wisiały w „publishing”). Po tym czasie jedna prawdziwa
+ * próba sprawdza, czy usługę zaktualizowano.
+ */
+export const TRANSCODE_UNSUPPORTED_COOLDOWN_MS = 6 * 60 * 60_000;
+
+/** Czy ostatnia prawdziwa odpowiedź „stara wersja usługi” jest świeższa niż przerwa. */
+export function unsupportedCooldownActive(
+  lastUnsupportedAt: string | null | undefined,
+  now: Date,
+): boolean {
+  if (!lastUnsupportedAt) return false;
+  const at = Date.parse(lastUnsupportedAt);
+  return Number.isFinite(at) && now.getTime() - at < TRANSCODE_UNSUPPORTED_COOLDOWN_MS;
+}
 
 export type VideoRenditionStatus = "pending" | "processing" | "ready" | "failed";
 
@@ -125,7 +150,15 @@ export function resolveVideoRendition(input: {
   if (row.status === "pending") return { state: "submit" };
 
   // processing
-  if (!row.job_id) return retryOrGiveUp("brak id zadania w usłudze");
+  if (!row.job_id) {
+    // Świeże przejęcie bez id = ktoś właśnie zleca (czekamy); stare = zlecenie
+    // przerwane, wiersz wolno przejąć od nowa (submitRendition to dopuszcza).
+    const claimedAt = row.job_started_at ? Date.parse(row.job_started_at) : Number.NaN;
+    const age = Number.isNaN(claimedAt) ? Number.POSITIVE_INFINITY : now.getTime() - claimedAt;
+    return age >= RENDITION_CLAIM_STALE_MS
+      ? retryOrGiveUp("zlecenie przerwane (brak id zadania w usłudze)")
+      : { state: "waiting" };
+  }
   const since = row.job_started_at ? Date.parse(row.job_started_at) : Number.NaN;
   const elapsed = Number.isNaN(since) ? 0 : now.getTime() - since;
   const timedOut = elapsed >= timeoutMs;
@@ -220,6 +253,13 @@ export function isTranscodeUnsupportedError(message: string): boolean {
 
 export const TRANSCODE_UNSUPPORTED_REASON =
   "usługa FFmpeg nie obsługuje jeszcze kompresji (stara wersja) — zrób redeploy usługi caption-burner";
+/**
+ * Wiersz pominięty w czasie przerwy po „starej wersji” — inny tekst niż
+ * prawdziwa odpowiedź usługi, żeby przerwa liczyła się od ostatniego
+ * prawdziwego wywołania, a nie przedłużała się przy każdej publikacji.
+ */
+export const TRANSCODE_UNSUPPORTED_SKIPPED =
+  "kompresja pominięta: usługa FFmpeg w starej wersji (zrób redeploy caption-burner) — wysłano oryginał";
 
 /** Notatka, gdy kompresja się nie udała i jedzie oryginał. */
 export function renditionGiveUpNote(reason: string): string {

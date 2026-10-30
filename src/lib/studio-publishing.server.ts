@@ -189,6 +189,13 @@ async function publishFacebookReel(item: QueueRow): Promise<string> {
   });
   const videoId = start.video_id as string | undefined;
   if (!videoId) throw new Error("Facebook nie zwrócił video_id (upload_phase=start).");
+  // Id wideo zapisujemy od razu: gdy przebieg zostanie przerwany w trakcie
+  // wysyłki, reclaimStalledMetaClaims sprawdzi w Mecie, czy rolka wyszła,
+  // zamiast zostawiać wpis do ręcznej decyzji.
+  await supabaseAdmin
+    .from("social_publish_queue")
+    .update({ external_post_id: videoId })
+    .eq("id", item.id);
   const uploadUrl =
     typeof start.upload_url === "string" && start.upload_url.startsWith("https://")
       ? start.upload_url
@@ -397,16 +404,19 @@ export const META_STALLED_CLAIM_MIN = 60;
 
 /**
  * Wpisy Meta, które utknęły w `publishing` (worker padł między przejęciem a
- * zapisem wyniku – np. limit czasu Workera przy wysyłce dużego pliku).
+ * zapisem wyniku – np. przebieg przerwany w trakcie wysyłki dużego pliku).
  *
- * NIE wracają automatycznie do `pending`: Reels i posty FB nie mają klucza
- * idempotencji, więc jeśli Meta zdążyła opublikować, ponowienie dałoby
- * duplikat. Przechodzą do `failed` z jasnym opisem – tick ich nie bierze,
- * a ponowienie (`retry_social_queue_item`) jest świadomą decyzją po
- * sprawdzeniu strony. Kontenery IG nie wiszą w `publishing` (mają
- * `processing` z własnym limitem czasu), więc ich to nie dotyczy.
+ * Rolki (FB Reels, IG Reels) naprawiamy sami po STALLED_REEL_CLAIM_MIN:
+ * pytamy Metę o stan wideo / kontenera (id zapisany zaraz po starcie
+ * wysyłki) i domykamy wpis jako opublikowany, czekamy albo ponawiamy —
+ * bez duplikatów i bez ręcznego „Ponów” (meta-stalled-reel.ts).
+ *
+ * Posty FB nie mają identyfikatora sprzed publikacji, więc ich ponowienie
+ * mogłoby dać duplikat: po META_STALLED_CLAIM_MIN przechodzą do `failed`
+ * z opisem, a ponowienie (`retry_social_queue_item`) jest świadomą decyzją.
  */
 export async function reclaimStalledMetaClaims(now: Date = new Date()): Promise<number> {
+  let handled = 0;
   const cutoff = new Date(now.getTime() - META_STALLED_CLAIM_MIN * 60_000).toISOString();
   const { data, error } = await supabaseAdmin
     .from("social_publish_queue")
@@ -418,14 +428,94 @@ export async function reclaimStalledMetaClaims(now: Date = new Date()): Promise<
         "i dopiero wtedy ponów (retry_social_queue_item).",
     })
     .eq("status", "publishing")
-    .in("platform", META_PLATFORMS)
+    .eq("platform", "facebook_post")
     .lt("updated_at", cutoff)
     .select("id");
+  if (error) console.error("[social-publish] reclaimStalledMetaClaims:", error.message);
+  handled += data?.length ?? 0;
+  handled += await healStalledReels(now);
+  return handled;
+}
+
+/** Zawieszone rolki FB / IG: stan z Meta → opublikowane / czekamy / ponowienie. */
+async function healStalledReels(now: Date): Promise<number> {
+  const { STALLED_REEL_CLAIM_MIN, classifyFacebookReelStatus, decideStalledReel } =
+    await import("./meta-stalled-reel");
+  const cutoff = new Date(now.getTime() - STALLED_REEL_CLAIM_MIN * 60_000).toISOString();
+  const { data: rows, error } = await supabaseAdmin
+    .from("social_publish_queue")
+    .select("*")
+    .eq("status", "publishing")
+    .in("platform", ["facebook_reels", "instagram_reels"])
+    .lt("updated_at", cutoff)
+    .order("updated_at", { ascending: true })
+    .limit(10);
   if (error) {
-    console.error("[social-publish] reclaimStalledMetaClaims:", error.message);
+    console.error("[social-publish] healStalledReels:", error.message);
     return 0;
   }
-  return data?.length ?? 0;
+  const { pageToken } = getMetaPublishEnv();
+  let handled = 0;
+  for (const raw of rows ?? []) {
+    const item = raw as QueueRow;
+    const platform = item.platform as "facebook_reels" | "instagram_reels";
+    const externalId = platform === "facebook_reels" ? item.external_post_id : item.ig_creation_id;
+    try {
+      let remote: string | null = null;
+      if (externalId) {
+        const json =
+          platform === "facebook_reels"
+            ? await graphGet(externalId, { fields: "status", access_token: pageToken })
+            : await graphGet(externalId, { fields: "status_code", access_token: pageToken });
+        remote =
+          platform === "facebook_reels"
+            ? classifyFacebookReelStatus(json)
+            : String((json as { status_code?: unknown }).status_code ?? "");
+      }
+      const decision = decideStalledReel({ platform, externalId, remote });
+      if (decision.action === "published") {
+        await markPublished(item.id, decision.externalId, item.attempt_count + 1);
+      } else if (decision.action === "wait") {
+        // Odśwież znacznik czasu — kolejne sprawdzenie za STALLED_REEL_CLAIM_MIN.
+        await supabaseAdmin
+          .from("social_publish_queue")
+          .update({ status: "publishing" })
+          .eq("id", item.id)
+          .eq("status", "publishing");
+        continue;
+      } else if (decision.action === "processing") {
+        await supabaseAdmin
+          .from("social_publish_queue")
+          .update({ status: "processing", scheduled_at: now.toISOString() })
+          .eq("id", item.id)
+          .eq("status", "publishing");
+      } else {
+        const attempts = item.attempt_count + 1;
+        const exhausted = attempts >= MAX_ATTEMPTS;
+        await supabaseAdmin
+          .from("social_publish_queue")
+          .update({
+            status: exhausted ? "failed" : "pending",
+            attempt_count: attempts,
+            scheduled_at: now.toISOString(),
+            ig_creation_id: null,
+            ig_container_at: null,
+            last_error: exhausted
+              ? `Publikacja przerwana ${attempts} razy (${decision.reason}) — sprawdź wpis ręcznie.`
+              : `Publikacja przerwana w trakcie (${decision.reason}) — ponawiam automatycznie.`,
+          })
+          .eq("id", item.id)
+          .eq("status", "publishing");
+      }
+      handled += 1;
+    } catch (e) {
+      // Meta nie odpowiedziała — spróbujemy przy następnym przebiegu.
+      console.warn(
+        `[social-publish] zawieszona rolka ${item.id}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+  return handled;
 }
 
 type TickState = { rateLimited: boolean; retryAfterMin: number | null };
@@ -613,7 +703,7 @@ export async function runSocialPublishTick(): Promise<{
   // Najpierw domykamy kontenery IG (najtańsze wywołania i najbliżej publikacji),
   // dopiero potem bierzemy nowe wpisy — przy limicie Meta liczy się kolejność.
   const reclaimed = await reclaimStalledMetaClaims();
-  if (reclaimed > 0) errors.push(`Odzyskano ${reclaimed} wpis(y) wiszące w „publishing” → failed.`);
+  if (reclaimed > 0) errors.push(`Obsłużono ${reclaimed} wpis(y) wiszące w „publishing”.`);
 
   const ig = await processInstagramProcessingItems(state);
   published += ig.published;

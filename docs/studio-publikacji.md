@@ -271,6 +271,34 @@ renditionu, więc po naprawie usługi kompresja rusza od nowa. Optymistyczne
 przejęcie wiersza (`pending → processing`) chroni przed podwójnym zleceniem,
 gdy tick i „Publikuj teraz" trafią na ten sam plik w tej samej chwili.
 
+**Zawieszenia przebiegu (poprawka 30.10.2026).** 28–30.10 trzy z czterech
+FB Reels wisiały w `publishing`, a „Bank odmówił” dwa dni nie wychodził na FB
+i YouTube. Przyczyny i zabezpieczenia:
+
+- **Uśpiona usługa w starej wersji.** Po odpowiedzi „stara wersja usługi”
+  każda publikacja budziła usługę na Render (do minuty) w trakcie wysyłki,
+  a przebieg był ucinany. Teraz przez 6 h od ostatniej prawdziwej takiej
+  odpowiedzi (`TRANSCODE_UNSUPPORTED_COOLDOWN_MS`) usługi nie wołamy wcale:
+  oryginał idzie od razu, wiersz dostaje `TRANSCODE_UNSUPPORTED_SKIPPED`
+  (nie przedłuża przerwy). Po 6 h jedna prawdziwa próba sprawdza, czy
+  usługę zaktualizowano. Trwała naprawa: redeploy `caption-burner` na Render.
+- **Porzucone zlecenie kompresji.** Wiersz `processing` bez `job_id` starszy
+  niż 10 min (`RENDITION_CLAIM_STALE_MS`) wolno przejąć od nowa — wcześniej
+  wisiał na zawsze i odkładał publikację co 5 minut.
+- **Zawieszone rolki Meta** (`meta-stalled-reel.ts`). Id wideo FB zapisujemy
+  w `external_post_id` zaraz po `upload_phase=start`. Rolka (FB / IG) wisząca
+  w `publishing` ponad 30 min jest sprawdzana w Mecie: opublikowana → wpis
+  `published`; w toku → czekamy; nie wyszła → wraca do `pending` (limit 3
+  prób). Bez duplikatów i bez ręcznego „Ponów”. Posty FB (`facebook_post`)
+  zostają przy dawnym zachowaniu (`failed` po 60 min).
+- **Kolejność w ticku.** Publikacje (Meta, TikTok, X) idą na początku
+  przebiegu, kompresja i Studio na końcu.
+- **Studio.** Zadanie wiszące ponad 30 min w `generating_script` /
+  `generating_audio` / `uploading` bez `heygen_video_id`
+  (`failStalledStudioJobs`) przechodzi w `failed` z opisem — nie blokuje
+  zapasu autopilota. Bez automatycznego ponowienia, bo render HeyGen mógł
+  zostać już zlecony.
+
 Diagnostyka: `run_publish_tick` (MCP) zwraca sekcję `renditions`
 (`discovered / submitted / ready / failed / errors`), a `GET /health` usługi
 mówi, czy ma `ffprobe`. Stan konkretnego pliku: tabela `video_renditions`

@@ -19,17 +19,16 @@ import { requireCronSecret } from "@/lib/cron-auth.server";
 
 async function runTick(): Promise<Response> {
   try {
-    // Najpierw wideo (może dostawić wpisy auto-publikacji), potem publikacja.
-    const video = await runStudioVideoTick().catch((e) => ({
+    // Publikacje NAJPIERW (decyzja 30.10.2026): wcześniej szły po obsłudze
+    // Studia (rendery HeyGen, wykończenia) i kompresji, więc długi przebieg
+    // przerywał wysyłkę FB Reels w połowie — wpis wisiał w „publishing”.
+    // Publikacja potrzebuje świeżego przebiegu; Studio i kompresja dokończą
+    // się w kolejnych przebiegach (co 10 min), a wpisy auto-publikacji ze
+    // Studia wyjdą w następnym ticku.
+    const social = await runSocialPublishTick().catch((e) => ({
+      ok: false,
       error: e instanceof Error ? e.message : String(e),
     }));
-    // Kompresja przed publikacją: renditions dla wpisów czekających w kolejkach
-    // (także YouTube), żeby plik był gotowy, zanim wpis stanie się wymagalny.
-    // Błąd tej części nie może wywalić publikacji.
-    const renditions = await runVideoRenditionTick().catch((e) => ({
-      error: e instanceof Error ? e.message : String(e),
-    }));
-    const social = await runSocialPublishTick();
     // TikTok osobno: własne API, własny token i limit ~15 postów/dobę
     // (jedna publikacja na przebieg). Błąd TikToka nie może wywalić ticka Meta.
     const tiktok = await runTiktokPublishTick().catch((e) => ({
@@ -38,6 +37,16 @@ async function runTick(): Promise<Response> {
     // X osobno z tego samego powodu co TikTok: własne API, własny token
     // i własne limity. Błąd X-a nie może wywalić ticka Meta ani TikToka.
     const x = await runXPublishTick().catch((e) => ({
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    // Kompresja przed publikacją: renditions dla wpisów czekających w kolejkach
+    // (także YouTube), żeby plik był gotowy, zanim wpis stanie się wymagalny.
+    // Błąd tej części nie może wywalić przebiegu.
+    const renditions = await runVideoRenditionTick().catch((e) => ({
+      error: e instanceof Error ? e.message : String(e),
+    }));
+    // Studio na końcu (najdłuższe: HeyGen, TTS, zlecenia wykończenia).
+    const video = await runStudioVideoTick().catch((e) => ({
       error: e instanceof Error ? e.message : String(e),
     }));
     const result = { ...social, video, renditions, tiktok, x };
