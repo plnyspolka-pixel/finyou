@@ -15,6 +15,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { isInternalStaff } from "@/lib/access/guards.server";
 import {
   getReceivedEmail,
+  isFinanceYouMessage,
   listReceivedEmails,
   ResendReceivingError,
 } from "@/lib/resend-receiving.server";
@@ -62,14 +63,24 @@ export const Route = createFileRoute("/api/admin/resend-inbox")({
           const mode = url.searchParams.get("mode") ?? "list";
           if (mode === "read") {
             const id = url.searchParams.get("id") ?? "";
-            return json({ ok: true, email: await getReceivedEmail(id) });
+            const email = await getReceivedEmail(id);
+            if (!isFinanceYouMessage(email)) return json({ ok: false, error: "Not found" }, 404);
+            return json({ ok: true, email });
           }
           if (mode !== "list") return json({ ok: false, error: "Unknown mode" }, 400);
           const page = await listReceivedEmails({
             limit: Number(url.searchParams.get("limit") ?? 30),
             after: url.searchParams.get("after") || undefined,
           });
-          return json({ ok: true, ...page });
+          // The Resend team may use other domains: never return their emails
+          // through a Finance You staff endpoint, even to a valid operator.
+          return json({
+            ok: true,
+            object: page.object,
+            data: page.data.filter(isFinanceYouMessage),
+            has_more: page.has_more,
+            next_after: page.data[page.data.length - 1]?.id ?? null,
+          });
         } catch (e) {
           return errorReply(e);
         }
