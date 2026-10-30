@@ -379,6 +379,13 @@
       "when": 1793041156326,
       "tag": "0053_konsultacje_inwestora",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1793044756326,
+      "tag": "0054_manual_mediation_security",
+      "breakpoints": true
     }
   ]
 }
