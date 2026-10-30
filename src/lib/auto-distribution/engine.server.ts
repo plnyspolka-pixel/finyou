@@ -7,6 +7,8 @@ import { LEGACY_STATUS_MAP, normalizeLoanStatus } from "@/lib/loan-status";
 
 /** Statusy, w których wniosek może kwalifikować się do dystrybucji. */
 const CANDIDATE_STATUSES = new Set([
+  "nowy_lead",
+  "w_trakcie_uzupelniania",
   "braki_w_dokumentach",
   "do_kontaktu",
   "w_follow_upie",
