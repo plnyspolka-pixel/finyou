@@ -39,7 +39,7 @@ export const listInstitutionalInvestors = createServerFn({ method: "GET" })
 
 /**
  * Wysyła ofertę e-mailem do inwestorów instytucjonalnych.
- * investorIds puste/nieprzekazane => wysyłka do WSZYSTKICH aktywnych instytucji.
+ * Wyłącznie jeden wskazany inwestor w indywidualnej sprawie.
  */
 export const sendOfferDistribution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -47,7 +47,7 @@ export const sendOfferDistribution = createServerFn({ method: "POST" })
     z
       .object({
         applicationId: z.string().uuid(),
-        investorIds: z.array(z.string().uuid()).max(500).optional(),
+        investorIds: z.array(z.string().uuid()).length(1),
         note: z.string().max(4000).optional(),
       })
       .parse(d),
