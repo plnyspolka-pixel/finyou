@@ -149,6 +149,7 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   // (strona główna), Klient, Pośrednik — potem Cennik, O nas, Blog, FAQ.
   const nav = [
     { label: "Inwestor", href: "/" },
+    { label: "Sklep", href: "/sklep" },
     { label: "Klient", href: "/dla-klienta" },
     { label: "Pośrednik", href: "/dla-posrednika" },
     { label: "Cennik", href: "/#cennik" },
@@ -284,6 +285,7 @@ export function SiteFooter() {
       h: "Ścieżki",
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
+        { t: "Sklep — produkty inwestora", href: "/sklep" },
         { t: "Jesteś inwestorem? →", href: PAGE_PATH.inwestor },
         { t: "Pośrednik", href: PAGE_PATH.posrednik },
         { t: "Program partnerski", href: "/program-partnerski" },
