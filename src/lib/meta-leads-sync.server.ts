@@ -1,6 +1,6 @@
 // Pełna logika pull-a leadów z Meta (Graph API) – wywoływana z:
 // - createServerFn (admin "Sync Meta leads" w panelu)
-// - cron hooka /api/public/hooks/meta-leads-pull (co minutę)
+// - cron hooka /api/public/hooks/meta-leads-pull (co 15 minut)
 import { extractLoanAmount, extractPropertyTypeRaw } from "@/lib/meta-lead-answers.server";
 import { ensureMetaTokens } from "@/lib/meta-tokens.server";
 import { leadDynamicVariables, resolveLeadRole } from "@/lib/ania-lead-context";
@@ -15,6 +15,37 @@ import {
 } from "@/lib/meta-lead-fields";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
+const DISCOVERY_MARKER = "meta_forms_discovery";
+
+/**
+ * Pilnuje, żeby strona miała subskrypcję `leadgen` dla naszej aplikacji. Bez niej
+ * Meta nie wysyła webhooka z nowym leadem (subskrypcja wiadomości jej nie obejmuje)
+ * i leady wpadają tylko pullem. Dopisuje `leadgen` do istniejących pól.
+ * Zwraca opis błędu albo null.
+ */
+async function ensureLeadgenSubscription(
+  pageId: string,
+  pageToken: string,
+): Promise<string | null> {
+  try {
+    const r = await fetch(`${GRAPH}/${pageId}/subscribed_apps?access_token=${pageToken}`);
+    const j: any = await r.json();
+    if (!r.ok) return j?.error?.message ?? `subscribed_apps ${r.status}`;
+    const appId = process.env.META_APP_ID;
+    const app = (j?.data ?? []).find((a: any) => !appId || String(a.id) === appId) ?? null;
+    const fields: string[] = app?.subscribed_fields ?? [];
+    if (fields.includes("leadgen")) return null;
+    const body = new URLSearchParams({
+      subscribed_fields: [...new Set([...fields, "leadgen"])].join(","),
+      access_token: pageToken,
+    });
+    const p = await fetch(`${GRAPH}/${pageId}/subscribed_apps`, { method: "POST", body });
+    const pj: any = await p.json();
+    return p.ok && pj?.success ? null : (pj?.error?.message ?? `subscribe ${p.status}`);
+  } catch (e: any) {
+    return e?.message ?? String(e);
+  }
+}
 
 export async function runMetaLeadsSync(): Promise<{
   forms_discovered: number;
@@ -49,15 +80,18 @@ export async function runMetaLeadsSync(): Promise<{
   // Limit aplikacji Meta (#4) skaluje się z liczbą użytkowników i dla wewnętrznej
   // aplikacji jest mały, więc nie stać nas na to przy każdym przebiegu — nowe
   // formularze i tak pojawiają się rzadko.
-  const { data: ostatnieOdkrycie } = await supabaseAdmin
-    .from("meta_lead_forms")
-    .select("last_synced_at")
-    .order("last_synced_at", { ascending: false, nullsFirst: false })
-    .limit(1)
+  // Znacznik odkrywania trzymamy osobno (integration_settings „meta_forms_discovery”).
+  // Wcześniej brany był z meta_lead_forms.last_synced_at, który pull włączonych
+  // formularzy odświeża co przebieg — przez to odkrywanie nie ruszyło od 22.09
+  // i nowe formularze (np. kampanii dla inwestorów) w ogóle nie trafiały do bazy.
+  const { data: znacznikOdkrycia } = await supabaseAdmin
+    .from("integration_settings")
+    .select("id, last_sync_at")
+    .eq("integration_name", DISCOVERY_MARKER)
     .maybeSingle();
   const odkrywaj =
-    !ostatnieOdkrycie?.last_synced_at ||
-    Date.now() - new Date(ostatnieOdkrycie.last_synced_at).getTime() > 60 * 60 * 1000;
+    !znacznikOdkrycia?.last_sync_at ||
+    Date.now() - new Date(znacznikOdkrycia.last_sync_at).getTime() > 60 * 60 * 1000;
 
   if (odkrywaj) {
     try {
@@ -67,8 +101,12 @@ export async function runMetaLeadsSync(): Promise<{
       const pagesJson: any = await pagesRes.json();
       if (!pagesRes.ok) throw new Error(pagesJson?.error?.message ?? `pages ${pagesRes.status}`);
       const pages: any[] = pagesJson?.data ?? [];
+      const { data: znane } = await supabaseAdmin.from("meta_lead_forms").select("meta_form_id");
+      const znaneIds = new Set((znane ?? []).map((f: any) => String(f.meta_form_id)));
       for (const page of pages) {
         const pageToken = page.access_token ?? token;
+        const sub = await ensureLeadgenSubscription(String(page.id), pageToken);
+        if (sub) summary.errors.push(`leadgen ${page.name}: ${sub}`);
         const formsRes = await fetch(
           `${GRAPH}/${page.id}/leadgen_forms?fields=id,name,status&limit=100&access_token=${pageToken}`,
         );
@@ -79,17 +117,33 @@ export async function runMetaLeadsSync(): Promise<{
         }
         for (const form of formsJson?.data ?? []) {
           summary.forms_discovered += 1;
-          await supabaseAdmin.from("meta_lead_forms").upsert(
-            {
-              meta_form_id: String(form.id),
-              meta_page_id: String(page.id),
-              form_name: form.name ?? null,
-              page_name: page.name ?? null,
-              last_synced_at: new Date().toISOString(),
-            },
-            { onConflict: "meta_form_id" },
-          );
+          const row: Record<string, unknown> = {
+            meta_form_id: String(form.id),
+            meta_page_id: String(page.id),
+            form_name: form.name ?? null,
+            page_name: page.name ?? null,
+          };
+          // Nowy, aktywny formularz od razu włączony do pulla — inaczej jego leady
+          // nie trafiają do CRM, dopóki ktoś ręcznie nie przestawi przełącznika.
+          // Istniejących formularzy nie ruszamy (wyłączone zostają wyłączone).
+          if (!znaneIds.has(String(form.id))) row.is_enabled = form.status === "ACTIVE";
+          await supabaseAdmin
+            .from("meta_lead_forms")
+            .upsert(row as any, { onConflict: "meta_form_id" });
         }
+      }
+      if (znacznikOdkrycia?.id) {
+        await supabaseAdmin
+          .from("integration_settings")
+          .update({ last_sync_at: new Date().toISOString(), last_error: null })
+          .eq("id", znacznikOdkrycia.id);
+      } else {
+        await supabaseAdmin.from("integration_settings").insert({
+          integration_name: DISCOVERY_MARKER,
+          is_enabled: true,
+          status: "polaczona",
+          last_sync_at: new Date().toISOString(),
+        });
       }
     } catch (e: any) {
       summary.errors.push(`discover: ${e?.message ?? e}`);
@@ -142,6 +196,7 @@ export async function runMetaLeadsSync(): Promise<{
     let url: string | null =
       `${GRAPH}/${formId}/leads?fields=id,created_time,field_data,form_id,campaign_id,ad_id&limit=50&filtering=${filter}&access_token=${pageToken}`;
     let maxCreated = sinceMs;
+    let nowychZFormularza = 0;
 
     try {
       while (url) {
@@ -164,6 +219,7 @@ export async function runMetaLeadsSync(): Promise<{
           if (dup) continue;
 
           summary.leads_new += 1;
+          nowychZFormularza += 1;
           const fd = lead.field_data ?? [];
 
           // Formularz klienta zewnętrznego (kampania prowadzona z naszego konta dla
@@ -194,6 +250,7 @@ export async function runMetaLeadsSync(): Promise<{
                 createdTime: lead.created_time ?? null,
                 fieldData: fd,
                 allowCall: !!autoCall && (form as any).voicebot_enabled !== false,
+                allowSms: (form as any).voicebot_enabled !== false,
               });
               if (r.callResult === "dispatched") summary.calls_queued += 1;
             } catch (e: any) {
@@ -458,7 +515,7 @@ export async function runMetaLeadsSync(): Promise<{
         .update({
           last_lead_at: new Date(maxCreated).toISOString(),
           last_synced_at: new Date().toISOString(),
-          total_leads_pulled: (form.total_leads_pulled ?? 0) + summary.leads_new,
+          total_leads_pulled: (form.total_leads_pulled ?? 0) + nowychZFormularza,
           last_error: null,
         })
         .eq("id", form.id);
