@@ -357,6 +357,7 @@ export const Route = createFileRoute("/api/public/meta-leads-webhook")({
                     createdTime: details.created_time ?? null,
                     fieldData: fd,
                     allowCall: !!vs && vs.call_trigger !== "manual" && fr.voicebotEnabled,
+                    allowSms: fr.voicebotEnabled,
                   }).catch((e) => console.error("[meta-leads-webhook] investor capture", e));
                   continue;
                 }
