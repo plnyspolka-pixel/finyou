@@ -178,7 +178,8 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
 
   // Paginacja, aby starsze wnioski nie znikały z wyszukiwania po 500 rekordach.
   const pageSize = 200;
-  for (let offset = 0; offset < 10_000 && result.sent_cases < capacity; offset += pageSize) {
+  let attemptedCases = 0;
+  for (let offset = 0; offset < 10_000 && attemptedCases < capacity; offset += pageSize) {
     const { data: loans, error } = await supabaseAdmin
       .from("loan_applications")
       .select("id, status, loan_amount, location_potential_score, business_purpose_declared")
@@ -266,6 +267,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
         result.proposed += 1;
       }
 
+      attemptedCases += 1;
       const sent = await approveProposal(proposalId!, null);
       if (!sent.ok) {
         result.failed += 1;
@@ -274,7 +276,7 @@ export async function syncAutoDistributionProposals(): Promise<SyncResult | { di
       result.sent_cases += 1;
       result.sent += sent.sent?.length ?? 0;
       result.failed += sent.failed?.length ?? 0;
-      if (result.sent_cases >= capacity) break;
+      if (attemptedCases >= capacity) break;
     }
     if (candidates.length < pageSize) break;
   }
@@ -332,8 +334,8 @@ export async function approveProposal(
   if (claimErr) throw new Error(claimErr.message);
   if (!claimed?.length) return { ok: false, error: "Propozycja jest już wysyłana przez inny proces." };
 
-  const { distributeOfferToInvestors } = await import("@/lib/offer-distribution-core.server");
   try {
+    const { distributeOfferToInvestors } = await import("@/lib/offer-distribution-core.server");
     // Do WSZYSTKICH aktywnych instytucji przyjmujących auto-oferty.
     // Ograniczenie odbiorców dotyczy wyłącznie wyraźnych rezygnacji/pauz.
     const recipients = await institutionalAutoRecipients();
@@ -342,7 +344,7 @@ export async function approveProposal(
       applicationId: proposal.loan_application_id,
       investorIds: recipients.map((i: any) => i.id),
     });
-    await (supabaseAdmin as any)
+    const { error: completedErr } = await (supabaseAdmin as any)
       .from("auto_distribution_proposals")
       .update({
         status: "approved_sent",
@@ -354,6 +356,7 @@ export async function approveProposal(
           : null,
       })
       .eq("id", proposal.id);
+    if (completedErr) throw new Error(completedErr.message);
     return { ok: true, sent: sendResult.sent, skipped: sendResult.skipped, failed: sendResult.failed };
   } catch (e: any) {
     await (supabaseAdmin as any)
