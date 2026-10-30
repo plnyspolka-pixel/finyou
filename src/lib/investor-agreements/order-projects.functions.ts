@@ -455,7 +455,6 @@ export async function loadMyOrderProjects(
   readOnly: boolean,
 ): Promise<MyOrderProjectsResult> {
   {
-    const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
 
     const [{ data: orders }, { data: investor }] = await Promise.all([
       loose(supabaseAdmin)
