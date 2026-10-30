@@ -293,6 +293,13 @@ i YouTube. Przyczyny i zabezpieczenia:
   zostają przy dawnym zachowaniu (`failed` po 60 min).
 - **Kolejność w ticku.** Publikacje (Meta, TikTok, X) idą na początku
   przebiegu, kompresja i Studio na końcu.
+- **Gotowe rolki Studia bez kompresji.** Rolka wykończona w Studiu (Remotion
+  na AWS Lambda albo zapasowo caption-burner) to MP4 H.264 w
+  `studio-media/mcp/studio-napisy/` — przy rozmiarze do 60 MB idzie od razu,
+  bez usługi FFmpeg (`isStudioFinishedReelUrl`, `studioReelSkipsCompression`),
+  i nie jest zakładana z wyprzedzeniem w `video_renditions`. Publikacja rolek
+  nie zależy więc od usługi na Render; kompresja zostaje dla surowych filmów
+  z biblioteki materiałów (MOV, 4K, pliki z telefonu).
 - **Studio.** Zadanie wiszące ponad 30 min w `generating_script` /
   `generating_audio` / `uploading` bez `heygen_video_id`
   (`failStalledStudioJobs`) przechodzi w `failed` z opisem — nie blokuje

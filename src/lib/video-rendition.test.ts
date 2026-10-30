@@ -6,12 +6,14 @@ import {
   VIDEO_RENDITION_MAX_ATTEMPTS,
   VIDEO_RENDITION_TIMEOUT_MS,
   isRenditionCandidateUrl,
+  isStudioFinishedReelUrl,
   isTranscodeUnsupportedError,
   isVideoPreparingNote,
   preparingNote,
   renditionSourcesToDiscover,
   renditionStoragePath,
   resolveVideoRendition,
+  studioReelSkipsCompression,
   type RenditionJobProbe,
   type VideoRenditionRowLike,
 } from "./video-rendition";
@@ -220,5 +222,29 @@ describe("isTranscodeUnsupportedError", () => {
       isTranscodeUnsupportedError("caption-burner: ass nie zawiera sekcji [Events] z kwestiami"),
     ).toBe(true);
     expect(isTranscodeUnsupportedError("caption-burner: przekroczony czas odpowiedzi")).toBe(false);
+  });
+});
+
+describe("gotowe rolki Studia bez kompresji", () => {
+  const REEL =
+    "https://jqvepxhulxdnbwbogkhe.supabase.co/storage/v1/object/public/studio-media/mcp/studio-napisy/2026-10/bank-odm-wi-sprawd-c5bd7ed8.mp4";
+  const MB = 1024 * 1024;
+
+  it("rozpoznaje rolkę wykończoną w Studiu (AWS / caption-burner)", () => {
+    expect(isStudioFinishedReelUrl(REEL)).toBe(true);
+    expect(isStudioFinishedReelUrl(`${REEL}?t=1`)).toBe(true);
+    // Surowy film z biblioteki, napisy SRT i cudze adresy — nie.
+    expect(isStudioFinishedReelUrl(SOURCE)).toBe(false);
+    expect(isStudioFinishedReelUrl(REEL.replace(".mp4", ".srt"))).toBe(false);
+    expect(isStudioFinishedReelUrl("https://example.com/studio-napisy/a.mp4")).toBe(false);
+    expect(isStudioFinishedReelUrl(null)).toBe(false);
+  });
+
+  it("pomija kompresję tylko przy znanym rozmiarze w limicie 60 MB", () => {
+    expect(studioReelSkipsCompression(REEL, 18 * MB)).toBe(true);
+    expect(studioReelSkipsCompression(REEL, 60 * MB)).toBe(true);
+    expect(studioReelSkipsCompression(REEL, 61 * MB)).toBe(false);
+    expect(studioReelSkipsCompression(REEL, null)).toBe(false);
+    expect(studioReelSkipsCompression(SOURCE, 5 * MB)).toBe(false);
   });
 });

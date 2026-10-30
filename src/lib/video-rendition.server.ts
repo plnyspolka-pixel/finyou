@@ -30,12 +30,14 @@ import {
   VIDEO_RENDITION_TARGET,
   TRANSCODE_UNSUPPORTED_REASON,
   isRenditionCandidateUrl,
+  isStudioFinishedReelUrl,
   isTranscodeUnsupportedError,
   preparingNote,
   renditionGiveUpNote,
   renditionSourcesToDiscover,
   renditionStoragePath,
   resolveVideoRendition,
+  studioReelSkipsCompression,
   type RenditionJobProbe,
   type VideoRenditionRowLike,
 } from "./video-rendition";
@@ -427,6 +429,12 @@ async function giveUp(row: VideoRenditionRow, reason: string): Promise<SettleOut
  * kompresja trwa (albo została właśnie zlecona). Bez usługi — oryginał.
  */
 export async function ensurePublishableVideo(sourceUrl: string): Promise<string> {
+  // Gotowa rolka Studia (AWS / caption-burner) w limicie rozmiaru idzie od
+  // razu — bez usługi FFmpeg i bez czekania na nią.
+  if (isStudioFinishedReelUrl(sourceUrl)) {
+    const size = await publicFileSize(sourceUrl);
+    if (studioReelSkipsCompression(sourceUrl, size)) return sourceUrl;
+  }
   const { isCaptionBurnerConfigured } = await import("./caption-burner.server");
   if (!isCaptionBurnerConfigured() || !isRenditionCandidateUrl(sourceUrl)) return sourceUrl;
 
@@ -495,7 +503,9 @@ export async function runVideoRenditionTick(): Promise<{
 
   // 1. Odkrywanie — plik ma być gotowy PRZED terminem publikacji.
   try {
-    const urls = await queuedVideoUrls();
+    // Gotowe rolki Studia nie potrzebują kompresji z wyprzedzeniem — ewentualny
+    // za duży plik obsłuży publikator (ensurePublishableVideo sprawdza rozmiar).
+    const urls = (await queuedVideoUrls()).filter((u) => !isStudioFinishedReelUrl(u));
     if (urls.length) {
       const { data: known } = await table()
         .select("source_url")
