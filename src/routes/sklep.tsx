@@ -212,7 +212,11 @@ function ProductCard({ offer, choose, active }: { offer: Offer; choose: (id: str
 function ProductDetail({ offer }: { offer: Offer }) {
   const variants: readonly string[] = offer.id === "akademia" ? LESSONS : offer.id === "kancelaria" ? TEMPLATES : [];
   const [selected, setSelected] = useState("pakiet");
-  const variantName = selected === "pakiet" ? offer.title : selected;
+  const variantName = selected === "pakiet" ? (offer.id === "akademia" ? "Pełna Akademia Inwestora" : "Pakiet 10 dokumentów") : selected;
+  const displayPrice = offer.id === "akademia" ? (selected === "pakiet" ? "1 990 zł" : "149 zł") :
+    offer.id === "kancelaria" ? (selected === "pakiet" ? "990 zł" : "199 zł") : offer.price;
+  const displayTerms = offer.id === "akademia" ? (selected === "pakiet" ? "28 lekcji · cena proponowana" : "jedna lekcja · cena proponowana") :
+    offer.id === "kancelaria" ? (selected === "pakiet" ? "pakiet 10 dokumentów · cena proponowana" : "gotowy dokument · cena proponowana") : offer.priceSub;
   const mailto = "mailto:kontakt@financeyou.pl?subject=" + encodeURIComponent("Zakup produktu Finance You: " + offer.title) +
     "&body=" + encodeURIComponent("Dzień dobry, interesuje mnie zakup: " + variantName +
       ".\nProszę o potwierdzenie ceny i możliwości zakupu pojedynczego produktu.\n\nDane kontaktowe:");
@@ -230,14 +234,14 @@ function ProductDetail({ offer }: { offer: Offer }) {
         </div>
         <div style={{ background: "rgba(79,139,240,.08)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", padding: "1.5rem", alignSelf: "stretch" }}>
           <div style={{ fontSize: ".75rem", color: "var(--muted-foreground)", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em" }}>Planowana sprzedaż indywidualna</div>
-          <div style={{ color: GOLD, fontSize: "2.15rem", fontWeight: 900, marginTop: ".65rem" }}>{offer.price}</div>
-          <div style={{ color: "var(--muted-foreground)", fontSize: ".8rem", marginTop: 4 }}>{offer.priceSub}</div>
+          <div style={{ color: GOLD, fontSize: "2.15rem", fontWeight: 900, marginTop: ".65rem" }}>{displayPrice}</div>
+          <div style={{ color: "var(--muted-foreground)", fontSize: ".8rem", marginTop: 4 }}>{displayTerms}</div>
           {variants.length > 0 && (
             <div style={{ marginTop: "1.35rem" }}>
               <label htmlFor={offer.id + "-wariant"} style={{ fontSize: ".85rem", fontWeight: 700 }}>Wybierz {offer.id === "akademia" ? "lekcję" : "dokument"}</label>
               <select id={offer.id + "-wariant"} value={selected} onChange={(e) => setSelected(e.target.value)}
                 style={{ display: "block", marginTop: ".5rem", padding: ".8rem", width: "100%", maxWidth: "100%", color: "var(--foreground)", background: "#0d1638", border: "1px solid var(--border)", borderRadius: 8, fontFamily: "inherit", fontSize: ".78rem" }}>
-                <option value="pakiet">{offer.id === "akademia" ? "Cały program" : "Pakiet dokumentów"}</option>
+                <option value="pakiet">{offer.id === "akademia" ? "Cały program (28 lekcji)" : "Pakiet 10 dokumentów"}</option>
                 {variants.map((t, i) => <option key={t} value={t}>{i + 1}. {t}</option>)}
               </select>
             </div>
