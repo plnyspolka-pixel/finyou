@@ -5,8 +5,6 @@ import { getRequest } from "@tanstack/react-start/server";
 import {
   buildKartaLeada,
   canTransition,
-  ACTIVE_MATCH_STATUSES,
-  amountMatchesOrder,
   isMatchStale,
   TEASER_HOURS,
   type MatchStatus,
