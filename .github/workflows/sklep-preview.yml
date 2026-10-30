@@ -1,0 +1,30 @@
+name: Finance You — kontrola strony /sklep
+
+on:
+  push:
+    branches:
+      - feat/financeyou-sklep-brand-native
+    paths:
+      - 'src/routes/sklep.tsx'
+      - '.github/workflows/sklep-preview.yml'
+  pull_request:
+    paths:
+      - 'src/routes/sklep.tsx'
+      - '.github/workflows/sklep-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  brand-native-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install dependencies without changing lockfile
+        run: bun install --frozen-lockfile
+      - name: Production build (routing and TypeScript transpilation)
+        run: bun run build
