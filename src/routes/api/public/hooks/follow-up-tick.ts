@@ -83,6 +83,18 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         // pg_net zrywa połączenie po 5 s i kadencja nie dochodziła do głosu.
 
         const now = Date.now();
+        // Przypomnienia tylko w ciągu dnia (8–20 czasu polskiego) — bot pisał
+        // do klienta o 2:45 w nocy.
+        const warsawHour = Number(
+          new Intl.DateTimeFormat("en-GB", {
+            timeZone: "Europe/Warsaw",
+            hour: "2-digit",
+            hourCycle: "h23",
+          }).format(new Date(now)),
+        );
+        if (warsawHour < 8 || warsawHour >= 20) {
+          return Response.json({ ok: true, processed: 0, sent: 0, quiet_hours: true });
+        }
         const cutoff = new Date(now - 31 * 24 * 3600_000).toISOString();
 
         // 1) Wszyscy adresaci z outboundami w ostatnich 31 dniach na obsługiwanych kanałach.
@@ -106,7 +118,7 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: number;
             lastOutboundAt: number;
             lastInboundAt: number;
-            lastInboundText: string | null;
+            callRequested: boolean;
           }
         >();
         for (const c of comms ?? []) {
@@ -119,17 +131,15 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
             outboundCount: 0,
             lastOutboundAt: 0,
             lastInboundAt: 0,
-            lastInboundText: null,
+            callRequested: false,
           };
           const t = new Date(c.created_at).getTime();
           if (c.direction === "outbound") {
             g.outboundCount += 1;
             if (t > g.lastOutboundAt) g.lastOutboundAt = t;
           } else if (c.direction === "inbound") {
-            if (t > g.lastInboundAt) {
-              g.lastInboundAt = t;
-              g.lastInboundText = c.content ?? null;
-            }
+            if (t > g.lastInboundAt) g.lastInboundAt = t;
+            if (isCallRequest(c.content)) g.callRequested = true;
           }
           groups.set(key, g);
         }
@@ -139,9 +149,10 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
         for (const g of groups.values()) {
           if (g.outboundCount === 0) continue;
           if (g.lastInboundAt >= g.lastOutboundAt) continue;
-          // Klient poprosił o telefon — czeka na człowieka, nie na przypomnienia
-          // na czacie (zespół dostał już powiadomienie o wiadomości przychodzącej).
-          if (isCallRequest(g.lastInboundText)) continue;
+          // Klient poprosił o telefon (kiedykolwiek w oknie, nie tylko ostatnią
+          // wiadomością — po „Ok.” nadal czeka na telefon) — czeka na człowieka,
+          // nie na przypomnienia na czacie.
+          if (g.callRequested) continue;
           // Outboundy *po* ostatnim inboundzie:
           // upraszczamy — outboundCount globalny w oknie 31d. Jeśli był inbound,
           // przeliczymy dokładniej poniżej osobnym zapytaniem.
@@ -169,6 +180,8 @@ export const Route = createFileRoute("/api/public/hooks/follow-up-tick")({
           const lead = leadMap.get(g.leadId);
           if (!lead) continue;
           if (lead.status && TERMINAL_STATUSES.has(String(lead.status))) continue;
+          // Lead oznaczony do kontaktu przez zespół — rozmowę przejmuje człowiek.
+          if (lead.status === "wymaga_kontaktu") continue;
           if (lead.application_data?.followup_paused) continue;
           // Lead z utworzonym wnioskiem (komplet danych zebrany, np. na czacie)
           // nie dostaje już „dokończ wniosek" — sprawą zajmuje się analityk.
