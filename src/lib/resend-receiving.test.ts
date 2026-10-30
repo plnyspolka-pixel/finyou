@@ -78,6 +78,8 @@ describe("API and sync safety invariants", () => {
     expect(route).toContain("supabaseAdmin.auth.getUser");
     expect(route).toContain("isInternalStaff");
     expect(route).toContain("if (denied) return denied");
+    expect(route).toContain("data: page.data.filter(isFinanceYouMessage)");
+    expect(route).toContain("if (!isFinanceYouMessage(email))");
     expect(route).not.toContain("requireCronSecret");
   });
   it("backfill bypasses outgoing notifications and records original received timestamps", () => {
