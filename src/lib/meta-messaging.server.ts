@@ -471,6 +471,14 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     console.error("[fb-comment] lead magnet error", e);
   }
 
+  // Bez pytania ani sygnału zainteresowania (docinek, krytyka, „super”)
+  // nie odpisujemy automatycznie — komentarz jest w skrzynce zespołu.
+  const { wantsCommentReply } = await import("@/lib/comment-intent");
+  if (!wantsCommentReply(text)) {
+    console.log(`[fb-comment] bez auto-odpowiedzi — brak pytania/zainteresowania (from=${fromId})`);
+    return;
+  }
+
   const agent = await runAgentTurn({
     leadId,
     channel: "messenger",
@@ -484,8 +492,8 @@ export async function handleFeedChange(value: any, pageId: string | undefined) {
     fullReply += `\n\nLink do dokończenia wniosku: ${linkCall.result.link}`;
   }
 
-  const firstName = fromName?.split(/\s+/)[0];
-  const publicAck = `${firstName ? `Cześć ${firstName}! ` : "Cześć! "}Napisałem do Ciebie w wiadomości prywatnej 👋`;
+  // Ania pisze o sobie w formie żeńskiej i bez emoji — jak w każdym kanale.
+  const publicAck = "Dzień dobry, odpisałam w wiadomości prywatnej.";
   const pub = await replyToCommentPublic({ commentId, text: publicAck });
   await logLeadCommunication({
     leadId,
