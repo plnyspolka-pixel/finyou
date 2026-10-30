@@ -51,6 +51,16 @@ function readKey(): string {
   return key;
 }
 
+// Resend API has a per-team request rate limit. Space out Receiving reads
+// (including pages and individual messages) to avoid accidental 429s.
+let nextReadAt = 0;
+async function paceRequest(): Promise<void> {
+  const now = Date.now();
+  const start = Math.max(now, nextReadAt);
+  nextReadAt = start + 600;
+  if (start > now) await new Promise<void>((resolve) => setTimeout(resolve, start - now));
+}
+
 async function requestReceiving(
   path = "",
   query: Record<string, string | number | undefined> = {},
@@ -60,6 +70,7 @@ async function requestReceiving(
     if (value !== undefined && value !== "") url.searchParams.set(name, String(value));
   }
 
+  await paceRequest();
   const res = await fetch(url, {
     method: "GET",
     headers: {
