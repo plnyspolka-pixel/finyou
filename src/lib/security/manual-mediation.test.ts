@@ -1,4 +1,4 @@
-/** Regresja: w indywidualnym pośrednictwie żaden endpoint nie dobiera sam projektów. */
+/** Regresja: Tinder 1:1 pozostaje ręczny, instytucje działają automatycznie. */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,8 +17,9 @@ describe("indywidualne pośrednictwo — ograniczenia kanałów ofertowych", () 
   it("nie uruchamia automatycznego dopasowania przy odczycie ani z crona", () => {
     expect(orderCycle).not.toContain("autoMatchInvestorOrders(");
     expect(orderServer).not.toContain("autoMatchInvestorOrders(");
-    expect(distribution).toContain("return { disabled: true };");
-    expect(distribution).toContain("Automatyczna dystrybucja jest wyłączona.");
+    // Oddzielny kanał B2B do instytucji jest celowo zautomatyzowany.
+    expect(distribution).toContain("INSTITUTIONAL_LOCATION_SCORE_THRESHOLD = 50");
+    expect(distribution).toContain('await approveProposal(proposalId!, null)');
   });
 
   it("nie dopuszcza samodzielnego pobrania projektu bez ręcznego dopasowania", () => {
@@ -30,9 +31,12 @@ describe("indywidualne pośrednictwo — ograniczenia kanałów ofertowych", () 
     expect(orderCycle).toContain("min(20).max(2000)");
   });
 
-  it("wymaga jednego odbiorcy zamiast wysyłki do wszystkich", () => {
-    expect(email).toContain("input.investorIds.length !== 1");
-    expect(source("src/lib/offer-distribution.functions.ts")).toContain(".length(1)");
+  it("dystrybucja instytucjonalna zachowuje wysyłkę do wszystkich aktywnych", () => {
+    expect(email).not.toContain("input.investorIds.length !== 1");
+    expect(distribution).toContain("applicationId: proposal.loan_application_id");
+    expect(source("src/lib/offer-distribution.functions.ts")).toContain("investorIds: z.array(z.string().uuid()).max(500).optional()");
+    expect(source("src/routes/api/public/hooks/auto-distribution-tick.ts"))
+      .toContain("result.sent_cases || result.failed");
   });
 
   it("odbiera authenticated dostęp do dawnego katalogu ofert; migracje mają lustro", () => {
