@@ -92,8 +92,8 @@ function SkrzynkaPage() {
         body: JSON.stringify({
           senderFilter: filter || undefined,
           after: after || undefined,
-          pageSize: 20,
-          maxPages: 1,
+          pageSize: filter ? 30 : 20,
+          maxPages: filter ? 5 : 1,
         }),
       });
       const result = (await response.json()) as ResendSyncReport & {
