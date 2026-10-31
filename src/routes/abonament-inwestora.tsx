@@ -86,7 +86,7 @@ function InvestorCheckoutPage() {
   const search = Route.useSearch();
   const { products } = Route.useLoaderData();
   const period: BillingPeriod = "rocznie";
-  const product = products.find((p) => p.active && p.code === SUBSCRIPTION_OPTIONS.rocznie.productCode) ?? fallbackProduct(period);
+  const product = products.find((p: AccessProduct) => p.active && p.code === SUBSCRIPTION_OPTIONS.rocznie.productCode) ?? fallbackProduct(period);
   const returned = Boolean(search.tpay && search.payment);
 
   return (
