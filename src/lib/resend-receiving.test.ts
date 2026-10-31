@@ -82,6 +82,19 @@ describe("API and sync safety invariants", () => {
     expect(route).toContain("if (!isFinanceYouMessage(email))");
     expect(route).not.toContain("requireCronSecret");
   });
+  it("one-shot server execution requires an unguessable token and consumes it atomically", () => {
+    const runner = source("src/routes/api/internal/resend-single-run.ts");
+    expect(runner).toContain('createHash("sha256")');
+    expect(runner).toContain("timingSafeEqual");
+    expect(runner).toContain('state !== "pending"');
+    expect(runner).toContain('.contains("configuration", { token_sha256: expected, state: "pending" })');
+    expect(runner).toContain('state: "running"');
+    expect(runner).toContain("synchronizeResendReceived");
+    expect(runner).toContain("return noStore(204)");
+    expect(runner).not.toContain("sendResendEmail");
+    expect(runner).not.toContain("runAgentTurn");
+  });
+
   it("backfill bypasses outgoing notifications and records original received timestamps", () => {
     const sync = source("src/lib/resend-received-sync.server.ts");
     expect(sync).toContain("created_at: normalDate(mail.created_at)");
