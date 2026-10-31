@@ -237,8 +237,13 @@ function relevantExcerpt(mail: ResendReceivedMessage): string {
 export async function synchronizeResendReceived(
   options: ResendSyncOptions = {},
 ): Promise<ResendSyncResult> {
-  const pageSize = Math.max(1, Math.min(30, Math.floor(options.pageSize ?? 20)));
-  const maxPages = Math.max(1, Math.min(5, Math.floor(options.maxPages ?? 1)));
+  const requestedPageSize = options.pageSize ?? 20;
+  const requestedMaxPages = options.maxPages ?? 1;
+  if (!Number.isFinite(requestedPageSize) || !Number.isFinite(requestedMaxPages)) {
+    throw new Error("Nieprawidłowe limity synchronizacji.");
+  }
+  const pageSize = Math.max(1, Math.min(30, Math.floor(requestedPageSize)));
+  const maxPages = Math.max(1, Math.min(5, Math.floor(requestedMaxPages)));
   const filter = (options.senderFilter ?? "").trim().toLowerCase();
   if (filter.length > 100) throw new Error("Filtr nadawcy jest za długi.");
 
@@ -291,7 +296,7 @@ export async function synchronizeResendReceived(
         const offerAlias = [...(item.to ?? []), ...(item.cc ?? [])]
           .some((address) => OFFER_ALIAS_RE.test(address));
         if (existing && (existing.content ?? "").trim().length > 80 &&
-            existing.metadata?.email_id === item.id && !offerAlias) {
+            existing.metadata?.email_id === item.id && !offerAlias && !filter) {
           result.skipped += 1;
           moveOn();
           continue;
