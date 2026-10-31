@@ -1,0 +1,16 @@
+{
+  "name": "Verified Agreements",
+  "short_name": "Agreements",
+  "description": "API-first agreement orchestration",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090c11",
+  "theme_color": "#090c11",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
