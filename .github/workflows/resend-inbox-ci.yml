@@ -5,6 +5,7 @@ on:
     paths:
       - 'src/lib/resend-receiv*'
       - 'src/routes/api/admin/resend-inbox.ts'
+      - 'src/routes/api/internal/resend-single-run.ts'
       - 'src/routes/admin.skrzynka.tsx'
       - 'src/routes/abonament-inwestora.tsx'
       - '.github/workflows/resend-inbox-ci.yml'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'src/lib/resend-receiv*'
       - 'src/routes/api/admin/resend-inbox.ts'
+      - 'src/routes/api/internal/resend-single-run.ts'
       - 'src/routes/admin.skrzynka.tsx'
       - 'src/routes/abonament-inwestora.tsx'
 
