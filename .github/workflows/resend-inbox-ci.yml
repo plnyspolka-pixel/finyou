@@ -27,5 +27,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Test Resend API
         run: bunx vitest run src/lib/resend-receiving.test.ts
+      - name: Generate TanStack route types
+        run: bunx -p @tanstack/router-cli@1.170.41 tsr generate
       - name: TypeScript typecheck
         run: bun run typecheck
