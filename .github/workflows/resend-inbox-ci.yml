@@ -6,6 +6,7 @@ on:
       - 'src/lib/resend-receiv*'
       - 'src/routes/api/admin/resend-inbox.ts'
       - 'src/routes/admin.skrzynka.tsx'
+      - 'src/routes/abonament-inwestora.tsx'
       - '.github/workflows/resend-inbox-ci.yml'
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'src/lib/resend-receiv*'
       - 'src/routes/api/admin/resend-inbox.ts'
       - 'src/routes/admin.skrzynka.tsx'
+      - 'src/routes/abonament-inwestora.tsx'
 
 jobs:
   test:
