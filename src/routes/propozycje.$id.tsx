@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,8 @@ import { formatPLN } from "@/lib/labels";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/propozycje/$id")({
+  // Individually mediated financing has no public or member-wide offer catalogue.
+  beforeLoad: () => { throw redirect({ to: "/inwestor" }); },
   head: () => ({
     meta: [
       { title: "Propozycja pożyczki — Finance You" },

@@ -1,8 +1,7 @@
-// „Moje zlecenia" — Projekty do Zleceń inwestora (Etap U2, bez klikania admina).
+// „Moje zlecenia" — tylko indywidualnie wskazane projekty, bez dostępu do puli.
 //
-// Dla każdego przyjętego Zlecenia pokazujemy Projekty (wnioski) w kwocie do
-// kwoty Zlecenia, utworzone nie wcześniej niż 3 dni przed złożeniem Zlecenia,
-// razem ze zdjęciami/dokumentami, potencjałem lokalizacyjnym i zamaskowaną KW.
+// Dla każdego przyjętego Zlecenia pokazujemy tylko Projekty wcześniej
+// indywidualnie przypisane przez operatora, wraz z ich dokumentacją.
 // Inwestor zamawia raport analityczny (pipeline; gotowy przebieg jest
 // reużywany — księga nie jest pobierana ponownie) i jednym przyciskiem
 // pobiera dane kontaktowe i rezerwuje Projekt (Dopasowanie → Karta Leada →
@@ -31,13 +30,10 @@ import {
   sanitizeKwAnalysisForTeaser,
 } from "./order-report-teaser";
 import {
-  ACTIVE_MATCH_STATUSES,
   TEASER_VISIBLE_MATCH_STATUSES,
-  amountMatchesOrder,
   consumerKaraStatement,
   orderLimitsFromSettings,
   projectFreshAt,
-  projectWindowStart,
   reservationDeadline,
   teaserDeadline,
   TEASER_HOURS,
@@ -211,14 +207,6 @@ async function myAcceptedOrder(db: any, userId: string, orderId: string) {
     throw new Error("Zlecenie wygasło.");
   }
   return order;
-}
-
-/** Czy Projekt kwalifikuje się do Zlecenia (kwota + okno czasowe). */
-function appFitsOrder(order: any, app: any): boolean {
-  if (!amountMatchesOrder(Number(order.amount_pln), Number(app.loan_amount ?? 0))) return false;
-  // fresh_at: utworzenie wniosku albo scalonego do niego nowszego duplikatu.
-  const freshAt = app.fresh_at ?? app.created_at;
-  return new Date(freshAt).getTime() >= projectWindowStart(order).getTime();
 }
 
 /** Zdjęcia i pliki klienta — podpisane po stronie serwera (bucket prywatny).
@@ -466,7 +454,6 @@ export async function loadMyOrderProjects(
   readOnly: boolean,
 ): Promise<MyOrderProjectsResult> {
   {
-    const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
 
     const [{ data: orders }, { data: investor }] = await Promise.all([
       loose(supabaseAdmin)
@@ -499,73 +486,19 @@ export async function loadMyOrderProjects(
     );
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
-    // Dopasowania moich Zleceń + Projekty zajęte przez innych zleceniodawców.
-    const [{ data: myMatches }, { data: busy }] = await Promise.all([
-      orderIds.length > 0
-        ? loose(supabaseAdmin)
-            .from("investor_order_matches")
-            .select(
-              "id, order_id, application_id, project_ref, status, reservation_expires_at, teaser_expires_at, teaser_released_at, teaser_extended, created_at",
-            )
-            .in("order_id", orderIds)
-            .in("status", TEASER_VISIBLE_MATCH_STATUSES)
-        : Promise.resolve({ data: [] }),
-      loose(supabaseAdmin)
-        .from("investor_order_matches")
-        .select("application_id, order_id")
-        .in("status", ACTIVE_MATCH_STATUSES),
-    ]);
-    // Projekty odrzucone przez inwestora w danym Zleceniu — nie wracają na listę.
-    const { data: declinedRows } = orderIds.length
+    // Tylko aktywne dopasowania wcześniej utworzone przez pracownika.
+    const { data: myMatches } = orderIds.length > 0
       ? await loose(supabaseAdmin)
           .from("investor_order_matches")
-          .select("order_id, application_id")
+          .select("id, order_id, application_id, project_ref, status, reservation_expires_at, teaser_expires_at, teaser_released_at, teaser_extended, created_at")
           .in("order_id", orderIds)
-          .eq("status", "odrzucone")
+          .in("status", TEASER_VISIBLE_MATCH_STATUSES)
       : { data: [] };
-    const declined = new Set(
-      (declinedRows ?? []).map((m: any) => `${m.order_id}:${m.application_id}`),
-    );
-    const myOrderIdSet = new Set(orderIds);
-    const busyElsewhere = new Set(
-      (busy ?? [])
-        .filter((m: any) => !myOrderIdSet.has(m.order_id))
-        .map((m: any) => m.application_id),
-    );
-
-    // Kandydaci: od najwcześniejszego okna wśród przyjętych Zleceń.
+    // Brak puli widocznej z poziomu inwestora. Pobieramy wyłącznie projekty
+    // wcześniej indywidualnie przypisane do zleceń przez operatora.
     let apps: any[] = [];
     const matchedAppIds = new Set((myMatches ?? []).map((m: any) => m.application_id));
-    let merged = new Map<string, string>();
-    if (accepted.length > 0) {
-      const earliest = new Date(
-        accepted
-          .map((o: any) => projectWindowStart(o).getTime())
-          .reduce((a: number, b: number) => Math.min(a, b)),
-      ).toISOString();
-      merged = await (await srv()).latestMergedAt(supabaseAdmin, earliest);
-      const { data } = await loose(supabaseAdmin)
-        .from("loan_applications")
-        .select(APP_SELECT)
-        .in("status", CANDIDATE_DB_STATUSES)
-        .is("deleted_at", null)
-        .gte("created_at", earliest)
-        .order("created_at", { ascending: false })
-        .limit(300);
-      apps = data ?? [];
-      // Starsze wnioski, do których w oknie scalono nowy duplikat (klient
-      // dodany ponownie) — dla inwestora to nowy Projekt.
-      const revivedIds = [...merged.keys()].filter((id) => !apps.some((a) => a.id === id));
-      if (revivedIds.length > 0) {
-        const { data: revived } = await loose(supabaseAdmin)
-          .from("loan_applications")
-          .select(APP_SELECT)
-          .in("status", CANDIDATE_DB_STATUSES)
-          .is("deleted_at", null)
-          .in("id", revivedIds);
-        apps = [...apps, ...(revived ?? [])];
-      }
-    }
+    const merged = new Map<string, string>();
     // Projekty już dopasowane (także spoza okna / statusów kandydata).
     const missing = [...matchedAppIds].filter((id) => !apps.some((a) => a.id === id));
     if (missing.length > 0) {
@@ -622,12 +555,8 @@ export async function loadMyOrderProjects(
             (myMatches ?? []).find(
               (m: any) => m.order_id === o.id && m.application_id === app.id,
             ) ?? null;
-          if (!match) {
-            if (declined.has(`${o.id}:${app.id}`)) continue;
-            if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
-            // Projekt aktywny w innym moim Zleceniu — pokazujemy tylko tam.
-            if ((myMatches ?? []).some((m: any) => m.application_id === app.id)) continue;
-          }
+          // Nie udostępniaj projektu bez ręcznego dopasowania operatora.
+          if (!match) continue;
           seen.add(app.id);
           projects.push(
             await buildProject(supabaseAdmin, o, app, match, myOfferByApp.get(app.id) ?? null),
@@ -678,8 +607,8 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!match && !appFitsOrder(order, app)) {
-    throw new Error("Ten Projekt nie mieści się w kwocie albo oknie czasowym Zlecenia.");
+  if (!match) {
+    throw new Error("Ten Projekt nie został indywidualnie przypisany przez operatora.");
   }
   return { app, match: match ?? null, contact };
 }
@@ -931,19 +860,7 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       return m ?? null;
     };
     let m = await matchFor();
-    if (!m) {
-      await (
-        await srv()
-      ).insertMatch(supabaseAdmin, {
-        orderId: order.id,
-        applicationId: app.id,
-        releaseTeaser: true,
-        actorId: userId,
-        actorKind: "system",
-      });
-      m = await matchFor();
-      if (!m) throw new Error("Nie udało się utworzyć Dopasowania.");
-    }
+    if (!m) throw new Error("Projekt musi zostać przypisany przez operatora.");
 
     const { ip, userAgent } = (await srv()).requestMeta();
     if (m.status === "dopasowane") {
@@ -1259,57 +1176,12 @@ export const withdrawMyOffer = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/**
- * „Odrzuć Projekt" dla Projektu z listy, który nie ma jeszcze obiegu
- * (Dopasowania). Zapisujemy Dopasowanie od razu jako odrzucone — Projekt
- * znika z listy tego Zlecenia, automat go nie dobierze, a ślad zostaje
- * w dzienniku cyklu. Bez obiegu nie liczy się do limitu odrzuceń Zlecenia
- * (Projekt aktywnego obiegu odrzuca declineMatch).
- */
+/** Nie można samodzielnie odrzucać projektów z nieistniejącej puli. */
 export const dismissOrderProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ orderId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d) => z.object({ orderId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
-    const { data: active } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .select("id")
-      .eq("order_id", order.id)
-      .eq("application_id", data.applicationId)
-      .in("status", TEASER_VISIBLE_MATCH_STATUSES)
-      .limit(1);
-    if ((active ?? []).length > 0) {
-      throw new Error("Ten Projekt jest w obiegu — odrzuć go przyciskiem przy dopasowaniu.");
-    }
-    const s = await srv();
-    const { matchId, projectRef } = await s.insertMatch(supabaseAdmin, {
-      orderId: order.id,
-      applicationId: data.applicationId,
-      releaseTeaser: false,
-      actorId: userId,
-      actorKind: "system",
-    });
-    const { data: m } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .select("*")
-      .eq("id", matchId)
-      .maybeSingle();
-    await s.transition(supabaseAdmin, m, "odrzucone", {
-      decided_at: new Date().toISOString(),
-      decided_by: userId,
-      decision_reason: "odrzucony z listy Projektów (bez obiegu)",
-    });
-    await s.logCycleEvent(supabaseAdmin, {
-      matchId,
-      orderId: order.id,
-      type: "projekt_odrzucony",
-      payload: { reason: null, bez_obiegu: true, project_ref: projectRef },
-      actor: userId,
-      actorKind: "inwestor",
-    });
-    return { ok: true };
+    await myAcceptedOrder(supabaseAdmin, context.userId, data.orderId);
+    return { ok: false, reason: "Projekty są przydzielane indywidualnie przez operatora." };
   });

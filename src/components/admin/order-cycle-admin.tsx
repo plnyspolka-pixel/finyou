@@ -62,11 +62,13 @@ export function OrderCycleAdminSection() {
 
 function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
   const create = useServerFn(createMatch);
+  const [selectionReason, setSelectionReason] = useState("");
   const mut = useMutation({
     mutationFn: (input: { orderId: string; applicationId: string }) =>
-      create({ data: { ...input, releaseTeaser: true } }),
+      create({ data: { ...input, releaseTeaser: true, reason: selectionReason.trim() } }),
     onSuccess: (res: any) => {
       toast.success(`Dopasowanie ${res.projectRef} utworzone, teaser udostępniony.`);
+      setSelectionReason("");
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -83,6 +85,16 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="manual-match-reason">Uzasadnienie indywidualnego doboru (obowiązkowe)</label>
+          <Input
+            id="manual-match-reason"
+            value={selectionReason}
+            onChange={(e) => setSelectionReason(e.target.value)}
+            placeholder="Dlaczego ten inwestor pasuje do konkretnej sprawy? Min. 20 znaków"
+          />
+          <p className="text-xs text-muted-foreground">Operator sam ocenia sprawę; system nie przydziela projektów automatycznie.</p>
+        </div>
         {nonEmpty.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Brak sugestii — brak przyjętych Zleceń albo pasujących wniosków.
@@ -104,7 +116,7 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={mut.isPending}
+                    disabled={mut.isPending || selectionReason.trim().length < 20}
                     onClick={() => mut.mutate({ orderId: s.orderId, applicationId: a.id })}
                   >
                     <Link2 className="mr-2 h-3.5 w-3.5" /> Dopasuj + teaser

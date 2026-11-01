@@ -11,7 +11,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { db, assertApprovedInvestor, getModuleSettings } from "./guards.server";
-import { rankProjects, type MatchPreferences, type MatchableProject } from "./matching";
 import { projectAudit } from "./audit.server";
 import {
   ACTIVE_CARD_STATUSES,
@@ -33,120 +32,18 @@ async function signPhoto(path: string | null, expiresIn = 900): Promise<string |
   return null;
 }
 
-/** Odsetek terminowych decyzji inwestora (do rankingu). */
-async function onTimeDecisionRate(userId: string): Promise<number> {
-  const { data } = await db
-    .from("project_assignments")
-    .select("status")
-    .eq("investor_id", userId)
-    .in("status", ["rejected", "interested", "expired"])
-    .limit(200);
-  const rows = (data ?? []) as { status: string }[];
-  if (!rows.length) return 1;
-  const decided = rows.filter((r) => r.status !== "expired").length;
-  return decided / rows.length;
-}
-
 /**
- * „Dobierz projekty dla mnie". Serwer: (1) sprawdza status approved_investor,
- * (2) kompletność profilu, (3) limit aktywnych przypisań, (4) analizuje pulę,
- * (5) wybiera najlepiej dopasowane, (6) tworzy przypisania ATOMOWO
- * (project_claim_assignment z blokadą wiersza), (7) dopiero wtedy karty są
- * widoczne. Inwestor nigdy nie dostaje całej puli.
+ * Automatyczne dopasowanie projektów zostało wyłączone.
+ * Istniejące indywidualnie przypisane karty pozostają dostępne.
  */
 export const matchProjectsForMe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const userId = context.userId as string;
-    const access = await assertApprovedInvestor(userId);
-
-    if (!access.profile_completed_at) {
-      return { ok: false as const, code: "profile_incomplete" as const, created: 0 };
-    }
-    const settings = await getModuleSettings();
-
-    const { data: activeRows, error: activeErr } = await db
-      .from("project_assignments")
-      .select("id, project_id")
-      .eq("investor_id", userId)
-      .in("status", ACTIVE_CARD_STATUSES);
-    if (activeErr) throw new Error(activeErr.message);
-    const active = (activeRows ?? []) as { id: string; project_id: string }[];
-    const slots = settings.max_active_assignments - active.length;
-    if (slots <= 0) {
-      return { ok: false as const, code: "limit_reached" as const, created: 0 };
-    }
-
-    // Projekty, z którymi inwestor już miał styczność (dowolny status) — nie
-    // pokazujemy ich ponownie automatycznie.
-    const { data: historyRows } = await db
-      .from("project_assignments")
-      .select("project_id")
-      .eq("investor_id", userId);
-    const seenProjects = new Set(
-      ((historyRows ?? []) as { project_id: string }[]).map((r) => r.project_id),
-    );
-
-    // Pula wewnętrzna: wyłącznie available_internal_pool z zaakceptowanym zdjęciem.
-    const { data: poolRows, error: poolErr } = await db
-      .from("investment_projects")
-      .select(
-        "id, amount, property_type, city, voivodeship, ltv_percent, period_months, interest_rate_percent, security_type, last_assigned_at, rejection_count, main_photo_path, photo_approved, status",
-      )
-      .eq("status", "available_internal_pool")
-      .eq("photo_approved", true)
-      .not("main_photo_path", "is", null)
-      .limit(500);
-    if (poolErr) throw new Error(poolErr.message);
-
-    const candidates = ((poolRows ?? []) as MatchableProject[]).filter(
-      (p) => !seenProjects.has(p.id),
-    );
-    if (!candidates.length) {
-      return { ok: true as const, code: "no_projects" as const, created: 0 };
-    }
-
-    const prefs = (access.preferences ?? {}) as MatchPreferences;
-    const ranked = rankProjects(candidates, prefs, {
-      activeAssignments: active.length,
-      onTimeDecisionRate: await onTimeDecisionRate(userId),
-      now: new Date(),
-    });
-    if (!ranked.length) {
-      return { ok: true as const, code: "no_projects" as const, created: 0 };
-    }
-
-    let created = 0;
-    for (const match of ranked) {
-      if (created >= slots) break;
-      // Atomowy claim — przy równoległych kliknięciach dwóch inwestorów projekt
-      // dostanie tylko jeden z nich (blokada wiersza + partial-unique index).
-      const { data: assignmentId, error } = await db.rpc("project_claim_assignment", {
-        _project_id: match.projectId,
-        _investor_id: userId,
-        _score: match.score,
-        _reason: match.reasons.join("; "),
-        _created_by: userId,
-      });
-      if (error) {
-        console.error("[projects] claim failed:", error.message);
-        continue;
-      }
-      if (assignmentId) created += 1;
-    }
-
-    return {
-      ok: true as const,
-      code: created > 0 ? ("ok" as const) : ("no_projects" as const),
-      created,
-    };
+    await assertApprovedInvestor(context.userId as string);
+    return { ok: false as const, code: "manual_only" as string, created: 0 };
   });
 
-/**
- * Aktywne karty inwestora — WYŁĄCZNIE teaser (zdjęcie, kwota, rodzaj
- * nieruchomości, miejscowość) + czasy. Żadnych danych pożyczkobiorcy, adresu,
- * KW, oprocentowania, LTV, wartości nieruchomości ani dokumentów.
- */
+/** Aktywne karty inwestora — tylko wcześniej przypisane. */
 export const listMyProjectCards = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
