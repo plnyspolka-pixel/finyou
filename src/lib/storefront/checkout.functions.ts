@@ -109,6 +109,7 @@ export const createStoreCheckout = createServerFn({ method: "POST" })
     immediate: z.literal(true),
     withdrawalAcknowledgement: z.literal(true),
     dpa: z.boolean().default(false),
+    kwPurpose: z.boolean().default(false),
   }).parse(input))
   .handler(async ({ data, context }) => {
     const admin = await db();
@@ -119,9 +120,13 @@ export const createStoreCheckout = createServerFn({ method: "POST" })
     }
     const items = await priceItems(data.cart);
     const needsDpa = items.some(i => i.kind === "document");
+    if (items.some(i => i.kind === "kw") && !data.kwPurpose) {
+      throw new Error("Potwierdź uprawniony cel analizy numeru KW.");
+    }
     if (needsDpa && !data.dpa) throw new Error("Przed kupnem generatora zaakceptuj umowę powierzenia danych.");
     await recordAcceptance(admin, context.userId, "store_terms", {
       accepted: true, immediate: true, withdrawalAcknowledgement: true,
+      kwPurpose: items.some(i => i.kind === "kw") ? data.kwPurpose : false,
     });
     if (needsDpa) await recordAcceptance(admin, context.userId, "store_dpa", { accepted: true });
     const total = items.reduce((n, i) => n + i.amount_grosz, 0);
