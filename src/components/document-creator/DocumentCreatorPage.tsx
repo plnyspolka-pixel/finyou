@@ -6,6 +6,8 @@ import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
 import { mergesRepeatedFields } from "@/lib/document-templates/merge-fields";
 import { readCalcHandoff, clearCalcHandoff, onCalcHandoffChange } from "@/lib/loan-calc-handoff";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { listMyEnvelopes } from "@/lib/esign/esign-owner.functions";
 import { Link } from "@tanstack/react-router";
 import {
   listDocxTemplates,
@@ -179,6 +181,21 @@ export function DocumentCreatorPage({
   const _gus = useServerFn(gusCompanyLookup);
   const _krs = useServerFn(krsCompanyLookup);
   const _myParty = useServerFn(getMyCreditorParty);
+  const _signatures = useServerFn(listMyEnvelopes);
+  const signatureQuery = useQuery({
+    queryKey: ["generated-document-signatures"],
+    enabled: enableEsign,
+    queryFn: () => _signatures({ data: { limit: 200 } }),
+  });
+  const signatureByDocument = useMemo(() => {
+    const map = new Map<string, { id: string; status: string }>();
+    for (const envelope of signatureQuery.data?.envelopes ?? []) {
+      if (envelope.generated_document_id && !map.has(envelope.generated_document_id)) {
+        map.set(envelope.generated_document_id, { id: envelope.id, status: envelope.status });
+      }
+    }
+    return map;
+  }, [signatureQuery.data]);
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
@@ -1058,6 +1075,21 @@ export function DocumentCreatorPage({
                             ? ` · prowizja ${h.commission_amount.toLocaleString("pl-PL")} PLN`
                             : ""}
                         </div>
+                        {enableEsign && signatureByDocument.has(h.id) && (
+                          <a
+                            className="mt-1 inline-block text-xs font-medium text-primary underline"
+                            href={`/inwestor/podpisy?koperta=${encodeURIComponent(signatureByDocument.get(h.id)!.id)}`}
+                          >
+                            E-podpis: {({
+                              szkic: "szkic",
+                              wyslana: "oczekuje na podpisy",
+                              zakonczona: "podpisano",
+                              odrzucona: "odrzucono",
+                              anulowana: "anulowano",
+                              wygasla: "wygasł",
+                            } as Record<string, string>)[signatureByDocument.get(h.id)!.status] ?? signatureByDocument.get(h.id)!.status}
+                          </a>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {h.docx_path && (
@@ -1083,7 +1115,7 @@ export function DocumentCreatorPage({
         <GeneratedDocumentEsignDialog
           document={esignDoc}
           onOpenChange={open => { if (!open) setEsignDoc(null); }}
-          onCreated={setLastEnvelopeId}
+          onCreated={id => { setLastEnvelopeId(id); void signatureQuery.refetch(); }}
         />
       )}
     </div>
