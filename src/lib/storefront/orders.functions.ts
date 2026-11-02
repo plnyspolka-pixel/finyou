@@ -92,7 +92,7 @@ export const startStoreCheckout=createServerFn({method:"POST"})
   .handler(async({context,data})=>{
     // Seller, VAT/invoicing and transaction recipient must be verified for these
     // standalone products before charging customers on production.
-    if(process.env.STORE_PAYMENTS_ENABLED!=="true")
+    if(process.env.STORE_PAYMENTS_ENABLED!=="true" || process.env.STORE_SELLER_CONFIRMED!=="true")
       return {ok:false as const,error:"Płatności za produkty jednostkowe są jeszcze niedostępne. Skorzystaj z zamówienia do potwierdzenia."};
     const buyerErrors=validateBuyer(data.buyer);
     if(buyerErrors.length)return {ok:false as const,error:buyerErrors[0]};
@@ -136,4 +136,52 @@ export const startStoreCheckout=createServerFn({method:"POST"})
       console.error("[store] checkout provider error",e instanceof Error?e.message:"unknown");
       return {ok:false as const,error:"Nie udało się rozpocząć płatności Tpay. Spróbuj później."};
     }
+  });
+
+export const getStoreCheckoutCapability=createServerFn({method:"GET"}).handler(async()=>({
+  available:process.env.STORE_PAYMENTS_ENABLED==="true" &&
+    process.env.STORE_SELLER_CONFIRMED==="true",
+}));
+
+export const submitStoreInquiry=createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i:unknown)=>z.object({items:z.array(ItemSchema).min(1).max(50),buyer:BuyerSchema}).parse(i))
+  .handler(async({context,data})=>{
+    const errors=validateBuyer(data.buyer);
+    if(errors.length)return {ok:false as const,error:errors[0]};
+    const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const db=supabaseAdmin as any;
+    const termsHash=await legalDigest("store_terms");
+    const {data:acceptance}=await db.from("store_legal_acceptances").select("id")
+      .eq("user_id",context.userId).eq("document_code","store_terms")
+      .eq("document_sha256",termsHash).maybeSingle();
+    if(!acceptance)return {ok:false as const,error:"Najpierw zaakceptuj regulamin sklepu."};
+    const items=await resolveStoreItems(db,data.items);
+    if(items.length===0)return {ok:false as const,error:"Brak płatnych produktów w zamówieniu."};
+    const since=new Date(Date.now()-3600000).toISOString();
+    const {count}=await db.from("store_inquiries").select("id",{count:"exact",head:true})
+      .eq("user_id",context.userId).gte("created_at",since);
+    if((count??0)>=3)return {ok:false as const,error:"Osiągnięto limit zgłoszeń. Spróbuj ponownie za godzinę."};
+    const total=items.reduce((sum,item)=>sum+item.price_grosz,0);
+    const {data:request,error:saveError}=await db.from("store_inquiries")
+      .insert({user_id:context.userId,items,total_grosz:total,buyer:data.buyer,store_terms_sha256:termsHash})
+      .select("id").single();
+    if(saveError||!request)return {ok:false as const,error:"Nie udało się zapisać zamówienia."};
+    const details=items.map((i:any)=>`- ${i.title} / ${(i.price_grosz/100).toFixed(2)} zł`).join("\n");
+    const textBody=`Zamówienie do potwierdzenia ${request.id}\nNabywca: ${data.buyer.buyerName}\nE-mail: ${data.buyer.buyerEmail}\n\nProdukty:\n${details}\n\nSuma: ${(total/100).toFixed(2)} zł\n\nTo NIE jest potwierdzenie opłacenia ani automatyczna realizacja zamówienia.`;
+    let sent=false;
+    try{
+      const {sendResendEmail}=await import("@/lib/resend-send.server");
+      const internal=await sendResendEmail({to:"kontakt@financeyou.pl",
+        subject:`Nowe zamówienie sklepu FY: ${request.id.slice(0,8)}`,
+        text:textBody,category:"transactional",noBranding:true});
+      const buyer=await sendResendEmail({to:data.buyer.buyerEmail,
+        subject:"Otrzymaliśmy Twoje zamówienie do potwierdzenia — Finance You",
+        text:textBody,category:"transactional"});
+      sent=internal.ok&&buyer.ok;
+      await db.from("store_inquiries").update({email_sent:sent}).eq("id",request.id);
+    }catch(e){
+      console.error("[store] transactional notification failed",e instanceof Error?e.message:"unknown");
+    }
+    return {ok:true as const,inquiryId:request.id,emailSent:sent};
   });
