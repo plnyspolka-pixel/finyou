@@ -358,6 +358,30 @@ async function fetchKrs(
   return { ok: false, code: "NOT_FOUND" };
 }
 
+
+/** Serwerowe użycie istniejącego parsera i API KRS przez moduł windykacyjny.
+ * Nie uruchamia osobnego endpointu i nie ufa danym przekazanym przez klienta.
+ */
+export async function lookupKrsCompanyForVerification(krsInput: string): Promise<KrsLookupResult> {
+  const normalized = normalizeKrs(krsInput);
+  if (!normalized) return {
+    success: false, errorCode: "INVALID_KRS", message: "Nieprawidłowy numer KRS."
+  };
+  const result = await fetchKrs(normalized);
+  if (!result.ok) return {
+    success: false,
+    errorCode: result.code,
+    message: result.code === "NOT_FOUND" ? "Nie znaleziono KRS." : "Rejestr KRS jest chwilowo niedostępny."
+  };
+  return {
+    success: true,
+    source: "Oficjalne API KRS",
+    searchType: "krs",
+    cached: false,
+    company: mapKrs(result.body, normalized)
+  };
+}
+
 // ---------- Public server function ----------
 
 export const krsCompanyLookup = createServerFn({ method: "POST" })
