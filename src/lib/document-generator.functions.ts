@@ -62,6 +62,8 @@ export type GeneratedDoc = {
   commission_added_to_costs: boolean | null;
   created_at: string;
   created_by: string | null;
+  canEsign: boolean;
+  esignReason: string;
 };
 
 /** Lista dostępnych wzorów (RLS filtruje po roli/audience). */
@@ -87,7 +89,7 @@ export const listGeneratedDocs = createServerFn({ method: "POST" })
     let q = context.supabase
       .from("generated_documents")
       .select(
-        "id, template_id, template_name, template_slug, lead_id, loan_application_id, docx_path, pdf_path, commission_amount, commission_added_to_costs, created_at, created_by",
+        "id, template_id, template_name, template_slug, form_data, lead_id, loan_application_id, docx_path, pdf_path, commission_amount, commission_added_to_costs, created_at, created_by",
       )
       .order("created_at", { ascending: false })
       .limit(data.limit ?? 50);
@@ -95,7 +97,12 @@ export const listGeneratedDocs = createServerFn({ method: "POST" })
     if (data.loanId) q = q.eq("loan_application_id", data.loanId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return (rows ?? []) as GeneratedDoc[];
+    const { eligibilityForGeneratedDocument } = await import("@/lib/document-signing-policy");
+    // Nie zwracamy form_data do UI — zawiera dane osób i informacje umowne.
+    return (rows ?? []).map(({ form_data, ...row }) => {
+      const legal = eligibilityForGeneratedDocument({ template_slug: row.template_slug, form_data });
+      return { ...row, canEsign: legal.allowed, esignReason: legal.reason };
+    }) as GeneratedDoc[];
   });
 
 /**
