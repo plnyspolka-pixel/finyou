@@ -27,7 +27,7 @@ describe("free standalone loan agreement",()=>{
     const txt=blocks.map(b=>("tekst" in b ? b.tekst : ("runs" in b?b.runs.map(r=>r.tekst).join(""):""))).join("\n");
     expect(txt).toContain("UMOWA POŻYCZKI");
     expect(txt).toContain("§ 5. Zabezpieczenie");
-    expect(txt).toContain("akt notarialny");
+    expect(txt).toContain("aktu notarialnego");
     expect(txt).toContain("Pożyczkobiorca:");
     expect(blocks.filter(b=>b.t==="tytul")).toHaveLength(1);
     expect(blocks.some(b=>b.t==="tytul"&&b.tekst.includes("ZAŁĄCZNIK"))).toBe(false);
