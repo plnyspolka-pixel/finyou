@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
-  createWindykatorDraft, getWindykatorKyc, startWindykatorKyc,
+  createWindykatorDraft, getWindykatorSaleStatus, getWindykatorKyc, startWindykatorKyc,
   createWindykatorCheckout, getWindykatorOrder, prepareWindykatorPackage
 } from "@/lib/windykator-startowy/orders.functions";
 
@@ -29,11 +29,14 @@ const initial={
 function WindykatorPage(){
   const query=Route.useSearch();
   const draftFn=useServerFn(createWindykatorDraft);
+  const saleFn=useServerFn(getWindykatorSaleStatus);
   const kycFn=useServerFn(getWindykatorKyc);
   const startKycFn=useServerFn(startWindykatorKyc);
   const payFn=useServerFn(createWindykatorCheckout);
   const getFn=useServerFn(getWindykatorOrder);
   const prepareFn=useServerFn(prepareWindykatorPackage);
+  const [saleEnabled,setSaleEnabled]=useState(false);
+  const [saleChecked,setSaleChecked]=useState(false);
   const [f,setF]=useState(initial);
   const [file,setFile]=useState<File|null>(null);
   const [confirm,setConfirm]=useState({representation:false,balance:false,terms:false,privacy:false,earlyStart:false,withdrawalNotice:false});
@@ -44,6 +47,10 @@ function WindykatorPage(){
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const set=(key:keyof typeof f,value:string)=>setF(old=>({...old,[key]:value}));
+  useEffect(()=>{
+    void saleFn().then(r=>{setSaleEnabled(r.enabled);setSaleChecked(true);})
+      .catch(()=>setSaleChecked(true));
+  },[saleFn]);
   useEffect(()=>{
     if(!caseId && typeof window!=="undefined"){
       const saved=window.sessionStorage.getItem("windykator_case");
@@ -137,7 +144,10 @@ function WindykatorPage(){
           <p className="mt-2 text-sm text-slate-600">
             Dane i dokument przechowujemy w prywatnym repozytorium sprawy. Zlecenie wymaga konta Finance You.
           </p>
-          {!caseId ? <form className="mt-6 space-y-4" onSubmit={submit}>
+          {saleChecked && !saleEnabled && <p className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+            Nowy produkt jest przygotowywany do uruchomienia. Do czasu zakończenia weryfikacji prawnej i technicznej nie przyjmujemy dokumentów ani płatności.
+          </p>}
+          {!caseId ? <form className="mt-6 space-y-4" onSubmit={submit}><fieldset disabled={!saleEnabled} className="space-y-4">
             <div>
               <label className={label} htmlFor="creditorKind">Rodzaj wierzyciela</label>
               <select id="creditorKind" className={field} value={f.creditorKind} onChange={e=>set("creditorKind",e.target.value)}>
@@ -188,7 +198,7 @@ function WindykatorPage(){
               {busy?"Zapisywanie…":"Zapisz zgłoszenie i przejdź do weryfikacji"}
             </button>
             <p className="text-xs text-slate-500">Bez opłaty na tym etapie. <a className="underline" href="/logowanie">Zaloguj się</a> lub <a className="underline" href="/rejestracja">załóż konto</a>.</p>
-          </form> : <div className="mt-6 space-y-4">
+          </fieldset></form> : <div className="mt-6 space-y-4">
             <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-800">
               Numer zgłoszenia: <strong className="break-all">{caseId}</strong><br/>
               {order?.status==="checkout_pending"?"Oczekiwanie na potwierdzenie Tpay":order?.status==="paid"?"Płatność potwierdzona — gotowe do analizy":order?.status==="analysis_ready"?"Pakiet wykonany":order?.status==="review_required"?"Pakiet wymaga weryfikacji": "Dokument zapisany"}
