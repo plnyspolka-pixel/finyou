@@ -49,7 +49,7 @@ function pageAction(mode,label){
   }
   const rawHtml=clone.innerHTML;
   const rawText=(root.innerText||"").trim();
-  if(rawHtml.length<50||rawText.length<12)return {ok:false,error:"Niepełna lub pusta treść: "+label};
+  if(rawHtml.length<50||rawText.length<8)return {ok:false,error:"Niepełna lub pusta treść: "+label};
   if(rawHtml.length>600000||rawText.length>250000)return {ok:false,error:"Dział przekracza limit bezpiecznego eksportu: "+label};
   return {ok:true,section:{label,rawHtml,rawText,capturedAt:new Date().toISOString()}};
 }
