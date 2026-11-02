@@ -1,0 +1,51 @@
+name: Direct Cloudflare production deploy
+on:
+  workflow_dispatch:
+    inputs:
+      worker_name:
+        description: "Cloudflare Worker name already serving Finance You (verify in Cloudflare first)"
+        type: string
+        required: true
+      confirm:
+        description: "Type DEPLOY to publish the main branch to this Worker"
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: financeyou-cloudflare-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: ${{ inputs.confirm == 'DEPLOY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Verify Cloudflare credentials and target
+        env:
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WORKER: ${{ inputs.worker_name }}
+        run: |
+          test -n "$CF_ACCOUNT" || { echo "::error::CLOUDFLARE_ACCOUNT_ID secret missing"; exit 1; }
+          test -n "$CF_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN secret missing"; exit 1; }
+          [[ "$WORKER" =~ ^[a-zA-Z0-9-]+$ ]] || { echo "::error::Invalid Worker name"; exit 1; }
+      - run: bun install --frozen-lockfile
+      - name: Owner intelligence regression tests
+        run: bunx vitest run src/lib/coowners/owner-intelligence.test.ts src/lib/coowners/public-index-search.test.ts src/lib/coowners/official-msig.test.ts
+      - name: Build the Cloudflare production app
+        run: bun run build
+      - name: Deploy built Worker to explicitly selected target
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET_WORKER: ${{ inputs.worker_name }}
+        run: |
+          bunx wrangler deploy --name "$TARGET_WORKER" --keep-vars
