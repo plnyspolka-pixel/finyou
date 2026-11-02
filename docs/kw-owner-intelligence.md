@@ -56,3 +56,30 @@ Nie dodajemy osobnego formularza, kroku ani kolumn SQL.
    tabel EKW/CMD/EasyMKW; parser jest ostrożny i może wymagać dopracowania.
 5. Dla pełnego wdrożenia rozważyć niezależne, identyfikatorowe integracje
    z giełdami po uzyskaniu zgody operatorów; indeks publiczny jest tylko OSINT.
+
+## Techniczna próba bezpośredniego scrapingu KRZ — 2026-11-02
+- Oficjalny portal jest dostępny do ręcznej, darmowej weryfikacji,
+  ale nie udostępnia oficjalnego API (potwierdzenie MS).
+- Próba HTTP przez wyszukiwarkę WWW: `403 Forbidden`.
+- Dwie próby z silnikami Firecrawl (w tym z uruchomioną przeglądarką)
+  zakończyły się brakiem dostępu do `krz.ms.gov.pl`.
+- Nie udało się więc potwierdzić konkretnego endpointu lub schematu odpowiedzi;
+  nie wolno kodować zgadywanych URL-i jako działającego API.
+- Dodano **diagnostyczny skrypt Playwright**:
+  `scripts/krz-public-probe.mjs`. Umożliwia lokalne uruchomienie jednej
+  próby po publicznym KRS spółki. Nie wykonuje masowego pobierania, nie obchodzi
+  CAPTCHA, nie używa proxy, nie przechwytuje danych sesyjnych.
+- Wymaga lokalnego testu w przeglądarce z dostępem do strony. Jeśli portal
+  ogranicza ruch automatyczny, przerwać i pozostać przy integracji dostawcy.
+- **Nie podłączać** skryptu do Cloudflare Workera ani do kroku produkcyjnego:
+  Playwright wymaga uruchomienia przeglądarki poza tym środowiskiem.
+- Ponieważ próby bezpośredniego dostępu nie powiodły się, bezpłatna ścieżka
+  nie jest rozwiązaniem potwierdzonym produkcyjnie.
+
+Jednorazowy test lokalny:
+```sh
+bun add -d playwright
+bunx playwright install chromium
+node scripts/krz-public-probe.mjs --inspect
+node scripts/krz-public-probe.mjs --krs 0000304735
+```
