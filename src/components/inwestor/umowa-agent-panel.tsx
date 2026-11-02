@@ -12,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { GeneratedDocumentEsignDialog, type GeneratedSigningDocument } from "@/components/document-creator/GeneratedDocumentEsignDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +95,7 @@ function loadPersisted(): Persisted {
  * harmonogram spłat jako jej pierwszą wiadomość (liczby wchodzą do szkicu
  * deterministycznie po stronie serwera).
  */
-export function UmowaAgentPanel() {
+export function UmowaAgentPanel({ enableEsign = false }: { enableEsign?: boolean } = {}) {
   const sendFn = useServerFn(sendUmowaAgentMessage);
   const previewFn = useServerFn(previewUmowaAgent);
   const docxFn = useServerFn(generateUmowaAgentDocx);
@@ -107,6 +108,10 @@ export function UmowaAgentPanel() {
   const [autokorekty, setAutokorekty] = useState<KorektaGroszowa[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
   const [preview, setPreview] = useState("");
+  const [latestPackage, setLatestPackage] = useState<GeneratedSigningDocument | null>(null);
+  const [packageCanEsign, setPackageCanEsign] = useState(false);
+  const [esignDoc, setEsignDoc] = useState<GeneratedSigningDocument | null>(null);
+  const [packageEnvelopeId, setPackageEnvelopeId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -152,6 +157,9 @@ export function UmowaAgentPanel() {
       setAutokorekty(res.autokorekty ?? []);
       setMissing(res.missing ?? []);
       setPreview("");
+    setLatestPackage(null);
+    setEsignDoc(null);
+    setPackageEnvelopeId(null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : null;
       setState((s) => ({
@@ -196,7 +204,12 @@ export function UmowaAgentPanel() {
         );
       } else if (res.signedUrl) {
         window.open(res.signedUrl, "_blank");
-        toast.success("Komplet umowy wygenerowany (.docx): wniosek, umowa, Zał. 1–3.");
+        toast.success("Komplet pożyczkowy wygenerowany (.docx): wniosek, umowa, harmonogram, protokół i załączniki.");
+        if (enableEsign && res.documentId) {
+          setLatestPackage({ id: res.documentId, title: "Komplet dokumentów pożyczki" });
+          setPackageCanEsign(res.canEsign === true);
+          setPackageEnvelopeId(null);
+        }
       } else {
         toast.error("Nie otrzymano pliku — spróbuj ponownie.");
       }
@@ -425,6 +438,29 @@ export function UmowaAgentPanel() {
         </div>
       </div>
 
+      {enableEsign && latestPackage && (
+        <div className="flex flex-wrap items-start justify-between gap-3 border-t border-border p-4">
+          <div>
+            <p className="text-sm font-semibold">Pakiet dokumentów wygenerowany</p>
+            <p className="text-xs text-muted-foreground">
+              {packageCanEsign
+                ? "Bez poręczyciela: możesz wysłać pakiet do podpisu dokumentowego. Hipotekę i art. 777 załatwia się u notariusza."
+                : "Pakiet zawiera poręczenie lub wymaga weryfikacji formy. Zwykły e-podpis wyłączony — wymagany podpis własnoręczny lub kwalifikowany."}
+            </p>
+          </div>
+          {packageCanEsign && (
+            <Button type="button" onClick={() => setEsignDoc(latestPackage)}>
+              <FileSignature className="mr-2 h-4 w-4" /> Wyślij pakiet do e-podpisu
+            </Button>
+          )}
+        </div>
+      )}
+      {enableEsign && packageEnvelopeId && (
+        <a className="block border-t p-3 text-sm font-semibold underline"
+          href={`/inwestor/podpisy?koperta=${encodeURIComponent(packageEnvelopeId)}`}>
+          Sprawdź podpisy wygenerowanego pakietu
+        </a>
+      )}
       {preview && (
         <div className="border-t border-border p-3">
           <div className="mb-1.5 flex items-center gap-2 text-sm font-medium">
@@ -436,6 +472,13 @@ export function UmowaAgentPanel() {
             className="min-h-[280px] font-mono text-xs leading-relaxed"
           />
         </div>
+      )}
+      {enableEsign && (
+        <GeneratedDocumentEsignDialog
+          document={esignDoc}
+          onOpenChange={open => { if (!open) setEsignDoc(null); }}
+          onCreated={setPackageEnvelopeId}
+        />
       )}
     </div>
   );
