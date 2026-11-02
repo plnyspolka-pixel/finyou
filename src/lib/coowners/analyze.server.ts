@@ -99,6 +99,8 @@ export async function analyzeCoOwners(args: {
     ...owners.map((o) => ({
       kind: "person" as const,
       name: o.fullName,
+      firstName: o.firstName,
+      lastName: o.lastName,
       pesel: parsePesel(o.pesel).valid ? o.pesel : null,
       nip: personNamesOverlap(args.primaryClientName, o.fullName) ? args.primaryClientNip : null,
     })),
