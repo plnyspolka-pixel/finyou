@@ -83,3 +83,26 @@ bunx playwright install chromium
 node scripts/krz-public-probe.mjs --inspect
 node scripts/krz-public-probe.mjs --krs 0000304735
 ```
+
+## Wynik uruchomienia na GitHub Actions — 2026-11-02
+Próba z rzeczywistym Chromium i Playwrightem na runnerze GitHub Actions
+(z niezależnym dostępem do Internetu) potwierdziła:
+- instalacja Playwright i Chromium: **OK**;
+- `GET https://krz.ms.gov.pl/`: **HTTP 403**;
+- dodatkowe żądanie `GET /_Incapsula_Resource`: **HTTP 200**;
+- `--inspect`: **status blocked** i zakończenie kodem 1;
+- formularz wyszukiwania KRS nie został udostępniony, więc nie wykonano
+  wyszukiwania danych ani nie potwierdzono endpointu odpowiedzi.
+
+Log w repozytorium:
+https://github.com/plnyspolka-pixel/finyou/actions/runs/41440871258
+
+Interpretacja: realna odmowa dostępu na wejściu z automatycznego klienta;
+ścieżka Incapsula sugeruje WAF/ochronę aplikacji. Nie jest to test
+identyczny z wizytą człowieka ani dowód całkowitej niemożliwości
+scrapingu, ale **ta implementacja nie jest dostępna produkcyjnie**.
+Nie omijać ochrony, nie traktować HTTP 403 jako braku wpisów KRZ.
+
+W odróżnieniu od tego testu środowisko narzędziowe lokalne blokuje
+cały ruch internetowy, w tym DNS; błąd `ERR_BLOCKED_BY_ADMINISTRATOR`
+lokalnie nie był dowodem działania zabezpieczeń KRZ.
