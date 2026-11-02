@@ -53,9 +53,9 @@ const MAIN_ITEMS: NavItem[] = [
   // Pipeline analityczny (KW → właściciele → analiza KW → ryzyko) — ten
   // sam, którym posługuje się zespół Finance You — dla Projektów inwestora.
   { to: "/inwestor/analityka", label: "Analityka", icon: BarChart3 },
-  // Jeden moduł dokumentów: agent umowy (silnik klauzul) + kreator
-  // dokumentów DOCX (bez kategorii „Umowy" — umowy tylko z agenta).
-  { to: "/inwestor/dokumenty", label: "Dokumenty i umowy", icon: FileText },
+  // Oddzielamy kreator umowy od biblioteki pism z e-podpisem.
+  { to: "/inwestor/dokumenty", label: "Kreator umowy pożyczki", icon: FileSignature },
+  { to: "/inwestor/kreator-dokumentow", label: "Generator dokumentów", icon: FileText },
   { to: "/inwestor/windykacja", label: "Windykacja", icon: Gavel },
   { to: "/inwestor/aml", label: "AML", icon: ShieldCheck },
   { to: "/inwestor/szkolenia", label: "Akademia", icon: GraduationCap },
