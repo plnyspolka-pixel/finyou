@@ -10,6 +10,7 @@
 // wyłącznie zamaskowany PESEL (6 cyfr daty + gwiazdki).
 
 import type { CeidgActivity } from "@/lib/risk-assessment/types";
+import type { OwnerIntelligenceReport } from "./owner-intelligence.types";
 
 export interface CoOwnerKrsHit {
   krs: string;
@@ -68,4 +69,6 @@ export interface CoOwnersAnalysis {
   checked: CoOwnerRegistryCheck[];
   warnings: string[];
   summary: string;
+  /** Ogłoszenia sądowe i publiczne giełdy — wynik OSINT, bez PESEL w JSON. */
+  intelligence?: OwnerIntelligenceReport | null;
 }
