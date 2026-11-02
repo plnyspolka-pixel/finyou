@@ -22,7 +22,7 @@ const label="block text-sm font-semibold text-slate-800 mb-2";
 const section="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7";
 const initial={
   creditorKind:"person" as "person"|"business"|"company",
-  creditorName:"",creditorNip:"",creditorEmail:"",
+  creditorName:"",creditorNip:"",creditorKrs:"",creditorEmail:"",
   debtorName:"",claimKind:"invoice" as "invoice"|"loan"|"other",
   claimAmount:"",dueDate:"",description:"",
 };
@@ -88,7 +88,7 @@ function WindykatorPage(){
       });
       const r=await draftFn({data:{
         creditorKind:f.creditorKind,creditorName:f.creditorName,
-        creditorNip:f.creditorNip||undefined,creditorEmail:f.creditorEmail,
+        creditorNip:f.creditorNip||undefined,creditorKrs:f.creditorKrs||undefined,creditorEmail:f.creditorEmail,
         debtorName:f.debtorName,claimKind:f.claimKind,claimAmount:Number(f.claimAmount),
         dueDate:f.dueDate,description:f.description,fileName:file.name,
         mime:file.type as "application/pdf"|"image/jpeg"|"image/png"|"image/webp",
@@ -151,7 +151,7 @@ function WindykatorPage(){
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-slate-200">
           Jednorazowy Pakiet Startowy: analiza dokumentu, raport roszczenia, projekt wezwania do zapłaty
-          i wstępny szkic EPU, jeżeli roszczenie się kwalifikuje.
+          i wstępny plan właściwej drogi sądowej (EPU, zwykły pozew, art. 777 lub egzekucja).
         </p>
         <div className="mt-7 inline-flex items-center gap-4 rounded-2xl border border-amber-400/40 bg-slate-900/70 p-5">
           <strong className="text-4xl font-black text-amber-300">50 zł</strong>
@@ -177,7 +177,7 @@ function WindykatorPage(){
                 <option value="business">Jednoosobowa działalność</option>
                 <option value="company">Spółka / inny podmiot</option>
               </select>
-              {f.creditorKind!=="person"&&<p className="mt-2 text-xs text-amber-800">Weryfikacja reprezentacji podmiotów wymaga dodatkowego etapu. Nie pobierzemy płatności przed jego uruchomieniem.</p>}
+              {f.creditorKind!=="person"&&<p className="mt-2 text-xs text-amber-800">Bot porówna dane z KRS lub CEIDG ze zweryfikowaną tożsamością. Przy reprezentacji łącznej poprosi o wymagane potwierdzenie umocowania.</p>}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><label className={label} htmlFor="creditorName">Imię i nazwisko lub firma wierzyciela</label>
@@ -185,7 +185,9 @@ function WindykatorPage(){
               <div><label className={label} htmlFor="creditorEmail">E-mail wierzyciela</label>
                 <input id="creditorEmail" className={field} type="email" required value={f.creditorEmail} onChange={e=>set("creditorEmail",e.target.value)}/></div>
               {f.creditorKind!=="person"&&<div><label className={label} htmlFor="creditorNip">NIP</label>
-                <input id="creditorNip" className={field} value={f.creditorNip} onChange={e=>set("creditorNip",e.target.value)}/></div>}
+                <input id="creditorNip" className={field} required minLength={10} maxLength={10} value={f.creditorNip} onChange={e=>set("creditorNip",e.target.value)}/></div>}
+              {f.creditorKind==="company"&&<div><label className={label} htmlFor="creditorKrs">Numer KRS spółki</label>
+                <input id="creditorKrs" className={field} required maxLength={10} value={f.creditorKrs} onChange={e=>set("creditorKrs",e.target.value)}/></div>}
               <div><label className={label} htmlFor="debtorName">Dłużnik — imię i nazwisko / firma</label>
                 <input id="debtorName" className={field} required minLength={4} value={f.debtorName} onChange={e=>set("debtorName",e.target.value)}/></div>
               <div><label className={label} htmlFor="claimKind">Podstawa</label>
@@ -254,7 +256,7 @@ function WindykatorPage(){
                 className="rounded-xl bg-slate-900 px-6 py-3 font-bold text-white">Odśwież status i analizę</button>
               {order.collectionActivatedAt&&<p className="mt-3 text-sm font-semibold text-slate-700">90-dniowy okres obsługi uruchomiony: {new Date(order.collectionActivatedAt).toLocaleDateString("pl-PL")} — do {new Date(order.collectionEndsAt).toLocaleDateString("pl-PL")}. Kanały kontaktu pozostają niepodłączone.</p>}
               {order.report&&<div className="mt-4 space-y-4">
-                {[["Raport analizy",order.report],["Projekt wezwania",order.notice],["Wstępny szkic EPU",order.epuDraft]].filter(v=>v[1]).map(([title,body])=>
+                {[["Raport analizy",order.report],["Projekt wezwania",order.notice],["Pakiet do właściwej ścieżki sądowej",order.courtDraft],["Szkic EPU (jeśli właściwy)",order.epuDraft]].filter(v=>v[1]).map(([title,body])=>
                   <div key={title}><h3 className="font-bold text-slate-900">{title}</h3>
                     <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-xs text-slate-800">{body}</pre>
                     <button type="button" className="mt-2 text-sm font-semibold underline" onClick={()=>navigator.clipboard.writeText(body)}>Kopiuj</button>
@@ -275,7 +277,7 @@ function WindykatorPage(){
             <li>Odczyt i analiza jednego dokumentu</li>
             <li>Raport faktów i braków dowodowych</li>
             <li>Projekt wezwania w imieniu wierzyciela</li>
-            <li>Wstępny szkic EPU, gdy sprawa się kwalifikuje</li>
+            <li>Wstępny pakiet sądowy dobrany do dokumentów</li>
           </ol>
           <p className="mt-4 text-xs text-slate-500">Wynikiem jest pakiet dokumentów, nie wyrok sądu ani gwarancja odzyskania należności.</p>
         </div>
