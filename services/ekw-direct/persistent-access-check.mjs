@@ -17,7 +17,7 @@ try{
   });
   const page=await context.newPage();
   const trace=[];
-  page.on("response",r=>{
+  context.on("response",r=>{
     if(r.request().resourceType()==="document"&&trace.length<8)
       trace.push({status:r.status(),at:mask(r.url())});
   });
@@ -29,10 +29,6 @@ try{
     await link.click({timeout:8000});
     opened=await popupPromise;
     if(opened){
-      opened.on("response",r=>{
-        if(r.request().resourceType()==="document"&&trace.length<8)
-          trace.push({status:r.status(),at:mask(r.url())});
-      });
       await opened.waitForLoadState("domcontentloaded",{timeout:16000}).catch(()=>{});
     }
   }
