@@ -7,5 +7,11 @@
     "src/lib/coowners/owner-intelligence.test.ts",
     "src/lib/coowners/public-index-search.server.ts",
     "src/lib/coowners/public-index-search.test.ts"
-  ]
+  ],
+  "compilerOptions": {
+    "types": [
+      "vite/client",
+      "node"
+    ]
+  }
 }
