@@ -67,5 +67,26 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
     const {error}=await (supabaseAdmin as any).from("store_legal_acceptances")
       .upsert(records,{onConflict:"user_id,document_code,document_sha256",ignoreDuplicates:true});
     if(error)throw new Error("Nie udało się utrwalić akceptacji. Spróbuj ponownie.");
-    return {accepted:unique.map(code=>({code,version:legalVersion(code)}))};
+    // Send the exact accepted versions on a durable medium; receipt delivery
+    // cannot undo a valid database acceptance and is therefore best effort.
+    let receiptSent=false;
+    try {
+      const {data:account}=await supabaseAdmin.auth.admin.getUserById(context.userId);
+      const email=account?.user?.email;
+      if(email){
+        const {sendResendEmail}=await import("@/lib/resend-send.server");
+        const receipt=await sendResendEmail({
+          to:email,category:"transactional",noBranding:true,
+          subject:"Potwierdzenie zawarcia dokumentów sklepu Finance You",
+          text:"Potwierdzenie elektronicznej akceptacji z dnia "+new Date().toISOString()+"\\n\\n"+
+            records.map(r=>r.document_version+" (SHA-256 "+r.document_sha256+")\\n"+
+            r.document_text).join("\\n\\n-------------------------\\n\\n")+
+            "\\n\\nKopie są również dostępne do pobrania na financeyou.pl/sklep/zgody.",
+        });
+        receiptSent=receipt.ok;
+      }
+    } catch(e) {
+      console.error("[store-legal] delivery error",e instanceof Error?e.message:"unknown");
+    }
+    return {accepted:unique.map(code=>({code,version:legalVersion(code)})),receiptSent};
   });
