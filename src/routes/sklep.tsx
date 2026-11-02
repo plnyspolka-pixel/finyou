@@ -101,7 +101,8 @@ function Storefront() {
   const checkoutAllowed = Boolean(
     cart.length && legalTexts && buyerName.trim().length >= 3 &&
     termsAccepted && immediateAccepted && withdrawalAcknowledged &&
-    (!needsDpa || dpaAccepted)
+    (!needsDpa || dpaAccepted) &&
+    (!cart.some((i) => i.type === "kw") || kwLegitimatePurpose)
   );
   async function payForCart() {
     if (!checkoutAllowed || paying) return;
@@ -115,7 +116,8 @@ function Storefront() {
           const pos = i.id.indexOf(":");
           return { kind: i.type as "lesson" | "document" | "kw", id: i.id.slice(pos + 1) };
         }),
-        terms: true, immediate: true, withdrawalAcknowledgement: true, dpa: needsDpa && dpaAccepted,
+        terms: true, immediate: true, withdrawalAcknowledgement: true,
+        dpa: needsDpa && dpaAccepted, kwPurpose: kwLegitimatePurpose,
       } });
       window.location.assign(result.paymentUrl);
     } catch (err) {
