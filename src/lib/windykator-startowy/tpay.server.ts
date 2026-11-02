@@ -24,7 +24,7 @@ export async function handleWindykatorTpay(input:{
       const activatedAt=new Date();
       const endsAt=new Date(activatedAt.getTime()+90*86400000);
       const {error:saveError}=await db.from("windykator_orders")
-        .update({status:"paid",paid_at:activatedAt.toISOString(),collection_activated_at:activatedAt.toISOString(),collection_ends_at:endsAt.toISOString()})
+        .update({status:"paid",paid_at:activatedAt.toISOString(),collection_activated_at:activatedAt.toISOString(),collection_ends_at:endsAt.toISOString(),collection_state:"active"})
         .eq("id",order.id).eq("status","checkout_pending");
       if(saveError)throw Error("Failed to record paid order");
     }
@@ -37,7 +37,7 @@ export async function handleWindykatorTpay(input:{
     return;
   }
   if(["refund","chargeback"].includes(input.status)){
-    await db.from("windykator_orders").update({status:"refunded"})
+    await db.from("windykator_orders").update({status:"refunded",collection_state:"paused"})
       .eq("id",order.id).in("status",["paid","analysis_ready","review_required","analysis_running"]);
   }
 }
