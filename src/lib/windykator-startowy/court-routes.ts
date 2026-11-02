@@ -86,7 +86,7 @@ export function draftCourtPackage(input:{
   const grounds=input.documentNo??"[NUMER I DATA DOKUMENTU]";
   const evidence=input.evidenceList.length?input.evidenceList.map((x,i)=>String(i+1)+". "+x).join("\n"):"[WYKAZ DOWODÓW]";
   const h=[
-    "WSTĘPNY PROJEKT — WYMAGA UZUPEŁNIENIA, KONTROLI I PODPISANIA",
+    "WSTĘPNY PROJEKT — NIE ZŁOŻONO DO SĄDU — WYMAGA UZUPEŁNIENIA, KONTROLI I PODPISANIA",
     "Sugerowana ścieżka: "+route.label,
     "Powód / wierzyciel: "+input.creditor+" [ADRES, IDENTYFIKATOR]",
     "Pozwany / dłużnik: "+input.debtor+" [ADRES, IDENTYFIKATOR]",
