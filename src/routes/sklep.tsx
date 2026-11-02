@@ -30,6 +30,7 @@ type Document = Catalog["documents"][number];
 type CartItem = { id: string; type: "lesson" | "document" | "course" | "kw"; title: string; price: number };
 const GOLD = "#f0c667";
 const PLN = (n: number) => n.toLocaleString("pl-PL") + " zł";
+const lessonDuration = (seconds: number | null) => seconds && seconds > 0 ? `ok. ${Math.max(1, Math.round(seconds / 60))} min` : "Czas nieustalony";
 const gradients = [
   "linear-gradient(135deg,#0f2865,#316a9c)",
   "linear-gradient(135deg,#33215f,#855a9e)",
@@ -166,7 +167,7 @@ function Storefront() {
           <p>Od pierwszej pożyczki po zarządzanie całym portfelem. Wybieraj konkretne narzędzia, które pomagają podejmować świadome decyzje.</p>
           <div className="fy-store-actions">
             <MktButton variant="gold" href="#akademia" size="lg">Przejrzyj lekcje</MktButton>
-            <MktButton variant="outline" href="#kancelaria" size="lg">Zobacz dokumenty</MktButton>
+            <MktButton variant="outline" href="#kancelaria" size="lg">Generator dokumentów</MktButton>
           </div>
           <div className="fy-store-trust"><span><Check size={16} /> 28 lekcji</span><span><Check size={16} /> Kancelaria AI</span><span><Check size={16} /> Analizy KW</span></div>
         </div>
@@ -180,7 +181,7 @@ function Storefront() {
     </section>
 
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
-      <a href="#akademia">Akademia</a><a href="#kancelaria">Kancelaria AI</a>
+      <a href="#akademia">Akademia</a><a href="#kancelaria">Generator dokumentów</a>
       <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
       <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
@@ -189,7 +190,7 @@ function Storefront() {
       <CatalogHeader id="akademia" eyebrow="01 / AKADEMIA INWESTORA" title="Wybierz lekcje, których potrzebujesz" copy="Pełny program Akademii — wszystkie opublikowane lekcje. Tylko lekcja pierwsza jest bezpłatna. Pozostałe możesz zamawiać pojedynczo lub jako cały pakiet." />
       <div className="fy-store-course-banner" style={panelStyle}>
         <img src="/marketing/moduly/szkolenie-1.webp" alt="" loading="lazy" />
-        <div><MktBadge variant="gold">KOMPLETNY PROGRAM</MktBadge><h3>Cała Akademia Inwestora</h3><p>28 lekcji. Od strategii inwestowania, przez analizę nieruchomości i prawo, po windykację i case studies.</p></div>
+        <div><MktBadge variant="gold">KOMPLETNY PROGRAM</MktBadge><h3>Cała Akademia Inwestora</h3><p>{catalog?.lessons.length ?? 28} lekcji. Od strategii inwestowania, przez analizę nieruchomości i prawo, po windykację i case studies. {catalog?.lessons.length && catalog.lessons.every(l => l.durationSeconds != null) ? `Łącznie ${lessonDuration(catalog.lessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0))}.` : ""}</p></div>
         <div className="fy-store-course-price"><strong>1 990 zł</strong>
           <button className="fy-store-add" type="button" onClick={() => add({ id:"course:academy",type:"course", title:"Pełna Akademia Inwestora — 28 lekcji",price:1990 })}>{courseInCart ? "✓ W koszyku" : "+ Dodaj pakiet"}</button>
         </div>
@@ -217,6 +218,7 @@ function Storefront() {
             <div className="fy-store-item-body">
               <div style={badge}>{lesson.category}</div>
               <h3>{lesson.title.replace(/^\d+\.\s*/, "")}</h3>
+              <p className="text-xs text-muted-foreground" aria-label="Czas trwania lekcji">{lessonDuration(lesson.durationSeconds)}</p>
               <div className="fy-store-item-footer">
                 {free ? <><span className="fy-store-free">DARMOWA</span><MktButton variant="gold" size="sm" href={"/pobierz/" + FREE_LESSON_SLUG}>Obejrzyj za darmo</MktButton></> :
                 <><strong>{PLN(149)}</strong><button type="button" className="fy-store-add" aria-label={"Dodaj do koszyka: " + lesson.title}
@@ -231,34 +233,16 @@ function Storefront() {
     </Section>
 
     <Section tint>
-      <CatalogHeader id="kancelaria" eyebrow="02 / KANCELARIA AI" title="Dokumenty gotowe do działania" copy="Pełna biblioteka dokumentów Finance You. Wybierz wzór, przygotuj dokument w kreatorze, opłać zamówienie i — jeżeli jest taka potrzeba — przekaż go do podpisania." />
+      <CatalogHeader id="kancelaria" eyebrow="02 / KANCELARIA AI" title="Generator dokumentów" copy="Jedno miejsce do przygotowywania pism. Wybierz dokument z biblioteki, uzupełnij dane i wygeneruj gotowy plik DOCX." />
       <div className="fy-store-free-contract" style={panelStyle}>
         <div className="fy-store-free-icon"><FileSignature size={44}/></div>
-        <div><span className="fy-store-free">JEDYNY DARMOWY DOKUMENT</span><h3>Umowa pożyczki — bez załączników</h3>
-          <p>Podstawowy wariant umowy pożyczki. Pełny proces kreatora oparty jest na istniejącym silniku umów Finance You. Generowanie wymaga zalogowania i odpowiednich zasad przetwarzania danych.</p>
-          <small>Wariant bez załączników wymaga jeszcze oddzielnego ograniczenia po stronie generatora, zanim będzie oferowany bezpłatnie wszystkim.</small>
+        <div>
+          <span className="fy-store-free">JEDEN GENERATOR · WIELE WZORÓW</span>
+          <h3>Generator dokumentów Finance You</h3>
+          <p>Wybierz rodzaj pisma spośród dostępnych szablonów, zobacz podgląd, uzupełnij dane i kliknij „Generuj dokument”. Otworzysz rzeczywisty kreator Finance You, z kontrolą uprawnień dla Twojego konta.</p>
+          <small>Dokumenty nie są sprzedawane pojedynczo. Dostęp do kreatora zależy od posiadanych uprawnień.</small>
         </div>
-        <MktButton variant="outline" href="/inwestor/dokumenty#kreator-umowy">Otwórz kreator</MktButton>
-      </div>
-      <p className="fy-store-workflow"><span>1. Wybierz dokument</span><span>2. Wygeneruj i opłać</span><span>3. Wyślij do podpisu</span></p>
-      <div className="fy-store-catalog-grid fy-store-document-grid">
-        {(catalog?.documents ?? []).map((doc: Document, index: number) => {
-          const id = "document:" + doc.id;
-          const inCart = itemIds.has(id);
-          return <article className="fy-store-item fy-store-document" key={id}>
-            <div className="fy-store-doc-art" style={{ background: gradients[(index + 3) % gradients.length] }}>
-              <FileText size={27} aria-hidden /><span>{String(doc.number).padStart(2,"0")}</span>
-            </div>
-            <div className="fy-store-item-body"><span style={badge}>{doc.category.replaceAll("_", " ")}</span>
-              <h3>{doc.title}</h3>
-              <div className="fy-store-item-footer"><strong>{PLN(199)}</strong>
-                <button type="button" className="fy-store-add" disabled={inCart} onClick={() => add({ id,type:"document",title:doc.title,price:199 })}>
-                  {inCart ? "✓ W koszyku" : "+ Dodaj do koszyka"}
-                </button>
-              </div>
-            </div>
-          </article>;
-        })}
+        <MktButton variant="gold" href="/inwestor/dokumenty">Wybierz pismo i generuj</MktButton>
       </div>
     </Section>
 
