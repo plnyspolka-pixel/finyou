@@ -1,0 +1,31 @@
+name: EKW network reachability matrix
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ekw-network-matrix.yml'
+  workflow_dispatch:
+jobs:
+  network-probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Probe no KW numbers (only HTTP status)
+        shell: python
+        run: |
+          import urllib.request, urllib.error
+          urls = [
+            "https://ekw.ms.gov.pl/eukw_ogol/menu.do",
+            "https://przegladarka-ekw.ms.gov.pl/eukw_prz/KsiegiWieczyste/wyszukiwanieKW",
+          ]
+          for url in urls:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            try:
+              with urllib.request.urlopen(req, timeout=20) as res:
+                print("PROBE", res.status, res.url)
+            except urllib.error.HTTPError as err:
+              print("PROBE", err.code, url)
+            except Exception as err:
+              print("PROBE ERROR", type(err).__name__, str(err)[:200])
