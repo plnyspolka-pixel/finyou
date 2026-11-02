@@ -31,6 +31,12 @@ describe("Windykator — kwalifikacja przed płatnością",()=>{
     expect(qualifyWindykatorCase({...base,creditorDeclaredNoDispute:false}).status).toBe("needs_documents");
     expect(qualifyWindykatorCase({...base,creditorDeclaredNoPayment:false}).status).toBe("needs_documents");
   });
+  it("przed płatnością blokuje sprawę, która w ciągu 90 dni utraci dostęp do EPU",()=>{
+    const nearLimit={...base.claim,dueDate:"2023-12-01"};
+    const r=qualifyWindykatorCase({...base,claim:nearLimit,facts:{...base.facts,dueDate:"2023-12-01"}});
+    expect(r.status).toBe("needs_documents");
+    expect(r.reasons.join(" ")).toContain("EPU");
+  });
   it("wyklucza checkout przed pozytywnym statusem i po 7 dniach",()=>{
     const v={status:"qualified",qualifiedAt:"2026-11-01T09:00:00Z",now:"2026-11-02T09:00:00Z",identityValid:true};
     expect(mayPurchaseQualifiedCase(v)).toBe(true);
