@@ -201,29 +201,9 @@ function PipelinePage() {
 
       <OneClickLegalPack documents={legal.documents ?? []} steps={steps} onDone={refresh} />
 
-      {(["umowa_ramowa", "nda", "rodo"] as const).map((code) => {
-        const doc = docByCode(code);
-        const s = step(code);
-        if (!doc) {
-          return (
-            <PipelineStepCard key={code} step={s} readable>
-              <p className="text-sm text-muted-foreground">
-                Dokument nie trafił jeszcze do rejestru — podgląd pojawi się po jego dodaniu.
-              </p>
-            </PipelineStepCard>
-          );
-        }
-        return (
-          <PipelineStepCard key={code} step={s} readable>
-            <DocumentStep
-              doc={doc}
-              locked={s.state === "zablokowany"}
-              investor={pipe.investor}
-              onDone={refresh}
-            />
-          </PipelineStepCard>
-        );
-      })}
+      {/* Trzy umowy akceptuje wyłącznie zbiorczy formularz powyżej.
+          Ich statusy pozostają widoczne w PipelineProgress; nie powielamy
+          indywidualnych formularzy i checkboxów poniżej. */}
 
       <PipelineStepCard step={step("zlecenie")}>
         {pipe.pipeline.canSubmitOrder && !access.loading && !access.hasFullAccess ? (
@@ -506,7 +486,7 @@ function OneClickLegalPack({ documents, steps, onDone }: {
   onDone: () => void;
 }) {
   const accept = useServerFn(acceptLegalDocument);
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [confirmedPack, setConfirmedPack] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
@@ -516,9 +496,7 @@ function OneClickLegalPack({ documents, steps, onDone }: {
   const remaining = active.filter((d) => d && !d.accepted);
   const delivered = steps.find((s) => s.key === "doreczenie")?.state === "zrobione";
   const eligible = delivered && active.every(Boolean);
-  const requiredChecks = remaining.flatMap((d) =>
-    ["confirmed:" + d.code, ...((DOC_STATEMENTS[d.code] ?? []).map((v) => d.code + ":" + v.key))]);
-  const allChecked = requiredChecks.every((key) => selected[key] === true);
+  const allChecked = confirmedPack;
 
   async function approveAll() {
     if (!eligible || !allChecked || busy) return;
@@ -530,7 +508,7 @@ function OneClickLegalPack({ documents, steps, onDone }: {
         const doc = active.find((d) => d?.code === code);
         if (!doc || doc.accepted) continue;
         const statements = Object.fromEntries((DOC_STATEMENTS[code] ?? [])
-          .map((v) => [v.key, selected[code + ":" + v.key] === true]));
+          .map((v) => [v.key, true]));
         await accept({ data: { code, confirmed: true, statements } });
         succeeded.push(code);
         setCompleted((previous) => [...previous, code]);
@@ -551,9 +529,9 @@ function OneClickLegalPack({ documents, steps, onDone }: {
       <CardHeader>
         <CardTitle className="text-lg">Akceptacja pakietu umów — jedna operacja</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Przeczytaj każdą umowę i zaznacz jej wymagane oświadczenia. Po zatwierdzeniu
-          system zapisze trzy odrębne potwierdzenia (wersje dokumentów, SHA-256, data i konto)
-          oraz wyśle je na trwałym nośniku. Pola nie są domyślnie zaznaczone.
+          Przejrzyj trzy dokumenty i ich istotne postanowienia. Potwierdź
+          cały pakiet jednym zaznaczeniem. Każdy dokument otrzyma osobny
+          zapis akceptacji (wersja, SHA-256, data i konto).
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -572,21 +550,24 @@ function OneClickLegalPack({ documents, steps, onDone }: {
               </Button>
             </div>
             {expanded[doc.code] ? <LegalPackText code={doc.code}/> : null}
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox checked={Boolean(selected["confirmed:" + doc.code])} disabled={!eligible || busy}
-                onCheckedChange={(value) => setSelected((v) => ({ ...v, ["confirmed:" + doc.code]: value === true }))}/>
-              <span>Zapoznałem się z pełną treścią tego dokumentu i akceptuję jego warunki.</span>
-            </label>
-            {(DOC_STATEMENTS[doc.code] ?? []).map((statement) => (
-              <label key={statement.key} className="flex items-start gap-2 text-sm">
-                <Checkbox checked={Boolean(selected[doc.code + ":" + statement.key])}
-                  disabled={!eligible || busy}
-                  onCheckedChange={(value) => setSelected((v) => ({ ...v, [doc.code + ":" + statement.key]: value === true }))}/>
-                <span>{statement.label}</span>
-              </label>
-            ))}
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium text-foreground">Najważniejsze postanowienia</summary>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {(DOC_STATEMENTS[doc.code] ?? []).map((statement) => (
+                  <li key={statement.key}>{statement.label}</li>
+                ))}
+              </ul>
+            </details>
           </div>
         ))}
+        <label className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm leading-relaxed">
+          <Checkbox checked={confirmedPack} disabled={!eligible || busy}
+            onCheckedChange={(value) => setConfirmedPack(value === true)} />
+          <span>Zapoznałem(-am) się z treścią wskazanych wyżej dokumentów:
+            Umowy ramowej, NDA oraz umowy RODO (w podanych wersjach).
+            Akceptuję wszystkie ich warunki, w tym wyszczególnione
+            powyżej postanowienia i oświadczenia.</span>
+        </label>
         {completed.length > 0 && <p className="text-sm text-emerald-700">
           Zapisano akceptacje: {completed.join(", ")}.
         </p>}
