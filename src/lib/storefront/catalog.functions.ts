@@ -10,7 +10,7 @@ export const getPublicStoreCatalog = createServerFn({ method: "GET" }).handler(a
   const [training, templates] = await Promise.all([
     supabaseAdmin
       .from("training_videos")
-      .select("id,title,description,category,sort_order,thumbnail_url")
+      .select("id,title,description,category,sort_order,thumbnail_url,duration_seconds")
       .eq("is_published", true)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -30,6 +30,7 @@ export const getPublicStoreCatalog = createServerFn({ method: "GET" }).handler(a
     description: v.description ?? "",
     category: v.category ?? "Akademia",
     thumbnail: v.thumbnail_url ?? null,
+    durationSeconds: typeof v.duration_seconds === "number" && v.duration_seconds > 0 ? v.duration_seconds : null,
     number: index + 1,
     // The user's pricing policy supersedes stale free_lesson flags in DB.
     free: index === 0,
