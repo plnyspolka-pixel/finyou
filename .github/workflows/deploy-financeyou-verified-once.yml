@@ -1,0 +1,62 @@
+# One-shot, fail-closed production deployment requested on 2026-11-02.
+# Push trigger is restricted to changes to this exact workflow file.
+# Never deploy by guessing the Cloudflare Worker name.
+name: Finance You verified one-shot production deploy
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/deploy-financeyou-verified-once.yml']
+permissions:
+  contents: read
+concurrency:
+  group: financeyou-cloudflare-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Legal signing, e-sign schema, navigation and contract regression tests
+        run: bunx vitest run src/lib/document-signing-policy.test.ts src/lib/esign/esign-generated-document.test.ts src/components/inwestor/investor-nav.test.ts src/lib/contract-engine/komplet.test.ts
+      - name: Build Cloudflare Worker
+        run: bun run build
+      - name: Fail-closed production Cloudflare target discovery
+        shell: bash
+        env:
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CF_ACCOUNT" || { echo "::error::CLOUDFLARE_ACCOUNT_ID is unavailable"; exit 1; }
+          test -n "$CF_TOKEN" || { echo "::error::CLOUDFLARE_API_TOKEN is unavailable"; exit 1; }
+          headers=(-H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json")
+          # Explicit hostname binding is required; never deploy to a guessed or newly created Worker.
+          domains=$(curl -fsS --retry 2 --max-time 20 "${headers[@]}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/domains?hostname=financeyou.pl")
+          service=$(printf '%s' "$domains" | jq -er '[.result[] | select(.hostname == "financeyou.pl" and .enabled == true) | .service] | unique | if length == 1 then .[0] else error("financeyou.pl has no unique enabled Worker binding") end')
+          [[ "$service" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "::error::Invalid verified service name"; exit 1; }
+          # Fail if the worker's Supabase target would change under the repo's wrangler vars.
+          settings=$(curl -fsS --retry 2 --max-time 20 "${headers[@]}" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/$service/settings")
+          existing_db=$(printf '%s' "$settings" | jq -er '.result.bindings[] | select(.name=="SUPABASE_URL" and .type=="plain_text") | .text' | head -1)
+          expected_db=$(jq -er '.vars.SUPABASE_URL' wrangler.jsonc)
+          test -n "$existing_db" && test "$existing_db" = "$expected_db" || { echo "::error::Worker SUPABASE_URL differs from repository configuration (or could not be read). Deployment blocked."; exit 1; }
+          echo "VERIFIED_PRODUCTION_WORKER=$service" >> "$GITHUB_ENV"
+          echo "Verified existing Cloudflare Worker mapped to financeyou.pl and unchanged Supabase project."
+      - name: Deploy only the verified production Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx wrangler deploy --name "$VERIFIED_PRODUCTION_WORKER" --keep-vars
+      - name: Production homepage smoke check
+        run: |
+          set -euo pipefail
+          curl -fsS --retry 4 --retry-delay 3 --max-time 20 -o /tmp/financeyou-response.html https://financeyou.pl/
+          test -s /tmp/financeyou-response.html
