@@ -195,7 +195,19 @@ function extract(raw:string):SourceFacts {
   const type=["invoice","loan","other"].includes(String(obj.documentType))
     ? String(obj.documentType) as "invoice"|"loan"|"other":"unknown";
   const due=s(obj.dueDate);
-  return {documentType:type,creditor:s(obj.creditor),debtor:s(obj.debtor),
+  const rawCourt=(obj.courtEvidence&&typeof obj.courtEvidence==="object"?obj.courtEvidence:{}) as Record<string,unknown>;
+  const ref=(v:unknown)=>typeof v==="string"&&v.trim().length>3?v.trim().slice(0,200):null;
+  const notarialReference=ref(rawCourt.notarialReference);
+  const titleReference=ref(rawCourt.titleReference);
+  const landRegister=ref(rawCourt.landRegister);
+  const courtEvidence={
+    hasNotarial777:rawCourt.hasNotarial777===true&&!!notarialReference,
+    hasEnforceableTitle:rawCourt.hasEnforceableTitle===true&&!!titleReference,
+    hasMortgage:rawCourt.hasMortgage===true&&!!landRegister,
+    hasVerifiedDelivery:rawCourt.hasVerifiedDelivery===true,
+    notarialReference,titleReference,landRegister
+  };
+  return {courtEvidence,documentType:type,creditor:s(obj.creditor),debtor:s(obj.debtor),
     documentNumber:s(obj.documentNumber),amount:n(obj.amount),
     dueDate:due&&isDate(due)?due:null,evidence:list(obj.evidence),
     missing:list(obj.missing),summary:s(obj.summary)??""};
@@ -216,7 +228,7 @@ async function readFactsForQualification(o:any):Promise<SourceFacts>{
     '{"documentType":"invoice|loan|other|unknown","creditor":null,"debtor":null,',
     '"documentNumber":null,"amount":null,"dueDate":null,"evidence":[],"missing":[],"summary":""}.',
     "Używaj prawdziwych wartości, podawaj daty jako YYYY-MM-DD, kwoty jako liczby.",
-    "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia."
+    "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia. Pola courtEvidence zaznaczaj wyłącznie gdy dołączony dokument jednoznacznie potwierdza fakt; podaj konkretny numer aktu, tytułu lub KW. Samo wspomnienie o hipotece albo 777 w umowie nie oznacza istnienia tytułu wykonawczego."
   ].join("\n");
   const content=o.source_mime==="application/pdf" ?
     [{type:"text",text:prompt},{type:"file",file:{filename:o.source_file_name,file_data:url}}] :
@@ -268,7 +280,7 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
     });
     if(!registry.verified){
       const reasons=[registry.reason??"Nie udało się zweryfikować umocowania wierzyciela."];
-      const status=registry.identityMatch?"needs_documents":"rejected";
+      const status=/nie jest tożsamy|nie odpowiada|różnią|niezgodn/i.test(reasons.join(" "))?"rejected":"needs_documents";
       await db.from("windykator_orders")
         .update({status,qualification_reasons:reasons,qualified_at:null,
           registry_verification:registry})
@@ -327,7 +339,7 @@ export const prepareWindykatorPackage=createServerFn({method:"POST"})
         claimKind:o.claim_kind,amount:Number(o.claim_amount),dueDate:o.due_date},facts);
       const court=chooseCourtRoute({
         dueDate:o.due_date,today:new Date().toISOString().slice(0,10),
-        evidence:EMPTY_COURT_EVIDENCE,disputed:!o.undisputed_asserted
+        evidence:facts.courtEvidence??EMPTY_COURT_EVIDENCE,disputed:!o.undisputed_asserted
       });
       const courtDraft=draftCourtPackage({route:court,creditor:o.creditor_name,
         debtor:o.debtor_name,amount:Number(o.claim_amount),dueDate:o.due_date,
