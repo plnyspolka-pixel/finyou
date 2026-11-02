@@ -1,0 +1,52 @@
+name: Windykator AI — migracja dwóch baz Supabase
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: "Finance you produkcja (vkzndnaoxhdxrxlpntcb)"
+            env_key: "SUPABASE_DB_URL_FINANCE_PRODUKCJA"
+          - target: "Finance You app (jqvepxhulxdnbwbogkhe)"
+            env_key: "SUPABASE_DB_URL_FINYOU_APP"
+    environment: windykator-db-migration
+    steps:
+      - uses: actions/checkout@v4
+      - name: PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Apply schema and verify target
+        env:
+          DB_URL_FINANCE: ${{ secrets.SUPABASE_DB_URL_FINANCE_PRODUKCJA }}
+          DB_URL_FINYOU: ${{ secrets.SUPABASE_DB_URL_FINYOU_APP }}
+          TARGET_KEY: ${{ matrix.env_key }}
+          TARGET_LABEL: ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$TARGET_KEY" in
+            SUPABASE_DB_URL_FINANCE_PRODUKCJA) DB_URL="$DB_URL_FINANCE" ;;
+            SUPABASE_DB_URL_FINYOU_APP) DB_URL="$DB_URL_FINYOU" ;;
+            *) echo "Nieznana baza" >&2; exit 1 ;;
+          esac
+          if [ -z "$DB_URL" ]; then
+            echo "Brak sekretu $TARGET_KEY dla $TARGET_LABEL. Nic nie zmieniono." >&2
+            exit 1
+          fi
+          echo "Aktualizacja: $TARGET_LABEL"
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261102122000_windykator_startowy.sql
+          psql "$DB_URL" -X -v ON_ERROR_STOP=1 -Atc "
+            select case when to_regclass('public.windykator_orders') is not null
+              and (select relrowsecurity from pg_class where oid='public.windykator_orders'::regclass)
+              and (select public = false from storage.buckets where id='windykator-private')
+            then 'OK' else 'FAIL' end;
+          " | grep -qx OK
+          echo "RLS, tabela i prywatne dokumenty: OK"
