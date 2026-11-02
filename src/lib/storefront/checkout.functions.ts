@@ -46,15 +46,7 @@ async function priceItems(raw: z.infer<typeof cartSchema>): Promise<Item[]> {
       // Wycofano wyłącznie NOWE transakcje per dokument; historyczne
       // uprawnienia i pobrania działają w pozostałych funkcjach.
       throw new Error("Pojedyncze dokumenty nie są już sprzedawane. Przejdź do generatora dokumentów.");
-      /* if (!UUID.safeParse(id).success) throw new Error("Nieprawidłowy identyfikator dokumentu.");
-      const { data, error } = await admin.from("document_templates")
-        .select("name,use_case,category,template_file_path")
-        .eq("id", id).maybeSingle();
-      if (error || !data?.template_file_path || data.use_case === "legacy" || data.category === "instrukcja") {
-        throw new Error("Ten dokument nie jest oferowany.");
-      }
-      title = data.name;
-      price = 19900; */
+
     }
     const key = i.kind + ":" + id;
     if (keys.has(key)) continue;
