@@ -113,7 +113,7 @@ export function classifyOfficialMsigRows(input: OfficialMsigInput, rows: unknown
       category:"court_notice",
       source:"MSiG — Ministerstwo Sprawiedliwości",
       title,
-      detail:(entityName + " · Monitor " + monitorNumber + " (ogłoszenie historyczne lub aktualne — wymaga sprawdzenia)").slice(0,250),
+      detail:(entityName + " · Monitor " + monitorNumber + " (ogłoszenie historyczne lub aktualne — wymaga sprawdzenia)").replace(/\b\d{11}\b/g,"[PESEL ukryty]").slice(0,250),
       publicationDate:publication,
       caseSignature:signature || null,
       url:OFFICIAL_MSIG_HOME,
