@@ -14,7 +14,7 @@ export interface CollectionSnapshot {
   creditorBalanceConfirmedAt: string | null;
   hasPendingPaymentPromise: boolean;
   contactOptOut: boolean;
-  completedActions: PlannedAction[];
+  completedStageDays: number[];
   today: string;
 }
 export type NextStep =
@@ -41,7 +41,7 @@ export function nextCollectionStep(s:CollectionSnapshot):NextStep {
   if(!Number.isFinite(balanceAge)||balanceAge<0||balanceAge>2)
     return {ok:false,reason:"Saldo niepotwierdzone w ostatnich 48 godzinach."};
   const stages=FREE_COLLECTION_STAGES.filter(x=>x.day<=s.elapsedDays);
-  const remaining=stages.filter(x=>!s.completedActions.includes(x.action));
+  const remaining=stages.filter(x=>!s.completedStageDays.includes(x.day));
   if(!remaining.length)return {ok:false,reason:"Brak kolejnej zaplanowanej czynności."};
   const stage=remaining[0];
   // Nawet przy pełnej weryfikacji działania wychodzące wymagają osobnego
