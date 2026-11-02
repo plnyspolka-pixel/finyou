@@ -290,3 +290,15 @@ Inwestor z zatwierdzonym KYC z pipeline'u nie generuje nowej sesji.
    PDF i stronę weryfikacji.
 4. Opcjonalnie: zregeneruj `src/integrations/supabase/types.ts`, żeby zdjąć
    luźne typowanie tabel `esign_*`.
+
+## Podpisy dokumentowe w generatorze — kwalifikacja wzorów (2.11.2026)
+
+Moduł `/inwestor/kreator-dokumentow` zawiera obecnie 33 wzory plikowe w bazie produkcyjnej (z czego jeden `legacy`, wyłączony z nowego kreatora). Biała lista podpisu dokumentowego dopuszcza 10 typów pism; są one enumerowane w `src/lib/document-signing-policy.ts` i sprawdzane ponownie przez `sourceFromGeneratedDocument` po stronie serwera. Nie jest to ocena każdego konkretnego stanu faktycznego. W razie zastrzeżenia formy pisemnej w umowie stron należy zastosować formę surowszą.
+
+**Dopuszczone:** monit; wezwanie do zapłaty standardowe; ostateczne wezwanie przedsądowe; wezwanie poręczyciela (samo wezwanie, nie oświadczenie ustanawiające poręczenie); ostrzeżenie BIG/KRD; uznanie długu; protokół negocjacji windykacyjnych; oświadczenie o potrąceniu; zawiadomienie o cesji (nie umowa cesji); pokwitowanie wypłaty.
+
+**Niedopuszczone w tym module:** oświadczenie 777 i dokumenty ustanawiające hipotekę (notariusz); zgoda na wykreślenie hipoteki (formalny dokument do KW); pisma sądowe/komornicze (właściwy tryb wniesienia); cesja i aneks/ugoda bez weryfikacji formy pierwotnej; procedury AML, instrukcje i załączniki informacyjne (brak czynności do podpisania). Zablokowane po stronie backendu, nie tylko CSS.
+
+**Komplet pożyczkowy z silnika klauzul:** wniosek, umowa, harmonogram, protokół, tabela opłat i warunkowo dyspozycja wypłaty. Nowa generacja zapisuje w audycie `ma_poreczyciela` (wyliczone na serwerze z przeprocesowanej UmowaData); pakiet z poręczycielem jest blokowany, ponieważ jego oświadczenie wymaga formy pisemnej pod rygorem nieważności (art. 876 §2 KC). Pakiet bez poręczyciela można podpisać formą dokumentową, ale hipoteka i poddanie się egzekucji art. 777 nadal są niezależnymi czynnościami notarialnymi. Pakiety historyczne bez flagi audytowej są blokowane do osobnej weryfikacji.
+
+Podstawy prawne: art. 77², 77³, 78¹, 245 §2, 720 §2, 876 §2 k.c.; art. 31 ustawy o księgach wieczystych i hipotece; art. 777 k.p.c. Wyliczenie jest zachowawcze, przy rozbieżnościach indywidualnych wymaga oceny konkretnej czynności.
