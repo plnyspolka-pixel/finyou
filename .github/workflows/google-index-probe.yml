@@ -1,0 +1,26 @@
+name: Google index diagnostic (one public query)
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+    paths:
+      - 'scripts/google-index-probe.mjs'
+      - '.github/workflows/google-index-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/google-probe
+          npm install --prefix /tmp/google-probe --no-audit --no-fund playwright
+          cd /tmp/google-probe
+          npx playwright install --with-deps chromium
+          cp "$GITHUB_WORKSPACE/scripts/google-index-probe.mjs" .
+      - name: One public Google SERP request
+        run: cd /tmp/google-probe && node google-index-probe.mjs
