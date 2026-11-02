@@ -75,7 +75,7 @@ function CheckoutPage(){
     try{
       await accept({data:{
         codes:hasDocuments?["store_terms","store_dpa"]:["store_terms"],
-        termsConfirmed:terms,dpaConfirmed:dpa,controllerAuthority:authority,
+        termsConfirmed:terms,dpaConfirmed:dpa,controllerAuthority:authority,controllerName:hasDocuments?buyerName:undefined,
       }});
       const buyer={buyerType,buyerName,buyerEmail,buyerNip:buyerNip||null,
         buyerStreet,buyerPostalCode,buyerCity,buyerCountry:"PL"};
