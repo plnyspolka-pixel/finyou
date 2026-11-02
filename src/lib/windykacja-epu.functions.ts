@@ -26,7 +26,7 @@ const eventInput = z.object({
     "final", "discontinued", "enforcement", "other",
   ]),
   sygnatura: z.string().trim().max(120).optional().nullable(),
-  occurredOn: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+  occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   note: z.string().trim().max(6000).optional().nullable(),
   attachmentPath: z.string().trim().max(650).optional().nullable(),
   claimSummary: z.string().trim().max(15000).optional().nullable(),
