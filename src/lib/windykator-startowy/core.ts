@@ -45,10 +45,11 @@ export function assembleStartPackage(claim: SubmittedClaim, facts: SourceFacts, 
   if (facts.amount == null || !sameMoney(facts.amount, claim.amount)) warnings.push("Nie potwierdzono kwoty z dokumentem.");
   if (!facts.dueDate || facts.dueDate !== date) warnings.push("Termin z dokumentu różni się od oświadczenia wierzyciela.");
   if (facts.documentType === "unknown") warnings.push("Nie rozpoznano rodzaju dokumentu.");
+  if (facts.documentType !== "unknown" && claim.claimKind !== "other" && facts.documentType !== claim.claimKind) warnings.push("Rodzaj dokumentu nie odpowiada zgłoszonemu roszczeniu.");
   if (facts.missing.length) warnings.push("Wskazane braki dokumentacji: " + facts.missing.map(x => clean(x, 100)).join("; "));
   warnings.push("Brak integracji bankowej: brak niezależnego potwierdzenia niezapłacenia zobowiązania.");
   warnings.push("Autentyczność dokumentu, wykonanie świadczenia, umocowanie oraz ewentualne przedawnienie wymagają dodatkowej kontroli.");
-  const critical = warnings.some(x => /Nie potwierdzono|Nieprawidłowa|Niepotwierdzona wymagalność|Nie rozpoznano/.test(x));
+  const critical = facts.missing.length > 0 || warnings.some(x => /Nie potwierdzono|Nieprawidłowa|Niepotwierdzona wymagalność|Nie rozpoznano|Rodzaj dokumentu nie odpowiada/.test(x));
   const creditor = clean(claim.creditorName);
   const debtor = clean(claim.debtorName);
   const id = clean(facts.documentNumber ?? "dokument wskazany w zgłoszeniu", 100);
