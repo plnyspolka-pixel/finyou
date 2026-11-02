@@ -28,9 +28,10 @@ export interface OfficialMsigRow {
 export const OFFICIAL_MSIG_ENDPOINT = "https://wyszukiwarka-msig.ms.gov.pl/api/Monitor/Search";
 export const OFFICIAL_MSIG_HOME = "https://wyszukiwarka-msig.ms.gov.pl/";
 
+const PL_CHARS: Record<string,string>={ą:"a",ć:"c",ę:"e",ł:"l",ń:"n",ó:"o",ś:"s",ź:"z",ż:"z"};
 function normalize(value: string): string {
   return value.toLowerCase()
-    .replace(/[ąćęłńóśźż]/g, (c) => ({ą:"a",ć:"c",ę:"e",ł:"l",ń:"n",ó:"o",ś:"s",ź:"z",ż:"z"}[c] ?? c))
+    .replace(/[ąćęłńóśźż]/g, (c) => PL_CHARS[c] ?? c)
     .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g," ");
 }
 
