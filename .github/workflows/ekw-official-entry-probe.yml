@@ -1,0 +1,23 @@
+name: EKW same-methods-as-MSiG reachability test
+on:
+  pull_request:
+    paths:
+      - "services/ekw-direct/official-entry-probe.mjs"
+      - ".github/workflows/ekw-official-entry-probe.yml"
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright browser
+        run: |
+          cd services/ekw-direct
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Compare HTTP fetch vs browser and official EKW entry flow
+        run: node services/ekw-direct/official-entry-probe.mjs
