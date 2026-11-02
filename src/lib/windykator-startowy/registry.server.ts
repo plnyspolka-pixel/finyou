@@ -69,7 +69,7 @@ export function verifyKrsRepresentation(input:{
   if(presidentOnly&&matched.some(p=>/prezes/i.test(p.role??"")))mode="single_board";
   if(!matched.length&&proxies.some(p=>/samoistna|samodzieln/i.test(p.role??"")))
     mode="independent_proxy";
-  if(matched.length&&joint)mode="joint_requires_cosign";
+  if(matched.length&&joint&&mode!=="single_board")mode="joint_requires_cosign";
   return {
     verified:mode==="single_board"||mode==="independent_proxy",
     registry:"KRS",reason:mode==="joint_requires_cosign"?"Zasady KRS wymagają reprezentacji łącznej; konieczny podpis drugiej osoby.":mode==="unverified"?"KRS nie potwierdza prawa do samodzielnej reprezentacji.":null,
