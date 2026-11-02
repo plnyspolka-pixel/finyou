@@ -27,6 +27,12 @@ export async function handleWindykatorTpay(input:{
     }
     return;
   }
+  if(["error","declined","cancelled"].includes(input.status) && order.status==="checkout_pending"){
+    await db.from("windykator_orders")
+      .update({status:"draft",tpay_transaction_id:null})
+      .eq("id",order.id).eq("status","checkout_pending");
+    return;
+  }
   if(["refund","chargeback"].includes(input.status)){
     await db.from("windykator_orders").update({status:"refunded"})
       .eq("id",order.id).in("status",["paid","analysis_ready","review_required","analysis_running"]);
