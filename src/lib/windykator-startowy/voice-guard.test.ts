@@ -1,6 +1,6 @@
 import {describe,it,expect} from "vitest";
 import {eligibleForWindykatorCall,classifyVoiceAnalysis} from "./voice-guard";
-import {normalizeWindPhone,voiceCallAllowedAt} from "./voice.server";
+import {normalizeWindPhone,voiceCallAllowedAt,windVoicePublicOrigin} from "./voice.server";
 import {verifyWindVoiceHmac} from "./voice-hmac";
 import {createHmac} from "node:crypto";
 const now=new Date("2026-11-02T11:00:00.000Z"); // poniedziałek 12:00 Warszawa
@@ -26,6 +26,20 @@ describe("Nowy ElevenLabs A5 — bezpieczna automatyka",()=>{
     expect(eligibleForWindykatorCall({...base,lastOutboundCallAt:"2026-10-30T10:00:00Z"}).ok).toBe(false);
     expect(eligibleForWindykatorCall({...base,now:new Date("2026-11-01T11:00:00Z")}).ok).toBe(false);
     expect(eligibleForWindykatorCall({...base,now:new Date("2026-11-02T23:00:00Z")}).ok).toBe(false);
+  });
+  it("oba webhooki dopuszczają domeny Finance You, nigdy Lovable",()=>{
+    const prev=process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL;
+    try{
+      process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL="https://financeyou.pl";
+      expect(windVoicePublicOrigin()).toBe("https://financeyou.pl");
+      process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL="https://app.financeyou.pl";
+      expect(windVoicePublicOrigin()).toBe("https://app.financeyou.pl");
+      process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL="https://somewhere.lovable.app";
+      expect(()=>windVoicePublicOrigin()).toThrow();
+    }finally{
+      if(prev===undefined)delete process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL;
+      else process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL=prev;
+    }
   });
   it("telefon prywatny nie przechodzi walidacji",()=>{
     expect(normalizeWindPhone("500 111 222")).toBe("+48500111222");
