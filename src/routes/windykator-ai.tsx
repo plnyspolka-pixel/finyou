@@ -5,7 +5,7 @@ import { z } from "zod";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   createWindykatorDraft, getWindykatorSaleStatus, getWindykatorKyc, startWindykatorKyc,
-  createWindykatorCheckout, getWindykatorOrder, prepareWindykatorPackage
+  createWindykatorCheckout, qualifyWindykatorOrder, getWindykatorOrder, prepareWindykatorPackage
 } from "@/lib/windykator-startowy/orders.functions";
 
 const search=z.object({caseId:z.string().optional(),tpay:z.string().optional(),didit:z.string().optional()});
@@ -33,13 +33,14 @@ function WindykatorPage(){
   const kycFn=useServerFn(getWindykatorKyc);
   const startKycFn=useServerFn(startWindykatorKyc);
   const payFn=useServerFn(createWindykatorCheckout);
+  const qualifyFn=useServerFn(qualifyWindykatorOrder);
   const getFn=useServerFn(getWindykatorOrder);
   const prepareFn=useServerFn(prepareWindykatorPackage);
   const [saleEnabled,setSaleEnabled]=useState(false);
   const [saleChecked,setSaleChecked]=useState(false);
   const [f,setF]=useState(initial);
   const [file,setFile]=useState<File|null>(null);
-  const [confirm,setConfirm]=useState({representation:false,balance:false,terms:false,privacy:false,earlyStart:false,withdrawalNotice:false});
+  const [confirm,setConfirm]=useState({representation:false,balance:false,terms:false,privacy:false,earlyStart:false,withdrawalNotice:false,noDispute:false});
   const [caseId,setCaseId]=useState<string|null>(query.caseId??null);
   const [kyc,setKyc]=useState<{verified:boolean,status:string,url:string|null}|null>(null);
   const [order,setOrder]=useState<any>(null);
@@ -92,13 +93,13 @@ function WindykatorPage(){
         mime:file.type as "application/pdf"|"image/jpeg"|"image/png"|"image/webp",
         dataUrl,consents:{
           representation:true,balance:true,terms:true,privacy:true,
-          earlyStart:true,withdrawalNotice:true
+          earlyStart:true,withdrawalNotice:true,noDispute:true
         }
       }});
       if("error" in r && r.error)throw Error(r.error);
       if("caseId" in r && r.caseId){
         window.sessionStorage.setItem("windykator_case",r.caseId);
-        setCaseId(r.caseId);setNotice("Zgłoszenie zapisane prywatnie. Następny krok: weryfikacja tożsamości i płatność.");
+        setCaseId(r.caseId);setNotice("Zgłoszenie zapisane. Zweryfikuj tożsamość, następnie bot oceni sprawę przed wyświetleniem płatności.");
       }
     }catch(e){setError(e instanceof Error?e.message:"Nie udało się przyjąć zgłoszenia. Zaloguj się i spróbuj ponownie.");}
     finally{setBusy(false);}
@@ -109,6 +110,17 @@ function WindykatorPage(){
       if("verified" in r && r.verified){setKyc({verified:true,status:"Approved",url:null});setNotice("Tożsamość potwierdzona.");}
       else if("url" in r && r.url)window.location.assign(r.url);
     }catch(e){setError(e instanceof Error?e.message:"Błąd weryfikacji.");}
+    finally{setBusy(false);}
+  }
+  async function qualify(){
+    if(!caseId)return;
+    setBusy(true);setError("");
+    try{
+      const r=await qualifyFn({data:{caseId}});
+      if("error" in r&&r.error)throw Error(r.error);
+      setNotice(r.status==="qualified"?"Bot zakwalifikował sprawę. Możesz opłacić Pakiet Startowy 50 zł.":"Sprawa nie została zakwalifikowana do automatycznej obsługi.");
+      await reload(caseId);
+    }catch(e){setError(e instanceof Error?e.message:"Błąd kwalifikacji.");}
     finally{setBusy(false);}
   }
   async function pay(){
@@ -183,7 +195,8 @@ function WindykatorPage(){
             <div className="space-y-3 rounded-xl bg-slate-50 p-4">
               {([
                 ["representation","Oświadczam, że jestem wierzycielem albo działam na podstawie ważnego umocowania."],
-                ["balance","Potwierdzam aktualność kwoty oraz zobowiązuję się zgłosić wpłaty, spory i inne zmiany."],
+                ["balance","Potwierdzam, że według posiadanych przeze mnie informacji należność pozostaje niezapłacona w podanej kwocie."],
+                ["noDispute","Oświadczam, że nie znam sporu co do istnienia, wysokości ani wymagalności tej należności; każdą zmianę zgłoszę niezwłocznie."],
                 ["terms","Akceptuję warunki Pakietu Startowego i rozdzielenie go od osobnej obsługi polubownej."],
                 ["privacy","Zapoznałem/am się z polityką prywatności i informacją o przetwarzaniu danych oraz analizie AI."],
                 ["earlyStart","Wyraźnie żądam wykonania odpłatnego Pakietu Startowego przed upływem 14 dni."],
@@ -201,21 +214,35 @@ function WindykatorPage(){
           </fieldset></form> : <div className="mt-6 space-y-4">
             <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-800">
               Numer zgłoszenia: <strong className="break-all">{caseId}</strong><br/>
-              {order?.status==="checkout_pending"?"Oczekiwanie na potwierdzenie Tpay":order?.status==="paid"?"Płatność potwierdzona — gotowe do analizy":order?.status==="analysis_ready"?"Pakiet wykonany":order?.status==="review_required"?"Pakiet wymaga weryfikacji": "Dokument zapisany"}
+              {order?.status==="checkout_pending"?"Oczekiwanie na potwierdzenie Tpay":order?.status==="paid"?"Płatność potwierdzona — gotowe do analizy":order?.status==="qualified"?"Zakwalifikowana — dostępna płatność":order?.status==="needs_documents"?"Wymaga dokumentów":order?.status==="rejected"?"Odrzucona":order?.status==="analysis_ready"?"Pakiet wykonany":order?.status==="review_required"?"Pakiet wymaga weryfikacji": "Dokument zapisany"}
             </div>
             {!order?.paid && <div>
-              <h3 className="font-bold text-slate-900">2. Potwierdź tożsamość i uruchom zakup</h3>
+              <h3 className="font-bold text-slate-900">2. Weryfikacja i automatyczna kwalifikacja</h3>
               <p className="my-2 text-sm text-slate-600">Weryfikacja Didit jest jednorazowa. Sprawy firmowe wymagają również potwierdzenia reprezentacji.</p>
               {kyc?.verified ? <p className="my-3 font-semibold text-emerald-700">Tożsamość zweryfikowana</p> :
                 <button type="button" disabled={busy} onClick={startIdentity} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold text-slate-900">Zweryfikuj tożsamość</button>}
-              <button type="button" disabled={busy||!kyc?.verified} onClick={pay}
+              <p className="my-3 text-sm text-slate-700">Bot sprawdzi najpierw dokument, zgodność stron, termin, kwotę i uprawnienie wierzyciela. Dopiero wynik „Zakwalifikowana” otwiera płatność.</p>
+              {["draft","needs_documents"].includes(order?.status) && <button type="button" disabled={busy||!kyc?.verified} onClick={qualify}
+                className="mt-3 block w-full rounded-xl bg-slate-900 px-5 py-4 font-extrabold text-white disabled:opacity-40">
+                {busy?"Sprawdzanie…":"Sprawdź i zakwalifikuj sprawę (bez opłaty)"}
+              </button>}
+              {order?.status==="qualifying" && <p className="mt-3 text-sm font-semibold text-slate-700">Dokumenty są właśnie analizowane. Odśwież status.</p>}
+              {order?.status==="qualified" && <p className="mt-3 text-sm font-bold text-emerald-700">Sprawa zakwalifikowana automatycznie. Można przejść do płatności.</p>}
+              {["needs_documents","rejected"].includes(order?.status) && <div className="mt-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+                <strong>{order.status==="rejected"?"Sprawa nie może zostać przyjęta automatycznie.":"Dokumenty nie wystarczają do automatycznego przyjęcia."}</strong>
+                {(order.qualificationReasons??[]).map((reason:string,i:number)=><p key={i} className="mt-1">{reason}</p>)}
+                <p className="mt-2">W razie braków przygotuj kompletny dokument z załącznikami i utwórz nowe zgłoszenie. Nie pobraliśmy opłaty.</p>
+              </div>}
+              {order?.status==="qualified" && <button type="button" disabled={busy||!kyc?.verified} onClick={pay}
                 className="mt-3 block w-full rounded-xl bg-amber-400 px-5 py-4 font-extrabold text-slate-950 disabled:opacity-40">
-                Przejdź do Tpay — 50 zł brutto
-              </button>
+                Opłać zakwalifikowaną sprawę — 50 zł brutto
+              </button>}
+              {order?.status==="checkout_pending" && <p className="mt-3 text-sm text-slate-700">Oczekujemy na potwierdzenie transakcji Tpay. Płatność weryfikuje serwer, a nie parametr w adresie strony.</p>}
             </div>}
             {order?.paid && <div>
               <button type="button" onClick={()=>void reload(caseId)} disabled={busy}
                 className="rounded-xl bg-slate-900 px-6 py-3 font-bold text-white">Odśwież status i analizę</button>
+              {order.collectionActivatedAt&&<p className="mt-3 text-sm font-semibold text-slate-700">90-dniowy okres obsługi uruchomiony: {new Date(order.collectionActivatedAt).toLocaleDateString("pl-PL")} — do {new Date(order.collectionEndsAt).toLocaleDateString("pl-PL")}. Kanały kontaktu pozostają niepodłączone.</p>}
               {order.report&&<div className="mt-4 space-y-4">
                 {[["Raport analizy",order.report],["Projekt wezwania",order.notice],["Wstępny szkic EPU",order.epuDraft]].filter(v=>v[1]).map(([title,body])=>
                   <div key={title}><h3 className="font-bold text-slate-900">{title}</h3>
