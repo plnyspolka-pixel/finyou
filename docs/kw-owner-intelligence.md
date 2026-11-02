@@ -141,3 +141,43 @@ wzmianki o postępowaniach i wyświetla je jako `name_only`.
 - **Nie wdrażać bez przeglądu RODO oraz ograniczenia natężenia zapytań**.
   Zapytania po nazwisku są przesyłane do dostawców wyszukiwania;
   dla wymagania wyłącznie UE wymagany dostawca i odpowiednie warunki.
+
+## Oficjalny MSiG: potwierdzony odczyt JSON — 2 listopada 2026
+Zbadano **oficjalny portal** `https://wyszukiwarka-msig.ms.gov.pl/`
+(nie mylić z komercyjnym `imsig.pl`).
+
+**Wyniki rzeczywistych testów:**
+1. Strona: `HTTP 200`, Angular; zwykły `fetchHtml()` odczytuje tylko
+   977 B szkieletu, nie listę ogłoszeń.
+2. Playwright uruchomił formularz; po publicznym numerze KRS
+   wysłał `GET /api/Monitor/Search` i otrzymał JSON.
+3. Publiczny KRS `0000753937` zwrócił rekord MSiG:
+   `id=19407882`, `monitorNumber=213/2026`,
+   `dateOfPublication=2026-11-02`,
+   `entityName=ANSYS POLAND (...) W LIKWIDACJI`.
+4. **Zwykłe serwerowe `fetch()` bez Chromium** do tej samej ścieżki
+   zwróciło `HTTP 200`, `list.length=1` i ten sam rekord, przy
+   parametrze `from=2001-01-01`. Log:
+   https://github.com/plnyspolka-pixel/finyou/actions/runs/41447610548
+
+**Zaimplementowano w gałęzi:** `src/lib/coowners/official-msig.server.ts`
+jako opcjonalną kwerendę dla **właścicieli będących spółkami** po
+KRS/NIP (albo nazwie). Działa w istniejącym raporcie KW i PDF,
+bez nowej tabeli ani abonamentu.
+- Maksymalnie **4 spółki na raport**, 1 strona wyników na spółkę.
+- Zwykłe ogłoszenia KRS nie generują alarmu o zadłużeniu.
+- Wzmianki o likwidacji/upadłości/restrukturyzacji mają status
+  `name_only`; należy porównać pełną nazwę, KRS i daty i sprawdzić
+  stan prawny w źródle.
+- Historyczny MSiG **nie zastępuje KRZ**; brak trafienia to nie
+  zaświadczenie o braku postępowania.
+- Oficjalny portal nie deklaruje wspieranego API i może zmienić schemat
+  JSON lub ograniczyć ruch; interfejs nie jest przeznaczony do masowego
+  pobierania. Nie uruchamiać skanowania hurtowego.
+- Kwerenda osoby fizycznej przez oficjalny portal wymaga odrębnej
+  walidacji na danych testowych i nie została włączona.
+
+**Ograniczenia:** na razie nie przechodzimy do pełnej treści pozycji
+i nie potwierdzamy bieżących stanów postępowań. Link prowadzi do
+wyszukiwarki, nie do odpisu konkretnej sprawy. Przed merge sprawdzić
+regulamin, retencję i tolerancję na zmiany wewnętrznego JSON.
