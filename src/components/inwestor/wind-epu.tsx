@@ -290,6 +290,19 @@ export function WindEpuPanel({
                   {event.metadata?.epu_sygnatura ? ` · ${event.metadata.epu_sygnatura}` : ""}
                 </div>
                 {event.tresc && <p className="whitespace-pre-wrap">{event.tresc}</p>}
+                {typeof event.metadata?.epu_claim_summary === "string" && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-primary">Zobacz zapisane dane pozwu</summary>
+                    <div className="mt-2 space-y-1">
+                      <Textarea readOnly rows={8} className="text-xs"
+                        value={event.metadata.epu_claim_summary} />
+                      <Button type="button" size="sm" variant="ghost"
+                        onClick={() => void copyText(event.metadata.epu_claim_summary)}>
+                        <ClipboardCopy className="h-3.5 w-3.5 mr-1" /> Kopiuj zapisany szkic
+                      </Button>
+                    </div>
+                  </details>
+                )}
                 {event.zalacznik_url && (
                   <Button type="button" variant="link" className="h-auto p-0 text-xs"
                     onClick={() => onDownload(event.zalacznik_url!)}>
