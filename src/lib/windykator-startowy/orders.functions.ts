@@ -192,6 +192,7 @@ function extract(raw:string):SourceFacts {
 
 /** Odczyt tylko na etapie kwalifikacji; nie generuje płatnego raportu. */
 async function readFactsForQualification(o:any):Promise<SourceFacts>{
+  const db=await dbAdmin();
   const key=process.env.LOVABLE_API_KEY;
   if(!key)throw Error("AI offline");
   const {data:file,error:fileError}=await db.storage.from("windykator-private")
@@ -234,8 +235,8 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
     const {data:o}=await db.from("windykator_orders").select("*")
       .eq("id",data.caseId).eq("user_id",context.userId).eq("intake_source","shop").maybeSingle();
     if(!o)return {error:"Nie znaleziono zgłoszenia w sklepie."};
-    if(o.status==="qualified")return {status:"qualified" as const,reasons:[]};
-    if(!["draft","needs_documents"].includes(o.status))
+    if(o.status==="qualified" && mayPurchaseQualifiedCase({status:o.status,qualifiedAt:o.qualified_at,now:new Date().toISOString(),identityValid:true})) return {status:"qualified" as const,reasons:[]};
+    if(!["draft","needs_documents","qualified"].includes(o.status))
       return {error:"Sprawa ma już decyzję kwalifikacyjną lub płatność."};
     const {data:k}=await db.from("didit_verifications").select("status,decision")
       .eq("user_id",context.userId).eq("vendor_data","windykator:"+context.userId)
@@ -248,7 +249,7 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
       const reasons=["Dane wierzyciela są niezgodne z potwierdzoną tożsamością."];
       await db.from("windykator_orders")
         .update({status:"rejected",qualification_reasons:reasons,qualified_at:null})
-        .eq("id",o.id).in("status",["draft","needs_documents"]);
+        .eq("id",o.id).in("status",["draft","needs_documents","qualified"]);
       return {status:"rejected" as const,reasons};
     }
     // Brak osobnego KYB oznacza brak kwalifikacji firm, nie ominięcie sprawdzenia.
@@ -261,7 +262,7 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
     }
     const {data:lock}=await db.from("windykator_orders")
       .update({status:"qualifying",qualification_reasons:[]}).eq("id",o.id)
-      .in("status",["draft","needs_documents"]).select("id").maybeSingle();
+      .in("status",["draft","needs_documents","qualified"]).select("id").maybeSingle();
     if(!lock)return {error:"Ta sprawa jest już sprawdzana."};
     try{
       const facts=await readFactsForQualification(o);
