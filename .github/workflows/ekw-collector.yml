@@ -1,0 +1,18 @@
+name: EKW local extension validation
+on:
+  pull_request:
+    paths:
+      - 'tools/ekw-browser-collector/**'
+      - '.github/workflows/ekw-collector.yml'
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tools/ekw-browser-collector/core.test.mjs
+      - run: node --check tools/ekw-browser-collector/popup.js
+      - run: node -e 'JSON.parse(require("node:fs").readFileSync("tools/ekw-browser-collector/manifest.json","utf8"))'
