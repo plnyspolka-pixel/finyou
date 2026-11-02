@@ -164,7 +164,7 @@ export const getWindykatorOrder=createServerFn({method:"POST"})
       .select("id,status,report_text,notice_text,epu_draft_text,analysis_error")
       .eq("id",data.caseId).eq("user_id",context.userId).maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
-    if(["draft","checkout_pending"].includes(o.status))return {caseId:o.id,status:o.status,paid:false};
+    if(["draft","checkout_pending","refunded","failed"].includes(o.status))return {caseId:o.id,status:o.status,paid:false};
     return {caseId:o.id,status:o.status,paid:true,
       report:o.report_text,notice:o.notice_text,epuDraft:o.epu_draft_text,error:o.analysis_error};
   });
