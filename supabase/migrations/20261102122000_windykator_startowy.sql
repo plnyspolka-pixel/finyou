@@ -41,6 +41,7 @@ create table if not exists public.windykator_orders (
   privacy_ack boolean not null,
   representation_asserted boolean not null,
   balance_asserted boolean not null,
+  undisputed_asserted boolean not null,
   accepted_terms_version text not null,
   accepted_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
