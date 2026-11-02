@@ -17,7 +17,7 @@ create table if not exists public.windykator_orders (
   source_storage_path text not null,
   source_sha256 text not null,
   status text not null default 'draft' check (status in (
-    'draft','checkout_pending','paid','analysis_ready','review_required','failed','refunded'
+    'draft','checkout_pending','paid','analysis_running','analysis_ready','review_required','failed','refunded'
   )),
   tpay_transaction_id text unique,
   amount_grosz integer not null default 5000 check (amount_grosz = 5000),
