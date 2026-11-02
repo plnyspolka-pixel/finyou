@@ -127,7 +127,7 @@ function Storefront() {
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
       <a href="#akademia">Akademia</a><a href="#kancelaria">Kancelaria AI</a>
       <a href="#analityk">Analityk KW</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
-      <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
+      <a href="/sklep/zakupy">Moje zakupy</a><button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
 
     <Section>
@@ -277,9 +277,9 @@ function Storefront() {
           <><ul>{cart.map((i) => <li key={i.id}><span>{i.title}</span><strong>{PLN(i.price)}</strong>
             <button aria-label={"Usuń " + i.title} onClick={() => remove(i.id)}><Trash2 size={18}/></button></li>)}</ul>
             <div className="fy-store-cart-total"><span>Łącznie</span><strong>{PLN(total)}</strong></div>
-            <div className="fy-store-cart-actions"><MktButton variant="gold" href={cartMail}>Wyślij zamówienie do potwierdzenia</MktButton>
+            <div className="fy-store-cart-actions"><MktButton variant="gold" href={"/sklep/zamowienie?items="+encodeURIComponent(cart.map(i=>i.id).join(","))}>Przejdź do zamówienia</MktButton><MktButton variant="outline" href={cartMail}>Wyślij zapytanie e-mail</MktButton>
               <button className="fy-store-clear" onClick={() => setCart([])}>Wyczyść koszyk</button></div>
-            <p className="fy-store-fineprint">To nie jest jeszcze płatność: zamówienie przekazywane jest do Finance You w wiadomości e-mail. Płatności Tpay za pojedyncze produkty i automatyczne nadawanie dostępu wymagają uruchomienia osobnych SKU, uprawnień i regulaminu sprzedaży.</p>
+            <p className="fy-store-fineprint">Na kolejnym ekranie potwierdzisz warunki zakupu i wymagane dokumenty. Jeśli płatności Tpay nie są aktywne dla właściwego sprzedawcy, zgłoszenie zapisze się automatycznie i trafi do obsługi — bez pobierania opłaty.</p>
           </>}
       </div>
       <p className="fy-store-privacy">Dane wprowadzane do generatora dokumentów, analityka KW i podpisów mogą być danymi osobowymi. <a href="/polityka-prywatnosci">Polityka prywatności</a> · <a href="/sklep/zgody">Regulamin sklepu i powierzenie danych</a>. Zapis na marketing nie jest wymagany do zakupu ani złożenia zapytania.</p>
