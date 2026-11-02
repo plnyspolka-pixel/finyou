@@ -121,7 +121,7 @@ export const createWindykatorCheckout=createServerFn({method:"POST"})
       return {error:"Zakup jest chwilowo wyłączony do czasu uruchomienia pełnej obsługi."};
     const db=await dbAdmin();
     const {data:o}=await db.from("windykator_orders").select("*")
-      .eq("id",data.caseId).eq("user_id",context.userId).maybeSingle();
+      .eq("id",data.caseId).eq("user_id",context.userId).eq("intake_source","shop").maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
     if(!mayPurchaseQualifiedCase({status:o.status,qualifiedAt:o.qualified_at,now:new Date().toISOString(),identityValid:true}))return {error:"Najpierw przejdź automatyczną kwalifikację sprawy. Ważność kwalifikacji: 7 dni."};
     if(o.creditor_kind!=="person")
