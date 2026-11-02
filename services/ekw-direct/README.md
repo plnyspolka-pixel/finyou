@@ -62,3 +62,11 @@ kontrolę dostępu i dokumentację ochrony danych.
 
 **To nie jest urzędowy odpis księgi wieczystej** ani narzędzie wyszukiwania
 nieznanych numerów KW.
+
+## Wynik próby z GitHub Actions (2026-11-02)
+
+Automatyczny Chromium w GitHub Actions otrzymał **HTTP 403** na formularzu
+`przegladarka-ekw.ms.gov.pl`, zanim podał jakikolwiek numer KW. Oznacza to
+blokadę ruchu z tego środowiska, **nie** dowodzi, że parser nie działa, ale
+wyklucza uznanie tego środowiska za działającą produkcję. Nie uruchamiać
+`EKW_DIRECT_URL` bez pozytywnego testu na docelowym, dopuszczonym hoście.
