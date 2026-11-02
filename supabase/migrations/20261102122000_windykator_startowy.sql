@@ -17,8 +17,16 @@ create table if not exists public.windykator_orders (
   source_storage_path text not null,
   source_sha256 text not null,
   status text not null default 'draft' check (status in (
-    'draft','checkout_pending','paid','analysis_running','analysis_ready','review_required','failed','refunded'
+    'draft','qualifying','qualified','needs_documents','rejected','checkout_pending','paid','analysis_running','analysis_ready','review_required','failed','refunded'
   )),
+  -- Jedynym źródłem nowej sprawy jest formularz sklepu.
+  intake_source text not null default 'shop' check (intake_source = 'shop'),
+  qualification_facts jsonb,
+  qualification_reasons jsonb not null default '[]'::jsonb,
+  qualified_at timestamptz,
+  -- 90 dni startuje wyłącznie po prawdziwym webhooku Tpay, a nie po kliknięciu.
+  collection_activated_at timestamptz,
+  collection_ends_at timestamptz,
   tpay_transaction_id text unique,
   amount_grosz integer not null default 5000 check (amount_grosz = 5000),
   paid_at timestamptz,
@@ -40,6 +48,7 @@ create table if not exists public.windykator_orders (
 );
 create index if not exists windykator_orders_user_created_idx on public.windykator_orders(user_id, created_at desc);
 create index if not exists windykator_orders_status_idx on public.windykator_orders(status);
+create index if not exists windykator_orders_qualification_idx on public.windykator_orders(qualified_at) where qualified_at is not null;
 alter table public.windykator_orders enable row level security;
 drop policy if exists windykator_orders_owner_select on public.windykator_orders;
 create policy windykator_orders_owner_select on public.windykator_orders
