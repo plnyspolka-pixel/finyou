@@ -7,6 +7,7 @@ import {
   createWindykatorDraft, getWindykatorSaleStatus, getWindykatorKyc, startWindykatorKyc,
   createWindykatorCheckout, qualifyWindykatorOrder, getWindykatorOrder, prepareWindykatorPackage
 } from "@/lib/windykator-startowy/orders.functions";
+import {confirmWindykatorVoiceBalance,callWindykatorDebtor,getWindykatorVoiceCaseState} from "@/lib/windykator-startowy/voice-case.functions";
 
 const search=z.object({caseId:z.string().optional(),tpay:z.string().optional(),didit:z.string().optional()});
 export const Route=createFileRoute("/windykator-ai")({
@@ -23,7 +24,7 @@ const section="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7
 const initial={
   creditorKind:"person" as "person"|"business"|"company",
   creditorName:"",creditorNip:"",creditorKrs:"",creditorEmail:"",
-  debtorName:"",claimKind:"invoice" as "invoice"|"loan"|"other",
+  debtorName:"",debtorPhone:"",claimKind:"invoice" as "invoice"|"loan"|"other",
   claimAmount:"",dueDate:"",description:"",
 };
 function WindykatorPage(){
@@ -36,6 +37,9 @@ function WindykatorPage(){
   const qualifyFn=useServerFn(qualifyWindykatorOrder);
   const getFn=useServerFn(getWindykatorOrder);
   const prepareFn=useServerFn(prepareWindykatorPackage);
+  const balanceFn=useServerFn(confirmWindykatorVoiceBalance);
+  const callFn=useServerFn(callWindykatorDebtor);
+  const voiceStateFn=useServerFn(getWindykatorVoiceCaseState);
   const [saleEnabled,setSaleEnabled]=useState(false);
   const [saleChecked,setSaleChecked]=useState(false);
   const [f,setF]=useState(initial);
@@ -44,6 +48,7 @@ function WindykatorPage(){
   const [caseId,setCaseId]=useState<string|null>(query.caseId??null);
   const [kyc,setKyc]=useState<{verified:boolean,status:string,url:string|null}|null>(null);
   const [order,setOrder]=useState<any>(null);
+  const [voice,setVoice]=useState<any>(null);
   const [busy,setBusy]=useState(false);
   const attemptedAutomaticQualification=useRef<string|null>(null);
   const [error,setError]=useState("");
@@ -71,6 +76,7 @@ function WindykatorPage(){
       const after=await getFn({data:{caseId:id}});
       setOrder(after);
     }
+    if("paid" in result&&result.paid){try{setVoice(await voiceStateFn({data:{caseId:id}}));}catch{}}
   }
   useEffect(()=>{
     if(caseId)void reload(caseId).catch(()=>setError("Zaloguj się, aby sprawdzić status sprawy."));
@@ -89,7 +95,7 @@ function WindykatorPage(){
       const r=await draftFn({data:{
         creditorKind:f.creditorKind,creditorName:f.creditorName,
         creditorNip:f.creditorNip||undefined,creditorKrs:f.creditorKrs||undefined,creditorEmail:f.creditorEmail,
-        debtorName:f.debtorName,claimKind:f.claimKind,claimAmount:Number(f.claimAmount),
+        debtorName:f.debtorName,debtorPhone:f.debtorPhone||undefined,claimKind:f.claimKind,claimAmount:Number(f.claimAmount),
         dueDate:f.dueDate,description:f.description,fileName:file.name,
         mime:file.type as "application/pdf"|"image/jpeg"|"image/png"|"image/webp",
         dataUrl,consents:{
@@ -122,6 +128,28 @@ function WindykatorPage(){
       setNotice(r.status==="qualified"?"Bot zakwalifikował sprawę. Możesz opłacić Pakiet Startowy 50 zł.":"Sprawa nie została zakwalifikowana do automatycznej obsługi.");
       await reload(caseId);
     }catch(e){setError(e instanceof Error?e.message:"Błąd kwalifikacji.");}
+    finally{setBusy(false);}
+  }
+  async function confirmBalance(remainsUnpaid:boolean,isDisputed:boolean){
+    if(!caseId)return;
+    setBusy(true);setError("");setNotice("");
+    try{
+      const r=await balanceFn({data:{caseId,remainsUnpaid,isDisputed}});
+      if("error" in r&&r.error)throw Error(r.error);
+      setNotice("Zapisano oświadczenie wierzyciela. Stan sprawy: "+r.state);
+      await reload(caseId);
+    }catch(e){setError(e instanceof Error?e.message:"Błąd zapisu oświadczenia.");}
+    finally{setBusy(false);}
+  }
+  async function startVoiceCall(){
+    if(!caseId)return;
+    setBusy(true);setError("");setNotice("");
+    try{
+      const r=await callFn({data:{caseId}});
+      if("error" in r&&r.error)throw Error(r.error);
+      setNotice("Agent A5 rozpoczął połączenie. Wynik zostanie zapisany automatycznie.");
+      await reload(caseId);
+    }catch(e){setError(e instanceof Error?e.message:"Błąd połączenia.");}
     finally{setBusy(false);}
   }
   async function pay(){
@@ -190,6 +218,9 @@ function WindykatorPage(){
                 <input id="creditorKrs" className={field} required maxLength={10} value={f.creditorKrs} onChange={e=>set("creditorKrs",e.target.value)}/></div>}
               <div><label className={label} htmlFor="debtorName">Dłużnik — imię i nazwisko / firma</label>
                 <input id="debtorName" className={field} required minLength={4} value={f.debtorName} onChange={e=>set("debtorName",e.target.value)}/></div>
+              <div><label className={label} htmlFor="debtorPhone">Telefon dłużnika (opcjonalnie — wyłącznie do nowego A5)</label>
+                <input id="debtorPhone" className={field} type="tel" placeholder="+48 500 000 000" value={f.debtorPhone}
+                  onChange={e=>set("debtorPhone",e.target.value)}/></div>
               <div><label className={label} htmlFor="claimKind">Podstawa</label>
                 <select id="claimKind" className={field} value={f.claimKind} onChange={e=>set("claimKind",e.target.value)}>
                   <option value="invoice">Faktura</option><option value="loan">Umowa pożyczki</option><option value="other">Inna umowa</option>
@@ -255,6 +286,30 @@ function WindykatorPage(){
               <button type="button" onClick={()=>void reload(caseId)} disabled={busy}
                 className="rounded-xl bg-slate-900 px-6 py-3 font-bold text-white">Odśwież status i analizę</button>
               {order.collectionActivatedAt&&<p className="mt-3 text-sm font-semibold text-slate-700">90-dniowy okres obsługi uruchomiony: {new Date(order.collectionActivatedAt).toLocaleDateString("pl-PL")} — do {new Date(order.collectionEndsAt).toLocaleDateString("pl-PL")}. Kanały kontaktu pozostają niepodłączone.</p>}
+              {voice&&!voice.error&&<div className="mt-5 rounded-xl border border-slate-200 p-4">
+                <h3 className="font-bold text-slate-900">Windykator AI A5 — rozmowy</h3>
+                <p className="mt-2 text-sm text-slate-600">Stan: <strong>{voice.state}</strong>. Telefon w sprawie: {voice.phoneConfigured?"podany":"nie podano"}.</p>
+                <p className="mt-2 text-xs text-slate-500">Nie łączymy tego z dawnymi botami. Przed telefonem wierzyciel potwierdza aktualne saldo. Rozmowy: pon.–pt., 9:00–18:00, nie częściej niż raz na siedem dni.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" disabled={busy} onClick={()=>void confirmBalance(true,false)}
+                    className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">Potwierdzam: należność nadal niezapłacona i bez sporu</button>
+                  <button type="button" disabled={busy} onClick={()=>void confirmBalance(false,false)}
+                    className="rounded-lg border px-4 py-2 text-sm font-semibold">Należność spłacona</button>
+                  <button type="button" disabled={busy} onClick={()=>void confirmBalance(true,true)}
+                    className="rounded-lg border px-4 py-2 text-sm font-semibold">Zgłoszono spór</button>
+                </div>
+                <button type="button" disabled={busy||voice.state!=="active"||!voice.phoneConfigured}
+                  onClick={()=>void startVoiceCall()}
+                  className="mt-3 rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
+                  Wykonaj telefon agentem A5
+                </button>
+                {(voice.calls??[]).length>0&&<div className="mt-4 space-y-2 text-xs">
+                  {(voice.calls??[]).map((c:any,i:number)=><div key={i} className="rounded-lg bg-slate-50 p-2">
+                    {new Date(c.created_at).toLocaleString("pl-PL")} · {c.direction} · {c.status}
+                    {c.outcome?.kind?" · "+c.outcome.kind:""}
+                  </div>)}
+                </div>}
+              </div>}
               {order.report&&<div className="mt-4 space-y-4">
                 {[["Raport analizy",order.report],["Projekt wezwania",order.notice],["Pakiet do właściwej ścieżki sądowej",order.courtDraft],["Szkic EPU (jeśli właściwy)",order.epuDraft]].filter(v=>v[1]).map(([title,body])=>
                   <div key={title}><h3 className="font-bold text-slate-900">{title}</h3>
