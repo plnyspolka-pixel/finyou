@@ -312,6 +312,19 @@ export const acceptLegalDocument = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    const requiredDeclarations: Record<string, string[]> = {
+      umowa_ramowa: [
+        "oplata_abonamentowa",
+        "mechanizm_zabezpieczenia_prowizji",
+        "kara_obejsciowa_i_okres_ochronny",
+      ],
+      nda: ["zakaz_obchodzenia"],
+      rodo: ["modul_a_odrebni_administratorzy"],
+    };
+    if (!(requiredDeclarations[data.code] ?? []).every((key) => data.statements[key] === true)) {
+      throw new Error("Potwierdź wszystkie wymagane oświadczenia do tego dokumentu.");
+    }
+
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

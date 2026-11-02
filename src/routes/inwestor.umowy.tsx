@@ -199,6 +199,8 @@ function PipelinePage() {
         <DeliveryStep state={legal} onDone={refresh} />
       </PipelineStepCard>
 
+      <OneClickLegalPack documents={legal.documents ?? []} steps={steps} onDone={refresh} />
+
       {(["umowa_ramowa", "nda", "rodo"] as const).map((code) => {
         const doc = docByCode(code);
         const s = step(code);
@@ -492,6 +494,129 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
  * jest zablokowany i dokument jest aktywny. Kolejność podpisów i tak
  * egzekwuje serwer (acceptLegalDocument).
  */
+
+/**
+ * One confirmation for the whole active investor package, preserving separate
+ * declarations and individual server-side agreement records for every document.
+ * The existing server verifies KYC, sanction screening, delivery and order.
+ */
+function OneClickLegalPack({ documents, steps, onDone }: {
+  documents: any[];
+  steps: PipelineStep[];
+  onDone: () => void;
+}) {
+  const accept = useServerFn(acceptLegalDocument);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  const [completed, setCompleted] = useState<string[]>([]);
+  const codes = ["umowa_ramowa", "nda", "rodo"] as const;
+  const active = codes.map((code) => documents.find((d) => d.code === code && d.active));
+  const remaining = active.filter((d) => d && !d.accepted);
+  const delivered = steps.find((s) => s.key === "doreczenie")?.state === "zrobione";
+  const eligible = delivered && active.every(Boolean);
+  const requiredChecks = remaining.flatMap((d) =>
+    ["confirmed:" + d.code, ...((DOC_STATEMENTS[d.code] ?? []).map((v) => d.code + ":" + v.key))]);
+  const allChecked = requiredChecks.every((key) => selected[key] === true);
+
+  async function approveAll() {
+    if (!eligible || !allChecked || busy) return;
+    setBusy(true);
+    setFailure("");
+    const succeeded: string[] = [];
+    try {
+      for (const code of codes) {
+        const doc = active.find((d) => d?.code === code);
+        if (!doc || doc.accepted) continue;
+        const statements = Object.fromEntries((DOC_STATEMENTS[code] ?? [])
+          .map((v) => [v.key, selected[code + ":" + v.key] === true]));
+        await accept({ data: { code, confirmed: true, statements } });
+        succeeded.push(code);
+        setCompleted((previous) => [...previous, code]);
+      }
+      toast.success("Pakiet dokumentów został zaakceptowany. Potwierdzenia wysłano na e-mail.");
+      onDone();
+    } catch (e) {
+      setFailure(errMsg(e) + (succeeded.length ? " Wcześniejsze akceptacje zostały zapisane. Odśwież stan i kontynuuj." : ""));
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!remaining.length) return null;
+  return (
+    <Card className="border-primary/30">
+      <CardHeader>
+        <CardTitle className="text-lg">Akceptacja pakietu umów — jedna operacja</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Przeczytaj każdą umowę i zaznacz jej wymagane oświadczenia. Po zatwierdzeniu
+          system zapisze trzy odrębne potwierdzenia (wersje dokumentów, SHA-256, data i konto)
+          oraz wyśle je na trwałym nośniku. Pola nie są domyślnie zaznaczone.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {!eligible ? <p className="text-sm text-amber-700">
+          Najpierw dokończ weryfikację, screening, oświadczenie o źródle środków
+          i doręczenie pakietu PDF na e-mail (kroki 1–6).
+        </p> : null}
+        {remaining.map((doc) => (
+          <div key={doc.code} className="space-y-3 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div><strong>{doc.title}</strong><p className="text-xs text-muted-foreground">
+                Wersja {doc.version} · SHA-256 {String(doc.sha256).slice(0, 16)}…
+              </p></div>
+              <Button variant="outline" size="sm" onClick={() => setExpanded((v) => ({ ...v, [doc.code]: !v[doc.code] }))}>
+                {expanded[doc.code] ? "Ukryj treść" : "Przeczytaj"}
+              </Button>
+            </div>
+            {expanded[doc.code] ? <LegalPackText code={doc.code}/> : null}
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox checked={Boolean(selected["confirmed:" + doc.code])} disabled={!eligible || busy}
+                onCheckedChange={(value) => setSelected((v) => ({ ...v, ["confirmed:" + doc.code]: value === true }))}/>
+              <span>Zapoznałem się z pełną treścią tego dokumentu i akceptuję jego warunki.</span>
+            </label>
+            {(DOC_STATEMENTS[doc.code] ?? []).map((statement) => (
+              <label key={statement.key} className="flex items-start gap-2 text-sm">
+                <Checkbox checked={Boolean(selected[doc.code + ":" + statement.key])}
+                  disabled={!eligible || busy}
+                  onCheckedChange={(value) => setSelected((v) => ({ ...v, [doc.code + ":" + statement.key]: value === true }))}/>
+                <span>{statement.label}</span>
+              </label>
+            ))}
+          </div>
+        ))}
+        {completed.length > 0 && <p className="text-sm text-emerald-700">
+          Zapisano akceptacje: {completed.join(", ")}.
+        </p>}
+        {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
+        <Button disabled={!eligible || !allChecked || busy} onClick={() => void approveAll()}>
+          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <BadgeCheck className="mr-2 h-4 w-4"/>}
+          Podpisuję i akceptuję pakiet umów
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          To podpisanie trzech dokumentów elektronicznie w formie dokumentowej,
+          a nie zgoda na marketing. Warunkowy Moduł B powierzenia nie aktywuje się bez Karty Polecenia.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LegalPackText({ code }: { code: "umowa_ramowa" | "nda" | "rodo" }) {
+  const fetchText = useServerFn(getLegalDocumentText);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["legal-pack-one-click-text", code],
+    queryFn: () => fetchText({ data: { code } }),
+  });
+  if (isLoading) return <p className="text-xs">Wczytywanie dokumentu…</p>;
+  if (isError) return <p className="text-xs text-destructive">Nie udało się pobrać dokumentu.</p>;
+  return <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed">
+    {String((data as { content_text?: string })?.content_text ?? "")}
+  </pre>;
+}
+
 function DocumentStep({
   doc,
   locked,

@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/routes/sklep.tsx'
+      - 'src/routes/inwestor.umowy.tsx'
+      - 'src/lib/investor-agreements/legal-pack.functions.ts'
       - 'src/routes/windykator-ai.tsx'
       - 'src/routes/regulamin-windykator-ai.tsx'
       - 'src/lib/windykator-startowy/**'
