@@ -50,19 +50,13 @@ export async function ensureWindykatorVoiceAgent():Promise<{agentId:string;creat
     // Nie zmieniaj promptu istniejącego agenta przy zwykłej obsłudze — do tego służy świadomy sync.
     return {agentId:s.agent_id,created:false};
   }
-  let agentId:string|null=null;
-  let lastError:Error|null=null;
-  for(const includeAnalysis of [true,false]){
-    try{
-      const result=await elevenRequest("/v1/convai/agents/create",{
-        method:"POST",json:agentPayload(includeAnalysis)
-      });
-      agentId=String(result.json?.agent_id||"");
-      if(agentId)break;
-      lastError=new Error("ElevenLabs nie zwrócił agent_id.");
-    }catch(e){lastError=e instanceof Error?e:new Error(String(e));}
-  }
-  if(!agentId)throw lastError??new Error("ElevenLabs: nie utworzono agenta.");
+  // Nie twórz „gołego” bota bez analizy rozmów: automatyczne pauzy po
+  // zgłoszeniu zapłaty i sporu są wymaganiem bezpieczeństwa usługi.
+  const result=await elevenRequest("/v1/convai/agents/create",{
+    method:"POST",json:agentPayload(true)
+  });
+  const agentId=String(result.json?.agent_id??"");
+  if(!agentId)throw Error("ElevenLabs nie zwrócił agent_id; nie utworzono agenta A5.");
   const db=await windVoiceDb();
   const {data:saved,error}=await db.from("windykator_voice_settings")
     .update({agent_id:agentId,updated_at:new Date().toISOString()})
