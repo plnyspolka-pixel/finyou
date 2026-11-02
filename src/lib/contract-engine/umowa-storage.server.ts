@@ -17,6 +17,8 @@ export async function zapiszUmoweDocx(
     templateName: string;
     /** Źródło generacji: kreator / agent / mcp. */
     zrodlo: string;
+    /** Ustalane po walidacji wyłącznie na serwerze, nie z oświadczenia klienta. */
+    hasGuarantor?: boolean;
     loanApplicationId?: string | null;
     leadId?: string | null;
     formData?: Record<string, unknown>;
@@ -42,6 +44,7 @@ export async function zapiszUmoweDocx(
     wersja_biblioteki_klauzul: komplet.wersjaBiblioteki,
     czesci: [...CZESCI_KOMPLETU],
     zrodlo: opts.zrodlo,
+    ma_poreczyciela: opts.hasGuarantor ?? null,
   };
 
   // Rejestr dokumentów — wpis trwały: bez niego generacja się nie udaje
