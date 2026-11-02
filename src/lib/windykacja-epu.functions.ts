@@ -29,14 +29,15 @@ const eventInput = z.object({
   occurredOn: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
   note: z.string().trim().max(6000).optional().nullable(),
   attachmentPath: z.string().trim().max(650).optional().nullable(),
-  claimSummary: z.string().trim().max(7000).optional().nullable(),
+  claimSummary: z.string().trim().max(15000).optional().nullable(),
 });
 
 export const recordWindEpuEvent = createServerFn({ method: "POST" })
   .middleware([requireInvestorPro])
   .inputValidator((input: unknown) => eventInput.parse(input))
   .handler(async ({ data, context }) => {
-    if (data.occurredOn > new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Warsaw" })) {
+    const { warsawToday } = await import("@/lib/windykacja-recalc");
+    if (data.occurredOn > warsawToday()) {
       throw new Error("Data zdarzenia nie może być w przyszłości.");
     }
     if (data.status === "prepared" && !data.claimSummary?.trim()) {
@@ -50,7 +51,8 @@ export const recordWindEpuEvent = createServerFn({ method: "POST" })
     }
 
     // Supabase RLS ogranicza zakres do sprawy wierzyciela (lub uprawnionego personelu).
-    const { data: kase, error: checkError } = await context.supabase
+    const db = context.supabase as unknown as { from: (table: string) => any };
+    const { data: kase, error: checkError } = await db
       .from("wind_collection_cases")
       .select("id")
       .eq("id", data.caseId)
@@ -59,7 +61,7 @@ export const recordWindEpuEvent = createServerFn({ method: "POST" })
     if (!kase) throw new Error("Sprawa nie istnieje albo nie masz do niej dostępu.");
 
     const title = EPU_STATUS_LABELS[data.status];
-    const { data: event, error } = await context.supabase
+    const { data: event, error } = await db
       .from("wind_events")
       .insert({
         case_id: data.caseId,
