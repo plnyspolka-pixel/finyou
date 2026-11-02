@@ -79,6 +79,34 @@ try {
     catch(e){console.log("MSIG_SEARCH_CLICK_ERROR "+String(e?.message??e).slice(0,230))}
     await page.waitForTimeout(4500);
     const searchText=(await page.locator("body").innerText()).slice(0,3800);
+
+    // Positive-control tests: one KRS and one company name known from a public
+    // 2026 issue of MSiG. Read-only; no browser authentication/session tokens.
+    async function searchOnce(label:string,krs:string,name:string){
+      await page.getByPlaceholder("Podaj nr KRS").fill(krs);
+      await page.getByPlaceholder("Wpisz nazwę podmiotu").fill(name);
+      const target=page.waitForResponse(r=>r.url().includes("/api/Monitor/Search"),{timeout:15000});
+      await page.locator('button[aria-label="Przycisk formularza szukaj"]').click({timeout:7000,noWaitAfter:true});
+      const response=await target;
+      const reqUrl=new URL(response.url());
+      let data:any=null;
+      try{data=await response.json()}catch{}
+      await page.waitForTimeout(1000);
+      const body=(await page.locator("body").innerText()).slice(0,1600);
+      console.log("MSIG_POSITIVE_CONTROL "+JSON.stringify({
+        label,http:response.status(),method:response.request().method(),
+        endpoint:reqUrl.origin+reqUrl.pathname,
+        query:Object.fromEntries(reqUrl.searchParams.entries()),
+        responseType:Array.isArray(data)?"array":typeof data,
+        responseKeys:data&&!Array.isArray(data)&&typeof data==="object"?Object.keys(data).slice(0,25):[],
+        responseLength:Array.isArray(data)?data.length:null,
+        // Public company metadata, single record, no PESEL or private identifiers.
+        responsePreview:JSON.stringify(data).slice(0,600),
+        display:body,
+      }));
+    }
+    await searchOnce("known_MSiG_2026_KRS","0000753937","");
+    await searchOnce("known_MSiG_2026_name","","ANSYS POLAND");
     console.log("MSIG_SEARCH "+JSON.stringify({
       scenario:"public company KRS 0000304735",
       pageText:searchText,
