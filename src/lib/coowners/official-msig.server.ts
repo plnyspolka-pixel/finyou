@@ -7,6 +7,8 @@ import type { OwnerIntelligenceHit, OwnerIntelligenceSourceStatus } from "./owne
 export interface OfficialMsigInput {
   kind: "person" | "company";
   name: string;
+  firstName?: string | null;
+  lastName?: string | null;
   krs?: string | null;
   nip?: string | null;
 }
@@ -42,6 +44,27 @@ const signals = [
 ] as const;
 const digits = (s: unknown) => String(s ?? "").replace(/\D/g,"");
 
+export function officialMsigPersonQuery(input: OfficialMsigInput): string {
+  if (input.kind !== "person") return input.name.trim();
+  const f = input.firstName?.trim();
+  const l = input.lastName?.trim();
+  if (f && l) return `${l} ${f}`.slice(0,160);
+  const pieces = input.name.trim().split(/\s+/);
+  if (pieces.length < 2) return "";
+  // Fallback: zazwyczaj KW udostępnia imię i nazwisko osobno. Jeśli brak
+  // rozdzielenia, ostatni człon przyjmujemy za nazwisko tylko na potrzeby
+  // wyszukiwania; wynik pozostaje wyłącznie name_only.
+  return `${pieces.at(-1)} ${pieces.slice(0,-1).join(" ")}`.slice(0,160);
+}
+
+const PERSONAL_COURT_SIGNATURE = /\b(?:[IVX]{1,5}|[A-Z]{1,4}\d?)\s+(?:GUp|GU|GRp|GRz|GR)\b/i;
+
+function isSamePersonName(expected: string, actual: string): boolean {
+  const a=normalize(expected), b=normalize(actual);
+  if (!a || !b) return false;
+  return b === a || b.startsWith(a+" ") || b.endsWith(" "+a);
+}
+
 /**
  * Lista ogłoszeń MSiG zawiera również zwykłe wpisy KRS — pokazujemy tylko
  * sygnały wymagające analizy prawnej, a nie każdą aktualizację rejestrową.
@@ -57,14 +80,20 @@ export function classifyOfficialMsigRows(input: OfficialMsigInput, rows: unknown
     const r = raw as Partial<OfficialMsigRow>;
     const entityName = String(r.entityName ?? "").replace(/\s+/g," ").trim();
     const matchedSignal = signals.find((s) => s.pattern.test(entityName));
-    if (!matchedSignal) continue;
     const n = normalize(entityName);
     const expected = normalize(input.name);
+    const personQuery = officialMsigPersonQuery(input);
+    const signature = String(r.signatureOfCase ?? "").slice(0,100);
+    // Dla osób fizycznych imię/nazwisko występują w kolejności
+    // nazwisko–imię; lista MSiG często nie zawiera słowa „upadłość”.
+    const matchedPerson = input.kind === "person" &&
+      (isSamePersonName(personQuery,entityName) || isSamePersonName(input.name,entityName));
+    if (!matchedSignal && !matchedPerson) continue;
     const krsMatch = input.krs && digits((raw as any).krs) === input.krs;
     const nipMatch = input.nip && digits((raw as any).nip) === input.nip;
     // KRS/NIP nie występują w większości pozycji listy: dopasowanie
     // z wyniku zapytania po identyfikatorze jest nadal tylko kandydatem.
-    if (!krsMatch && !nipMatch && !n.includes(expected) && !expected.includes(n)) {
+    if (!matchedPerson && !krsMatch && !nipMatch && !n.includes(expected) && !expected.includes(n)) {
       // Skróty z KW (np. sp. z o.o.) różnią się od pełnej nazwy MSiG.
       // Nie odrzucamy jednak odpowiedzi po konkretnym numerze KRS/NIP.
       if (!/^\d{10}$/.test(input.krs ?? "") && !/^\d{10}$/.test(input.nip ?? "")) continue;
@@ -76,13 +105,17 @@ export function classifyOfficialMsigRows(input: OfficialMsigInput, rows: unknown
     const key = String(id);
     if (seen.has(key)) continue;
     seen.add(key);
+    const title = matchedSignal?.title ??
+      (PERSONAL_COURT_SIGNATURE.test(signature)
+        ? "Ogłoszenie MSiG — sprawa sądowa osoby fizycznej"
+        : "Ogłoszenie MSiG — osoba fizyczna, rodzaj sprawy nieustalony");
     found.push({
       category:"court_notice",
       source:"MSiG — Ministerstwo Sprawiedliwości",
-      title:matchedSignal.title,
+      title,
       detail:(entityName + " · Monitor " + monitorNumber + " (ogłoszenie historyczne lub aktualne — wymaga sprawdzenia)").slice(0,250),
       publicationDate:publication,
-      caseSignature:r.signatureOfCase ? String(r.signatureOfCase).slice(0,100) : null,
+      caseSignature:signature || null,
       url:OFFICIAL_MSIG_HOME,
       match:"name_only",
     });
@@ -92,17 +125,16 @@ export function classifyOfficialMsigRows(input: OfficialMsigInput, rows: unknown
 }
 
 /**
- * Jedna publiczna kwerenda na podmiot prawny. Brak dostępu, pusty wynik,
+ * Jedna publiczna kwerenda na spółkę lub osobę fizyczną. Brak dostępu, pusty wynik,
  * odchylenie schematu oraz HTTP 429 są raportowane jako brak potwierdzenia
  * i nigdy nie stanowią dowodu braku wpisów.
  */
 export async function searchOfficialMsig(input: OfficialMsigInput): Promise<OfficialMsigResult> {
-  if (input.kind !== "company") return {
-    status:"partial",note:"Wyszukiwarka oficjalnego MSiG: kwerenda osoby fizycznej niezweryfikowana; nie wykonano.",hits:[],
-  };
+  // PESEL nie jest parametrem publicznej wyszukiwarki MSiG.
+  // Nie umieszczamy go w URL ani nie szukamy po nim w treści ogłoszeń.
   const krs = /^\d{10}$/.test(input.krs ?? "") ? input.krs! : "";
   const nip = /^\d{10}$/.test(input.nip ?? "") ? input.nip! : "";
-  const name = (input.name ?? "").trim().slice(0,160);
+  const name = officialMsigPersonQuery(input).slice(0,160);
   if (!krs && !nip && name.length < 5) return {
     status:"unavailable",note:"Brak KRS, NIP lub wystarczającej nazwy do MSiG.",hits:[],
   };
@@ -110,6 +142,8 @@ export async function searchOfficialMsig(input: OfficialMsigInput): Promise<Offi
   const end = now.toISOString().slice(0,10);
   const url = new URL(OFFICIAL_MSIG_ENDPOINT);
   const params = {
+    // Dla osoby fizycznej preferujemy „Nazwisko Imię”. W wyszukiwaniu
+    // spółki KRS/NIP działa jako stabilniejszy identyfikator.
     entityName:krs || nip ? "" : name,
     krs,nip:krs?"":nip,
     textInPosition:"",textInBody:"",
@@ -135,7 +169,7 @@ export async function searchOfficialMsig(input: OfficialMsigInput): Promise<Offi
       // Pierwsza strona / nieudokumentowany interfejs / brak wglądu w KRZ:
       // zawsze częściowa kontrola ryzyka, nawet przy pustych wynikach.
       status:"partial",
-      note:"Oficjalny MSiG (1. strona od 2001 r.): "+
+      note:"Oficjalny MSiG (1. strona od 2001 r.; osoby: wyszukiwanie nazwisko–imię): "+
         (hits.length ? "znaleziono wzmianki wymagające weryfikacji." : "brak rozpoznanych wzmianek w pobranym zakresie.")+
         " Baza KRZ NIE została w ten sposób sprawdzona; zwykłe wpisy KRS pominięto.",
       hits,
