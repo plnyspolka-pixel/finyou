@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GeneratedDocumentEsignDialog, type GeneratedSigningDocument } from "./GeneratedDocumentEsignDialog";
 import { formatDateTime } from "@/lib/labels";
 import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
@@ -156,6 +157,7 @@ export function DocumentCreatorPage({
   excludeCategories,
   embedded = false,
   lenderFromProfile = embedded,
+  enableEsign = false,
 }: {
   /** Kategorie wzorów ukryte w tym panelu (np. „umowa" u inwestora,
    *  gdzie umowy powstają wyłącznie w zakładce „Tworzenie umowy"). */
@@ -166,6 +168,8 @@ export function DocumentCreatorPage({
   /** Strona „Pożyczkodawca / Wierzyciel" wstępnie z profilu zalogowanego
    *  inwestora (domyślnie w panelu inwestora, czyli przy osadzeniu). */
   lenderFromProfile?: boolean;
+  /** Akcje „Wyślij do e-podpisu” w osobnym module generatora inwestora. */
+  enableEsign?: boolean;
 } = {}) {
   const _list = useServerFn(listDocxTemplates);
   const _generate = useServerFn(generateDocxFromTemplate);
@@ -178,6 +182,9 @@ export function DocumentCreatorPage({
 
   const [templates, setTemplates] = useState<DocTemplate[]>([]);
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
+  const [esignDoc, setEsignDoc] = useState<GeneratedSigningDocument | null>(null);
+  const [recentDoc, setRecentDoc] = useState<GeneratedSigningDocument | null>(null);
+  const [lastEnvelopeId, setLastEnvelopeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<DocTemplate | null>(null);
@@ -572,6 +579,10 @@ export function DocumentCreatorPage({
         },
       });
       toast.success("Dokument wygenerowany");
+      if (enableEsign) {
+        setRecentDoc({ id: res.id, title: selected.name });
+        setLastEnvelopeId(null);
+      }
       const url = await _signedUrl({ data: { path: res.docxPath } });
       window.open(url.url, "_blank");
       await refresh();
@@ -627,6 +638,25 @@ export function DocumentCreatorPage({
         </div>
       )}
 
+      {enableEsign && recentDoc && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <div>
+            <p className="font-semibold">Dokument gotowy: {recentDoc.title}</p>
+            <p className="text-xs text-muted-foreground">Możesz pobrać DOCX lub od razu wysłać wersję PDF do podpisu.</p>
+          </div>
+          <Button onClick={() => setEsignDoc(recentDoc)}>
+            <FileText className="mr-2 h-4 w-4"/> Wyślij do e-podpisu
+          </Button>
+        </div>
+      )}
+      {enableEsign && lastEnvelopeId && (
+        <p role="status" className="rounded-lg border p-3 text-sm">
+          Koperta została utworzona.{" "}
+          <a className="font-semibold underline" href={`/inwestor/podpisy?koperta=${encodeURIComponent(lastEnvelopeId)}`}>
+            Zobacz status podpisów i pobierz dokument
+          </a>
+        </p>
+      )}
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         {/* Lista wzorów */}
         <Card className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
@@ -1029,15 +1059,18 @@ export function DocumentCreatorPage({
                             : ""}
                         </div>
                       </div>
-                      {h.docx_path && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownload(h.docx_path!)}
-                        >
-                          <Download className="mr-1 h-3.5 w-3.5" /> DOCX
-                        </Button>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {h.docx_path && (
+                          <Button size="sm" variant="outline" onClick={() => handleDownload(h.docx_path!)}>
+                            <Download className="mr-1 h-3.5 w-3.5" /> DOCX
+                          </Button>
+                        )}
+                        {enableEsign && (h.docx_path || h.pdf_path) && (
+                          <Button size="sm" onClick={() => setEsignDoc({ id: h.id, title: h.template_name ?? "Dokument" })}>
+                            Wyślij do e-podpisu
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1046,6 +1079,13 @@ export function DocumentCreatorPage({
           </Card>
         </div>
       </div>
+      {enableEsign && (
+        <GeneratedDocumentEsignDialog
+          document={esignDoc}
+          onOpenChange={open => { if (!open) setEsignDoc(null); }}
+          onCreated={setLastEnvelopeId}
+        />
+      )}
     </div>
   );
 }
