@@ -248,6 +248,7 @@ export const generateContractDocx = defineTool({
         numerUmowy: r.umowa?.meta?.numer_umowy,
         templateName: "Komplet umowy pożyczki (MCP, silnik klauzul)",
         zrodlo: "mcp",
+        hasGuarantor: Boolean(r.umowa?.porecziciel),
         loanApplicationId: args.loan_application_id ?? null,
         formData: {
           ...(args.profile_id ? { client_profile_id: args.profile_id } : {}),
