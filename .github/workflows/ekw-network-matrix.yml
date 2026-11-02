@@ -1,8 +1,6 @@
 name: EKW network reachability matrix
+# Manual only after persistent HTTP 403; no automated repeated probes.
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/ekw-network-matrix.yml'
   workflow_dispatch:
 jobs:
   network-probe:
