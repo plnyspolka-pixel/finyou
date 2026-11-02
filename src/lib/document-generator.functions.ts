@@ -129,7 +129,10 @@ export const generateDocxFromTemplate = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const { assertStoreDocumentGeneration } = await import("@/lib/storefront/checkout.functions");
+    await assertStoreDocumentGeneration(userId, data.templateId);
+    const { supabaseAdmin: supabase } = await import("@/integrations/supabase/client.server");
 
     // 1. Pobierz szablon
     const { data: tpl, error: tplErr } = await supabase
@@ -210,9 +213,16 @@ export const getGeneratedDocSignedUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { path: string; expiresInSec?: number }) => d)
   .handler(async ({ data, context }) => {
-    const { data: signed, error } = await context.supabase.storage
+    if (!data.path.startsWith("generated/" + context.userId + "/")) {
+      throw new Error("Nie masz uprawnień do tego pliku.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: own } = await supabaseAdmin.from("generated_documents")
+      .select("id").eq("created_by",context.userId).eq("docx_path",data.path).maybeSingle();
+    if (!own) throw new Error("Dokument nie należy do Twojego konta.");
+    const { data: signed, error } = await supabaseAdmin.storage
       .from(CLIENT_FILES_BUCKET)
-      .createSignedUrl(data.path, data.expiresInSec ?? 300);
+      .createSignedUrl(data.path, Math.min(Math.max(data.expiresInSec ?? 300, 30), 600));
     if (error || !signed) throw new Error(error?.message ?? "Brak URL");
     return { url: signed.signedUrl };
   });
@@ -222,7 +232,10 @@ export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }) => {
-    const { data: tpl, error: tplErr } = await context.supabase
+    const { assertStoreDocumentGeneration } = await import("@/lib/storefront/checkout.functions");
+    await assertStoreDocumentGeneration(context.userId, data.templateId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("document_templates")
       .select("name, template_file_path")
       .eq("id", data.templateId)
@@ -236,9 +249,9 @@ export const getDocxTemplateDownloadUrl = createServerFn({ method: "POST" })
         reason: "Brak przypisanego pliku.",
       };
 
-    const { bucket } = await downloadTemplateFile(context.supabase, tpl.template_file_path);
+    const { bucket } = await downloadTemplateFile(supabaseAdmin, tpl.template_file_path);
     if (bucket) {
-      const { data: signed } = await context.supabase.storage
+      const { data: signed } = await supabaseAdmin.storage
         .from(bucket)
         .createSignedUrl(tpl.template_file_path, 300);
       if (signed?.signedUrl)
@@ -291,7 +304,10 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }) => {
-    const { data: tpl, error: tplErr } = await context.supabase
+    const { assertStoreDocumentGeneration } = await import("@/lib/storefront/checkout.functions");
+    await assertStoreDocumentGeneration(context.userId, data.templateId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tpl, error: tplErr } = await supabaseAdmin
       .from("document_templates")
       .select("template_file_path")
       .eq("id", data.templateId)
@@ -300,7 +316,7 @@ export const getDocxTemplatePreview = createServerFn({ method: "POST" })
     if (!tpl?.template_file_path) throw new Error("Wzór nie ma przypisanego pliku.");
 
     const { file, error: dlErr } = await downloadTemplateFile(
-      context.supabase,
+      supabaseAdmin,
       tpl.template_file_path,
     );
     if (!file) throw new Error(`Pobranie wzoru: ${dlErr ?? "brak pliku"}`);
