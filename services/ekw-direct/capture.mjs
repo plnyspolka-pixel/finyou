@@ -89,21 +89,52 @@ export async function captureKw(rawKw, options = {}) {
   const page = await context.newPage();
   page.setDefaultTimeout(12000);
   try {
-    const initial = await page.goto(EKW_SEARCH_URL, { waitUntil: "domcontentloaded", timeout: 25000 });
-    if (initial && (initial.status() === 403 || initial.status() === 429)) {
-      throw new EkwError("EKW_ACCESS_BLOCKED", "Serwer EKW odrzucił połączenie HTTP " + initial.status() + "; konieczna weryfikacja dopuszczonego środowiska.");
+    // Official entry path: do not assume deep-linking to the search form is supported.
+    // Open the public landing page and use its "Przeglądanie księgi wieczystej" link.
+    // The destination may open in a new tab, so keep the selected active viewer page.
+    const landing = await page.goto("https://ekw.ms.gov.pl/eukw_ogol/menu.do", {
+      waitUntil: "domcontentloaded", timeout: 25000,
+    });
+    if (!landing?.ok()) {
+      throw new EkwError("EKW_HOME_UNAVAILABLE",
+        "Nie udało się otworzyć strony głównej EKW (HTTP " + (landing?.status() ?? "brak odpowiedzi") + ").");
     }
-    await requireUnblocked(page);
-    await page.locator("#kodWydzialuInput").fill(kw.court);
-    await page.locator('input[name="numerKw"]').fill(kw.number);
-    await page.locator('input[name="cyfraKontrolna"]').fill(kw.check);
-    await clickInput(page, "wyszukaj");
+    const officialLink = page.getByRole("link", { name: /Przeglądanie księgi wieczystej/i });
+    if (!(await officialLink.count())) {
+      throw new EkwError("EKW_UI_CHANGED", "Nie znaleziono oficjalnego odnośnika do przeglądarki EKW.");
+    }
+    const opened = page.waitForEvent("popup", { timeout: 3000 }).catch(() => null);
+    await officialLink.first().click();
+    const popup = await opened;
+    const viewer = popup ?? page;
+    await viewer.waitForLoadState("domcontentloaded", { timeout: 12000 }).catch(() => {});
+    const viewerUrl = viewer.url();
+    if (!viewerUrl.startsWith("https://przegladarka-ekw.ms.gov.pl/eukw_prz/")) {
+      throw new EkwError("EKW_UNEXPECTED_REDIRECT", "Oficjalny link przekierował poza przeglądarkę EKW.");
+    }
+    const viewerContent = (await viewer.locator("body").innerText().catch(() => "")).slice(0, 4000);
+    const securityFrame = await viewer.locator('iframe[src*="_Incapsula_Resource"], iframe[src*="captcha"], iframe[src*="incident"]').count();
+    const hasAccessDenied = isBlockedPage(viewerContent) ||
+      /access denied|error 15|request was blocked by our security service/i.test(viewerContent) ||
+      securityFrame > 0;
+    if (hasAccessDenied || !(await viewer.locator("#kodWydzialuInput").count())) {
+      throw new EkwError("EKW_ACCESS_BLOCKED",
+        "Oficjalna przeglądarka EKW nie udostępniła formularza numeru KW. " +
+        "Blokada WAF lub zmiana interfejsu; brak automatycznego ponawiania.");
+    }
+    // Further interactions use the page returned from the official navigation.
+    const kwPage = viewer;
+    await requireUnblocked(kwPage);
+    await kwPage.locator("#kodWydzialuInput").fill(kw.court);
+    await kwPage.locator('input[name="numerKw"]').fill(kw.number);
+    await kwPage.locator('input[name="cyfraKontrolna"]').fill(kw.check);
+    await clickInput(kwPage, "wyszukaj");
 
-    const resultButton = page.locator('input[name="przyciskWydrukZwykly"]');
+    const resultButton = kwPage.locator('input[name="przyciskWydrukZwykly"]');
     if (!(await resultButton.count())) {
       throw new EkwError("NOT_FOUND_OR_CHANGED_UI", "EKW nie zwróciło przycisku aktualnej treści; sprawdź numer lub układ portalu.");
     }
-    await clickInput(page, "przyciskWydrukZwykly");
+    await clickInput(kwPage, "przyciskWydrukZwykly");
 
     const result = {
       kw_number: kw.compact,
@@ -113,14 +144,14 @@ export async function captureKw(rawKw, options = {}) {
       okladka: '<table><tr><td class="csTytul">Numer księgi wieczystej</td><td class="csDane">' + kw.formatted + '</td></tr></table>',
     };
     for (const [field, tab] of Object.entries(EKW_SECTIONS)) {
-      const button = page.locator('input[value="' + tab + '"]');
+      const button = kwPage.locator('input[value="' + tab + '"]');
       if (!(await button.count())) {
         throw new EkwError("CHANGED_UI", "Nie znaleziono zakładki " + tab + " w EKW.");
       }
       await button.first().click();
-      await page.waitForLoadState("domcontentloaded", { timeout: 7000 }).catch(() => {});
-      await requireUnblocked(page);
-      const html = await safeTableHtml(page);
+      await kwPage.waitForLoadState("domcontentloaded", { timeout: 7000 }).catch(() => {});
+      await requireUnblocked(kwPage);
+      const html = await safeTableHtml(kwPage);
       if (!html || html.length < 20) {
         throw new EkwError("EMPTY_SECTION", "Nie odczytano działu " + tab + "; treść nie zostanie uznana za kompletną.");
       }
