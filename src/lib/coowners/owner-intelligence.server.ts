@@ -220,11 +220,12 @@ async function checkIndexedCourt(input: OwnerIntelligenceInput): Promise<{
 }> {
   const name = input.name.trim().replace(/"/g, "");
   if (name.length < 5) return { note: "Za krótka nazwa do wyszukiwania.", hits: [] };
-  // Maksymalnie 3 kwerendy na podmiot, wyłącznie po nazwie; nigdy PESEL.
+  // Maksymalnie 4 kwerendy na podmiot, wyłącznie po nazwie; nigdy PESEL.
   const queries = [
     'site:krpu.pl "' + name + '"',
     'site:imsig.pl "' + name + '"',
     '"' + name + '" (KRZ OR "restrukturyzacja" OR "upadłość" OR "GRz-nu")',
+    '"' + name + '" "GRz-nu"',
   ];
   const searched = await Promise.allSettled(queries.map((q) => searchPublicIndex(q, 8)));
   const hits = searched.flatMap((r) =>
