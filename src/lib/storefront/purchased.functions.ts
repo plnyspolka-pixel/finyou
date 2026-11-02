@@ -47,7 +47,7 @@ export const getPurchasedDocDraft=createServerFn({method:"POST"})
     if(!doc?.template_file_path||doc.use_case==="legacy"||doc.category==="instrukcja")
       throw new Error("Wzór nie jest dostępny.");
     const {downloadTemplateFile}=await import("@/lib/document-generator.functions");
-    const downloaded=await downloadTemplateFile(context.supabase,doc.template_file_path);
+    const downloaded=await downloadTemplateFile(supabaseAdmin as any,doc.template_file_path);
     if(!downloaded.file)throw new Error("Nie można pobrać wzoru dokumentu.");
     const {default:PizZip}=await import("pizzip");
     const zip=new PizZip(await downloaded.file.arrayBuffer());
@@ -81,7 +81,7 @@ export const generatePurchasedDocx=createServerFn({method:"POST"})
     if(!doc?.template_file_path||doc.use_case==="legacy"||doc.category==="instrukcja")
       throw new Error("Ten wzór nie jest dostępny.");
     const {downloadTemplateFile}=await import("@/lib/document-generator.functions");
-    const downloaded=await downloadTemplateFile(context.supabase,doc.template_file_path);
+    const downloaded=await downloadTemplateFile(supabaseAdmin as any,doc.template_file_path);
     if(!downloaded.file)throw new Error("Nie można pobrać wzoru.");
     const {default:PizZip}=await import("pizzip");
     const zip=new PizZip(await downloaded.file.arrayBuffer());
@@ -90,18 +90,18 @@ export const generatePurchasedDocx=createServerFn({method:"POST"})
     zip.file("word/document.xml",replaceByOccurrence(normalizePlaceholders(raw),data.values));
     const output=zip.generate({type:"nodebuffer",compression:"DEFLATE"});
     const storagePath=`generated/${context.userId}/${crypto.randomUUID()}_dokument.docx`;
-    const {error:uploadErr}=await context.supabase.storage.from(CLIENT_FILES_BUCKET)
+    const {error:uploadErr}=await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
       .upload(storagePath,new Blob([new Uint8Array(output)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}),{upsert:false});
     if(uploadErr)throw new Error("Nie udało się zapisać wygenerowanego dokumentu.");
-    const {data:saved,error:saveErr}=await context.supabase.from("generated_documents").insert({
+    const {data:saved,error:saveErr}=await supabaseAdmin.from("generated_documents").insert({
       template_id:doc.id,template_name:doc.name,template_slug:doc.slug,
       form_data:data.values,docx_path:storagePath,file_size_bytes:output.length,created_by:context.userId,
     }).select("id").single();
     if(saveErr||!saved){
-      await context.supabase.storage.from(CLIENT_FILES_BUCKET).remove([storagePath]);
+      await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET).remove([storagePath]);
       throw new Error("Nie można zapisać historii wygenerowanego dokumentu.");
     }
-    const {data:url,error:signErr}=await context.supabase.storage.from(CLIENT_FILES_BUCKET)
+    const {data:url,error:signErr}=await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
       .createSignedUrl(storagePath,5*60);
     if(signErr)throw new Error("Dokument zapisano, ale nie można utworzyć linku do pobrania.");
     return {id:saved.id,url:url?.signedUrl??null};
