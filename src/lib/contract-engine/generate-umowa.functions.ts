@@ -235,6 +235,7 @@ export const generateUmowaFromEngine = createServerFn({ method: "POST" })
       numerUmowy: umowa.meta?.numer_umowy,
       templateName: "Komplet umowy pożyczki (silnik klauzul)",
       zrodlo: "kreator",
+      hasGuarantor: Boolean(umowa?.porecziciel),
       // Wniosek: jawnie podany albo ten, z którego powstał profil klienta.
       loanApplicationId: data.loanApplicationId ?? profile.sourceApplicationId ?? null,
       formData: {
