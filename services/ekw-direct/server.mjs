@@ -54,7 +54,10 @@ const server = http.createServer(async (req, res) => {
   try {
     const body = await readJson(req);
     if (!body || typeof body.kw !== "string") throw new EkwError("INVALID_KW", "Brak numeru księgi.");
-    const sections = await captureKw(body.kw);
+    // Headed mode is opt-in, for a machine with a real, authorised EKW session.
+    const sections = await captureKw(body.kw, {
+      headless: process.env.EKW_BROWSER_HEADLESS !== "false",
+    });
     write(res, 200, { ok: true, sections });
   } catch (error) {
     const code = error instanceof EkwError ? error.code : "BROWSER_ERROR";
