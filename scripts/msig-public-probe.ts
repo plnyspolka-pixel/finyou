@@ -67,7 +67,7 @@ try {
     });
     await page.getByPlaceholder("Podaj nr KRS").fill("0000304735");
     await page.waitForTimeout(400);
-    const searchButton=page.getByRole("button",{name:/^Szukaj$/i});
+    const searchButton=page.locator('button[aria-label="Przycisk formularza szukaj"]');
     const controls=await page.evaluate(()=>({
       searchButtons:[...document.querySelectorAll("button")].filter(x=>x.innerText.includes("Szukaj")).map(x=>({
         outer:x.outerHTML.slice(0,650),disabled:x.disabled,visible:x.getBoundingClientRect().width>0,
