@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assembleStartPackage, WINDYKATOR_PRICE_GROSZ, WINDYKATOR_TERMS_VERSION, type SourceFacts } from "./core";
+import { qualifyWindykatorCase, mayPurchaseQualifiedCase } from "./qualification";
 
 const dbAdmin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin as any;
 const isDate = (v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v));
@@ -20,7 +21,7 @@ const schema=z.object({
   mime:z.enum(["application/pdf","image/jpeg","image/png","image/webp"]),
   dataUrl:z.string().min(100).max(8000000),
   consents:z.object({
-    representation:z.literal(true), balance:z.literal(true), terms:z.literal(true),
+    representation:z.literal(true), balance:z.literal(true), noDispute:z.literal(true), terms:z.literal(true),
     privacy:z.literal(true), earlyStart:z.literal(true), withdrawalNotice:z.literal(true),
   }),
 });
@@ -46,6 +47,7 @@ export const createWindykatorDraft=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .inputValidator((v:unknown)=>schema.parse(v))
   .handler(async ({data,context})=>{
+    if(process.env.WINDYKATOR_AI_CHECKOUT_ENABLED!=="true") return {error:"Przyjmowanie zgłoszeń jest jeszcze wyłączone."};
     const db=await dbAdmin();
     const {count}=await db.from("windykator_orders").select("id",{count:"exact",head:true})
       .eq("user_id",context.userId).gte("created_at",new Date(Date.now()-86400000).toISOString());
@@ -66,7 +68,7 @@ export const createWindykatorDraft=createServerFn({method:"POST"})
       due_date:data.dueDate,case_description:data.description??null,
       source_file_name:name,source_mime:data.mime,source_storage_path:path,source_sha256:sha256,
       early_start_consent:true,withdrawal_notice_ack:true,terms_accepted:true,
-      privacy_ack:true,representation_asserted:true,balance_asserted:true,
+      privacy_ack:true,representation_asserted:true,balance_asserted:true,undisputed_asserted:true,
       accepted_terms_version:WINDYKATOR_TERMS_VERSION
     });
     if(error){await db.storage.from("windykator-private").remove([path]);return {error:"Nie można utworzyć sprawy."};}
@@ -121,7 +123,7 @@ export const createWindykatorCheckout=createServerFn({method:"POST"})
     const {data:o}=await db.from("windykator_orders").select("*")
       .eq("id",data.caseId).eq("user_id",context.userId).maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
-    if(o.status!=="draft")return {error:"Płatność została już rozpoczęta."};
+    if(!mayPurchaseQualifiedCase({status:o.status,qualifiedAt:o.qualified_at,now:new Date().toISOString(),identityValid:true}))return {error:"Najpierw przejdź automatyczną kwalifikację sprawy. Ważność kwalifikacji: 7 dni."};
     if(o.creditor_kind!=="person")
       return {error:"Reprezentacja firmy wymaga odrębnej weryfikacji. Płatność zablokowana."};
     const {data:k}=await db.from("didit_verifications").select("status,decision")
@@ -133,7 +135,7 @@ export const createWindykatorCheckout=createServerFn({method:"POST"})
     if(!name||norm(name)!==norm(o.creditor_name))
       return {error:"Dane wierzyciela różnią się od zweryfikowanej tożsamości."};
     const {data:locked}=await db.from("windykator_orders")
-      .update({status:"checkout_pending"}).eq("id",o.id).eq("status","draft")
+      .update({status:"checkout_pending"}).eq("id",o.id).eq("status","qualified")
       .select("id").maybeSingle();
     if(!locked)return {error:"Sprawa jest już przetwarzana."};
     try{
@@ -153,7 +155,7 @@ export const createWindykatorCheckout=createServerFn({method:"POST"})
       return {paymentUrl:tx.transactionPaymentUrl};
     }catch(e){
       console.error("[windykator] Tpay",e);
-      await db.from("windykator_orders").update({status:"draft"}).eq("id",o.id)
+      await db.from("windykator_orders").update({status:"qualified"}).eq("id",o.id)
         .eq("status","checkout_pending").is("tpay_transaction_id",null);
       return {error:"Brak połączenia z Tpay. Spróbuj ponownie."};
     }
@@ -165,12 +167,13 @@ export const getWindykatorOrder=createServerFn({method:"POST"})
   .handler(async ({data,context})=>{
     const db=await dbAdmin();
     const {data:o}=await db.from("windykator_orders")
-      .select("id,status,report_text,notice_text,epu_draft_text,analysis_error")
+      .select("id,status,qualification_reasons,qualified_at,collection_activated_at,collection_ends_at,report_text,notice_text,epu_draft_text,analysis_error")
       .eq("id",data.caseId).eq("user_id",context.userId).maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
-    if(["draft","checkout_pending","refunded","failed"].includes(o.status))return {caseId:o.id,status:o.status,paid:false};
+    if(["draft","qualifying","qualified","needs_documents","rejected","checkout_pending","refunded","failed"].includes(o.status))return {caseId:o.id,status:o.status,paid:false,qualificationReasons:o.qualification_reasons??[],qualifiedAt:o.qualified_at??null};
     return {caseId:o.id,status:o.status,paid:true,
-      report:o.report_text,notice:o.notice_text,epuDraft:o.epu_draft_text,error:o.analysis_error};
+      report:o.report_text,notice:o.notice_text,epuDraft:o.epu_draft_text,error:o.analysis_error,
+      collectionActivatedAt:o.collection_activated_at,collectionEndsAt:o.collection_ends_at};
   });
 
 function extract(raw:string):SourceFacts {
@@ -187,6 +190,106 @@ function extract(raw:string):SourceFacts {
     missing:list(obj.missing),summary:s(obj.summary)??""};
 }
 
+/** Odczyt tylko na etapie kwalifikacji; nie generuje płatnego raportu. */
+async function readFactsForQualification(o:any):Promise<SourceFacts>{
+  const key=process.env.LOVABLE_API_KEY;
+  if(!key)throw Error("AI offline");
+  const {data:file,error:fileError}=await db.storage.from("windykator-private")
+    .download(o.source_storage_path);
+  if(fileError||!file)throw Error("Brak źródła");
+  const url="data:"+o.source_mime+";base64,"+Buffer.from(await file.arrayBuffer()).toString("base64");
+  const prompt=[
+    "Wyodrębnij jedynie dane znajdujące się w załączonym dokumencie. Niczego nie zgaduj.",
+    "Zwróć WYŁĄCZNIE JSON z polami:",
+    '{"documentType":"invoice|loan|other|unknown","creditor":null,"debtor":null,',
+    '"documentNumber":null,"amount":null,"dueDate":null,"evidence":[],"missing":[],"summary":""}.',
+    "Używaj prawdziwych wartości, podawaj daty jako YYYY-MM-DD, kwoty jako liczby.",
+    "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia."
+  ].join("\n");
+  const content=o.source_mime==="application/pdf" ?
+    [{type:"text",text:prompt},{type:"file",file:{filename:o.source_file_name,file_data:url}}] :
+    [{type:"text",text:prompt},{type:"image_url",image_url:{url}}];
+  const res=await fetch("https://ai.gateway.lovable.dev/v1/chat/completions",{
+    method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},
+    body:JSON.stringify({model:"google/gemini-2.5-flash",
+      messages:[{role:"system",content:"Zwracaj tylko JSON z udokumentowanymi danymi."},
+        {role:"user",content}],response_format:{type:"json_object"}})
+  });
+  if(!res.ok)throw Error("AI HTTP "+res.status);
+  const body=await res.json();
+  const facts=extract(String(body?.choices?.[0]?.message?.content??""));
+  return facts;
+}
+
+/**
+ * Jedyna droga przyjęcia: formularz sklepu -> KYC -> OCR+reguły -> "qualified".
+ * Identyfikator caseId pochodzi z rekordu zalogowanego wierzyciela, nie z SMS/CRM.
+ */
+export const qualifyWindykatorOrder=createServerFn({method:"POST"})
+  .middleware([requireSupabaseAuth]).inputValidator((v:unknown)=>caseSchema.parse(v))
+  .handler(async ({data,context})=>{
+    if(process.env.WINDYKATOR_AI_CHECKOUT_ENABLED!=="true")
+      return {error:"Automatyczna kwalifikacja jest wyłączona do czasu wdrożenia."};
+    const db=await dbAdmin();
+    const {data:o}=await db.from("windykator_orders").select("*")
+      .eq("id",data.caseId).eq("user_id",context.userId).eq("intake_source","shop").maybeSingle();
+    if(!o)return {error:"Nie znaleziono zgłoszenia w sklepie."};
+    if(o.status==="qualified")return {status:"qualified" as const,reasons:[]};
+    if(!["draft","needs_documents"].includes(o.status))
+      return {error:"Sprawa ma już decyzję kwalifikacyjną lub płatność."};
+    const {data:k}=await db.from("didit_verifications").select("status,decision")
+      .eq("user_id",context.userId).eq("vendor_data","windykator:"+context.userId)
+      .order("created_at",{ascending:false}).limit(1).maybeSingle();
+    if(k?.status!=="Approved")return {error:"Najpierw przejdź weryfikację tożsamości Didit."};
+    const {extractDiditPersonalData}=await import("@/lib/didit.server");
+    const verifiedName=extractDiditPersonalData(k.decision).fullName;
+    const same=!!verifiedName && norm(verifiedName)===norm(o.creditor_name);
+    if(!same){
+      const reasons=["Dane wierzyciela są niezgodne z potwierdzoną tożsamością."];
+      await db.from("windykator_orders")
+        .update({status:"rejected",qualification_reasons:reasons,qualified_at:null})
+        .eq("id",o.id).in("status",["draft","needs_documents"]);
+      return {status:"rejected" as const,reasons};
+    }
+    // Brak osobnego KYB oznacza brak kwalifikacji firm, nie ominięcie sprawdzenia.
+    if(o.creditor_kind!=="person"){
+      const reasons=["Weryfikacja reprezentacji firmy nie jest jeszcze dostępna."];
+      await db.from("windykator_orders")
+        .update({status:"needs_documents",qualification_reasons:reasons,qualified_at:null})
+        .eq("id",o.id).in("status",["draft","needs_documents"]);
+      return {status:"needs_documents" as const,reasons};
+    }
+    const {data:lock}=await db.from("windykator_orders")
+      .update({status:"qualifying",qualification_reasons:[]}).eq("id",o.id)
+      .in("status",["draft","needs_documents"]).select("id").maybeSingle();
+    if(!lock)return {error:"Ta sprawa jest już sprawdzana."};
+    try{
+      const facts=await readFactsForQualification(o);
+      const result=qualifyWindykatorCase({
+        claim:{creditorName:o.creditor_name,debtorName:o.debtor_name,
+          amount:Number(o.claim_amount),dueDate:o.due_date,claimKind:o.claim_kind},
+        facts,creditorKind:o.creditor_kind,
+        identityVerified:true,identityMatchesCreditor:true,creditorRepresentationVerified:true,
+        creditorDeclaredNoPayment:o.balance_asserted===true,
+        creditorDeclaredNoDispute:o.undisputed_asserted===true,
+        today:new Date().toISOString().slice(0,10)
+      });
+      const {error}=await db.from("windykator_orders").update({
+        status:result.status,qualification_reasons:result.reasons,
+        qualification_facts:facts,qualified_at:result.status==="qualified"?new Date().toISOString():null,
+        analysis_error:null
+      }).eq("id",o.id).eq("status","qualifying");
+      if(error)throw Error("Nie zapisano kwalifikacji.");
+      return result;
+    }catch(e){
+      console.error("[windykator] qualification",e);
+      await db.from("windykator_orders")
+        .update({status:"draft",analysis_error:"Błąd kontroli dokumentów. Możesz ponowić kwalifikację."})
+        .eq("id",o.id).eq("status","qualifying");
+      return {error:"Nie udało się zweryfikować dokumentów. Spróbuj ponownie."};
+    }
+  });
+
 /** Po Tpay, idempotentnie; błąd OCR nie odblokowuje windykacji ani wezwania. */
 export const prepareWindykatorPackage=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth]).inputValidator((v:unknown)=>caseSchema.parse(v))
@@ -201,32 +304,8 @@ export const prepareWindykatorPackage=createServerFn({method:"POST"})
       .eq("id",o.id).eq("status","paid").select("id").maybeSingle();
     if(!lock)return {error:"Analiza już trwa."};
     try{
-      const key=process.env.LOVABLE_API_KEY;
-      if(!key)throw Error("AI offline");
-      const {data:file,error:fileError}=await db.storage.from("windykator-private")
-        .download(o.source_storage_path);
-      if(fileError||!file)throw Error("Brak źródła");
-      const url="data:"+o.source_mime+";base64,"+Buffer.from(await file.arrayBuffer()).toString("base64");
-      const prompt=[
-        "Wyodrębnij jedynie dane znajdujące się w załączonym dokumencie. Niczego nie zgaduj.",
-        "Zwróć WYŁĄCZNIE JSON z polami:",
-        '{"documentType":"invoice|loan|other|unknown","creditor":null,"debtor":null,',
-        '"documentNumber":null,"amount":null,"dueDate":null,"evidence":[],"missing":[],"summary":""}.',
-        "Używaj prawdziwych wartości, podawaj daty jako YYYY-MM-DD, kwoty jako liczby.",
-        "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia."
-      ].join("\n");
-      const content=o.source_mime==="application/pdf" ?
-        [{type:"text",text:prompt},{type:"file",file:{filename:o.source_file_name,file_data:url}}] :
-        [{type:"text",text:prompt},{type:"image_url",image_url:{url}}];
-      const res=await fetch("https://ai.gateway.lovable.dev/v1/chat/completions",{
-        method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},
-        body:JSON.stringify({model:"google/gemini-2.5-flash",
-          messages:[{role:"system",content:"Zwracaj tylko JSON z udokumentowanymi danymi."},
-            {role:"user",content}],response_format:{type:"json_object"}})
-      });
-      if(!res.ok)throw Error("AI HTTP "+res.status);
-      const body=await res.json();
-      const facts=extract(String(body?.choices?.[0]?.message?.content??""));
+      const facts=o.qualification_facts as SourceFacts;
+      if(!facts || !o.qualified_at)throw Error("Brak zatwierdzonej kwalifikacji.");
       const pack=assembleStartPackage({creditorName:o.creditor_name,debtorName:o.debtor_name,
         claimKind:o.claim_kind,amount:Number(o.claim_amount),dueDate:o.due_date},facts);
       const {error}=await db.from("windykator_orders").update({
