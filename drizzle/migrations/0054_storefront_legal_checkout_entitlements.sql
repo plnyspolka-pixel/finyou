@@ -181,3 +181,20 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.finalize_store_paid_order(uuid,text,integer) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.finalize_store_paid_order(uuid,text,integer) TO service_role;
+
+-- Sales request fallback when legally correct Tpay merchant cannot yet be used.
+CREATE TABLE IF NOT EXISTS public.store_inquiries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  items jsonb NOT NULL CHECK(jsonb_typeof(items)='array'),
+  total_grosz integer NOT NULL CHECK(total_grosz>0),
+  buyer jsonb NOT NULL,
+  store_terms_sha256 text NOT NULL,
+  status text NOT NULL DEFAULT 'new' CHECK(status IN ('new','contacted','closed')),
+  email_sent boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS store_inquiries_user_idx ON public.store_inquiries(user_id,created_at DESC);
+ALTER TABLE public.store_inquiries ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.store_inquiries FROM PUBLIC,anon,authenticated;
+GRANT SELECT,INSERT,UPDATE ON public.store_inquiries TO service_role;
