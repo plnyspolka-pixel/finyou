@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assembleStartPackage, WINDYKATOR_PRICE_GROSZ, WINDYKATOR_TERMS_VERSION, type SourceFacts } from "./core";
 import { qualifyWindykatorCase, mayPurchaseQualifiedCase } from "./qualification";
+import { chooseCourtRoute, draftCourtPackage, EMPTY_COURT_EVIDENCE } from "./court-routes";
 
 const dbAdmin = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin as any;
 const isDate = (v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v));
@@ -11,6 +12,7 @@ const schema=z.object({
   creditorKind:z.enum(["person","business","company"]),
   creditorName:z.string().trim().min(5).max(240),
   creditorNip:z.string().trim().max(10).optional(),
+  creditorKrs:z.string().trim().max(10).optional(),
   creditorEmail:z.string().trim().email().max(240),
   debtorName:z.string().trim().min(4).max(240),
   claimKind:z.enum(["invoice","loan","other"]),
@@ -63,7 +65,7 @@ export const createWindykatorDraft=createServerFn({method:"POST"})
     if(uploadError)return {error:"Nie można zapisać prywatnego dokumentu."};
     const {error}=await db.from("windykator_orders").insert({
       id,user_id:context.userId,creditor_kind:data.creditorKind,creditor_name:data.creditorName,
-      creditor_nip:data.creditorNip??null,creditor_email:data.creditorEmail,
+      creditor_nip:data.creditorNip??null,creditor_krs:data.creditorKrs??null,creditor_email:data.creditorEmail,
       debtor_name:data.debtorName,claim_kind:data.claimKind,claim_amount:data.claimAmount,
       due_date:data.dueDate,case_description:data.description??null,
       source_file_name:name,source_mime:data.mime,source_storage_path:path,source_sha256:sha256,
@@ -124,16 +126,24 @@ export const createWindykatorCheckout=createServerFn({method:"POST"})
       .eq("id",data.caseId).eq("user_id",context.userId).eq("intake_source","shop").maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
     if(!mayPurchaseQualifiedCase({status:o.status,qualifiedAt:o.qualified_at,now:new Date().toISOString(),identityValid:true}))return {error:"Najpierw przejdź automatyczną kwalifikację sprawy. Ważność kwalifikacji: 7 dni."};
-    if(o.creditor_kind!=="person")
-      return {error:"Reprezentacja firmy wymaga odrębnej weryfikacji. Płatność zablokowana."};
+    if(!o.registry_verification?.verified || !o.registry_verification.identityMatch)
+      return {error:"Nie potwierdzono uprawnień wierzyciela w oficjalnym rejestrze."};
     const {data:k}=await db.from("didit_verifications").select("status,decision")
       .eq("user_id",context.userId).eq("vendor_data","windykator:"+context.userId)
       .order("created_at",{ascending:false}).limit(1).maybeSingle();
     if(k?.status!=="Approved")return {error:"Potwierdź tożsamość przez Didit."};
     const {extractDiditPersonalData}=await import("@/lib/didit.server");
     const name=extractDiditPersonalData(k.decision).fullName;
-    if(!name||norm(name)!==norm(o.creditor_name))
-      return {error:"Dane wierzyciela różnią się od zweryfikowanej tożsamości."};
+    if(!name) return {error:"Brak potwierdzonej tożsamości z Didit."};
+    const { verifyCreditorRegistry }=await import("./registry.server");
+    // Re-check przed płatnością: nie polegaj na danych rejestrowych sprzed kwalifikacji.
+    const personal=extractDiditPersonalData(k.decision);
+    const registry=await verifyCreditorRegistry({
+      creditorKind:o.creditor_kind,creditorName:o.creditor_name,
+      creditorNip:o.creditor_nip,creditorKrs:o.creditor_krs,
+      verifiedName:name,verifiedPesel:personal.personalNumber
+    });
+    if(!registry.verified)return {error:registry.reason??"Nie potwierdzono reprezentacji."};
     const {data:locked}=await db.from("windykator_orders")
       .update({status:"checkout_pending"}).eq("id",o.id).eq("status","qualified")
       .select("id").maybeSingle();
@@ -167,13 +177,14 @@ export const getWindykatorOrder=createServerFn({method:"POST"})
   .handler(async ({data,context})=>{
     const db=await dbAdmin();
     const {data:o}=await db.from("windykator_orders")
-      .select("id,status,qualification_reasons,qualified_at,collection_activated_at,collection_ends_at,report_text,notice_text,epu_draft_text,analysis_error")
+      .select("id,status,qualification_reasons,qualified_at,collection_activated_at,collection_ends_at,court_route,court_draft_text,report_text,notice_text,epu_draft_text,analysis_error")
       .eq("id",data.caseId).eq("user_id",context.userId).maybeSingle();
     if(!o)return {error:"Nie znaleziono sprawy."};
     if(["draft","qualifying","qualified","needs_documents","rejected","checkout_pending","refunded","failed"].includes(o.status))return {caseId:o.id,status:o.status,paid:false,qualificationReasons:o.qualification_reasons??[],qualifiedAt:o.qualified_at??null};
     return {caseId:o.id,status:o.status,paid:true,
       report:o.report_text,notice:o.notice_text,epuDraft:o.epu_draft_text,error:o.analysis_error,
-      collectionActivatedAt:o.collection_activated_at,collectionEndsAt:o.collection_ends_at};
+      collectionActivatedAt:o.collection_activated_at,collectionEndsAt:o.collection_ends_at,
+      courtRoute:o.court_route,courtDraft:o.court_draft_text};
   });
 
 function extract(raw:string):SourceFacts {
@@ -243,22 +254,26 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
       .order("created_at",{ascending:false}).limit(1).maybeSingle();
     if(k?.status!=="Approved")return {error:"Najpierw przejdź weryfikację tożsamości Didit."};
     const {extractDiditPersonalData}=await import("@/lib/didit.server");
-    const verifiedName=extractDiditPersonalData(k.decision).fullName;
-    const same=!!verifiedName && norm(verifiedName)===norm(o.creditor_name);
-    if(!same){
-      const reasons=["Dane wierzyciela są niezgodne z potwierdzoną tożsamością."];
-      await db.from("windykator_orders")
-        .update({status:"rejected",qualification_reasons:reasons,qualified_at:null})
-        .eq("id",o.id).in("status",["draft","needs_documents","qualified"]);
-      return {status:"rejected" as const,reasons};
+    const personal=extractDiditPersonalData(k.decision);
+    if(!personal.fullName){
+      return {error:"Didit nie zwrócił pełnego imienia i nazwiska."};
     }
-    // Brak osobnego KYB oznacza brak kwalifikacji firm, nie ominięcie sprawdzenia.
-    if(o.creditor_kind!=="person"){
-      const reasons=["Weryfikacja reprezentacji firmy nie jest jeszcze dostępna."];
+    // Istniejące KRS i CEIDG są wykorzystywane jako źródła urzędowe.
+    // Nie przyjmujemy reprezentacji łącznej bez dodatkowego umocowania.
+    const {verifyCreditorRegistry}=await import("./registry.server");
+    const registry=await verifyCreditorRegistry({
+      creditorKind:o.creditor_kind,creditorName:o.creditor_name,
+      creditorNip:o.creditor_nip,creditorKrs:o.creditor_krs,
+      verifiedName:personal.fullName,verifiedPesel:personal.personalNumber
+    });
+    if(!registry.verified){
+      const reasons=[registry.reason??"Nie udało się zweryfikować umocowania wierzyciela."];
+      const status=registry.identityMatch?"needs_documents":"rejected";
       await db.from("windykator_orders")
-        .update({status:"needs_documents",qualification_reasons:reasons,qualified_at:null})
-        .eq("id",o.id).in("status",["draft","needs_documents"]);
-      return {status:"needs_documents" as const,reasons};
+        .update({status,qualification_reasons:reasons,qualified_at:null,
+          registry_verification:registry})
+        .eq("id",o.id).in("status",["draft","needs_documents","qualified"]);
+      return {status:status as "needs_documents"|"rejected",reasons};
     }
     const {data:lock}=await db.from("windykator_orders")
       .update({status:"qualifying",qualification_reasons:[]}).eq("id",o.id)
@@ -270,14 +285,15 @@ export const qualifyWindykatorOrder=createServerFn({method:"POST"})
         claim:{creditorName:o.creditor_name,debtorName:o.debtor_name,
           amount:Number(o.claim_amount),dueDate:o.due_date,claimKind:o.claim_kind},
         facts,creditorKind:o.creditor_kind,
-        identityVerified:true,identityMatchesCreditor:true,creditorRepresentationVerified:true,
+        identityVerified:true,identityMatchesCreditor:registry.identityMatch,
+        creditorRepresentationVerified:registry.verified,
         creditorDeclaredNoPayment:o.balance_asserted===true,
         creditorDeclaredNoDispute:o.undisputed_asserted===true,
         today:new Date().toISOString().slice(0,10)
       });
       const {error}=await db.from("windykator_orders").update({
         status:result.status,qualification_reasons:result.reasons,
-        qualification_facts:facts,qualified_at:result.status==="qualified"?new Date().toISOString():null,
+        registry_verification:registry,qualification_facts:facts,qualified_at:result.status==="qualified"?new Date().toISOString():null,
         analysis_error:null
       }).eq("id",o.id).eq("status","qualifying");
       if(error)throw Error("Nie zapisano kwalifikacji.");
@@ -309,9 +325,18 @@ export const prepareWindykatorPackage=createServerFn({method:"POST"})
       if(!facts || !o.qualified_at)throw Error("Brak zatwierdzonej kwalifikacji.");
       const pack=assembleStartPackage({creditorName:o.creditor_name,debtorName:o.debtor_name,
         claimKind:o.claim_kind,amount:Number(o.claim_amount),dueDate:o.due_date},facts);
+      const court=chooseCourtRoute({
+        dueDate:o.due_date,today:new Date().toISOString().slice(0,10),
+        evidence:EMPTY_COURT_EVIDENCE,disputed:!o.undisputed_asserted
+      });
+      const courtDraft=draftCourtPackage({route:court,creditor:o.creditor_name,
+        debtor:o.debtor_name,amount:Number(o.claim_amount),dueDate:o.due_date,
+        documentNo:facts.documentNumber,evidenceList:facts.evidence});
       const {error}=await db.from("windykator_orders").update({
         status:pack.ready?"analysis_ready":"review_required",analysis:{facts,warnings:pack.warnings},
-        report_text:pack.report,notice_text:pack.notice,epu_draft_text:pack.epuDraft,analysis_error:null
+        report_text:pack.report,notice_text:pack.notice,
+        court_route:court.route,court_draft_text:courtDraft,
+        epu_draft_text:court.route==="epu"?pack.epuDraft:null,analysis_error:null
       }).eq("id",o.id).eq("status","analysis_running");
       if(error)throw Error("Błąd zapisu wyniku");
       return {done:true,reviewRequired:!pack.ready};
