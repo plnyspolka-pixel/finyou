@@ -182,7 +182,7 @@ function WindykatorPage(){
                 <input type="checkbox" className="mt-1" checked={confirm[id]}
                   onChange={e=>setConfirm(old=>({...old,[id]:e.target.checked}))}/>
                 <span>{text}</span></label>)}
-              <p className="text-xs text-slate-600">Potwierdzenie nie pozbawia konsumenta praw sprzecznie z ustawą. Usługa jest w pełni wykonana dopiero po faktycznym dostarczeniu rezultatów.</p>
+              <p className="text-xs text-slate-600">Przeczytaj <a href="/regulamin-windykator-ai" className="underline">warunki Pakietu Startowego</a> i <a href="/polityka-prywatnosci" className="underline">politykę prywatności</a>. Potwierdzenie nie pozbawia konsumenta praw sprzecznie z ustawą. Usługa jest w pełni wykonana dopiero po faktycznym dostarczeniu rezultatów.</p>
             </div>
             <button type="submit" disabled={busy} className="w-full rounded-xl bg-amber-400 px-6 py-4 font-extrabold text-slate-950 disabled:opacity-60">
               {busy?"Zapisywanie…":"Zapisz zgłoszenie i przejdź do weryfikacji"}
