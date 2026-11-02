@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   decodeMaybeBase64,
   fetchAndStoreKw,
-  hasCmdConfig,
+  hasAnyKwConfig,
   normalizeKwNumber,
 } from "@/lib/kw-fetch.server";
 
@@ -75,7 +75,7 @@ export const getKwForApplication = createServerFn({ method: "POST" })
     return { hasKw: true as const, kwNumber: kw, document };
   });
 
-/** Admin/operator only. Orders KW download from CMD, polls, fetches HTML, stores in cache. */
+/** Admin/operator only. Fetches KW from selected provider and stores its HTML sections in cache. */
 export const fetchKwForApplication = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) =>
@@ -94,8 +94,8 @@ export const fetchKwForApplication = createServerFn({ method: "POST" })
     const allowed = (roles ?? []).some((r) => r.role === "administrator" || r.role === "operator");
     if (!allowed) throw new Error("Brak uprawnień (wymagana rola administrator/operator).");
 
-    if (!hasCmdConfig()) {
-      throw new Error("Brak konfiguracji CMD KW Engine (CMD_KW_USER / CMD_KW_PASSWORD).");
+    if (!hasAnyKwConfig()) {
+      throw new Error("Brak skonfigurowanego źródła KW: EKW Direct, EasyMKW lub CMD.");
     }
 
     const kw = await resolveKwForApplication(supabase, data.loanApplicationId);
