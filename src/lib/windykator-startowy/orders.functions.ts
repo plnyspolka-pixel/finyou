@@ -226,7 +226,9 @@ async function readFactsForQualification(o:any):Promise<SourceFacts>{
     "Wyodrębnij jedynie dane znajdujące się w załączonym dokumencie. Niczego nie zgaduj.",
     "Zwróć WYŁĄCZNIE JSON z polami:",
     '{"documentType":"invoice|loan|other|unknown","creditor":null,"debtor":null,',
-    '"documentNumber":null,"amount":null,"dueDate":null,"evidence":[],"missing":[],"summary":""}.',
+    '"documentNumber":null,"amount":null,"dueDate":null,"evidence":[],"missing":[],"summary":"",',
+    '"courtEvidence":{"hasNotarial777":false,"hasEnforceableTitle":false,"hasMortgage":false,',
+    '"hasVerifiedDelivery":false,"notarialReference":null,"titleReference":null,"landRegister":null}}.',
     "Używaj prawdziwych wartości, podawaj daty jako YYYY-MM-DD, kwoty jako liczby.",
     "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia. Pola courtEvidence zaznaczaj wyłącznie gdy dołączony dokument jednoznacznie potwierdza fakt; podaj konkretny numer aktu, tytułu lub KW. Samo wspomnienie o hipotece albo 777 w umowie nie oznacza istnienia tytułu wykonawczego."
   ].join("\n");
