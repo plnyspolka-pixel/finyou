@@ -186,7 +186,8 @@ export const getMyStorePurchases = createServerFn({ method: "GET" })
         .eq("document_sha256",await storeLegalSha("store_dpa")).limit(1),
     ]);
     if (o.error || e.error || dpa.error) throw new Error("Nie można odczytać zakupów.");
-    return { orders: o.data ?? [], entitlements: e.data ?? [], dpaAccepted: Boolean(dpa.data?.length) };
+    const { isInternalStaff } = await import("@/lib/access/guards.server");
+    return { orders: o.data ?? [], entitlements: e.data ?? [], dpaAccepted: Boolean(dpa.data?.length) || await isInternalStaff(context.userId) };
   });
 
 async function assertEntitled(admin: any, userId: string, kind: "lesson"|"document"|"kw", itemId: string) {
