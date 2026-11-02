@@ -463,10 +463,15 @@ async function sourceFromGeneratedDocument(
 }> {
   const { data: doc } = await context.supabase
     .from("generated_documents")
-    .select("id, template_name, docx_path, pdf_path, loan_application_id")
+    .select("id, template_name, template_slug, form_data, docx_path, pdf_path, loan_application_id")
     .eq("id", generatedDocumentId)
     .maybeSingle();
   if (!doc) throw new Error("Nie znaleziono wygenerowanego dokumentu albo brak do niego dostępu.");
+  // Krytyczna brama prawna po stronie serwera: nie da się obejść ukrytego
+  // przycisku przez bezpośrednie wywołanie createEnvelope.
+  const { eligibilityForGeneratedDocument } = await import("@/lib/document-signing-policy");
+  const eligibility = eligibilityForGeneratedDocument(doc);
+  if (!eligibility.allowed) throw new Error("Podpis dokumentowy niedostępny: " + eligibility.reason);
   const base = (p: string) => p.split("/").pop() ?? "dokument";
   if (doc.pdf_path) {
     return {
