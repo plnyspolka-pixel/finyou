@@ -219,12 +219,10 @@ function extract(raw:string):SourceFacts {
 /** Odczyt tylko na etapie kwalifikacji; nie generuje płatnego raportu. */
 async function readFactsForQualification(o:any):Promise<SourceFacts>{
   const db=await dbAdmin();
-  const key=process.env.LOVABLE_API_KEY;
-  if(!key)throw Error("AI offline");
   const {data:file,error:fileError}=await db.storage.from("windykator-private")
     .download(o.source_storage_path);
-  if(fileError||!file)throw Error("Brak źródła");
-  const url="data:"+o.source_mime+";base64,"+Buffer.from(await file.arrayBuffer()).toString("base64");
+  if(fileError||!file)throw Error("Brak dokumentu źródłowego.");
+  const bytes=new Uint8Array(await file.arrayBuffer());
   const prompt=[
     "Wyodrębnij jedynie dane znajdujące się w załączonym dokumencie. Niczego nie zgaduj.",
     "Zwróć WYŁĄCZNIE JSON z polami:",
@@ -235,18 +233,9 @@ async function readFactsForQualification(o:any):Promise<SourceFacts>{
     "Używaj prawdziwych wartości, podawaj daty jako YYYY-MM-DD, kwoty jako liczby.",
     "Nie traktuj faktury jako dowodu zapłaty ani niezapłacenia. Pola courtEvidence zaznaczaj wyłącznie gdy dołączony dokument jednoznacznie potwierdza fakt; podaj konkretny numer aktu, tytułu lub KW. Samo wspomnienie o hipotece albo 777 w umowie nie oznacza istnienia tytułu wykonawczego."
   ].join("\n");
-  const content=o.source_mime==="application/pdf" ?
-    [{type:"text",text:prompt},{type:"file",file:{filename:o.source_file_name,file_data:url}}] :
-    [{type:"text",text:prompt},{type:"image_url",image_url:{url}}];
-  const res=await fetch("https://ai.gateway.lovable.dev/v1/chat/completions",{
-    method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},
-    body:JSON.stringify({model:"google/gemini-2.5-flash",
-      messages:[{role:"system",content:"Zwracaj tylko JSON z udokumentowanymi danymi."},
-        {role:"user",content}],response_format:{type:"json_object"}})
-  });
-  if(!res.ok)throw Error("AI HTTP "+res.status);
-  const body=await res.json();
-  const facts=extract(String(body?.choices?.[0]?.message?.content??""));
+  const {extractWindykatorDocumentDirect}=await import("./document-ai.server");
+  const raw=await extractWindykatorDocumentDirect({mime:o.source_mime,bytes,prompt});
+  const facts=extract(raw);
   return facts;
 }
 
