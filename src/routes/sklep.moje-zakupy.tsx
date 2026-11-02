@@ -35,6 +35,7 @@ function StoreLibrary() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [video, setVideo] = useState<{ title:string; url:string; external:boolean } | null>(null);
+  const [download, setDownload] = useState<{ url:string; label:string } | null>(null);
   const [doc, setDoc] = useState<{id:string; name:string; placeholders:string[]}|null>(null);
   const [values, setValues] = useState<Record<string,string>>({});
   useEffect(() => {
@@ -74,8 +75,8 @@ function StoreLibrary() {
     void act("generate:"+doc.id,async()=>{
       const result = await generate({ data:{ templateId:doc.id,values } });
       const link = await getDownload({ data:{ path:result.docxPath,expiresInSec:300 } });
-      window.open(link.url, "_blank", "noopener,noreferrer");
-      setMessage("Dokument wygenerowano. Link do DOCX jest ważny przez 5 minut.");
+      setDownload({ url: link.url, label: "Pobierz wygenerowany dokument DOCX" });
+      setMessage("Dokument wygenerowano. Kliknij poniższy link do pobrania (ważny 5 minut).");
     });
   };
   const openKw = (id:string) => void act("kw:"+id,async()=>{
@@ -84,8 +85,8 @@ function StoreLibrary() {
       setMessage(result.message || "Raport jest przygotowywany — spróbuj ponownie za chwilę.");
       return;
     }
-    window.open(result.url, "_blank", "noopener,noreferrer");
-    setMessage("Raport KW " + result.kw + " jest gotowy. Otwórz lub pobierz PDF.");
+    setDownload({ url: result.url, label: "Pobierz raport KW " + result.kw + " — PDF" });
+    setMessage("Raport KW " + result.kw + " jest gotowy. Pobierz PDF z poniższego linku.");
   });
   const signDpa = () => void act("dpa",async()=>{
     await acceptDpa({data:{accepted:true}});
@@ -103,6 +104,7 @@ function StoreLibrary() {
       {loading && <p>Sprawdzanie płatności i uprawnień…</p>}
       {error && <div className="fy-store-library-error" role="alert">{error} <a href="/logowanie">Zaloguj się do swojego konta</a></div>}
       {message && <p role="status" className="fy-store-library-status">{message}</p>}
+      {download && <p className="fy-store-library-status"><a href={download.url} target="_blank" rel="noopener noreferrer">{download.label}</a></p>}
       {purchases && <>
         {purchases.orders.some((o)=>o.status === "pending" || o.status === "created") &&
           <div className="fy-store-library-panel">Masz płatność oczekującą na potwierdzenie. Po jej rozliczeniu odśwież tę stronę. Nie udostępniamy treści na podstawie samego powrotu z Tpay.</div>}
