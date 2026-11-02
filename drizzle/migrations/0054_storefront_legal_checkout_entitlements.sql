@@ -65,9 +65,8 @@ DECLARE
   v_kind text;
   v_item_id text;
 BEGIN
-  IF current_user <> 'service_role' THEN
-    RAISE EXCEPTION 'Only service_role can confirm a store order';
-  END IF;
+  -- Invoker control is enforced by EXECUTE grants below; within
+  -- SECURITY DEFINER, current_user would be the function owner.
   SELECT * INTO v_order FROM public.store_orders WHERE id=p_id FOR UPDATE;
   IF NOT FOUND THEN RETURN false; END IF;
   IF v_order.status='paid' THEN
