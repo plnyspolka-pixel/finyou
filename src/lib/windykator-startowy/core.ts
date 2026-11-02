@@ -49,7 +49,7 @@ export function assembleStartPackage(claim: SubmittedClaim, facts: SourceFacts, 
   if (facts.missing.length) warnings.push("Wskazane braki dokumentacji: " + facts.missing.map(x => clean(x, 100)).join("; "));
   warnings.push("Brak integracji bankowej: brak niezależnego potwierdzenia niezapłacenia zobowiązania.");
   warnings.push("Autentyczność dokumentu, wykonanie świadczenia, umocowanie oraz ewentualne przedawnienie wymagają dodatkowej kontroli.");
-  const critical = facts.missing.length > 0 || warnings.some(x => /Nie potwierdzono|Nieprawidłowa|Niepotwierdzona wymagalność|Nie rozpoznano|Rodzaj dokumentu nie odpowiada/.test(x));
+  const critical = facts.missing.length > 0 || warnings.some(x => /Nie potwierdzono|Nieprawidłowa|Niepotwierdzona wymagalność|Nie rozpoznano|Termin z dokumentu różni|Rodzaj dokumentu nie odpowiada/.test(x));
   const creditor = clean(claim.creditorName);
   const debtor = clean(claim.debtorName);
   const id = clean(facts.documentNumber ?? "dokument wskazany w zgłoszeniu", 100);
