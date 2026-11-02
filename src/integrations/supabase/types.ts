@@ -15341,6 +15341,9 @@ export type Database = {
           title: string
           track: string | null
           updated_at: string
+          upload_bytes: number | null
+          upload_claimed_at: string | null
+          upload_session_url: string | null
           youtube_video_id: string | null
         }
         Insert: {
@@ -15370,6 +15373,9 @@ export type Database = {
           title: string
           track?: string | null
           updated_at?: string
+          upload_bytes?: number | null
+          upload_claimed_at?: string | null
+          upload_session_url?: string | null
           youtube_video_id?: string | null
         }
         Update: {
@@ -15399,6 +15405,9 @@ export type Database = {
           title?: string
           track?: string | null
           updated_at?: string
+          upload_bytes?: number | null
+          upload_claimed_at?: string | null
+          upload_session_url?: string | null
           youtube_video_id?: string | null
         }
         Relationships: [

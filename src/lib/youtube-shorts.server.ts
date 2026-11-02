@@ -270,6 +270,11 @@ export type QueueRow = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Moment przejęcia do uploadu (null = wpis sprzed śledzenia sesji). */
+  upload_claimed_at?: string | null;
+  /** Adres sesji resumable upload — zapisany zaraz po inicjacji. */
+  upload_session_url?: string | null;
+  upload_bytes?: number | null;
 };
 
 function shortsTitle(title: string): string {
@@ -333,6 +338,16 @@ async function uploadShort(item: QueueRow): Promise<string> {
   }
   const uploadUrl = initRes.headers.get("Location");
   if (!uploadUrl) throw new Error("Brak nagłówka Location w odpowiedzi inicjującej upload.");
+  // Adres sesji zapisany PRZED wysyłką pliku: gdy przebieg zostanie ucięty
+  // w trakcie, tick zapyta YouTube o stan tej sesji (youtube-stalled-upload.ts)
+  // zamiast zostawić wpis w `uploading` na zawsze albo zrobić duplikat.
+  {
+    const { error: saveErr } = await supabaseAdmin
+      .from("youtube_publish_queue")
+      .update({ upload_session_url: uploadUrl, upload_bytes: videoBytes.byteLength })
+      .eq("id", item.id);
+    if (saveErr) console.warn(`[youtube] zapis sesji uploadu ${item.id}: ${saveErr.message}`);
+  }
 
   const putRes = await fetch(uploadUrl, {
     method: "PUT",
@@ -348,18 +363,188 @@ async function uploadShort(item: QueueRow): Promise<string> {
   return uploaded.id;
 }
 
+/** Kolumny sesji uploadu (migracja 0054). */
+const UPLOAD_SESSION_COLS = ["upload_claimed_at", "upload_session_url", "upload_bytes"] as const;
+
+function isMissingUploadColumn(err: { message?: string } | null | undefined): boolean {
+  return Boolean(err?.message && UPLOAD_SESSION_COLS.some((c) => err.message!.includes(c)));
+}
+
+/**
+ * Zapis do kolejki odporny na brak migracji 0054: gdy baza nie zna kolumn
+ * sesji, ten sam zapis idzie bez nich — publikacja nie może stanąć przez
+ * kolejność wdrożenia kodu i migracji.
+ */
+async function updateQueue(
+  patch: Record<string, unknown>,
+  filter: (q: any) => any,
+  finish: (q: any) => any = (q) => q,
+): Promise<{ data: any; error: { message: string } | null }> {
+  const run = (p: Record<string, unknown>) =>
+    finish(filter(supabaseAdmin.from("youtube_publish_queue").update(p as never)));
+  const first = await run(patch);
+  if (!isMissingUploadColumn(first.error)) return first;
+  const reduced = Object.fromEntries(
+    Object.entries(patch).filter(([k]) => !(UPLOAD_SESSION_COLS as readonly string[]).includes(k)),
+  );
+  return run(reduced);
+}
+
+/**
+ * Domknięcie wpisu z filmem na kanale: status, pierwszy komentarz i powiązanie
+ * z lead magnetem. Wspólne dla zwykłego uploadu i naprawy zawieszonego wpisu.
+ */
+async function finishPublished(item: QueueRow, videoId: string, note: string | null) {
+  const id = item.id;
+  await updateQueue(
+    {
+      status: "published",
+      youtube_video_id: videoId,
+      published_at: new Date().toISOString(),
+      last_error: note,
+      attempt_count: item.attempt_count + 1,
+      upload_session_url: null,
+    },
+    (q) => q.eq("id", id),
+  );
+  // Isolated from upload errors: failure must never requeue an uploaded film.
+  try {
+    const { addYoutubeFirstComment } = await import("./youtube-first-comment.server");
+    await addYoutubeFirstComment(id, videoId);
+  } catch {
+    console.warn("[growth_engine] Nie udało się uruchomić pierwszego komentarza YouTube.");
+  }
+  // Wpis z lead magnetem (autopilot): film pod automat komentarzy YouTube.
+  const leadMagnetId = (item as { lead_magnet_id?: string | null }).lead_magnet_id;
+  if (leadMagnetId) {
+    try {
+      const { linkPublishedPost } = await import("./lead-magnets/lead-magnets.server");
+      await linkPublishedPost({
+        leadMagnetId,
+        queuePlatform: "youtube",
+        externalPostId: videoId,
+        label: item.title || null,
+        postUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      });
+    } catch (e) {
+      console.warn(
+        `[lead-magnet] powiązanie filmu ${videoId}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+}
+
+/** Stan sesji resumable upload: PUT bez treści z `Content-Range: bytes *\/<rozmiar>`. */
+async function probeUploadSession(
+  sessionUrl: string,
+  bytes: number | null,
+): Promise<import("./youtube-stalled-upload").UploadProbe> {
+  const { videoIdFromUploadResponse } = await import("./youtube-stalled-upload");
+  try {
+    const accessToken = await getAccessToken();
+    const res = await fetch(sessionUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Length": "0",
+        "Content-Range": `bytes */${bytes && bytes > 0 ? bytes : "*"}`,
+      },
+    });
+    let videoId: string | null = null;
+    if (res.status === 200 || res.status === 201) {
+      videoId = videoIdFromUploadResponse(await res.json().catch(() => null));
+    }
+    return { status: res.status, videoId };
+  } catch (e) {
+    console.warn(`[youtube] stan sesji uploadu: ${e instanceof Error ? e.message : String(e)}`);
+    return null;
+  }
+}
+
+/**
+ * Wpisy wiszące w `uploading` (przebieg ucięty między przejęciem a zapisem
+ * wyniku): stan sesji z YouTube → opublikowane / czekamy / ponowienie.
+ */
+export async function healStalledYoutubeUploads(now: Date = new Date()): Promise<number> {
+  const { STALLED_YOUTUBE_UPLOAD_MIN, decideStalledYoutubeUpload } =
+    await import("./youtube-stalled-upload");
+  const cutoff = new Date(now.getTime() - STALLED_YOUTUBE_UPLOAD_MIN * 60_000).toISOString();
+  const { data: rows, error } = await supabaseAdmin
+    .from("youtube_publish_queue")
+    .select("*")
+    .eq("status", "uploading")
+    .lt("updated_at", cutoff)
+    .order("updated_at", { ascending: true })
+    .limit(5);
+  if (error) {
+    console.error("[youtube] healStalledYoutubeUploads:", error.message);
+    return 0;
+  }
+  let handled = 0;
+  for (const raw of rows ?? []) {
+    const item = raw as QueueRow;
+    const since = item.upload_claimed_at ?? item.updated_at;
+    const stalledHours = (now.getTime() - new Date(since).getTime()) / 3_600_000;
+    const sessionUrl = item.upload_session_url ?? null;
+    const probe = sessionUrl
+      ? await probeUploadSession(sessionUrl, item.upload_bytes ?? null)
+      : null;
+    const decision = decideStalledYoutubeUpload({
+      claimTracked: Boolean(item.upload_claimed_at),
+      sessionUrl,
+      probe,
+      stalledHours,
+    });
+    // Tylko wpis nadal w `uploading` (równoległy przebieg mógł go już domknąć).
+    const guard = (q: any) => q.eq("id", item.id).eq("status", "uploading");
+    if (decision.action === "wait") continue;
+    if (decision.action === "published") {
+      const { data: still } = await guard(
+        supabaseAdmin.from("youtube_publish_queue").select("id"),
+      ).maybeSingle();
+      if (!still) continue;
+      await finishPublished(
+        item,
+        decision.videoId,
+        "Domknięte automatycznie: przebieg ucięty po uploadzie, YouTube potwierdził film.",
+      );
+    } else if (decision.action === "requeue") {
+      const attempts = item.attempt_count + 1;
+      const exhausted = attempts >= MAX_ATTEMPTS;
+      await updateQueue(
+        {
+          status: exhausted ? "failed" : "pending",
+          attempt_count: attempts,
+          last_error: `Upload przerwany: ${decision.reason}.${exhausted ? "" : " Ponowienie automatyczne."}`,
+          upload_session_url: null,
+          upload_bytes: null,
+          ...(exhausted ? {} : { scheduled_at: now.toISOString() }),
+        },
+        guard,
+      );
+    } else {
+      await updateQueue({ status: "failed", last_error: decision.reason }, guard);
+    }
+    handled += 1;
+  }
+  return handled;
+}
+
 // Publikacja jednego wpisu kolejki: optymistyczne przejęcie (pending →
 // uploading) chroni przed podwójnym uploadem przy nakładających się tickach.
 export async function processQueueItem(
   id: string,
 ): Promise<{ ok: boolean; videoId?: string; preparing?: boolean; error?: string }> {
-  const { data: claimed, error: claimErr } = await supabaseAdmin
-    .from("youtube_publish_queue")
-    .update({ status: "uploading" })
-    .eq("id", id)
-    .in("status", ["pending", "failed"])
-    .select("*")
-    .maybeSingle();
+  const { data: claimed, error: claimErr } = await updateQueue(
+    {
+      status: "uploading",
+      upload_claimed_at: new Date().toISOString(),
+      upload_session_url: null,
+      upload_bytes: null,
+    },
+    (q) => q.eq("id", id).in("status", ["pending", "failed"]),
+    (q) => q.select("*").maybeSingle(),
+  );
   if (claimErr) return { ok: false, error: claimErr.message };
   if (!claimed) return { ok: false, error: "Wpis nie jest w stanie do publikacji." };
 
@@ -377,41 +562,7 @@ export async function processQueueItem(
   }
   try {
     const videoId = await uploadShort(item);
-    await supabaseAdmin
-      .from("youtube_publish_queue")
-      .update({
-        status: "published",
-        youtube_video_id: videoId,
-        published_at: new Date().toISOString(),
-        last_error: null,
-        attempt_count: item.attempt_count + 1,
-      })
-      .eq("id", id);
-    // Isolated from upload errors: failure must never requeue an uploaded film.
-    try {
-      const { addYoutubeFirstComment } = await import("./youtube-first-comment.server");
-      await addYoutubeFirstComment(id, videoId);
-    } catch {
-      console.warn("[growth_engine] Nie udało się uruchomić pierwszego komentarza YouTube.");
-    }
-    // Wpis z lead magnetem (autopilot): film pod automat komentarzy YouTube.
-    const leadMagnetId = (claimed as { lead_magnet_id?: string | null }).lead_magnet_id;
-    if (leadMagnetId) {
-      try {
-        const { linkPublishedPost } = await import("./lead-magnets/lead-magnets.server");
-        await linkPublishedPost({
-          leadMagnetId,
-          queuePlatform: "youtube",
-          externalPostId: videoId,
-          label: item.title || null,
-          postUrl: `https://www.youtube.com/watch?v=${videoId}`,
-        });
-      } catch (e) {
-        console.warn(
-          `[lead-magnet] powiązanie filmu ${videoId}: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      }
-    }
+    await finishPublished(item, videoId, null);
     return { ok: true, videoId };
   } catch (err) {
     const { VideoPreparingError } = await import("./video-rendition.server");
@@ -455,6 +606,13 @@ export async function runYoutubeShortsTick(): Promise<{
 }> {
   const row = await getIntegrationRow();
   if (!row.refresh_token) return { ok: true, processed: 0, published: 0, errors: [] };
+
+  // Najpierw zawieszone uploady — rozstrzygnięte przed nowymi, bez duplikatów.
+  try {
+    await healStalledYoutubeUploads();
+  } catch (e) {
+    console.error(`[youtube] naprawa zawieszonych: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
   const { data: due, error } = await withOriginFilter(
     // Pauza autopilota wstrzymuje tylko jego wpisy (ręczne idą dalej).

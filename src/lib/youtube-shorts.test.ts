@@ -37,6 +37,15 @@ it("even an unexpected comment failure cannot requeue or fail the upload", async
   expect(await processQueueItem("q")).toEqual({ ok: true, videoId: "new-video" });
   expect(state.updates.some((p) => p.status === "pending" || p.status === "failed")).toBe(false);
 });
+it("upload session is saved before the file is sent and cleared on success", async () => {
+  await processQueueItem("q");
+  const sessionSave = state.updates.findIndex((p) => p.upload_session_url === "https://example.com/upload");
+  const published = state.updates.findIndex((p) => p.status === "published");
+  expect(state.updates[0]).toEqual(expect.objectContaining({ status: "uploading", upload_session_url: null }));
+  expect(sessionSave).toBeGreaterThan(0);
+  expect(published).toBeGreaterThan(sessionSave);
+  expect(state.updates[published]).toEqual(expect.objectContaining({ upload_session_url: null }));
+});
 it("failed uploads never post comments", async () => {
   vi.mocked(fetch).mockReset().mockResolvedValue(new Response("failed", { status: 500 }));
   expect((await processQueueItem("q")).ok).toBe(false);
