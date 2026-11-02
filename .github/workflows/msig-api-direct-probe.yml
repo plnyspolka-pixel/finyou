@@ -1,11 +1,5 @@
 name: MSiG direct public JSON endpoint diagnostic
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/msig-api-direct-probe.ts'
-      - '.github/workflows/msig-api-direct-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
