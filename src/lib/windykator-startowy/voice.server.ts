@@ -13,6 +13,13 @@ export async function readWindVoiceSettings(){
   if(error||!data)throw Error("Zastosuj migrację Windykator AI przed utworzeniem agenta.");
   return data as {agent_id:string|null;phone_number_id:string|null;phone_e164:string|null};
 }
+/** Domena obydwu webhooków A5; żaden adres Lovable nie jest dozwolony. */
+export function windVoicePublicOrigin(){
+  const allowed=new Set(["https://app.financeyou.pl","https://financeyou.pl"]);
+  const origin=(process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL??"https://app.financeyou.pl").replace(/\/$/,"");
+  if(!allowed.has(origin))throw Error("Błędna domena WINDYKATOR_VOICE_PUBLIC_BASE_URL.");
+  return origin;
+}
 export function normalizeWindPhone(raw:string):string|null{
   const p=raw.replace(/[ ()-]/g,"");
   const n=p.startsWith("00")?"+"+p.slice(2):p;
@@ -78,19 +85,15 @@ export async function ensureWindykatorPostCallWebhook():Promise<{webhookId:strin
   if(row?.post_call_webhook_id&&row?.post_call_webhook_secret){
     // Retry po nieudanym przypięciu webhooka; nie twórz kolejnego w workspace.
     await elevenRequest("/v1/convai/agents/"+encodeURIComponent(settings.agent_id),{
-      method:"PATCH",json:{platform_settings:{webhooks:{
+      method:"PATCH",json:{platform_settings:{workspace_overrides:{webhooks:{
         post_call_webhook_id:row.post_call_webhook_id,
         events:["transcript","call_initiation_failure"],
         transcript_format:"json",send_audio:false
-      }}}
+      }}}}
     });
     return {webhookId:row.post_call_webhook_id};
   }
-  // Cały obieg A5: własna domena Finance You, nigdy Lovable ani preview URL.
-  const allowed=new Set(["https://app.financeyou.pl","https://financeyou.pl"]);
-  const origin=(process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL??"https://app.financeyou.pl").replace(/\/$/,"");
-  if(!allowed.has(origin))throw Error("WINDYKATOR_VOICE_PUBLIC_BASE_URL musi wskazywać domenę Finance You.");
-  const url=origin+"/api/public/windykator-voice-postcall";
+  const url=windVoicePublicOrigin()+"/api/public/windykator-voice-postcall";
   const created=await elevenRequest("/v1/workspace/webhooks",{method:"POST",json:{
     settings:{auth_type:"hmac",name:"Finance You — Windykator AI A5 (post-call)",webhook_url:url}
   }});
@@ -103,13 +106,40 @@ export async function ensureWindykatorPostCallWebhook():Promise<{webhookId:strin
   if(error)throw Error("Nie zapisano sekretu webhooka: "+error.message);
   // Aktualizacja TYLKO A5, a nie globalnych webhooków całego workspace.
   await elevenRequest("/v1/convai/agents/"+encodeURIComponent(settings.agent_id),{
-    method:"PATCH",json:{platform_settings:{webhooks:{
+    method:"PATCH",json:{platform_settings:{workspace_overrides:{webhooks:{
       post_call_webhook_id:webhookId,
       events:["transcript","call_initiation_failure"],
       transcript_format:"json",send_audio:false
-    }}}
+    }}}}
   });
   return {webhookId};
+}
+/** Konfiguruj przychodzące rozmowy w A5 bez ręcznego dodawania Lovable / CRM. */
+export async function ensureWindykatorInboundWebhook():Promise<{url:string}>{
+  const cfg=await readWindVoiceSettings();
+  if(!cfg.agent_id)throw Error("Najpierw utwórz agenta A5.");
+  const secret=process.env.WINDYKATOR_VOICE_INIT_SECRET??"";
+  if(secret.length<24)throw Error("Ustaw losowy WINDYKATOR_VOICE_INIT_SECRET (min. 24 znaki).");
+  const url=windVoicePublicOrigin()+"/api/public/hooks/windykator-voice-init";
+  const {data:settings}=await (await windVoiceDb()).from("windykator_voice_settings")
+    .select("post_call_webhook_id").eq("id",1).single();
+  if(!settings?.post_call_webhook_id)
+    throw Error("Najpierw przygotuj dedykowany post-call webhook A5.");
+  await elevenRequest("/v1/convai/agents/"+encodeURIComponent(cfg.agent_id),{
+    method:"PATCH",json:{platform_settings:{
+      overrides:{enable_conversation_initiation_client_data_from_webhook:true},
+      workspace_overrides:{
+        conversation_initiation_client_data_webhook:{
+          url,request_headers:{"x-webhook-secret":secret}
+        },
+        webhooks:{
+          post_call_webhook_id:settings.post_call_webhook_id,
+          events:["transcript","call_initiation_failure"],transcript_format:"json",send_audio:false
+        }
+      }
+    }}
+  });
+  return {url};
 }
 export async function syncWindykatorVoicePrompt():Promise<{agentId:string}>{
   const s=await readWindVoiceSettings();
