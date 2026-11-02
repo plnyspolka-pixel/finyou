@@ -64,6 +64,9 @@ export function verifyKrsRepresentation(input:{
     const matchesRole=!presidentOnly||matched.some(p=>/prezes/i.test(p.role??""));
     if(matchesRole)mode="single_board";
   }
+  // Częsty wariant KRS: prezes reprezentuje samodzielnie, a pozostali członkowie łącznie.
+  // Przesłanka indywidualna prezesa ma pierwszeństwo przed warunkiem wspólnym pozostałych.
+  if(presidentOnly&&matched.some(p=>/prezes/i.test(p.role??"")))mode="single_board";
   if(!matched.length&&proxies.some(p=>/samoistna|samodzieln/i.test(p.role??"")))
     mode="independent_proxy";
   if(matched.length&&joint)mode="joint_requires_cosign";
