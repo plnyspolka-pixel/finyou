@@ -56,9 +56,9 @@ function WindykatorPage(){
   async function reload(id:string){
     const result=await getFn({data:{caseId:id}});
     setOrder(result);
-    if(result.paid && result.status==="paid"){
+    if("paid" in result && result.paid && result.status==="paid"){
       const prep=await prepareFn({data:{caseId:id}});
-      if(prep.error)setError(prep.error);
+      if("error" in prep && prep.error)setError(prep.error);
       const after=await getFn({data:{caseId:id}});
       setOrder(after);
     }
@@ -88,8 +88,8 @@ function WindykatorPage(){
           earlyStart:true,withdrawalNotice:true
         }
       }});
-      if(r.error)throw Error(r.error);
-      if(r.caseId){
+      if("error" in r && r.error)throw Error(r.error);
+      if("caseId" in r && r.caseId){
         window.sessionStorage.setItem("windykator_case",r.caseId);
         setCaseId(r.caseId);setNotice("Zgłoszenie zapisane prywatnie. Następny krok: weryfikacja tożsamości i płatność.");
       }
@@ -98,17 +98,17 @@ function WindykatorPage(){
   }
   async function startIdentity(){
     setBusy(true);setError("");
-    try{const r=await startKycFn();if(r.error)throw Error(r.error);
-      if(r.verified){setKyc({verified:true,status:"Approved",url:null});setNotice("Tożsamość potwierdzona.");}
-      else if(r.url)window.location.assign(r.url);
+    try{const r=await startKycFn();if("error" in r && r.error)throw Error(r.error);
+      if("verified" in r && r.verified){setKyc({verified:true,status:"Approved",url:null});setNotice("Tożsamość potwierdzona.");}
+      else if("url" in r && r.url)window.location.assign(r.url);
     }catch(e){setError(e instanceof Error?e.message:"Błąd weryfikacji.");}
     finally{setBusy(false);}
   }
   async function pay(){
     if(!caseId)return;
     setBusy(true);setError("");
-    try{const r=await payFn({data:{caseId}});if(r.error)throw Error(r.error);
-      if(r.paymentUrl)window.location.assign(r.paymentUrl);
+    try{const r=await payFn({data:{caseId}});if("error" in r && r.error)throw Error(r.error);
+      if("paymentUrl" in r && r.paymentUrl)window.location.assign(r.paymentUrl);
     }catch(e){setError(e instanceof Error?e.message:"Błąd płatności.");}
     finally{setBusy(false);}
   }
