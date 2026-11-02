@@ -20,7 +20,7 @@ const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingm
  * tam nie ma — wzór dołączony do kodu, wgrywany przy okazji do Storage
  * (best effort), żeby działały też podpisane linki do pobrania.
  */
-async function downloadTemplateFile(
+export async function downloadTemplateFile(
   supabase: SupabaseClient<Database>,
   path: string,
 ): Promise<{ file: Blob | null; bucket: string | null; error: string | null }> {

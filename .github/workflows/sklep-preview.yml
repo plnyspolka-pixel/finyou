@@ -22,6 +22,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
+      - name: Storefront legal and free DOCX tests
+        run: bun run test src/lib/storefront/legal.test.ts
       - name: Install browser for desktop and mobile reference screenshots
         run: npx --yes playwright@1.56.1 install chromium --with-deps
       - name: Serve official Lovable logo from local mirror

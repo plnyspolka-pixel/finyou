@@ -463,6 +463,9 @@ export async function handleTpayNotification(
   const crc = String(tx.hiddenDescription ?? body.tr_crc ?? "").trim();
 
   if (UUID_RE.test(crc)) {
+    // Separate standalone purchases from subscriptions; same verified Tpay transaction.
+    const { handleVerifiedStoreTpay } = await import("@/lib/storefront/tpay-webhook.server");
+    if (await handleVerifiedStoreTpay(crc, String(trId), tx)) return "TRUE";
     await handleAccessPayment(
       crc,
       { transactionId: String(trId), status: tx.status, amount: Number(tx.amount) },
