@@ -28,6 +28,7 @@ const EXCHANGES = [
 
 const maxItems = 12;
 const cap = (s: unknown, length = 220) => String(s ?? "").trim().slice(0, length);
+const redactPesel = (s: string) => s.replace(/\b\d{11}\b/g, "[PESEL ukryty]");
 const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 const normalize = (s: string) =>
   s.toLocaleLowerCase("pl-PL").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -169,14 +170,14 @@ async function checkExchanges(input: OwnerIntelligenceInput): Promise<{
         const u = new URL(r.url);
         const host = u.hostname.toLowerCase();
         if (!(host === market.domain || host.endsWith("." + market.domain))) return false;
-        if (u.pathname === "/" || u.pathname.length < 3) return false;
+        if (u.pathname === "/" || u.pathname.length < 3 || /\d{11}/.test(u.href)) return false;
         return normalize(`${r.title} ${r.snippet}`).includes(normalize(name));
       } catch { return false; }
     }).slice(0, 5).map((r): OwnerIntelligenceHit => ({
       source: market.title,
       category: "debt_exchange",
-      title: cap(r.title, 160),
-      detail: cap(r.snippet, 180) || null,
+      title: redactPesel(cap(r.title, 160)),
+      detail: redactPesel(cap(r.snippet, 180)) || null,
       publicationDate: null, caseSignature: null,
       url: r.url,
       match: "name_only",
