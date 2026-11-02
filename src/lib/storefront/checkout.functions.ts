@@ -238,6 +238,8 @@ export const getPurchasedDocumentTemplate = createServerFn({ method: "POST" })
   });
 
 export async function assertStoreDocumentGeneration(userId: string, templateId: string) {
+  const { isInternalStaff } = await import("@/lib/access/guards.server");
+  if (await isInternalStaff(userId)) return;
   const admin = await db();
   await assertEntitled(admin,userId,"document",templateId);
   const { data: accepted } = await admin.from("store_legal_acceptances").select("id")
@@ -253,6 +255,8 @@ export async function assertStoreKwAccess(userId: string, compact: string) {
 
 /** Art.28 document-processing agreement, independent of billing entitlement. */
 export async function assertCurrentStoreDpaAccepted(userId: string) {
+  const { isInternalStaff } = await import("@/lib/access/guards.server");
+  if (await isInternalStaff(userId)) return; // Company staff processes for the controller, not as an external principal.
   const admin = await db();
   const { data, error } = await admin.from("store_legal_acceptances")
     .select("id").eq("user_id", userId)
