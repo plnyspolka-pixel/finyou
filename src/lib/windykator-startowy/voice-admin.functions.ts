@@ -16,14 +16,17 @@ export const getWindykatorVoiceAdminState=createServerFn({method:"GET"})
     const settings=await readWindVoiceSettings();
     return {...settings,configured:Boolean(process.env.ELEVENLABS_API_KEY),
       outboundEnabled:process.env.WINDYKATOR_VOICE_OUTBOUND_ENABLED==="true",
-      inboundReady:Boolean(settings.phone_e164&&settings.agent_id)};
+      inboundReady:Boolean(settings.phone_e164&&settings.agent_id),
+      postcallReady:Boolean((settings as any).post_call_webhook_id)};
   });
 export const provisionWindykatorVoiceAgent=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .handler(async ({context})=>{
     await requireAdmin(context);
-    const {ensureWindykatorVoiceAgent}=await import("./voice.server");
-    return ensureWindykatorVoiceAgent();
+    const {ensureWindykatorVoiceAgent,ensureWindykatorPostCallWebhook}=await import("./voice.server");
+    const agent=await ensureWindykatorVoiceAgent();
+    const postcall=await ensureWindykatorPostCallWebhook();
+    return {...agent,postcallWebhookId:postcall.webhookId};
   });
 export const syncWindykatorVoiceAgent=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
