@@ -126,7 +126,7 @@ function Storefront() {
 
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
       <a href="#akademia">Akademia</a><a href="#kancelaria">Kancelaria AI</a>
-      <a href="#analityk">Analityk KW</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
+      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
       <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
 
@@ -235,6 +235,22 @@ function Storefront() {
           </div></div>}
           <p className="fy-store-fineprint"><LockKeyhole size={15}/> Bez potwierdzonej płatności nie pobieramy księgi ani nie generujemy płatnego raportu.</p>
         </form>
+      </div>
+    </Section>
+
+
+    <Section>
+      <div id="windykator-ai" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
+        <div>
+          <Eyebrow tone="gold">04 / WINDYKATOR AI</Eyebrow>
+          <h2>Nieopłacona faktura? Zacznij od dokumentów.</h2>
+          <p>Pakiet Startowy za 50 zł brutto: automatyczny odczyt faktury lub umowy, raport roszczenia, projekt wezwania do zapłaty i wstępny pakiet dla właściwej ścieżki sądowej (EPU, pozew zwykły, 777 lub egzekucja).</p>
+          <div className="fy-store-feature-price">50 zł <small>/ jedna sprawa · jednorazowo</small></div>
+          <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Weryfikacja tożsamości i uprawnienia wierzyciela, prywatne przechowywanie dokumentu oraz płatność przez Tpay po uruchomieniu usługi.</span></div>
+          <div className="fy-store-actions"><MktButton variant="gold" size="lg" href="/windykator-ai">Przejdź do Pakietu Startowego</MktButton></div>
+          <small>Osobna, bezpłatna 90-dniowa windykacja polubowna wymaga dodatkowej kwalifikacji. Na etapie Pakietu Startowego system nie kontaktuje się automatycznie z dłużnikiem.</small>
+        </div>
+        <img src="/marketing/windykacja/etap-1.png" alt="Windykator AI — analiza i dokumentacja sprawy" loading="lazy"/>
       </div>
     </Section>
 

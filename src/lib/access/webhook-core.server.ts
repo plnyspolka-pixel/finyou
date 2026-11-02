@@ -462,6 +462,20 @@ export async function handleTpayNotification(
 
   const crc = String(tx.hiddenDescription ?? body.tr_crc ?? "").trim();
 
+
+  // Nowy produkt: Pakiet Startowy Windykator AI. Nie przyznaje żadnych
+  // uprawnień abonamentowych i ma własną kontrolę kwoty 50 zł.
+  if (crc.startsWith("WINDYKATOR:")) {
+    const { handleWindykatorTpay } = await import("@/lib/windykator-startowy/tpay.server");
+    await handleWindykatorTpay({
+      caseId: crc.slice("WINDYKATOR:".length),
+      transactionId: String(trId),
+      status: tx.status,
+      amount: Number(tx.amount),
+    });
+    return "TRUE";
+  }
+
   if (UUID_RE.test(crc)) {
     await handleAccessPayment(
       crc,
