@@ -310,6 +310,48 @@ export function CoOwnersStep({
           ))}
         </div>
       )}
+      {co.intelligence && (
+        <section className="space-y-3 rounded-xl border p-3">
+          <h4 className="font-semibold">Wywiad gospodarczy właścicieli</h4>
+          <p className="text-xs text-muted-foreground">
+            KRZ / MSiG i publiczne giełdy wierzytelności · sprawdzono{" "}
+            {formatDateTime(co.intelligence.checkedAt)}. Wynik oparty tylko na
+            nazwie wymaga potwierdzenia tożsamości.
+          </p>
+          {co.intelligence.subjects.map((subject, i) => (
+            <div key={i} className="space-y-1 rounded-lg border bg-muted/20 p-3">
+              <div className="font-medium">{subject.name}</div>
+              <div className="text-xs text-muted-foreground">
+                KRZ/MSiG: {subject.courtStatus === "checked" ? "sprawdzono" : subject.courtStatus === "partial" ? "częściowo" : "niedostępne"}
+                {" · "}
+                Giełdy: {subject.exchangesStatus === "checked" ? "sprawdzono indeks" : subject.exchangesStatus === "partial" ? "wynik niepełny" : "niedostępne"}
+              </div>
+              <p className="text-xs text-muted-foreground">{subject.courtNote}</p>
+              {subject.hits.length > 0 ? (
+                <ul className="list-disc space-y-1 pl-4 text-xs">
+                  {subject.hits.map((hit, j) => (
+                    <li key={j}>
+                      <a href={hit.url} target="_blank" rel="noopener noreferrer" className="underline">
+                        {hit.source}: {hit.title}
+                      </a>
+                      {hit.publicationDate ? ` · ${hit.publicationDate}` : ""}
+                      {hit.caseSignature ? ` · sygn. ${hit.caseSignature}` : ""}
+                      {" · "}
+                      {hit.match === "identifier" ? "identyfikator zgodny" : "tylko nazwa — niezweryfikowane"}
+                      {hit.detail ? ` · ${hit.detail}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Brak dopasowanych publikacji w sprawdzonym zakresie — nie oznacza braku zadłużenia.
+                </p>
+              )}
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">{co.intelligence.note}</p>
+        </section>
+      )}
     </div>
   );
 }

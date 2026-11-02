@@ -379,6 +379,7 @@ export function reduceCoOwners(r: CoOwnersAnalysis | null | undefined): Analytic
     restructuring: "restrukturyzacja",
   };
   return {
+    intelligence: r.intelligence ?? null,
     totalOwnersInKw: Number(r.totalOwnersInKw ?? 0),
     summary: String(r.summary ?? ""),
     warnings: Array.isArray(r.warnings) ? r.warnings.map(String) : [],

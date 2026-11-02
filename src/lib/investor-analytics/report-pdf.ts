@@ -704,6 +704,54 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
     );
     if (notes.length) blocks.push({ t: "bullets", items: notes });
   }
+  if (co.intelligence) {
+    const intelligence = co.intelligence;
+    const statusLabel = (status: "checked" | "unavailable" | "partial") =>
+      status === "checked" ? "Sprawdzono dostępny zakres"
+        : status === "partial" ? "Wynik częściowy" : "Nie sprawdzono / źródło niedostępne";
+    blocks.push(
+      { t: "heading", text: "Wywiad gospodarczy właścicieli — KRZ, MSiG i giełdy długów" },
+      { t: "paragraph", muted: true, text: `Sprawdzono ${formatWarsawDateTime(intelligence.checkedAt)}. ${intelligence.note}` },
+    );
+    for (const owner of intelligence.subjects) {
+      blocks.push(
+        { t: "subheading", text: `${owner.kind === "company" ? "Podmiot" : "Osoba"}: ${owner.name}` },
+        { t: "keyValues", rows: [
+          ["KRZ / MSiG", `${statusLabel(owner.courtStatus)}. ${owner.courtNote}`],
+          ["Giełdy wierzytelności", `${statusLabel(owner.exchangesStatus)}. ${owner.exchangesNote}`],
+        ] },
+      );
+      if (owner.hits.length) {
+        blocks.push({
+          t: "table",
+          columns: [
+            { label: "Źródło", width: 2 },
+            { label: "Ustalenie", width: 3 },
+            { label: "Data / sygnatura", width: 2 },
+            { label: "Zgodność", width: 2 },
+          ],
+          rows: owner.hits.map((hit) => [
+            hit.source,
+            `${hit.title}${hit.detail ? ` — ${hit.detail}` : ""}`,
+            [hit.publicationDate, hit.caseSignature].filter(Boolean).join(" / ") || "brak",
+            hit.match === "identifier"
+              ? "Identyfikator zgodny"
+              : "Tylko nazwa — do weryfikacji",
+          ]),
+        });
+        blocks.push({
+          t: "bullets",
+          items: owner.hits.map((hit) => `Źródło (${hit.source}): ${hit.url}`),
+        });
+      } else {
+        blocks.push({
+          t: "paragraph",
+          muted: true,
+          text: "Nie znaleziono dopasowanych publikacji w sprawdzonym zakresie. To nie oznacza braku zadłużenia.",
+        });
+      }
+    }
+  }
   return blocks;
 }
 

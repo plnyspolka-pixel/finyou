@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/coowners/analyze.server.ts",
+    "src/lib/coowners/owner-intelligence.server.ts",
+    "src/lib/coowners/owner-intelligence.types.ts",
+    "src/lib/coowners/owner-intelligence.test.ts",
+    "src/lib/coowners/public-index-search.server.ts",
+    "src/lib/coowners/public-index-search.test.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "vite/client",
+      "node"
+    ]
+  }
+}
