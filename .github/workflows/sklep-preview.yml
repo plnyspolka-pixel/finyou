@@ -6,6 +6,9 @@ on:
       - 'src/routes/sklep.tsx'
       - 'src/routes/windykator-ai.tsx'
       - 'src/routes/regulamin-windykator-ai.tsx'
+      - 'src/routes/admin.windykator-voice.tsx'
+      - 'src/routes/api/public/windykator-voice-postcall.ts'
+      - 'src/routes/api/public/hooks/windykator-voice-init.ts'
       - 'src/lib/windykator-startowy/**'
       - 'src/lib/access/webhook-core.server.ts'
       - 'supabase/migrations/20261102122000_windykator_startowy.sql'
@@ -26,7 +29,7 @@ jobs:
       - name: Install dependencies without changing lockfile
         run: bun install --frozen-lockfile
       - name: Windykator Startowy — regression tests
-        run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts src/lib/windykator-startowy/court-routes.test.ts src/lib/windykator-startowy/registry.server.test.ts
+        run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts src/lib/windykator-startowy/court-routes.test.ts src/lib/windykator-startowy/registry.server.test.ts src/lib/windykator-startowy/voice-guard.test.ts
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
       - name: Install browser for desktop and mobile reference screenshots
