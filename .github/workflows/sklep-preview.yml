@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies without changing lockfile
         run: bun install --frozen-lockfile
       - name: Windykator Startowy — regression tests
-        run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts
+        run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts src/lib/windykator-startowy/court-routes.test.ts src/lib/windykator-startowy/registry.server.test.ts
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
       - name: Install browser for desktop and mobile reference screenshots
