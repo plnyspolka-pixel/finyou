@@ -3,6 +3,7 @@
 // leadów (lead-doc-intel.server.ts). Wyniki lądują w cache kw_documents.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { compactKwNumber } from "@/lib/kw";
+import { hasEkwDirectConfig, fetchAndStoreKwDirect } from "@/lib/kw-ekw-direct.server";
 
 export function normalizeKwNumber(raw: string): string | null {
   // Jedna normalizacja dla platformy (@/lib/kw): numer dopełniany zerami do
@@ -12,6 +13,12 @@ export function normalizeKwNumber(raw: string): string | null {
 
 export function hasCmdConfig(): boolean {
   return Boolean(process.env.CMD_KW_USER && process.env.CMD_KW_PASSWORD);
+}
+
+export function hasAnyKwConfig(): boolean {
+  return hasEkwDirectConfig() ||
+    Boolean(process.env.EASYMKW_API_USER && process.env.EASYMKW_API_PASSWORD) ||
+    hasCmdConfig();
 }
 
 // Limity CMD są grupowe (współdzielone przez całe konto) i odnawiają się po
@@ -158,6 +165,10 @@ export async function fetchAndStoreKw(
   kw: string,
   opts?: { orderedBy?: string | null; force?: boolean; pollMaxMs?: number },
 ): Promise<KwFetchOutcome> {
+  // Direct browser capture takes priority only when explicitly configured.
+  // Blocked/CAPTCHA sessions do not trigger paid-provider orders.
+  if (hasEkwDirectConfig()) return fetchAndStoreKwDirect(kw, opts);
+
   // Produkcja: EasyMKW (mkw.monitoringdanych.io, kredyty na koncie).
   // Stary CMD KW Engine (dev, grupowy limit) tylko gdy brak danych EasyMKW.
   const { hasEasyMkwConfig } = await import("@/lib/easymkw.server");
