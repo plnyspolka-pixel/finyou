@@ -80,6 +80,8 @@ create table if not exists public.windykator_voice_settings (
   agent_id text unique,
   phone_number_id text unique,
   phone_e164 text unique,
+  post_call_webhook_id text,
+  post_call_webhook_secret text,
   updated_at timestamptz not null default now()
 );
 insert into public.windykator_voice_settings(id) values (1) on conflict do nothing;
