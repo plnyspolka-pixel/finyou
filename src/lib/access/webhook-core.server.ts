@@ -463,6 +463,16 @@ export async function handleTpayNotification(
   const crc = String(tx.hiddenDescription ?? body.tr_crc ?? "").trim();
 
 
+  // Zakup jednostkowych produktów sklepu. Prefix STORE odróżnia zamówienia
+  // od identyfikatorów płatności abonamentowych i od Windykatora AI.
+  if (crc.startsWith("STORE:")) {
+    const { handleStoreTpayNotification } = await import("@/lib/storefront/webhook.server");
+    await handleStoreTpayNotification(crc.slice("STORE:".length), {
+      transactionId: String(trId), status: tx.status, amount: Number(tx.amount),
+    });
+    return "TRUE";
+  }
+
   // Nowy produkt: Pakiet Startowy Windykator AI. Nie przyznaje żadnych
   // uprawnień abonamentowych i ma własną kontrolę kwoty 50 zł.
   if (crc.startsWith("WINDYKATOR:")) {
