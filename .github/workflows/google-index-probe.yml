@@ -1,11 +1,5 @@
 name: Google index diagnostic (one public query)
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/google-index-probe.mjs'
-      - '.github/workflows/google-index-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
