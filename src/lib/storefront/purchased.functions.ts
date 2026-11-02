@@ -61,6 +61,10 @@ export const generatePurchasedDocx=createServerFn({method:"POST"})
     templateId:Uuid, values:z.record(z.string().max(2000)).refine(v=>Object.keys(v).length<=350),
   }).parse(v))
   .handler(async({context,data})=>{
+    // Do not accept third-party personal data until supplier DPAs, locations
+    // and subprocessor registry are verified for this standalone service.
+    if(process.env.STORE_DPA_PROCESSING_ENABLED!=="true")
+      throw new Error("Generator danych osób trzecich wymaga zakończenia weryfikacji powierzeń i podprocesorów.");
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
     const db=supabaseAdmin as any;
     const [entitled,dpaHash]=await Promise.all([
