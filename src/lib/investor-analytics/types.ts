@@ -4,6 +4,7 @@
 // analiza KW → analiza ryzyka. Tu tylko odczyt wyników i uruchomienie na
 // żądanie dla okazji/wniosków wybranych dla inwestora (nie całej puli).
 import type { FindingStatus, KwAnalysisResult } from "@/lib/kw-analysis/types";
+import type { OwnerIntelligenceReport } from "@/lib/coowners/owner-intelligence.types";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import type { InvestorValuationSummary } from "@/lib/risk-assessment/risk-assessment.functions";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
@@ -108,6 +109,8 @@ export interface AnalyticsCoOwner {
 }
 
 export interface AnalyticsCoOwners {
+  /** Publiczny wywiad gospodarczy, wyświetlany tylko uprawnionemu odbiorcy. */
+  intelligence?: OwnerIntelligenceReport | null;
   totalOwnersInKw: number;
   summary: string;
   warnings: string[];
