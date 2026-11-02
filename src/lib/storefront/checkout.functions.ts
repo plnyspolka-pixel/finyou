@@ -240,3 +240,8 @@ export async function assertStoreDocumentGeneration(userId: string, templateId: 
     .eq("document_sha256",await storeLegalSha("store_dpa")).maybeSingle();
   if (!accepted) throw new Error("Wymagana jest aktualna umowa powierzenia danych.");
 }
+
+/** User-scoped check for a specific paid KW. No public report access. */
+export async function assertStoreKwAccess(userId: string, compact: string) {
+  await assertEntitled(await db(), userId, "kw", compact);
+}
