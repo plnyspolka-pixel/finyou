@@ -1,0 +1,47 @@
+name: Verify generator and e-sign legal policy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/document-signing-policy.ts'
+      - 'src/lib/document-signing-policy.test.ts'
+      - 'src/lib/document-generator.functions.ts'
+      - 'src/lib/contract-engine/umowa-storage.server.ts'
+      - 'src/lib/contract-engine/umowa-agent.functions.ts'
+      - 'src/lib/contract-engine/generate-umowa.functions.ts'
+      - 'src/lib/esign/**'
+      - 'src/components/document-creator/**'
+      - 'src/components/inwestor/umowa-agent-panel.tsx'
+      - 'src/routes/inwestor.kreator-dokumentow.tsx'
+      - 'src/components/inwestor/investor-nav.ts'
+      - '.github/workflows/verify-generator-esign.yml'
+  pull_request:
+    paths:
+      - 'src/lib/document-signing-policy.ts'
+      - 'src/lib/document-signing-policy.test.ts'
+      - 'src/lib/document-generator.functions.ts'
+      - 'src/lib/contract-engine/**'
+      - 'src/lib/esign/**'
+      - 'src/components/document-creator/**'
+      - 'src/components/inwestor/umowa-agent-panel.tsx'
+      - 'src/routes/inwestor.kreator-dokumentow.tsx'
+      - '.github/workflows/verify-generator-esign.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Focused legal e-sign and navigation tests
+        run: bunx vitest run src/lib/document-signing-policy.test.ts src/lib/esign/esign-generated-document.test.ts src/components/inwestor/investor-nav.test.ts src/lib/contract-engine/komplet.test.ts
+      - name: TypeScript typecheck
+        run: bun run typecheck
+      - name: Production build
+        run: bun run build
