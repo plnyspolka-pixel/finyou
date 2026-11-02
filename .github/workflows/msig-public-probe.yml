@@ -1,11 +1,5 @@
 name: MSiG official public search diagnostic
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/msig-public-probe.ts'
-      - '.github/workflows/msig-public-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
