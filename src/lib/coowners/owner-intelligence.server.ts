@@ -184,9 +184,12 @@ async function checkExchanges(input: OwnerIntelligenceInput): Promise<{
   }));
   const hits = searches.flatMap((s) => s.status === "fulfilled" ? s.value : []);
   const failed = searches.some((s) => s.status === "rejected");
+  // Wyszukiwarka może być chwilowo blokowana: zerowa liczba rezultatów
+  // nie dowodzi, że konkretny portal został skutecznie przeszukany.
+  const allEmpty = hits.length === 0;
   const unique = [...new Map(hits.map((h) => [h.url, h])).values()].slice(0, maxItems);
   return {
-    status: failed ? "partial" : "checked",
+    status: failed || allEmpty ? "partial" : "checked",
     note: "Wyszukiwanie publicznego indeksu stron: nie jest pełnym przeszukaniem giełd. Każde trafienie to niezweryfikowana publikacja, a nie potwierdzenie długu.",
     hits: unique,
   };
@@ -196,7 +199,7 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
   const checkedAt = new Date().toISOString();
   const unique = [...new Map(inputs.filter((o) => o.name.trim()).map((o) => [
     `${o.kind}:${normalize(o.name)}`, o,
-  ])).values()].slice(0, maxItems);
+  ] as const)).values()].slice(0, maxItems);
   const subjects = await Promise.all(unique.map(async (input): Promise<OwnerIntelligenceSubject> => {
     const [court, exchanges] = await Promise.all([checkCourt(input), checkExchanges(input)]);
     return {
