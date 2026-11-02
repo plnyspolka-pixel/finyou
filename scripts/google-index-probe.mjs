@@ -18,7 +18,12 @@ try {
     })),
   }));
   console.log(JSON.stringify({ status: response?.status(), url: page.url(), ...data }, null, 2));
-  if (!response?.ok()) process.exitCode = 1;
+  if (!response?.ok() || /\/sorry\/|captcha/i.test(page.url()) ||
+      /nietypowy ruch|unusual traffic|automatycznego ruchu/i.test(data.text ?? "") ||
+      data.links.length === 0) {
+    console.log("No accessible organic Google results; indexing method unavailable on this runner.");
+    process.exitCode = 1;
+  }
 } finally {
   await browser.close();
 }
