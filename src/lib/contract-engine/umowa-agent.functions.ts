@@ -236,7 +236,7 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
     const { umowa, problemy, autokorekty } = przetworzSzkic(szkic);
     const blocked = problemy.some((p) => p.poziom === "BLAD");
     if (blocked) {
-      return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };
+      return { docxPath: null, signedUrl: null, documentId: null, canEsign: false, problemy, autokorekty, blocked: true };
     }
 
     let komplet: KompletWynik;
@@ -248,20 +248,23 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
         sciezka: "render",
         komunikat: `Nie udało się złożyć dokumentu: ${e?.message ?? e}`,
       });
-      return { docxPath: null, signedUrl: null, problemy, autokorekty, blocked: true };
+      return { docxPath: null, signedUrl: null, documentId: null, canEsign: false, problemy, autokorekty, blocked: true };
     }
 
-    const { docxPath, signedUrl } = await zapiszUmoweDocx(supabase as any, {
+    const { docxPath, signedUrl, documentId } = await zapiszUmoweDocx(supabase as any, {
       userId,
       komplet,
       numerUmowy: umowa?.meta?.numer_umowy,
       templateName: "Komplet umowy pożyczki (agent umowy AI, silnik klauzul)",
       zrodlo: "umowa-agent",
+      hasGuarantor: Boolean(umowa?.porecziciel),
     });
 
     return {
       docxPath,
       signedUrl,
+      documentId,
+      canEsign: !Boolean(umowa?.porecziciel),
       problemy,
       autokorekty,
       blocked: false,
