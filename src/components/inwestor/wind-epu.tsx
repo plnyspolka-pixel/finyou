@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ClipboardCopy, ExternalLink, FileUp, Scale } from "lucide-react";
@@ -137,6 +137,22 @@ export function WindEpuPanel({
 
   const onFile = (event: ChangeEvent<HTMLInputElement>) => setFile(event.target.files?.[0] ?? null);
 
+  // Sąd zabrania osadzania w iframe (X-Frame-Options: DENY).
+  // Desktop: spróbuj osobnego, mniejszego okna. Gdy blokada popup,
+  // standardowy link otworzy nową kartę. Na telefonie: zwykła nowa karta.
+  const openEpuWindow = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (typeof window.matchMedia !== "function" ||
+        window.matchMedia("(max-width: 767px)").matches) return;
+    const popup = window.open(
+      E_SAD_URL, "_blank",
+      "popup=yes,width=1180,height=820,resizable=yes,scrollbars=yes",
+    );
+    if (!popup) return; // anchor fallback: target="_blank"
+    try { popup.opener = null; } catch { /* external window */ }
+    popup.focus();
+    event.preventDefault();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -225,10 +241,12 @@ export function WindEpuPanel({
           <p className="text-xs text-muted-foreground">
             Zaloguj się, utwórz pozew, uzupełnij pola, podpisz i opłać go bezpośrednio
             w systemie EPU. Dowody należy wskazać, ale nie dołącza się ich do pozwu.
+            Finance You pozostanie otwarte. Na komputerze spróbujemy otworzyć mniejsze okno;
+            na telefonie lub przy blokadzie wyskakujących okien otworzy się nowa karta.
           </p>
           <Button asChild type="button" variant="outline">
-            <a href={E_SAD_URL} target="_blank" rel="noopener noreferrer">
-              Otwórz oficjalny e-Sąd <ExternalLink className="h-4 w-4 ml-2" />
+            <a href={E_SAD_URL} target="_blank" rel="noopener noreferrer" onClick={openEpuWindow}>
+              Otwórz e-Sąd w osobnym oknie <ExternalLink className="h-4 w-4 ml-2" />
             </a>
           </Button>
         </div>
