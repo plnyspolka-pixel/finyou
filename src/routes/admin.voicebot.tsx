@@ -224,6 +224,10 @@ function VoicebotAdmin() {
         </Button>
       </div>
 
+      <a href="/admin/windykator-voice" className="inline-flex items-center rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+        Nowy, niezależny Windykator AI A5 — konfiguracja ElevenLabs
+      </a>
+
       {/* KONFIGURACJA AGENTA */}
       <Card>
         <CardHeader>
