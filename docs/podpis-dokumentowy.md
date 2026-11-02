@@ -13,6 +13,26 @@ sprawdzić publicznie pod `/weryfikacja/<kod>`.
 
 Panele nadawcy: `/admin/podpisy`, `/operator/podpisy`, `/inwestor/podpisy`
 (w menu inwestora pozycja **„E-podpis”**, zaraz po „Moje oferty”).
+Osobny generator inwestora: `/inwestor/kreator-dokumentow`. Inwestor wybiera
+wzór, uzupełnia dane, generuje DOCX i wybiera **„Wyślij do e-podpisu”**
+przy świeżo wygenerowanym dokumencie albo w historii. Formularz podpisu
+przyjmuje podpisujących zewnętrznych (imię, nazwisko, e-mail, opcjonalnie
+telefon), opcjonalnie inwestora jako podpisującego, kolejność podpisów i
+ważność zaproszenia. Wysyłka uruchamia istniejące `createEnvelope` z
+`generatedDocumentId` i `sendNow: true`; nie wymaga pobierania/wgrywania
+dokumentu. Backend kontroluje dostęp do rekordu przez RLS, zamienia DOCX na
+PDF i zapisuje kopertę z audytem. Lista/status podpisów i pobranie PDF
+pozostają w `/inwestor/podpisy`. Pełnomocnictwa i podpisy w imieniu
+spółek wymagają zaawansowanego formularza w module E-podpis.
+
+Generowanie dokumentów jest nadal chronione aktualną akceptacją umowy
+powierzenia danych w `StoreDpaGate` i uprawnieniami serwerowymi
+`assertStoreDocumentGeneration`. Formularz podpisu nie daje dostępu do
+dowolnego dokumentu: `sourceFromGeneratedDocument` odczytuje go jako
+zalogowany użytkownik z RLS. Szybki e-podpis jest podpisem w formie
+dokumentowej, a nie kwalifikowanym; nie wolno przedstawiać go jako
+zamiennika formy pisemnej pod rygorem nieważności albo aktu notarialnego.
+
 Panel klienta pożyczkowego: `/klient/podpisy` (dokumenty do podpisu i podpisane).
 Strona podpisującego: `/podpis/<token>` (bez logowania).
 
