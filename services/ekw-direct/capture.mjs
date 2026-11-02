@@ -1,5 +1,3 @@
-import { chromium } from "playwright";
-
 export const EKW_SEARCH_URL =
   "https://przegladarka-ekw.ms.gov.pl/eukw_prz/KsiegiWieczyste/wyszukiwanieKW";
 
@@ -85,6 +83,7 @@ async function clickInput(page, name, timeout = 8000) {
  */
 export async function captureKw(rawKw, options = {}) {
   const kw = parseKw(rawKw);
+  const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: options.headless !== false });
   const context = await browser.newContext({ locale: "pl-PL", acceptDownloads: false });
   const page = await context.newPage();
