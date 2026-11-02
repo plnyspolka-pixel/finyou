@@ -31,6 +31,7 @@ function CheckoutPage(){
   const fetchCatalog=useServerFn(getPublicStoreCatalog);
   const [status,setStatus]=useState<string|null>(null);
   const [paymentsEnabled,setPaymentsEnabled]=useState(false);
+  const [sellerName,setSellerName]=useState<string|null>(null);
   const [inquiryResult,setInquiryResult]=useState<string|null>(null);
   const [buyerType,setBuyerType]=useState<"person"|"company">("person");
   const [buyerName,setBuyerName]=useState("");
@@ -56,7 +57,7 @@ function CheckoutPage(){
   useEffect(()=>{
     let active=true;
     fetchCatalog().then(v=>{if(active)setCatalog(v)}).catch(()=>{});
-    capability().then(v=>{if(active)setPaymentsEnabled(v.available)}).catch(()=>{});
+    capability().then(v=>{if(active){setPaymentsEnabled(v.available);setSellerName(v.sellerName)}}).catch(()=>{});
     supabase.auth.getUser().then(({data})=>{
       if(active) setStatus(data.user?"logged":"guest");
       if(active&&data.user?.email)setBuyerEmail(data.user.email);
@@ -102,7 +103,7 @@ function CheckoutPage(){
       </section>:<>
         {status==="guest"?<div className="mt-7 rounded-xl border p-5">Zakup i historia dokumentów wymagają konta inwestora. <a className="font-bold underline" href={"/logowanie?next="+encodeURIComponent("/sklep/zamowienie?items="+encodeURIComponent(search.items))}>Zaloguj się</a> albo <a href="/rejestracja?role=inwestor" className="underline">zarejestruj</a>.</div>:
         status==="logged"?<form className="mt-7 space-y-5" onSubmit={submit}>
-          <section className="rounded-xl border p-5"><h2 className="text-lg font-bold">Produkty w zamówieniu</h2><ul className="mt-3 list-disc pl-5 text-sm space-y-1">{labels.map((l,i)=><li key={i}>{l}</li>)}</ul></section>
+          <section className="rounded-xl border p-5"><h2 className="text-lg font-bold">Produkty w zamówieniu</h2>{paymentsEnabled && sellerName ? <p className="mt-2 text-sm">Sprzedawca: <strong>{sellerName}</strong></p>:null}<ul className="mt-3 list-disc pl-5 text-sm space-y-1">{labels.map((l,i)=><li key={i}>{l}</li>)}</ul></section>
           <section className="rounded-xl border p-5 space-y-3"><h2 className="text-lg font-bold">Dane nabywcy</h2>
             <label className="block text-sm">Typ nabywcy<select className="mt-1 block w-full rounded border p-3 bg-card" value={buyerType} onChange={e=>setBuyerType(e.target.value as "person"|"company")}><option value="person">Osoba fizyczna</option><option value="company">Firma</option></select></label>
             {([["Imię i nazwisko / nazwa",buyerName,setBuyerName],["Adres e-mail",buyerEmail,setBuyerEmail],["Ulica, numer",buyerStreet,setBuyerStreet],["Kod pocztowy",buyerPostalCode,setBuyerPostalCode],["Miejscowość",buyerCity,setBuyerCity]] as const).map(([label,value,setValue],i)=><label className="block text-sm" key={label}>{label}<input className="mt-1 block w-full rounded border p-3 bg-card" type={i===1?"email":"text"} value={value} onChange={e=>setValue(e.target.value)} required maxLength={i===1?255:300}/></label>)}
