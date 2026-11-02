@@ -157,9 +157,9 @@ export function UmowaAgentPanel({ enableEsign = false }: { enableEsign?: boolean
       setAutokorekty(res.autokorekty ?? []);
       setMissing(res.missing ?? []);
       setPreview("");
-    setLatestPackage(null);
-    setEsignDoc(null);
-    setPackageEnvelopeId(null);
+      setLatestPackage(null);
+      setEsignDoc(null);
+      setPackageEnvelopeId(null);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : null;
       setState((s) => ({
@@ -226,6 +226,9 @@ export function UmowaAgentPanel({ enableEsign = false }: { enableEsign?: boolean
     setAutokorekty([]);
     setMissing([]);
     setPreview("");
+    setLatestPackage(null);
+    setEsignDoc(null);
+    setPackageEnvelopeId(null);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
