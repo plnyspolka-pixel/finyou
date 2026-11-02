@@ -1,0 +1,38 @@
+name: KRZ public portal — bounded browser diagnostic
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+    paths:
+      - 'scripts/krz-public-probe.mjs'
+      - '.github/workflows/krz-public-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout PR contents
+        uses: actions/checkout@v4
+      - name: Install isolated Playwright browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/krz-playwright
+          npm install --prefix /tmp/krz-playwright --no-audit --no-fund playwright
+          cd /tmp/krz-playwright
+          npx playwright install --with-deps chromium
+          cp "$GITHUB_WORKSPACE/scripts/krz-public-probe.mjs" ./krz-public-probe.mjs
+      - name: Test KRZ landing and public search form
+        shell: bash
+        run: |
+          cd /tmp/krz-playwright
+          node krz-public-probe.mjs --inspect
+      - name: Run one search by public company KRS
+        shell: bash
+        if: success()
+        run: |
+          cd /tmp/krz-playwright
+          node krz-public-probe.mjs --krs 0000304735
