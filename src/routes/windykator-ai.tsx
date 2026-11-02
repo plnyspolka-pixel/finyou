@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
@@ -45,6 +45,7 @@ function WindykatorPage(){
   const [kyc,setKyc]=useState<{verified:boolean,status:string,url:string|null}|null>(null);
   const [order,setOrder]=useState<any>(null);
   const [busy,setBusy]=useState(false);
+  const attemptedAutomaticQualification=useRef<string|null>(null);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const set=(key:keyof typeof f,value:string)=>setF(old=>({...old,[key]:value}));
@@ -131,6 +132,15 @@ function WindykatorPage(){
     }catch(e){setError(e instanceof Error?e.message:"Błąd płatności.");}
     finally{setBusy(false);}
   }
+  // Sprawa po KYC sama przechodzi ocenę bota — bez ręcznej akceptacji i bez
+  // kolejnego kliknięcia; przy błędzie pozostaje możliwość ponowienia.
+  useEffect(()=>{
+    if(!saleEnabled || !caseId || !kyc?.verified || order?.status!=="draft")return;
+    if(attemptedAutomaticQualification.current===caseId)return;
+    attemptedAutomaticQualification.current=caseId;
+    void qualify();
+  },[saleEnabled,caseId,kyc?.verified,order?.status]);
+
   return <MarketingShell page="sklep">
     <section className="fy-hero" style={{color:"#fff"}}>
       <div aria-hidden className="fy-hero-fx"/>
@@ -224,7 +234,7 @@ function WindykatorPage(){
               <p className="my-3 text-sm text-slate-700">Bot sprawdzi najpierw dokument, zgodność stron, termin, kwotę i uprawnienie wierzyciela. Dopiero wynik „Zakwalifikowana” otwiera płatność.</p>
               {["draft","needs_documents"].includes(order?.status) && <button type="button" disabled={busy||!kyc?.verified} onClick={qualify}
                 className="mt-3 block w-full rounded-xl bg-slate-900 px-5 py-4 font-extrabold text-white disabled:opacity-40">
-                {busy?"Sprawdzanie…":"Sprawdź i zakwalifikuj sprawę (bez opłaty)"}
+                {busy?"Sprawdzanie…":"Ponów automatyczną kwalifikację (bez opłaty)"}
               </button>}
               {order?.status==="qualifying" && <p className="mt-3 text-sm font-semibold text-slate-700">Dokumenty są właśnie analizowane. Odśwież status.</p>}
               {order?.status==="qualified" && <p className="mt-3 text-sm font-bold text-emerald-700">Sprawa zakwalifikowana automatycznie. Można przejść do płatności.</p>}
