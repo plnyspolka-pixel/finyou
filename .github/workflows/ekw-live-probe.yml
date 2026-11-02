@@ -1,9 +1,7 @@
 name: EKW Direct live form probe
+# Disabled automatic probes after persistent HTTP 403 from GitHub runners.
+# A live test must be intentional and authorized; unit checks continue automatically.
 on:
-  pull_request:
-    paths:
-      - "services/ekw-direct/**"
-      - ".github/workflows/ekw-live-probe.yml"
   workflow_dispatch:
 jobs:
   probe:
