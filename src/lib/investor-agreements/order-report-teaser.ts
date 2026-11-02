@@ -128,6 +128,9 @@ export function sanitizeCoOwnersForTeaser(
   const many = co.owners.length > 1;
   return {
     ...co,
+    // Pod żadnym pozorem nie pokazujemy w wersji przed rezerwacją nazw,
+    // dokumentów ani URL-i do profili dłużników z nowego modułu.
+    intelligence: null,
     summary: m(co.summary),
     warnings: co.warnings.map(m),
     owners: co.owners.map((o, i) => ({
