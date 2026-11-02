@@ -1,7 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {eligibleForWindykatorCall,classifyVoiceAnalysis} from "./voice-guard";
 import {normalizeWindPhone,voiceCallAllowedAt} from "./voice.server";
-import {verifyWindVoiceHmac} from "@/routes/api/public/windykator-voice-postcall";
+import {verifyWindVoiceHmac} from "./voice-hmac";
 import {createHmac} from "node:crypto";
 const now=new Date("2026-11-02T11:00:00.000Z"); // poniedziałek 12:00 Warszawa
 const base={
