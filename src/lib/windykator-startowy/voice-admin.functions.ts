@@ -24,6 +24,10 @@ export const provisionWindykatorVoiceAgent=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .handler(async ({context})=>{
     await requireAdmin(context);
+    if((process.env.WINDYKATOR_VOICE_INIT_SECRET??"").length<24)
+      throw Error("Ustaw WINDYKATOR_VOICE_INIT_SECRET przed tworzeniem A5 — sekret chroni połączenia przychodzące.");
+    if(!process.env.ELEVENLABS_API_KEY)
+      throw Error("Brak ELEVENLABS_API_KEY na serwerze.");
     const {ensureWindykatorVoiceAgent,ensureWindykatorPostCallWebhook,ensureWindykatorInboundWebhook}=await import("./voice.server");
     const agent=await ensureWindykatorVoiceAgent();
     const postcall=await ensureWindykatorPostCallWebhook();
