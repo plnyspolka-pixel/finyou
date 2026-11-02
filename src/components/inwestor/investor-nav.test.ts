@@ -44,6 +44,16 @@ describe("investorNavGroups", () => {
     expect(item?.to).toBe("/inwestor/podpisy");
   });
 
+  it("ma osobne moduły: kreator umowy pożyczki i generator z e-podpisem", () => {
+    const items = investorNavGroups(undefined).flatMap((g) => g.items);
+    expect(items.find(i => i.label === "Kreator umowy pożyczki")?.to)
+      .toBe("/inwestor/dokumenty");
+    expect(items.find(i => i.label === "Generator dokumentów")?.to)
+      .toBe("/inwestor/kreator-dokumentow");
+    expect(items.find(i => i.label === "E-podpis")?.to)
+      .toBe("/inwestor/podpisy");
+  });
+
   it("home path follows the same rule", () => {
     expect(investorHomePath(undefined)).toBe("/inwestor/umowy");
     expect(investorHomePath({ hasLiveOrder: false })).toBe("/inwestor/umowy");
