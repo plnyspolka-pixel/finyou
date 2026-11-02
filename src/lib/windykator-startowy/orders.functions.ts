@@ -15,6 +15,7 @@ const schema=z.object({
   creditorKrs:z.string().trim().max(10).optional(),
   creditorEmail:z.string().trim().email().max(240),
   debtorName:z.string().trim().min(4).max(240),
+  debtorPhone:z.string().trim().max(18).optional(),
   claimKind:z.enum(["invoice","loan","other"]),
   claimAmount:z.number().min(1).max(100000000),
   dueDate:z.string().refine(isDate,"Nieprawidłowy termin"),
@@ -66,7 +67,9 @@ export const createWindykatorDraft=createServerFn({method:"POST"})
     const {error}=await db.from("windykator_orders").insert({
       id,user_id:context.userId,creditor_kind:data.creditorKind,creditor_name:data.creditorName,
       creditor_nip:data.creditorNip??null,creditor_krs:data.creditorKrs??null,creditor_email:data.creditorEmail,
-      debtor_name:data.debtorName,claim_kind:data.claimKind,claim_amount:data.claimAmount,
+      debtor_name:data.debtorName,
+      debtor_phone:data.debtorPhone?(await import("./voice.server")).normalizeWindPhone(data.debtorPhone):null,
+      claim_kind:data.claimKind,claim_amount:data.claimAmount,
       due_date:data.dueDate,case_description:data.description??null,
       source_file_name:name,source_mime:data.mime,source_storage_path:path,source_sha256:sha256,
       early_start_consent:true,withdrawal_notice_ack:true,terms_accepted:true,
