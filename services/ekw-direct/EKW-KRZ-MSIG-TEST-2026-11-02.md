@@ -35,3 +35,25 @@ Node `fetch` na tym runnerze zgłasza `TypeError` dla testowych URL-i przegląda
 ## Do produkcji?
 
 **NIE.** Brak potwierdzonego odczytu jakiejkolwiek prawdziwej KW, brak porównania wzmianek, właścicieli i hipotek. Nie podmieniać źródła w Finance You i nie oznaczać niekompletnych wyników jako `ready`.
+
+## Niezależny test z polskiego środowiska Firecrawl – 2 listopada 2026
+
+Uruchomiono pojedynczą sesję na publicznej stronie startowej, w regionie PL (basic proxy), bez numeru KW i danych osobowych.
+Kliknięto „Przeglądanie księgi wieczystej” jeden raz.
+
+- Docelowy URL: `https://przegladarka-ekw.ms.gov.pl/eukw_prz/KsiegiWieczyste/wyszukiwanieKW?komunikaty=true&kontakt=true&okienkoSerwisowe=false`.
+- Wynik: **Access Denied – Error 15**; formularz numeru KW nie jest renderowany.
+- Serwis zabezpieczeń wyświetlił **Incident ID: 687000780244888120-346405549307270019**, czas `2026-11-02 16:00:42 UTC`; IP źródłowe 82.29.47.229; proxy 45.60.74.15 (ID 10687-100).
+- To pokazuje filtr bezpieczeństwa przed rozpoczęciem operacji na KW; sam sygnał Error 15 nie identyfikuje konkretnej reguły.
+- Sesja diagnostyczna została zatrzymana. Nie były podejmowane próby omijania blokad ani rozwiązywania CAPTCHA.
+- Przygotowano szkic zgłoszenia do `ekw@ms.gov.pl`, niewysłany bez potwierdzenia użytkownika.
+- Zautomatyzowane, ponawiane próby sieciowe GitHub Actions zostały ograniczone do ręcznego uruchamiania.
+
+## Zmiany w adapterze po analizie
+
+- Direct worker przechodzi przez oficjalną stronę główną i link, a nie bezpośrednio do głębokiego formularza.
+- Wymagane jest pojawienie się prawdziwego formularza KW; blokada / iframe security nie są interpretowane jako „brak księgi”.
+- W `kw-ekw-direct.server.ts` usunięto zwracanie dowolnego starego `fetched_at` jako świeżego wyniku: każdy nowy odczyt na żądanie wymaga ponownego capture.
+- Wynik sprzed ponad 180 s nie może zostać uznany za świeży.
+- Data `fetched_at` z workera opisuje zakończenie odczytu pięciu działów.
+- Unit tests GitHub Actions przechodzą; wciąż brak pozytywnego prawdziwego odczytu EKW.
