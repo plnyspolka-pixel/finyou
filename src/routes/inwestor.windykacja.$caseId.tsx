@@ -1,3 +1,4 @@
+import { WindEpuPanel } from "@/components/inwestor/wind-epu";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -425,6 +426,17 @@ function WindykacjaCaseCard() {
         onSetTermination={onSetTermination}
         onWplata={() => setAction("wplata")}
         onScan={() => setAction("skan")}
+      />
+
+      <WindEpuPanel
+        caseId={caseId}
+        userId={user?.id}
+        loan={loan}
+        borrower={borrower}
+        creditor={creditor}
+        events={events}
+        onUpdated={() => void reload()}
+        onDownload={downloadDoc}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
