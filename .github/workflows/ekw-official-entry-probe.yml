@@ -1,9 +1,6 @@
 name: EKW same-methods-as-MSiG reachability test
+# Manual only: automated runs repeatedly hit EKW WAF 403.
 on:
-  pull_request:
-    paths:
-      - "services/ekw-direct/official-entry-probe.mjs"
-      - ".github/workflows/ekw-official-entry-probe.yml"
   workflow_dispatch:
 jobs:
   test:
