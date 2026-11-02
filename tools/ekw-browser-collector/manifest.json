@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Finance You — EKW capture (local)",
+  "version": "0.1.0",
+  "description": "Collect the five sections of the land register already open in the official viewer. No paid API and no CAPTCHA bypass.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://ekw.ms.gov.pl/*",
+    "https://przegladarka-ekw.ms.gov.pl/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Przechwyć aktualną KW"
+  }
+}
