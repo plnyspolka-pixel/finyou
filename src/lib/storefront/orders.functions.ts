@@ -93,7 +93,7 @@ export const startStoreCheckout=createServerFn({method:"POST"})
   .handler(async({context,data})=>{
     // Seller, VAT/invoicing and transaction recipient must be verified for these
     // standalone products before charging customers on production.
-    if(process.env.STORE_PAYMENTS_ENABLED!=="true" || process.env.STORE_SELLER_CONFIRMED!=="true")
+    if(process.env.STORE_PAYMENTS_ENABLED!=="true" || process.env.STORE_SELLER_CONFIRMED!=="true" || !(process.env.STORE_SELLER_LEGAL_NAME??"").trim() || process.env.STORE_INVOICING_READY!=="true")
       return {ok:false as const,error:"Płatności za produkty jednostkowe są jeszcze niedostępne. Skorzystaj z zamówienia do potwierdzenia."};
     const buyerErrors=validateBuyer(data.buyer);
     if(buyerErrors.length)return {ok:false as const,error:buyerErrors[0]};
@@ -141,7 +141,10 @@ export const startStoreCheckout=createServerFn({method:"POST"})
 
 export const getStoreCheckoutCapability=createServerFn({method:"GET"}).handler(async()=>({
   available:process.env.STORE_PAYMENTS_ENABLED==="true" &&
-    process.env.STORE_SELLER_CONFIRMED==="true",
+    process.env.STORE_SELLER_CONFIRMED==="true" &&
+    !!(process.env.STORE_SELLER_LEGAL_NAME??"").trim() &&
+    process.env.STORE_INVOICING_READY==="true",
+  sellerName:(process.env.STORE_SELLER_LEGAL_NAME??"").trim()||null,
 }));
 
 export const submitStoreInquiry=createServerFn({method:"POST"})
