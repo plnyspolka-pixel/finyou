@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GeneratedDocumentEsignDialog, type GeneratedSigningDocument } from "./GeneratedDocumentEsignDialog";
+import { eligibilityForTemplateSlug } from "@/lib/document-signing-policy";
 import { formatDateTime } from "@/lib/labels";
 import { extractLoanCalcPayload, type LoanCalcPayload } from "@/lib/loan-calc-pdf";
 import { buildCalcFieldValues } from "@/lib/loan-calc-fill";
@@ -201,6 +202,7 @@ export function DocumentCreatorPage({
   const [history, setHistory] = useState<GeneratedDoc[]>([]);
   const [esignDoc, setEsignDoc] = useState<GeneratedSigningDocument | null>(null);
   const [recentDoc, setRecentDoc] = useState<GeneratedSigningDocument | null>(null);
+  const [recentDecision, setRecentDecision] = useState<{ allowed: boolean; reason: string } | null>(null);
   const [lastEnvelopeId, setLastEnvelopeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -598,6 +600,7 @@ export function DocumentCreatorPage({
       toast.success("Dokument wygenerowany");
       if (enableEsign) {
         setRecentDoc({ id: res.id, title: selected.name });
+        setRecentDecision(eligibilityForTemplateSlug(selected.slug));
         setLastEnvelopeId(null);
       }
       const url = await _signedUrl({ data: { path: res.docxPath } });
@@ -659,11 +662,15 @@ export function DocumentCreatorPage({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div>
             <p className="font-semibold">Dokument gotowy: {recentDoc.title}</p>
-            <p className="text-xs text-muted-foreground">Możesz pobrać DOCX lub od razu wysłać wersję PDF do podpisu.</p>
+            <p className="text-xs text-muted-foreground">
+              {recentDecision?.allowed ? "Możesz pobrać DOCX albo przesłać wersję PDF do podpisu." : recentDecision?.reason ?? "Weryfikacja formy dokumentu."}
+            </p>
           </div>
-          <Button onClick={() => setEsignDoc(recentDoc)}>
-            <FileText className="mr-2 h-4 w-4"/> Wyślij do e-podpisu
-          </Button>
+          {recentDecision?.allowed && (
+            <Button onClick={() => setEsignDoc(recentDoc)}>
+              <FileText className="mr-2 h-4 w-4"/> Wyślij do e-podpisu
+            </Button>
+          )}
         </div>
       )}
       {enableEsign && lastEnvelopeId && (
@@ -1075,6 +1082,11 @@ export function DocumentCreatorPage({
                             ? ` · prowizja ${h.commission_amount.toLocaleString("pl-PL")} PLN`
                             : ""}
                         </div>
+                        {enableEsign && !h.canEsign && (
+                          <div className="mt-1 text-xs text-muted-foreground" title={h.esignReason}>
+                            E-podpis niedostępny — <span>{h.esignReason}</span>
+                          </div>
+                        )}
                         {enableEsign && signatureByDocument.has(h.id) && (
                           <a
                             className="mt-1 inline-block text-xs font-medium text-primary underline"
@@ -1097,7 +1109,7 @@ export function DocumentCreatorPage({
                             <Download className="mr-1 h-3.5 w-3.5" /> DOCX
                           </Button>
                         )}
-                        {enableEsign && (h.docx_path || h.pdf_path) && (
+                        {enableEsign && h.canEsign && (h.docx_path || h.pdf_path) && (
                           <Button size="sm" onClick={() => setEsignDoc({ id: h.id, title: h.template_name ?? "Dokument" })}>
                             Wyślij do e-podpisu
                           </Button>
