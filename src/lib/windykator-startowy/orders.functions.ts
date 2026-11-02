@@ -38,6 +38,10 @@ function bytesFromDataUrl(src:string,mime:string):Uint8Array {
   if(!valid||b.length<128||b.length>5242880)throw Error("Obsługiwane są PDF/JPG/PNG/WebP do 5 MB.");
   return b;
 }
+/** Funkcja publiczna: nie prosimy o wrażliwe dane, gdy checkout jest zamknięty. */
+export const getWindykatorSaleStatus=createServerFn({method:"GET"})
+  .handler(async()=>({enabled:process.env.WINDYKATOR_AI_CHECKOUT_ENABLED==="true"}));
+
 export const createWindykatorDraft=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .inputValidator((v:unknown)=>schema.parse(v))
