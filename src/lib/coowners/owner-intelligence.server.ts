@@ -5,6 +5,7 @@
 // wynik nie przechowuje pełnych identyfikatorów.
 import { stripHtml } from "@/lib/risk-assessment/kw-parse-core";
 import { webSearch } from "@/lib/web-fetch.server";
+import { searchPublicIndex, type IndexedSearchResult } from "./public-index-search.server";
 import type {
   OwnerIntelligenceHit,
   OwnerIntelligenceReport,
@@ -157,6 +158,94 @@ async function checkCourt(input: OwnerIntelligenceInput): Promise<{
   }
 }
 
+
+const INDEX_COURT_SITES = ["krpu.pl", "imsig.pl", "krz.ms.gov.pl"] as const;
+
+/**
+ * Wyniki Google/DDG nie są odpisem KRZ. Nie przypisujemy osobie cudzej
+ * sprawy tylko dlatego, że imię i nazwisko występuje na wielkiej liście.
+ * Sygnatura musi być blisko nazwiska/nazwy w krótkim fragmencie wyniku.
+ */
+export function classifyIndexedCourtHit(
+  input: OwnerIntelligenceInput,
+  result: IndexedSearchResult,
+): OwnerIntelligenceHit | null {
+  let hostname = "";
+  try { hostname = new URL(result.url).hostname.toLowerCase(); } catch { return null; }
+  if (!INDEX_COURT_SITES.some((d) => hostname === d || hostname.endsWith("." + d))) return null;
+  if (/\b\d{11}\b/.test(result.url)) return null;
+  const raw = result.title + " " + result.snippet;
+  const norm = normalize(raw);
+  const sought = normalize(input.name);
+  const variants = [sought];
+  if (input.kind === "person" && sought.split(" ").length === 2) {
+    variants.push(sought.split(" ").reverse().join(" "));
+  }
+  const positions = variants.map((v) => norm.indexOf(v)).filter((p) => p !== -1);
+  if (!positions.length) return null;
+  // Krótki snippet + odległość 180 znaków ogranicza fałszywe dopasowania
+  // na stronach katalogowych z tysiącami spraw.
+  const signature = raw.match(/\b[A-Z]{2}\d[A-Z]\/(?:GRz-nu|GRz|GUp-s|GUp|GU|GR)\/\d{1,5}\/20\d{2}\b/i);
+  const sigPos = signature ? normalize(raw.slice(0, signature.index ?? 0)).length : -1;
+  const nearSignature = Boolean(signature && positions.some((p) => Math.abs(sigPos - p) < 180));
+  const distress = /\b(restrukturyzacj|upad[łl]o|post[ęe]powani.{0,25}uk[łl]adow|zatwierdzeni.{0,15}uk[łl]ad)/i.test(raw);
+  const liquidation = /w\s+likwidacji|otwarci.{0,20}likwidacji/i.test(raw);
+  const isMsiG = hostname === "imsig.pl" || hostname.endsWith(".imsig.pl");
+
+  if (!nearSignature && !(isMsiG && (distress || liquidation))) return null;
+  const url = safeUrl(result.url);
+  if (!url) return null;
+  const source = hostname.includes("krpu.pl")
+    ? "KRPU.pl — indeks WWW (nieoficjalny)"
+    : hostname.includes("imsig.pl")
+      ? "MSiG — indeks WWW, nieodpis"
+      : "KRZ — wynik indeksu WWW, nieodpis";
+  const kind = nearSignature
+    ? "Zindeksowana wzmianka o sprawie sądowej"
+    : liquidation ? "Wzmianka o likwidacji podmiotu" : "Zindeksowana wzmianka o postępowaniu";
+  return {
+    source,
+    category: "court_notice",
+    title: kind,
+    detail: redactPesel(cap(result.title + " — " + result.snippet, 210)),
+    publicationDate: null,
+    caseSignature: signature?.[0] ?? null,
+    url,
+    match: "name_only",
+  };
+}
+
+async function checkIndexedCourt(input: OwnerIntelligenceInput): Promise<{
+  note: string; hits: OwnerIntelligenceHit[];
+}> {
+  const name = input.name.trim().replace(/"/g, "");
+  if (name.length < 5) return { note: "Za krótka nazwa do wyszukiwania.", hits: [] };
+  // Maksymalnie 3 kwerendy na podmiot, wyłącznie po nazwie; nigdy PESEL.
+  const queries = [
+    'site:krpu.pl "' + name + '"',
+    'site:imsig.pl "' + name + '"',
+    '"' + name + '" (KRZ OR "restrukturyzacja" OR "upadłość" OR "GRz-nu")',
+  ];
+  const searched = await Promise.allSettled(queries.map((q) => searchPublicIndex(q, 8)));
+  const hits = searched.flatMap((r) =>
+    r.status === "fulfilled"
+      ? r.value.results.flatMap((item) => {
+          const hit = classifyIndexedCourtHit(input, item);
+          return hit ? [hit] : [];
+        })
+      : []
+  );
+  const engines = [...new Set(searched.flatMap((r) =>
+    r.status === "fulfilled" ? [r.value.engine] : []
+  ))].join(", ");
+  const uniq = [...new Map(hits.map((h) => [h.url + ":" + h.caseSignature, h])).values()].slice(0, maxItems);
+  return {
+    note: (uniq.length ? "Są wzmianki wymagające weryfikacji." : "Brak rozpoznanych wzmianek w wynikach indeksów.") +
+      " Źródła wyszukiwania: " + (engines || "niedostępne") + ". Indeks nie stanowi pełnego KRZ/MSiG.",
+    hits: uniq,
+  };
+}
+
 async function checkExchanges(input: OwnerIntelligenceInput): Promise<{
   status: OwnerIntelligenceSubject["exchangesStatus"]; note: string; hits: OwnerIntelligenceHit[];
 }> {
@@ -202,12 +291,15 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
     `${o.kind}:${normalize(o.name)}`, o,
   ] as const)).values()].slice(0, maxItems);
   const subjects = await Promise.all(unique.map(async (input): Promise<OwnerIntelligenceSubject> => {
-    const [court, exchanges] = await Promise.all([checkCourt(input), checkExchanges(input)]);
+    const [court, indexed, exchanges] = await Promise.all([
+      checkCourt(input), checkIndexedCourt(input), checkExchanges(input),
+    ]);
     return {
       name: cap(input.name, 160), kind: input.kind,
-      courtStatus: court.status, courtNote: court.note,
+      courtStatus: court.status === "checked" ? "checked" : "partial",
+      courtNote: court.note + " | " + indexed.note,
       exchangesStatus: exchanges.status, exchangesNote: exchanges.note,
-      hits: [...court.hits, ...exchanges.hits],
+      hits: [...court.hits, ...indexed.hits, ...exchanges.hits].slice(0, maxItems),
     };
   }));
   return {
