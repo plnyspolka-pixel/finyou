@@ -1,11 +1,5 @@
 name: Finance You current fetch/Jina diagnostics
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/kw-fetch-jina-probe.ts'
-      - '.github/workflows/kw-fetch-jina-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
