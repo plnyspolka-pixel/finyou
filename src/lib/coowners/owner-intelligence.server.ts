@@ -294,18 +294,25 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
   const unique = [...new Map(inputs.filter((o) => o.name.trim()).map((o) => [
     `${o.kind}:${normalize(o.name)}`, o,
   ] as const)).values()].slice(0, maxItems);
-  // Ograniczenie natężenia nieudokumentowanego interfejsu MSiG: maksymalnie
-  // 4 zapytania łącznie dla osób fizycznych i spółek. Bez hurtowego indeksowania.
-  const officialTargets = new Set(unique.slice(0, 4));
+  // Przetwarzamy WSZYSTKICH rozpoznanych właścicieli z działu II (do limitu
+  // analizy 12), ale maksymalnie dwa jednoczesne zapytania do publicznego
+  // interfejsu MSiG. Nie przekazujemy tam PESEL.
+  const officialPromises = new Map<OwnerIntelligenceInput, ReturnType<typeof searchOfficialMsig>>();
+  const lanes: Promise<unknown>[] = [Promise.resolve(), Promise.resolve()];
+  unique.forEach((input, index) => {
+    const lane = index % 2;
+    const task = lanes[lane].then(() => searchOfficialMsig(input));
+    officialPromises.set(input, task);
+    lanes[lane] = task.catch(() => undefined);
+  });
+
   const subjects = await Promise.all(unique.map(async (input): Promise<OwnerIntelligenceSubject> => {
+    const officialTask = officialPromises.get(input);
     const [court, official, indexed, exchanges] = await Promise.all([
       checkCourt(input),
-      officialTargets.has(input) ? searchOfficialMsig(input) : Promise.resolve({
-        status: "partial" as const,
-        note:"MSiG: pominięto z powodu limitu 4 podmiotów na raport.",
-        hits: [] as OwnerIntelligenceHit[],
-      }),
-      checkIndexedCourt(input), checkExchanges(input),
+      officialTask ?? searchOfficialMsig(input),
+      checkIndexedCourt(input),
+      checkExchanges(input),
     ]);
     return {
       name: cap(input.name, 160), kind: input.kind,
