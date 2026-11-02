@@ -27,15 +27,6 @@ export function qualifyWindykatorCase(i: QualificationInput): QualificationResul
     missing.push("Brak zweryfikowanego umocowania wierzyciela lub reprezentanta.");
   }
   if (i.claim.dueDate > i.today) rejected.push("Termin wymagalności jeszcze nie nastąpił.");
-  // Produkt obiecuje projekt EPU po 90 dniach, zatem kwalifikacja uwzględnia
-  // także upływ 3-letniego okna EPU przed zakończeniem usługi.
-  const end = new Date(i.today + "T12:00:00Z");
-  end.setUTCDate(end.getUTCDate() + 90);
-  const oldestEpuDate = new Date(end);
-  oldestEpuDate.setUTCFullYear(oldestEpuDate.getUTCFullYear() - 3);
-  if (i.claim.dueDate < oldestEpuDate.toISOString().slice(0,10)) {
-    missing.push("Ryzyko przekroczenia 3-letniego warunku EPU przed zakończeniem 90 dni.");
-  }
   if (!i.creditorDeclaredNoPayment) missing.push("Nie ma aktualnego oświadczenia o niezapłaceniu należności.");
   if (!i.creditorDeclaredNoDispute) missing.push("Należność jest sporna albo status sporu pozostaje nieustalony.");
   const parsed = assembleStartPackage(i.claim, i.facts, i.today);
