@@ -244,7 +244,7 @@ function Storefront() {
         <div>
           <Eyebrow tone="gold">04 / WINDYKATOR AI</Eyebrow>
           <h2>Nieopłacona faktura? Zacznij od dokumentów.</h2>
-          <p>Pakiet Startowy za 50 zł brutto: automatyczny odczyt faktury lub umowy, raport roszczenia, projekt wezwania do zapłaty i wstępny szkic pozwu EPU, jeżeli sprawa spełnia wymagania procedury.</p>
+          <p>Pakiet Startowy za 50 zł brutto: automatyczny odczyt faktury lub umowy, raport roszczenia, projekt wezwania do zapłaty i wstępny pakiet dla właściwej ścieżki sądowej (EPU, pozew zwykły, 777 lub egzekucja).</p>
           <div className="fy-store-feature-price">50 zł <small>/ jedna sprawa · jednorazowo</small></div>
           <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Weryfikacja tożsamości i uprawnienia wierzyciela, prywatne przechowywanie dokumentu oraz płatność przez Tpay po uruchomieniu usługi.</span></div>
           <div className="fy-store-actions"><MktButton variant="gold" size="lg" href="/windykator-ai">Przejdź do Pakietu Startowego</MktButton></div>
