@@ -28,6 +28,7 @@ function StoreLegalPage() {
   const [terms,setTerms]=useState(false);
   const [dpa,setDpa]=useState(false);
   const [authority,setAuthority]=useState(false);
+  const [controllerName,setControllerName]=useState("");
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
@@ -49,11 +50,11 @@ function StoreLegalPage() {
     if(codes.length===0){setError("Zaznacz wymagane oświadczenia, aby przyjąć dokumenty.");return;}
     setBusy(true);
     try{
-      await save({data:{codes,termsConfirmed:terms,dpaConfirmed:dpa,controllerAuthority:authority}});
+      await save({data:{codes,termsConfirmed:terms,dpaConfirmed:dpa,controllerAuthority:authority,controllerName}});
       const next=await getState();
       setAccepted(next.docs.filter(d=>d.accepted).map(d=>d.code));
       setMessage("Akceptacje zapisane na Twoim koncie wraz z pełną wersją dokumentów i datą.");
-      setTerms(false);setDpa(false);setAuthority(false);
+      setTerms(false);setDpa(false);setAuthority(false);setControllerName("");
     }catch(e){setError(e instanceof Error?e.message:"Nie udało się zapisać akceptacji.")}
     finally{setBusy(false)}
   }
@@ -80,11 +81,12 @@ function StoreLegalPage() {
         <h2 className="font-bold text-lg flex gap-2 items-center"><FileCheck size={20}/> Potwierdź dokumenty elektronicznie</h2>
         {!accepted.includes("store_terms")&&<label className="mt-4 flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={terms} onChange={e=>setTerms(e.target.checked)}/><span>Zapoznałem się z pełną treścią <strong>regulaminu sklepu</strong> i akceptuję go.</span></label>}
         {!accepted.includes("store_dpa")&&<div className="mt-4 space-y-3 border-t border-border pt-4">
+          <label className="block text-sm">Pełna nazwa administratora danych (imię i nazwisko lub firma)<input type="text" className="mt-1 block w-full rounded-lg border border-border bg-card p-3" value={controllerName} maxLength={300} onChange={e=>setControllerName(e.target.value)} placeholder="Imię i nazwisko / firma" required/></label>
           <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={authority} onChange={e=>setAuthority(e.target.checked)}/><span>Potwierdzam, że jestem administratorem powierzanych danych lub mam umocowanie do zawarcia umowy w jego imieniu.</span></label>
           <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={dpa} onChange={e=>setDpa(e.target.checked)}/><span>Zapoznałem się z pełną treścią <strong>umowy powierzenia przetwarzania danych</strong> i akceptuję ją jako administrator danych.</span></label>
         </div>}
         {accepted.includes("store_terms")&&accepted.includes("store_dpa")?<p className="mt-4 flex items-center gap-2 text-emerald-400"><ShieldCheck size={18}/> Aktualne wersje dokumentów zostały zaakceptowane.</p>:
-        <button className="mt-5 rounded-lg bg-amber-300 px-5 py-3 font-bold text-slate-900 disabled:opacity-50" disabled={busy || (!terms && !(dpa&&authority))} onClick={accept}>{busy?"Zapisywanie…":"Akceptuję wybrane dokumenty"}</button>}
+        <button className="mt-5 rounded-lg bg-amber-300 px-5 py-3 font-bold text-slate-900 disabled:opacity-50" disabled={busy || (!terms && !(dpa&&authority&&controllerName.trim()))} onClick={accept}>{busy?"Zapisywanie…":"Akceptuję wybrane dokumenty"}</button>}
         {error&&<p role="alert" className="mt-3 text-red-400">{error}</p>}
         {message&&<p role="status" className="mt-3 text-emerald-400">{message}</p>}
         <p className="mt-4 text-xs leading-relaxed text-muted-foreground">Akceptacja nie oznacza zgody na marketing i nie jest automatyczną podstawą do przetwarzania dowolnych danych osób trzecich. Dla zleceń inwestycyjnych obowiązuje odrębny pipeline weryfikacji i umów.</p>
