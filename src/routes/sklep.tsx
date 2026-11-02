@@ -181,11 +181,12 @@ function Storefront() {
         <div className="fy-store-free-icon"><FileSignature size={44}/></div>
         <div><span className="fy-store-free">JEDYNY DARMOWY DOKUMENT</span><h3>Umowa pożyczki — bez załączników</h3>
           <p>Podstawowy wariant umowy pożyczki. Pełny proces kreatora oparty jest na istniejącym silniku umów Finance You. Generowanie wymaga zalogowania i odpowiednich zasad przetwarzania danych.</p>
-          <small>Wariant bez załączników wymaga jeszcze oddzielnego ograniczenia po stronie generatora, zanim będzie oferowany bezpłatnie wszystkim.</small>
+          <small>Bezpłatny, edytowalny wzór DOCX do samodzielnego wypełnienia. Przed podpisaniem sprawdź postanowienia i zabezpieczenia w swojej sprawie.</small>
         </div>
-        <MktButton variant="outline" href="/inwestor/dokumenty#kreator-umowy">Otwórz kreator</MktButton>
+        <MktButton variant="gold" href="/api/public/store/free-loan-agreement">Pobierz bezpłatną umowę DOCX</MktButton>
       </div>
-      <p className="fy-store-workflow"><span>1. Wybierz dokument</span><span>2. Wygeneruj i opłać</span><span>3. Wyślij do podpisu</span></p>
+      <p className="fy-store-workflow"><span>1. Wybierz dokument</span><span>2. Zapoznaj się z regulaminem i DPA</span><span>3. Opłać i wygeneruj</span><span>4. Wyślij do podpisu</span></p>
+      <div className="fy-store-law-notice" style={panelStyle}><ShieldCheck size={27} color="#f0c667" /><div><strong>Umowa powierzenia na klik — bez drukowania</strong><p>Przed pierwszym przetwarzaniem danych innych osób zaakceptujesz elektronicznie aktualną umowę powierzenia. Akceptacja zostaje na Twoim koncie wraz z treścią i skrótem dokumentu; nie ponawiasz jej przy każdej generacji.</p><a href="/sklep/zgody">Przeczytaj i zaakceptuj regulamin oraz DPA →</a></div></div>
       <div className="fy-store-catalog-grid fy-store-document-grid">
         {(catalog?.documents ?? []).map((doc: Document, index: number) => {
           const id = "document:" + doc.id;
@@ -281,7 +282,7 @@ function Storefront() {
             <p className="fy-store-fineprint">To nie jest jeszcze płatność: zamówienie przekazywane jest do Finance You w wiadomości e-mail. Płatności Tpay za pojedyncze produkty i automatyczne nadawanie dostępu wymagają uruchomienia osobnych SKU, uprawnień i regulaminu sprzedaży.</p>
           </>}
       </div>
-      <p className="fy-store-privacy">Dane wprowadzane do generatora dokumentów, analityka KW i podpisów mogą być danymi osobowymi. <a href="/polityka-prywatnosci">Polityka prywatności</a> · <a href="/regulamin">Regulamin</a>. Zapis na marketing nie jest wymagany do złożenia zapytania zakupowego.</p>
+      <p className="fy-store-privacy">Dane wprowadzane do generatora dokumentów, analityka KW i podpisów mogą być danymi osobowymi. <a href="/polityka-prywatnosci">Polityka prywatności</a> · <a href="/sklep/zgody">Regulamin sklepu i powierzenie danych</a>. Zapis na marketing nie jest wymagany do zakupu ani złożenia zapytania.</p>
     </Section>
     <style>{`
       .fy-store-hero {color:#fff;}
@@ -330,6 +331,9 @@ function Storefront() {
       .fy-store-free-contract h3{font-size:1.38rem;font-weight:850;margin:1rem 0 .5rem;}
       .fy-store-free-contract p,.fy-store-free-contract small{color:#c5d0e7;line-height:1.6;display:block;}
       .fy-store-free-icon{height:5rem;width:5rem;border-radius:1rem;display:grid;place-items:center;background:rgba(240,198,103,.15);color:${GOLD};}
+      .fy-store-law-notice{display:flex;gap:1rem;padding:1.1rem;margin:0 0 1.5rem;color:#eff4ff;align-items:flex-start;}
+      .fy-store-law-notice p{font-size:.83rem;color:#c8d2e7;line-height:1.6;margin:.4rem 0;}
+      .fy-store-law-notice a{color:#f0c667;text-decoration:underline;font-weight:750;font-size:.84rem;}
       .fy-store-workflow{display:flex;flex-wrap:wrap;gap:.6rem;margin:1rem 0 1.25rem;font-size:.81rem;color:var(--foreground);}
       .fy-store-workflow span{padding:.5rem .8rem;border:1px solid var(--border);border-radius:999px;}
       .fy-store-document-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
