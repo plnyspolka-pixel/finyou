@@ -54,5 +54,26 @@ try {
       buttons:[...document.querySelectorAll("button")].slice(0,20).map(e=>e.innerText.trim()),
     }));
     console.log("MSIG_PLAYWRIGHT "+JSON.stringify({http:response?.status(),url:page.url(),...info,responses:responses.slice(0,30)},null,2));
+    // Exactly one search on the public company KRS, never a private person's PESEL.
+    const searchTraffic=[];
+    page.on("response",r=>{
+      try{
+        const u=new URL(r.url());
+        if(!u.hostname.endsWith("ms.gov.pl"))return;
+        const type=r.headers()["content-type"] ?? "";
+        if(!/json/i.test(type) && !/api|szuk|oglosz|pozyc|search/i.test(u.pathname))return;
+        searchTraffic.push({host:u.hostname,path:u.pathname,method:r.request().method(),status:r.status(),type:type.slice(0,75)});
+      }catch{}
+    });
+    await page.getByPlaceholder("Podaj nr KRS").fill("0000304735");
+    await page.getByRole("button",{name:/^Szukaj$/i}).click();
+    await page.waitForTimeout(4500);
+    const searchText=(await page.locator("body").innerText()).slice(0,3800);
+    console.log("MSIG_SEARCH "+JSON.stringify({
+      scenario:"public company KRS 0000304735",
+      pageText:searchText,
+      traffic:searchTraffic.slice(-20),
+    },null,2));
+
   }finally{await browser.close()}
 }catch(e){console.log("MSIG_PLAYWRIGHT_ERROR "+String(e?.message??e).slice(0,500))}
