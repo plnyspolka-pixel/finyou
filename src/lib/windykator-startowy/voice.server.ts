@@ -74,6 +74,37 @@ export async function ensureWindykatorVoiceAgent():Promise<{agentId:string;creat
   }
   return {agentId,created:true};
 }
+/** Dedykowany post-call HMAC webhook, nie przekierowujemy rezultatów do A1/A4. */
+export async function ensureWindykatorPostCallWebhook():Promise<{webhookId:string}>{
+  const settings=await readWindVoiceSettings();
+  if(!settings.agent_id)throw Error("Najpierw utwórz agenta A5.");
+  const db=await windVoiceDb();
+  const {data:row}=await db.from("windykator_voice_settings")
+    .select("post_call_webhook_id,post_call_webhook_secret").eq("id",1).single();
+  if(row?.post_call_webhook_id&&row?.post_call_webhook_secret)
+    return {webhookId:row.post_call_webhook_id};
+  const {resolveAppBaseUrl}=await import("@/lib/access/urls.server");
+  const url=resolveAppBaseUrl()+"/api/public/windykator-voice-postcall";
+  const created=await elevenRequest("/v1/workspace/webhooks",{method:"POST",json:{
+    settings:{auth_type:"hmac",name:"Finance You — Windykator AI A5 (post-call)",webhook_url:url}
+  }});
+  const webhookId=String(created.json?.webhook_id??"");
+  const secret=String(created.json?.webhook_secret??"");
+  if(!webhookId||!secret)throw Error("ElevenLabs nie zwrócił webhook_id i bezpiecznego sekretu.");
+  const {error}=await db.from("windykator_voice_settings").update({
+    post_call_webhook_id:webhookId,post_call_webhook_secret:secret,updated_at:new Date().toISOString()
+  }).eq("id",1);
+  if(error)throw Error("Nie zapisano sekretu webhooka: "+error.message);
+  // Aktualizacja TYLKO A5, a nie globalnych webhooków całego workspace.
+  await elevenRequest("/v1/convai/agents/"+encodeURIComponent(settings.agent_id),{
+    method:"PATCH",json:{platform_settings:{webhooks:{
+      post_call_webhook_id:webhookId,
+      events:["transcript","call_initiation_failure"],
+      transcript_format:"json",send_audio:false
+    }}}
+  });
+  return {webhookId};
+}
 export async function syncWindykatorVoicePrompt():Promise<{agentId:string}>{
   const s=await readWindVoiceSettings();
   if(!s.agent_id)throw Error("Najpierw utwórz agenta A5.");
