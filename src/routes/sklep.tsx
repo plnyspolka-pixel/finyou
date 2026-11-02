@@ -72,6 +72,7 @@ function Storefront() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [kw, setKw] = useState("");
   const [kwError, setKwError] = useState("");
   const [kwReady, setKwReady] = useState(false);
@@ -84,6 +85,22 @@ function Storefront() {
     fetchLegal().then((data) => { if (alive) setLegalTexts(data); }).catch(() => { if (alive) setPayError("Nie udało się załadować regulaminu."); });
     return () => { alive = false; };
   }, [fetchCatalog, fetchLegal]);
+  // Keep the basket only for this browser tab so returning from investor login
+  // doesn't silently discard the checkout. KW numbers are not persisted long-term.
+  useEffect(() => {
+    try {
+      const previous = JSON.parse(sessionStorage.getItem("fy-store-cart-v1") || "[]");
+      if (Array.isArray(previous)) setCart(previous.filter((x) =>
+        x && typeof x.id === "string" && ["lesson","document","course","kw"].includes(x.type) &&
+        typeof x.title === "string" && Number.isFinite(x.price)).slice(0,50));
+    } catch { /* no saved cart */ }
+    setCartHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!cartHydrated) return;
+    try { sessionStorage.setItem("fy-store-cart-v1", JSON.stringify(cart)); }
+    catch { /* storage disabled */ }
+  }, [cart,cartHydrated]);
   const itemIds = useMemo(() => new Set(cart.map((i) => i.id)), [cart]);
   const total = cart.reduce((sum, i) => sum + i.price, 0);
   const add = (item: CartItem) => {
@@ -335,7 +352,7 @@ function Storefront() {
               <label htmlFor="fy-store-buyer">Imię i nazwisko / nazwa nabywcy</label>
               <input id="fy-store-buyer" value={buyerName} onChange={(e) => setBuyerName(e.target.value)}
                 placeholder="Wpisz dane nabywcy" autoComplete="name" />
-              <p className="fy-store-fineprint">Do płatności wymagane jest zalogowane konto z potwierdzonym adresem e-mail. Potwierdzenie trafi na adres przypisany do konta.</p>
+              <p className="fy-store-fineprint">Do płatności wymagane jest zalogowane konto z potwierdzonym adresem e-mail. Potwierdzenie trafi na adres przypisany do konta. <a href="/logowanie" style={{ color: "#f0c667", textDecoration: "underline" }}>Zaloguj się</a> lub <a href="/rejestracja?role=inwestor" style={{ color: "#f0c667", textDecoration: "underline" }}>załóż konto inwestora</a>. Koszyk pozostanie w tej karcie po powrocie.</p>
               <details><summary>Regulamin sklepu — przeczytaj pełną treść</summary>
                 <pre>{legalTexts?.terms.text ?? "Wczytywanie..."}</pre>
               </details>
