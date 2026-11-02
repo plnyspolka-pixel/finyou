@@ -1,0 +1,20 @@
+name: EKW Direct live form probe
+# Disabled automatic probes after persistent HTTP 403 from GitHub runners.
+# A live test must be intentional and authorized; unit checks continue automatically.
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+        working-directory: services/ekw-direct
+      - run: npx playwright install --with-deps chromium
+        working-directory: services/ekw-direct
+      - name: Test official EKW search form (without KW or personal data)
+        run: node smoke.mjs
+        working-directory: services/ekw-direct

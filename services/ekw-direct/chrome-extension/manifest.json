@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Finance You – EKW Local Capture (beta)",
+  "version": "0.1.0",
+  "description": "Zapis pięciu działów otwartej księgi z publicznej przeglądarki EKW. Bez transferu danych do pośrednika.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://przegladarka-ekw.ms.gov.pl/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

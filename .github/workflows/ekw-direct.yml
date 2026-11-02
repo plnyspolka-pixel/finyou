@@ -1,0 +1,23 @@
+name: EKW Direct unit tests
+on:
+  pull_request:
+    paths:
+      - "services/ekw-direct/**"
+      - "src/lib/kw-ekw-direct.server.ts"
+      - "src/lib/kw-fetch.server.ts"
+      - "src/lib/kw-content.functions.ts"
+      - ".github/workflows/ekw-direct.yml"
+  workflow_dispatch:
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ekw-direct
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test *.test.mjs
+      - run: node --check capture.mjs && node --check server.mjs && node --check diag-ekw-network.mjs && node --check persistent-access-check.mjs
