@@ -506,7 +506,6 @@ function OneClickLegalPack({ documents, steps, onDone }: {
   onDone: () => void;
 }) {
   const accept = useServerFn(acceptLegalDocument);
-  const fetchText = useServerFn(getLegalDocumentText);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
@@ -572,7 +571,7 @@ function OneClickLegalPack({ documents, steps, onDone }: {
                 {expanded[doc.code] ? "Ukryj treść" : "Przeczytaj"}
               </Button>
             </div>
-            {expanded[doc.code] ? <LegalPackText code={doc.code} fetchText={fetchText}/> : null}
+            {expanded[doc.code] ? <LegalPackText code={doc.code}/> : null}
             <label className="flex items-start gap-2 text-sm">
               <Checkbox checked={Boolean(selected["confirmed:" + doc.code])} disabled={!eligible || busy}
                 onCheckedChange={(value) => setSelected((v) => ({ ...v, ["confirmed:" + doc.code]: value === true }))}/>
@@ -605,10 +604,8 @@ function OneClickLegalPack({ documents, steps, onDone }: {
   );
 }
 
-function LegalPackText({ code, fetchText }: {
-  code: "umowa_ramowa" | "nda" | "rodo";
-  fetchText: ReturnType<typeof useServerFn<typeof getLegalDocumentText>>;
-}) {
+function LegalPackText({ code }: { code: "umowa_ramowa" | "nda" | "rodo" }) {
+  const fetchText = useServerFn(getLegalDocumentText);
   const { data, isLoading, isError } = useQuery({
     queryKey: ["legal-pack-one-click-text", code],
     queryFn: () => fetchText({ data: { code } }),
