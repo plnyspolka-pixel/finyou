@@ -86,8 +86,11 @@ export async function ensureWindykatorPostCallWebhook():Promise<{webhookId:strin
     });
     return {webhookId:row.post_call_webhook_id};
   }
-  const {resolveAppBaseUrl}=await import("@/lib/access/urls.server");
-  const url=resolveAppBaseUrl()+"/api/public/windykator-voice-postcall";
+  // Cały obieg A5: własna domena Finance You, nigdy Lovable ani preview URL.
+  const allowed=new Set(["https://app.financeyou.pl","https://financeyou.pl"]);
+  const origin=(process.env.WINDYKATOR_VOICE_PUBLIC_BASE_URL??"https://app.financeyou.pl").replace(/\\/$/,"");
+  if(!allowed.has(origin))throw Error("WINDYKATOR_VOICE_PUBLIC_BASE_URL musi wskazywać domenę Finance You.");
+  const url=origin+"/api/public/windykator-voice-postcall";
   const created=await elevenRequest("/v1/workspace/webhooks",{method:"POST",json:{
     settings:{auth_type:"hmac",name:"Finance You — Windykator AI A5 (post-call)",webhook_url:url}
   }});
