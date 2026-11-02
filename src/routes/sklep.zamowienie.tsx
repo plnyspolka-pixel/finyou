@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketingShell } from "@/components/marketing/shell";
 import { acceptStoreLegalDocuments } from "@/lib/storefront/legal.functions";
-import { startStoreCheckout,getMyStoreOrder } from "@/lib/storefront/orders.functions";
+import { startStoreCheckout,getMyStoreOrder,getStoreCheckoutCapability,submitStoreInquiry } from "@/lib/storefront/orders.functions";
 import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
 type Line={kind:"lesson"|"document"|"course";id:string};
 const parseItems=(s:string):Line[]=>s.split(",").slice(0,50).flatMap(p=>{
@@ -26,8 +26,12 @@ function CheckoutPage(){
   const accept=useServerFn(acceptStoreLegalDocuments);
   const checkout=useServerFn(startStoreCheckout);
   const getOrder=useServerFn(getMyStoreOrder);
+  const inquiry=useServerFn(submitStoreInquiry);
+  const capability=useServerFn(getStoreCheckoutCapability);
   const fetchCatalog=useServerFn(getPublicStoreCatalog);
   const [status,setStatus]=useState<string|null>(null);
+  const [paymentsEnabled,setPaymentsEnabled]=useState(false);
+  const [inquiryResult,setInquiryResult]=useState<string|null>(null);
   const [buyerType,setBuyerType]=useState<"person"|"company">("person");
   const [buyerName,setBuyerName]=useState("");
   const [buyerEmail,setBuyerEmail]=useState("");
@@ -52,6 +56,7 @@ function CheckoutPage(){
   useEffect(()=>{
     let active=true;
     fetchCatalog().then(v=>{if(active)setCatalog(v)}).catch(()=>{});
+    capability().then(v=>{if(active)setPaymentsEnabled(v.available)}).catch(()=>{});
     supabase.auth.getUser().then(({data})=>{
       if(active) setStatus(data.user?"logged":"guest");
       if(active&&data.user?.email)setBuyerEmail(data.user.email);
@@ -60,7 +65,7 @@ function CheckoutPage(){
       if(active)setStatus(o?.status??"not_found");
     }).catch(()=>{if(active)setStatus("error")});
     return()=>{active=false};
-  },[search.order,fetchCatalog,getOrder]);
+  },[search.order,fetchCatalog,getOrder,capability]);
   async function submit(e:FormEvent){
     e.preventDefault();setError("");
     if(!terms||!immediate||(hasDocuments&&(!dpa||!authority))) {
@@ -72,12 +77,15 @@ function CheckoutPage(){
         codes:hasDocuments?["store_terms","store_dpa"]:["store_terms"],
         termsConfirmed:terms,dpaConfirmed:dpa,controllerAuthority:authority,
       }});
-      const result=await checkout({data:{
-        items,immediateDigitalDelivery:true,buyer:{
-          buyerType,buyerName,buyerEmail,buyerNip:buyerNip||null,
-          buyerStreet,buyerPostalCode,buyerCity,buyerCountry:"PL",
-        },
-      }});
+      const buyer={buyerType,buyerName,buyerEmail,buyerNip:buyerNip||null,
+        buyerStreet,buyerPostalCode,buyerCity,buyerCountry:"PL"};
+      if(!paymentsEnabled) {
+        const result=await inquiry({data:{items,buyer}});
+        if(!result.ok){setError(result.error);return;}
+        setInquiryResult(result.inquiryId);
+        return;
+      }
+      const result=await checkout({data:{items,immediateDigitalDelivery:true,buyer}});
       if(!result.ok){setError(result.error);return;}
       window.location.href=result.paymentUrl;
     }catch(e){setError(e instanceof Error?e.message:"Nie można rozpocząć zamówienia.")}
@@ -109,7 +117,8 @@ function CheckoutPage(){
             <p className="text-xs text-muted-foreground">Nie wymagamy zgody na marketing. Przetwarzanie danych opisuje <a className="underline" href="/polityka-prywatnosci">Polityka prywatności</a>.</p>
           </section>
           {error&&<p role="alert" className="rounded-lg border border-red-500/40 p-3 text-red-400">{error}</p>}
-          <button type="submit" disabled={processing||items.length===0} className="w-full rounded-xl bg-amber-300 px-6 py-4 font-bold text-slate-900 disabled:opacity-60">{processing?"Przygotowanie zamówienia…":"Zamawiam i płacę przez Tpay"}</button>
+          {inquiryResult&&<div role="status" className="rounded-lg border border-emerald-400/50 p-4">Zamówienie do potwierdzenia zostało zapisane pod numerem <strong>{inquiryResult}</strong>. Płatności nie pobrano. Finance You otrzyma zgłoszenie zgodnie z aktywną konfiguracją poczty.</div>}
+          <button type="submit" disabled={processing||items.length===0||!!inquiryResult} className="w-full rounded-xl bg-amber-300 px-6 py-4 font-bold text-slate-900 disabled:opacity-60">{processing?"Przygotowanie zamówienia…":paymentsEnabled?"Zamawiam i płacę przez Tpay":"Wyślij zamówienie do potwierdzenia"}</button>
           <p className="text-xs text-muted-foreground">Automatyczne płatności jednostkowe wymagają aktywacji właściwego konta sprzedawcy oraz ostatecznego rozliczenia podatkowego; przed aktywacją system nie pobierze opłaty.</p>
         </form>:<p className="mt-7">Sprawdzanie konta…</p>}
       </>}
