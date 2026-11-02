@@ -1,0 +1,21 @@
+name: MSiG natural-person public search proof
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+    paths:
+      - 'scripts/msig-person-probe.ts'
+      - '.github/workflows/msig-person-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  natural-person:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun scripts/msig-person-probe.ts
