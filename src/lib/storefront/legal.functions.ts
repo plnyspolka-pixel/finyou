@@ -64,10 +64,20 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
         dpaConfirmed:code==="store_dpa"?true:undefined,controllerAuthority:code==="store_dpa"?true:undefined,
         controllerName:code==="store_dpa"?data.controllerName?.trim():undefined},
     })));
-    const {error}=await (supabaseAdmin as any).from("store_legal_acceptances")
-      .upsert(records,{onConflict:"user_id,document_code,document_sha256",ignoreDuplicates:true});
+    const db=supabaseAdmin as any;
+    const {data:prior,error:priorErr}=await db.from("store_legal_acceptances")
+      .select("document_code,document_sha256")
+      .eq("user_id",context.userId)
+      .in("document_sha256",records.map(r=>r.document_sha256));
+    if(priorErr)throw new Error("Nie można zweryfikować istniejących akceptacji.");
+    const fresh=records.filter(r=>!(prior??[]).some((p:any)=>
+      p.document_code===r.document_code && p.document_sha256===r.document_sha256));
+    if(fresh.length===0) return {accepted:unique.map(code=>({code,version:legalVersion(code)})),
+      receiptSent:false,alreadyAccepted:true};
+    const {error}=await db.from("store_legal_acceptances")
+      .upsert(fresh,{onConflict:"user_id,document_code,document_sha256",ignoreDuplicates:true});
     if(error)throw new Error("Nie udało się utrwalić akceptacji. Spróbuj ponownie.");
-    // Send the exact accepted versions on a durable medium; receipt delivery
+    // Send the exact newly accepted versions on a durable medium; receipt delivery
     // cannot undo a valid database acceptance and is therefore best effort.
     let receiptSent=false;
     try {
@@ -79,7 +89,7 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
           to:email,category:"transactional",noBranding:true,
           subject:"Potwierdzenie zawarcia dokumentów sklepu Finance You",
           text:"Potwierdzenie elektronicznej akceptacji z dnia "+new Date().toISOString()+"\\n\\n"+
-            records.map(r=>r.document_version+" (SHA-256 "+r.document_sha256+")\\n"+
+            fresh.map(r=>r.document_version+" (SHA-256 "+r.document_sha256+")\\n"+
             r.document_text).join("\\n\\n-------------------------\\n\\n")+
             "\\n\\nKopie są również dostępne do pobrania na financeyou.pl/sklep/zgody.",
         });
