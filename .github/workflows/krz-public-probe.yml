@@ -1,11 +1,5 @@
 name: KRZ public portal — bounded browser diagnostic
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/krz-public-probe.mjs'
-      - '.github/workflows/krz-public-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
