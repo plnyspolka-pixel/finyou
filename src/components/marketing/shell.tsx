@@ -27,6 +27,7 @@ export type MarketingPage =
   | "klient"
   | "inwestor"
   | "inwestorModul"
+  | "sklep"
   | "posrednik"
   | "blog"
   | "kalkulator";
@@ -68,6 +69,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   klient: "/dla-klienta",
   inwestor: "/",
   inwestorModul: "/",
+  sklep: "/sklep",
   posrednik: "/dla-posrednika",
   blog: "/blog",
   kalkulator: "/kalkulator-ltv",
@@ -84,6 +86,7 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
   inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
+  sklep: { label: "Złóż zlecenie", href: "/inwestor/umowy" },
   posrednik: { label: "Załóż konto pośrednika", href: "/posrednicy/rejestracja" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -199,8 +202,8 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               ))}
               <a href="/logowanie">Zaloguj</a>
             </nav>
-            <MktButton size="sm" variant="gold" href="/#cennik">
-              Zostań partnerem
+            <MktButton size="sm" variant="gold" href={page === "sklep" ? "/inwestor/umowy" : "/#cennik"}>
+              {page === "sklep" ? "Złóż zlecenie" : "Zostań partnerem"}
             </MktButton>
             <Button
               className="fy-sales-menu-toggle"
