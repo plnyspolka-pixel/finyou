@@ -21,7 +21,10 @@ function Purchases(){
           {e.item_kind==="document"&&<a className="underline" href={"/sklep/dokument/"+e.item_id}>Wygeneruj</a>}
           {e.item_kind==="course"&&<a className="underline" href="/sklep#akademia">Wybierz lekcję w Akademii</a>}
         </li>)}</ul>}
-      <h2 className="mt-8 text-lg font-bold">Historia zamówień</h2><ul className="mt-3 space-y-2">{state.orders.map(o=><li key={o.id} className="rounded-lg border p-3 text-sm">Zamówienie {o.id.slice(0,8)} · {o.status==="paid"?"Opłacone":o.status==="pending"?"Oczekuje na płatność":o.status} · {(o.amount_grosz/100).toLocaleString("pl-PL")} zł</li>)}</ul>
+      <h2 className="mt-8 text-lg font-bold">Zamówienia do potwierdzenia</h2>
+      {state.inquiries.length===0?<p className="mt-2 text-sm">Brak oczekujących zgłoszeń.</p>:
+      <ul className="mt-3 space-y-2">{state.inquiries.map(o=><li key={o.id} className="rounded-lg border p-3 text-sm">Zgłoszenie {o.id.slice(0,8)} · {o.status==="new"?"Przyjęte do obsługi":o.status} · {(o.total_grosz/100).toLocaleString("pl-PL")} zł · {o.email_sent?"Potwierdzenie wysłano":"Potwierdzenie e-mail nie zostało wysłane"}</li>)}</ul>}
+      <h2 className="mt-8 text-lg font-bold">Historia płatności</h2><ul className="mt-3 space-y-2">{state.orders.map(o=><li key={o.id} className="rounded-lg border p-3 text-sm">Zamówienie {o.id.slice(0,8)} · {o.status==="paid"?"Opłacone":o.status==="pending"?"Oczekuje na płatność":o.status} · {(o.amount_grosz/100).toLocaleString("pl-PL")} zł</li>)}</ul>
     </>}
   </main></MarketingShell>;
 }
