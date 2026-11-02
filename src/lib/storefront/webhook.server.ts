@@ -30,7 +30,22 @@ export async function handleStoreTpayNotification(
         const { sendResendEmail } = await import("@/lib/resend-send.server");
         const { data: full } = await db.from("store_orders").select("buyer,items,amount_grosz").eq("id",orderId).single();
         const email = String(full?.buyer?.email || "");
-        if (email) await sendResendEmail({
+        if (email) {
+          const { getStoreLegal, storeLegalSha } = await import("./legal");
+          const { pdfZTekstuBase64 } = await import("@/lib/legal/pdf-z-tekstu");
+          const attachmentCodes = ["store_terms", ...(Array.isArray(full?.items) && full.items.some((item: any) => item.kind === "document") ? ["store_dpa"] : [])] as Array<"store_terms" | "store_dpa">;
+          const attachments = await Promise.all(attachmentCodes.map(async code => {
+            const d = getStoreLegal(code);
+            return {
+              filename: code + "-" + d.version + ".pdf",
+              content: await pdfZTekstuBase64({
+                title: d.title, version: d.version, contentText: d.text,
+                sha256: await storeLegalSha(code),
+              }),
+              contentType: "application/pdf",
+            };
+          }));
+          await sendResendEmail({
           to: email,
           category: "transactional",
           subject: "Finance You — potwierdzenie zakupu produktów cyfrowych",
@@ -41,7 +56,9 @@ export async function handleStoreTpayNotification(
             "Produkty:\n" + (full?.items || []).map((i: any) => "- " + i.title).join("\n") +
             "\n\nRegulamin, umowę powierzenia i potwierdzenia ich akceptacji możesz odczytać na koncie.\n" +
             "Jeśli wystąpi problem z dostępem do zakupionej treści, napisz: kontakt@financeyou.pl",
+          attachments,
         });
+        }
       } catch (err) {
         console.warn("[store] payment confirmation email needs retry", orderId, (err as Error).message);
       }
