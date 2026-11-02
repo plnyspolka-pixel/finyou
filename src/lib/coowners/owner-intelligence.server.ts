@@ -16,6 +16,8 @@ import type {
 export interface OwnerIntelligenceInput {
   kind: "person" | "company";
   name: string;
+  firstName?: string | null;
+  lastName?: string | null;
   pesel?: string | null;
   nip?: string | null;
   regon?: string | null;
@@ -293,16 +295,14 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
     `${o.kind}:${normalize(o.name)}`, o,
   ] as const)).values()].slice(0, maxItems);
   // Ograniczenie natężenia nieudokumentowanego interfejsu MSiG: maksymalnie
-  // 4 jednorazowe kwerendy dla spółek w raporcie, bez masowego indeksowania.
-  const officialTargets = new Set(unique.filter((input) => input.kind === "company").slice(0, 4));
+  // 4 zapytania łącznie dla osób fizycznych i spółek. Bez hurtowego indeksowania.
+  const officialTargets = new Set(unique.slice(0, 4));
   const subjects = await Promise.all(unique.map(async (input): Promise<OwnerIntelligenceSubject> => {
     const [court, official, indexed, exchanges] = await Promise.all([
       checkCourt(input),
       officialTargets.has(input) ? searchOfficialMsig(input) : Promise.resolve({
         status: "partial" as const,
-        note: input.kind === "person"
-          ? "MSiG: wyszukiwanie osoby fizycznej po nazwie niezweryfikowane."
-          : "MSiG: pominięto z powodu limitu 4 podmiotów na raport.",
+        note:"MSiG: pominięto z powodu limitu 4 podmiotów na raport.",
         hits: [] as OwnerIntelligenceHit[],
       }),
       checkIndexedCourt(input), checkExchanges(input),
