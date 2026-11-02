@@ -27,7 +27,7 @@ const schema=z.object({
     privacy:z.literal(true), earlyStart:z.literal(true), withdrawalNotice:z.literal(true),
   }),
 });
-function bytesFromDataUrl(src:string,mime:string):Uint8Array {
+function bytesFromDataUrl(src:string,mime:string):Uint8Array<ArrayBuffer> {
   const prefix="data:"+mime+";base64,";
   if(!src.startsWith(prefix))throw Error("Nieprawidłowy format pliku.");
   const b64=src.slice(prefix.length);
