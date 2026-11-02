@@ -3,7 +3,7 @@
  * Bounded read-only probe of DuckDuckGo HTML, which is a clearly labeled
  * fallback if Google is unavailable. Does not query private-person names.
  */
-const q = 'site:krpu.pl "Marcin Gerbatowski"';
+const q = '"Marcin Gerbatowski" "GRz-nu"';
 const url = "https://html.duckduckgo.com/html/?" + new URLSearchParams({ q, kl: "pl-pl" });
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), 15000);
