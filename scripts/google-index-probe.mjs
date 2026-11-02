@@ -4,7 +4,7 @@ const { chromium } = await import("playwright");
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ locale: "pl-PL", timezoneId: "Europe/Warsaw" });
-  const query = '"Marcin Gerbatowski" "GRz-nu"';
+  const query = '"GRz-nu" site:krpu.pl';
   const url = "https://www.google.com/search?" + new URLSearchParams({ q: query, hl: "pl", num: "10" });
   const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 });
   await page.waitForTimeout(1800);
