@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS public.store_legal_acceptances (
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   document_code text NOT NULL CHECK(document_code IN ('store_terms','store_dpa')),
   document_version text NOT NULL,
-  document_sha256 text NOT NULL CHECK(document_sha256 ~ '^[0-9a-f]{64}
+  document_sha256 text NOT NULL CHECK(document_sha256 ~ '^[0-9a-f]{64}$'),
+  document_text text NOT NULL,
   accepted_at timestamptz NOT NULL DEFAULT now(),
   auth_method text NOT NULL DEFAULT 'authenticated_session',
   ip inet,
