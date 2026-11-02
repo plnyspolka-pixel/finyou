@@ -38,12 +38,15 @@ export type EkwDirectResponse = {
 export function validateDirectResponse(data: EkwDirectResponse, kw: string): boolean {
   const s = data.sections;
   if (!data.ok || !s || s.kw_number !== kw || !Number.isFinite(Date.parse(s.fetched_at))) return false;
+  const age = Date.now() - Date.parse(s.fetched_at);
+  if (age < -60_000 || age > 180_000) return false;
   return SECTION_KEYS.every((key) => {
     const html = s[key];
     return (
       typeof html === "string" &&
       html.length >= 20 &&
       html.length <= 2_000_000 &&
+      !/access denied|error 15|support id|blocked by our security service|captcha/i.test(html) &&
       !/<\s*(?:script|iframe|object|embed|form|svg)\b/i.test(html) &&
       !/\bon\w+\s*=/i.test(html) &&
       !/\b(?:href|src)\s*=/i.test(html)
@@ -71,7 +74,9 @@ export async function fetchAndStoreKwDirect(
   if (readError) {
     return { ok: false, status: "error", cached: false, error: readError.message };
   }
-  if (cached?.fetched_at && !opts?.force) return { ok: true, status: "ready", cached: true };
+  // No cache short-circuit. This path is invoked for on-demand fresh reads.
+  // A previously fetched snapshot stays available for comparison/history,
+  // but can NEVER satisfy a new official-source read request.
   // Avoid duplicate overlapping browser sessions.
   if (
     cached?.status === "processing" &&
