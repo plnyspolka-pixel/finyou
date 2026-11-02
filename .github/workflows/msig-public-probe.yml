@@ -25,10 +25,8 @@ jobs:
           npm install --prefix /tmp/msig-playwright --no-audit --no-fund playwright
           cd /tmp/msig-playwright
           npx playwright install --with-deps chromium
-          cp "$GITHUB_WORKSPACE/scripts/msig-public-probe.ts" ./
-          ln -s "$GITHUB_WORKSPACE/src" src
+          ln -s /tmp/msig-playwright/node_modules "$GITHUB_WORKSPACE/node_modules"
       - name: Check official portal and iMSiG restrictions
         shell: bash
         run: |
-          cp scripts/msig-public-probe.ts /tmp/msig-playwright/msig-public-probe.ts
-          NODE_PATH=/tmp/msig-playwright/node_modules bun /tmp/msig-playwright/msig-public-probe.ts
+          bun scripts/msig-public-probe.ts
