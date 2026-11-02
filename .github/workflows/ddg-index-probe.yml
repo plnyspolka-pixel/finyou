@@ -1,11 +1,5 @@
 name: Search-index DDG fallback diagnostic
 on:
-  pull_request:
-    types: [opened, synchronize]
-    branches: [main]
-    paths:
-      - 'scripts/ddg-index-probe.mjs'
-      - '.github/workflows/ddg-index-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
