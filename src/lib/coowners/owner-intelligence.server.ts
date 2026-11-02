@@ -1,0 +1,213 @@
+// Wywiad właścicieli z działu II: ogłoszenia sądowe MSiG/KRZ (iMSiG API)
+// oraz publiczne indeksowane ogłoszenia giełd wierzytelności.
+// Bez obchodzenia zabezpieczeń serwisów i bez wysyłania PESEL do wyszukiwarek.
+// PESEL/NIP/KRS/REGON służą jedynie do serwerowego odpytania uprawnionego API;
+// wynik nie przechowuje pełnych identyfikatorów.
+import { stripHtml } from "@/lib/risk-assessment/kw-parse-core";
+import { webSearch } from "@/lib/web-fetch.server";
+import type {
+  OwnerIntelligenceHit,
+  OwnerIntelligenceReport,
+  OwnerIntelligenceSubject,
+} from "./owner-intelligence.types";
+
+export interface OwnerIntelligenceInput {
+  kind: "person" | "company";
+  name: string;
+  pesel?: string | null;
+  nip?: string | null;
+  regon?: string | null;
+  krs?: string | null;
+}
+
+const EXCHANGES = [
+  { domain: "gielda-dlugow.com", title: "Giełda Długów" },
+  { domain: "dlugi.info", title: "Długi.info" },
+  { domain: "dlug.info.pl", title: "DługInfo" },
+] as const;
+
+const maxItems = 12;
+const cap = (s: unknown, length = 220) => String(s ?? "").trim().slice(0, length);
+const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
+const normalize = (s: string) =>
+  s.toLocaleLowerCase("pl-PL").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+
+function equalName(a: unknown, b: string): boolean {
+  return typeof a === "string" && normalize(a) === normalize(b);
+}
+
+function safeUrl(raw: unknown): string | null {
+  try {
+    const url = new URL(String(raw));
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Nazwy podmiotów z tabel działu II: nie skanujemy pozostałych działów KW. */
+export function extractCompanyOwnersFromKw(dzial2: string | null | undefined): OwnerIntelligenceInput[] {
+  const text = stripHtml(dzial2);
+  const found: OwnerIntelligenceInput[] = [];
+  const seen = new Set<string>();
+  // EKW/CMD/EasyMKW: "Nazwa ABC SPÓŁKA... Siedziba ... REGON 123456789"
+  for (const m of text.matchAll(/\bnazwa\s+(.{3,160}?)(?=\s+(?:siedziba|regon|krs|lp\.?|wielkość udziału)\b|$)/giu)) {
+    const name = m[1].trim().replace(/[|,;]+$/, "");
+    if (!name || !/[\p{L}]/u.test(name) || seen.has(normalize(name))) continue;
+    const vicinity = text.slice(m.index ?? 0, (m.index ?? 0) + 250);
+    const regon = vicinity.match(/\bregon\s*[:\s]*(\d{9}|\d{14})\b/i)?.[1] ?? null;
+    const krs = vicinity.match(/\bkrs\s*[:\s]*(\d{10})\b/i)?.[1] ?? null;
+    const nip = vicinity.match(/\bnip\s*[:\s]*(\d{10})\b/i)?.[1] ?? null;
+    // Wpis musi dotyczyć podmiotu: identyfikator lub rozpoznawalna forma prawna.
+    if (!regon && !krs && !nip && !/sp[oó][łl]k|sp\.\s*z\s*o\.o\.|s\.a\.|fundacj|sp[oó][łl]dzielni|gmina|bank|wsp[oó]lnota/i.test(name)) continue;
+    seen.add(normalize(name));
+    found.push({ kind: "company", name: cap(name, 160), regon, krs, nip });
+  }
+  return found.slice(0, maxItems);
+}
+
+export function identifierMatch(input: OwnerIntelligenceInput, entity: any): boolean {
+  const numbers = entity?.numbers ?? {};
+  return Boolean(
+    (input.pesel && /^\d{11}$/.test(input.pesel) && digits(numbers.pesel) === input.pesel) ||
+    (input.nip && /^\d{10}$/.test(input.nip) && digits(numbers.nip) === input.nip) ||
+    (input.regon && /^(\d{9}|\d{14})$/.test(input.regon) && digits(numbers.regon) === input.regon) ||
+    (input.krs && /^\d{10}$/.test(input.krs) && digits(numbers.krs) === input.krs)
+  );
+}
+
+async function checkCourt(input: OwnerIntelligenceInput): Promise<{
+  status: OwnerIntelligenceSubject["courtStatus"]; note: string; hits: OwnerIntelligenceHit[];
+}> {
+  const key = process.env.IMSIG_API_KEY?.trim();
+  if (!key) {
+    return { status: "unavailable", note: "Nie skonfigurowano IMSIG_API_KEY — KRZ/MSiG nie zostały automatycznie sprawdzone.", hits: [] };
+  }
+  const params = new URLSearchParams({ stream: "none", append_first_entry: "true" });
+  // Najpierw stabilny identyfikator, dopiero później nazwa. Nie wykonujemy
+  // wielu zapytań, gdyż każdorazowe pobranie może zużywać limit API.
+  if (input.kind === "person" && /^\d{11}$/.test(input.pesel ?? "")) {
+    params.set("pesel", input.pesel!);
+  } else if (/^\d{10}$/.test(input.krs ?? "")) {
+    params.set("krs", input.krs!);
+  } else if (/^\d{10}$/.test(input.nip ?? "")) {
+    params.set("nip", input.nip!);
+  } else if (/^(\d{9}|\d{14})$/.test(input.regon ?? "")) {
+    params.set("regon", input.regon!);
+  } else if (input.kind === "person" && input.name.trim().split(/\s+/).length >= 2) {
+    const parts = input.name.trim().split(/\s+/);
+    params.set("first_name", parts[0]);
+    params.set("last_name", parts.slice(1).join(" "));
+  } else {
+    params.set("cleaned_name", input.name);
+  }
+  try {
+    const response = await fetch(`https://api.imsig.pl/v2/announcements?${params}`, {
+      headers: { Authorization: key, Accept: "application/json" },
+      signal: AbortSignal.timeout(18_000),
+    });
+    if (!response.ok) {
+      return { status: "unavailable", note: `API KRZ/MSiG zwróciło HTTP ${response.status}; nie oznacza to braku wpisów.`, hits: [] };
+    }
+    const rows: unknown = await response.json();
+    if (!Array.isArray(rows)) {
+      return { status: "unavailable", note: "Nieprawidłowy format danych z API KRZ/MSiG.", hits: [] };
+    }
+    const matches: OwnerIntelligenceHit[] = [];
+    for (const record of rows) {
+      const r = record as any;
+      const entities: any[] = Array.isArray(r.entity) ? r.entity : [];
+      const confirmed = entities.some((e) => identifierMatch(input, e));
+      const sameName = entities.some((e) =>
+        equalName(e?.info?.cleaned_name, input.name) ||
+        equalName([e?.info?.first_name, e?.info?.last_name].filter(Boolean).join(" "), input.name)
+      );
+      // W odpowiedzi mogą znaleźć się osoby o identycznym nazwisku — brak
+      // powiązania z identyfikatorem => jedynie wynik do weryfikacji.
+      if (!confirmed && !sameName) continue;
+      const url = safeUrl(r.content?.url ?? r.msig_entry?.url);
+      if (!url) continue;
+      const p = r.proceeding ?? {};
+      matches.push({
+        source: "KRZ/MSiG — iMSiG",
+        category: "court_notice",
+        title: cap(p.type || "Ogłoszenie w KRZ/MSiG", 160),
+        detail: cap(p.status || "Status postępowania nieustalony", 150),
+        publicationDate: cap(r.meta?.issue_date || r.krz_entry?.issue_date || r.msig_entry?.issue_date, 25) || null,
+        caseSignature: cap(p.main_signature || r.krz_entry?.signature || r.msig_entry?.signature, 100) || null,
+        url,
+        match: confirmed ? "identifier" : "name_only",
+      });
+      if (matches.length >= maxItems) break;
+    }
+    const partial = rows.length >= 1000;
+    return {
+      status: partial ? "partial" : "checked",
+      note: partial
+        ? "Wynik ograniczony do 1000 ogłoszeń API; wymaga dalszej kwerendy."
+        : matches.length
+          ? "Znaleziono ogłoszenia; sprawdź datę, rodzaj i status postępowania (może być historyczne)."
+          : "Nie odnaleziono ogłoszeń w dostępnym zakresie iMSiG; nie wyklucza to innych postępowań.",
+      hits: matches,
+    };
+  } catch {
+    return { status: "unavailable", note: "Błąd połączenia z API KRZ/MSiG; wynik nie jest negatywnym potwierdzeniem.", hits: [] };
+  }
+}
+
+async function checkExchanges(input: OwnerIntelligenceInput): Promise<{
+  status: OwnerIntelligenceSubject["exchangesStatus"]; note: string; hits: OwnerIntelligenceHit[];
+}> {
+  const name = input.name.trim();
+  if (!name || name.length < 5) return { status: "unavailable", note: "Nie ustalono nazwy do wyszukiwania.", hits: [] };
+  const searches = await Promise.allSettled(EXCHANGES.map(async (market) => {
+    const query = `site:${market.domain} "${name.replace(/"/g, "")}"`;
+    const results = await webSearch(query, { limit: 8, region: "pl-pl" });
+    return results.filter((r) => {
+      try {
+        const u = new URL(r.url);
+        const host = u.hostname.toLowerCase();
+        if (!(host === market.domain || host.endsWith("." + market.domain))) return false;
+        if (u.pathname === "/" || u.pathname.length < 3) return false;
+        return normalize(`${r.title} ${r.snippet}`).includes(normalize(name));
+      } catch { return false; }
+    }).slice(0, 5).map((r): OwnerIntelligenceHit => ({
+      source: market.title,
+      category: "debt_exchange",
+      title: cap(r.title, 160),
+      detail: cap(r.snippet, 180) || null,
+      publicationDate: null, caseSignature: null,
+      url: r.url,
+      match: "name_only",
+    }));
+  }));
+  const hits = searches.flatMap((s) => s.status === "fulfilled" ? s.value : []);
+  const failed = searches.some((s) => s.status === "rejected");
+  const unique = [...new Map(hits.map((h) => [h.url, h])).values()].slice(0, maxItems);
+  return {
+    status: failed ? "partial" : "checked",
+    note: "Wyszukiwanie publicznego indeksu stron: nie jest pełnym przeszukaniem giełd. Każde trafienie to niezweryfikowana publikacja, a nie potwierdzenie długu.",
+    hits: unique,
+  };
+}
+
+export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInput[]): Promise<OwnerIntelligenceReport> {
+  const checkedAt = new Date().toISOString();
+  const unique = [...new Map(inputs.filter((o) => o.name.trim()).map((o) => [
+    `${o.kind}:${normalize(o.name)}`, o,
+  ])).values()].slice(0, maxItems);
+  const subjects = await Promise.all(unique.map(async (input): Promise<OwnerIntelligenceSubject> => {
+    const [court, exchanges] = await Promise.all([checkCourt(input), checkExchanges(input)]);
+    return {
+      name: cap(input.name, 160), kind: input.kind,
+      courtStatus: court.status, courtNote: court.note,
+      exchangesStatus: exchanges.status, exchangesNote: exchanges.note,
+      hits: [...court.hits, ...exchanges.hits],
+    };
+  }));
+  return {
+    checkedAt, subjects,
+    note: "Analiza otwartych źródeł. Zgodność samego imienia i nazwiska lub nazwy nie potwierdza tożsamości ani istnienia wymagalnego długu. Brak trafienia nie potwierdza braku zadłużenia.",
+  };
+}
