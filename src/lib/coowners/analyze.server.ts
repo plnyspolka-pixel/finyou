@@ -19,6 +19,7 @@ import type { CeidgActivity } from "@/lib/risk-assessment/types";
 import { mergeKwOwners, maskPesel, personNamesOverlap } from "./core";
 import { searchKrsForPerson, emptyKrsCheck } from "./krs-person-search.server";
 import type { CoOwnersAnalysis, CoOwnerRegistryCheck } from "./types";
+import { checkOwnerPublicIntelligence, extractCompanyOwnersFromKw } from "./owner-intelligence.server";
 
 function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalysis {
   return {
@@ -29,6 +30,7 @@ function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalys
     checked: [],
     warnings: [],
     summary,
+    intelligence: await intelligencePromise,
   };
 }
 
@@ -90,6 +92,21 @@ export async function analyzeCoOwners(args: {
 
   const totalOwnersInKw = parseOwners(row.dzial_2).length;
   const owners = mergeKwOwners(row.dzial_2);
+  // Osoby prawne też są właścicielami; dotychczasowa analiza CEIDG/KRS
+  // dotyczyła tylko osób fizycznych. Wywiad obejmuje oba typy podmiotów.
+  const companies = extractCompanyOwnersFromKw(row.dzial_2);
+  const intelligencePromise = checkOwnerPublicIntelligence([
+    ...owners.map((o) => ({
+      kind: "person" as const,
+      name: o.fullName,
+      pesel: parsePesel(o.pesel).valid ? o.pesel : null,
+      nip: personNamesOverlap(args.primaryClientName, o.fullName) ? args.primaryClientNip : null,
+    })),
+    ...companies,
+  ]).catch((e: unknown) => {
+    console.error("[coowners] owner intelligence failed", e instanceof Error ? e.message : "unknown");
+    return null;
+  });
   if (owners.length === 0) {
     return {
       available: true,
@@ -98,7 +115,10 @@ export async function analyzeCoOwners(args: {
       totalOwnersInKw,
       checked: [],
       warnings: [],
-      summary: "W dziale II KW nie rozpoznano osób fizycznych do sprawdzenia w CEIDG/KRS.",
+      summary: companies.length
+        ? `Dział II KW: zidentyfikowano ${companies.length} podmiotów prawnych do sprawdzenia w rejestrach.`
+        : "W dziale II KW nie rozpoznano właścicieli do sprawdzenia.",
+      intelligence: await intelligencePromise,
     };
   }
 
