@@ -5,7 +5,7 @@
 export type CollectionStatus =
   | "awaiting_activation" | "active" | "payment_reported" | "disputed"
   | "human_review" | "settled" | "expired";
-export type PlannedAction = "email" | "sms" | "voice" | "pre_court_notice" | "epu_package";
+export type PlannedAction = "email" | "sms" | "voice" | "pre_court_notice" | "court_package";
 export interface CollectionSnapshot {
   status: CollectionStatus;
   elapsedDays: number;
@@ -24,7 +24,7 @@ export type NextStep =
 export const FREE_COLLECTION_STAGES: ReadonlyArray<{day:number;action:PlannedAction}> = [
   {day:0,action:"email"},{day:7,action:"sms"},{day:14,action:"voice"},
   {day:21,action:"email"},{day:45,action:"voice"},
-  {day:60,action:"pre_court_notice"},{day:90,action:"epu_package"}
+  {day:60,action:"pre_court_notice"},{day:90,action:"court_package"}
 ] as const;
 
 /** Nie podejmuj kontaktu przy sporze, deklaracji wpłaty lub nieaktualnym saldzie.
