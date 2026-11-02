@@ -242,7 +242,7 @@ function Storefront() {
           <p>Wybierz rodzaj pisma spośród dostępnych szablonów, zobacz podgląd, uzupełnij dane i kliknij „Generuj dokument”. Otworzysz rzeczywisty kreator Finance You, z kontrolą uprawnień dla Twojego konta.</p>
           <small>Dokumenty nie są sprzedawane pojedynczo. Dostęp do kreatora zależy od posiadanych uprawnień.</small>
         </div>
-        <MktButton variant="gold" href="/inwestor/dokumenty#kreator-dokumentow">Wybierz pismo i generuj</MktButton>
+        <MktButton variant="gold" href="/inwestor/kreator-dokumentow">Wybierz pismo i generuj</MktButton>
       </div>
     </Section>
 
