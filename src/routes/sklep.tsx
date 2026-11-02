@@ -92,7 +92,7 @@ function Storefront() {
     try {
       const previous = JSON.parse(sessionStorage.getItem("fy-store-cart-v1") || "[]");
       if (Array.isArray(previous)) setCart(previous.filter((x) =>
-        x && typeof x.id === "string" && ["lesson","document","course","kw"].includes(x.type) &&
+        x && typeof x.id === "string" && ["lesson","course","kw"].includes(x.type) &&
         typeof x.title === "string" && Number.isFinite(x.price)).slice(0,50));
     } catch { /* no saved cart */ }
     setCartHydrated(true);
@@ -242,7 +242,7 @@ function Storefront() {
           <p>Wybierz rodzaj pisma spośród dostępnych szablonów, zobacz podgląd, uzupełnij dane i kliknij „Generuj dokument”. Otworzysz rzeczywisty kreator Finance You, z kontrolą uprawnień dla Twojego konta.</p>
           <small>Dokumenty nie są sprzedawane pojedynczo. Dostęp do kreatora zależy od posiadanych uprawnień.</small>
         </div>
-        <MktButton variant="gold" href="/inwestor/dokumenty">Wybierz pismo i generuj</MktButton>
+        <MktButton variant="gold" href="/inwestor/dokumenty#kreator-dokumentow">Wybierz pismo i generuj</MktButton>
       </div>
     </Section>
 
