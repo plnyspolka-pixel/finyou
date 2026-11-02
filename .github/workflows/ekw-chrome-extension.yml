@@ -1,0 +1,21 @@
+name: EKW Chrome extension syntax
+on:
+  pull_request:
+    paths:
+      - "services/ekw-direct/chrome-extension/**"
+      - ".github/workflows/ekw-chrome-extension.yml"
+  workflow_dispatch:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate manifest
+        run: node -e 'const m=require("./services/ekw-direct/chrome-extension/manifest.json"); if(m.manifest_version!==3 || m.host_permissions.length!==1) process.exit(1); console.log("MV3 OK")'
+      - name: Check scripts
+        run: |
+          node --check services/ekw-direct/chrome-extension/background.js
+          node --check services/ekw-direct/chrome-extension/popup.js
