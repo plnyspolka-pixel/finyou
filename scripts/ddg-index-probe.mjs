@@ -3,7 +3,7 @@
  * Bounded read-only probe of DuckDuckGo HTML, which is a clearly labeled
  * fallback if Google is unavailable. Does not query private-person names.
  */
-const q = 'site:krpu.pl "GRz-nu"';
+const q = 'site:krpu.pl "Marcin Gerbatowski"';
 const url = "https://html.duckduckgo.com/html/?" + new URLSearchParams({ q, kl: "pl-pl" });
 const controller = new AbortController();
 const timer = setTimeout(() => controller.abort(), 15000);
@@ -21,6 +21,7 @@ try {
   console.log(JSON.stringify({
     status: response.status, pageBytes: html.length,
     resultAnchorCount: hits, blocked,
+    signatureMention: html.includes("GD1G/GRz-nu/125/2025"),
     note: "Generic query only; names and personal details are not logged.",
   }, null, 2));
   if (!response.ok || blocked || !hits) process.exitCode = 1;
