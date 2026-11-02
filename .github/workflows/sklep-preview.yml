@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - 'src/routes/sklep.tsx'
+      - 'src/routes/sklep.moje-zakupy.tsx'
+      - 'src/lib/storefront/**'
+      - 'src/lib/access/webhook-core.server.ts'
+      - 'src/lib/document-generator.functions.ts'
+      - 'supabase/migrations/20261102*'
       - 'src/routes/inwestor.umowy.tsx'
       - 'src/lib/investor-agreements/legal-pack.functions.ts'
       - 'src/routes/windykator-ai.tsx'
@@ -29,6 +34,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Windykator Startowy — regression tests
         run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts src/lib/windykator-startowy/court-routes.test.ts src/lib/windykator-startowy/registry.server.test.ts
+      - name: Storefront unit tests
+        run: bun run test -- src/lib/storefront/legal.test.ts
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
       - name: Install browser for desktop and mobile reference screenshots

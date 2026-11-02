@@ -7,6 +7,7 @@ import { Section, SectionHead } from "@/components/marketing/sections";
 import { Eyebrow, MktBadge, MktButton } from "@/components/marketing/primitives";
 import { Icon3D } from "@/components/marketing/icon-3d";
 import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
+import { createStoreCheckout, getStoreLegalTexts } from "@/lib/storefront/checkout.functions";
 import { validateKwNumber } from "@/lib/kw";
 import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
 
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/sklep")({
 type Catalog = Awaited<ReturnType<typeof getPublicStoreCatalog>>;
 type Lesson = Catalog["lessons"][number];
 type Document = Catalog["documents"][number];
-type CartItem = { id: string; type: "lesson" | "document" | "course"; title: string; price: number };
+type CartItem = { id: string; type: "lesson" | "document" | "course" | "kw"; title: string; price: number };
 const GOLD = "#f0c667";
 const PLN = (n: number) => n.toLocaleString("pl-PL") + " zł";
 const gradients = [
@@ -57,9 +58,21 @@ function CatalogHeader({ eyebrow, title, copy, id }: { eyebrow: string; title: s
 
 function Storefront() {
   const fetchCatalog = useServerFn(getPublicStoreCatalog);
+  const fetchLegal = useServerFn(getStoreLegalTexts);
+  const startCheckout = useServerFn(createStoreCheckout);
+  const [legalTexts, setLegalTexts] = useState<Awaited<ReturnType<typeof getStoreLegalTexts>> | null>(null);
+  const [buyerName, setBuyerName] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [immediateAccepted, setImmediateAccepted] = useState(false);
+  const [withdrawalAcknowledged, setWithdrawalAcknowledged] = useState(false);
+  const [dpaAccepted, setDpaAccepted] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartHydrated, setCartHydrated] = useState(false);
   const [kw, setKw] = useState("");
   const [kwError, setKwError] = useState("");
   const [kwReady, setKwReady] = useState(false);
@@ -69,8 +82,25 @@ function Storefront() {
   useEffect(() => {
     let alive = true;
     fetchCatalog().then((data) => { if (alive) setCatalog(data); }).catch(() => { if (alive) setLoadError(true); });
+    fetchLegal().then((data) => { if (alive) setLegalTexts(data); }).catch(() => { if (alive) setPayError("Nie udało się załadować regulaminu."); });
     return () => { alive = false; };
-  }, [fetchCatalog]);
+  }, [fetchCatalog, fetchLegal]);
+  // Keep the basket only for this browser tab so returning from investor login
+  // doesn't silently discard the checkout. KW numbers are not persisted long-term.
+  useEffect(() => {
+    try {
+      const previous = JSON.parse(sessionStorage.getItem("fy-store-cart-v1") || "[]");
+      if (Array.isArray(previous)) setCart(previous.filter((x) =>
+        x && typeof x.id === "string" && ["lesson","document","course","kw"].includes(x.type) &&
+        typeof x.title === "string" && Number.isFinite(x.price)).slice(0,50));
+    } catch { /* no saved cart */ }
+    setCartHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!cartHydrated) return;
+    try { sessionStorage.setItem("fy-store-cart-v1", JSON.stringify(cart)); }
+    catch { /* storage disabled */ }
+  }, [cart,cartHydrated]);
   const itemIds = useMemo(() => new Set(cart.map((i) => i.id)), [cart]);
   const total = cart.reduce((sum, i) => sum + i.price, 0);
   const add = (item: CartItem) => {
@@ -83,12 +113,35 @@ function Storefront() {
     if (tab === "cases") return /case|stud|windykacj|egzekucj/i.test(l.title + " " + l.category);
     return true;
   }) ?? [], [catalog, tab]);
-  const cartMessage = "Dzień dobry, proszę o potwierdzenie możliwości zakupu następujących produktów Finance You:\n\n"
-    + cart.map((item, i) => (i + 1) + ". " + item.title + " — " + PLN(item.price)).join("\n")
-    + "\n\nRazem: " + PLN(total)
-    + "\n\nProszę o informacje dotyczące płatności i udostępnienia produktów.\n";
-  const cartMail = "mailto:kontakt@financeyou.pl?subject=" +
-    encodeURIComponent("Zamówienie produktów sklepu Finance You") + "&body=" + encodeURIComponent(cartMessage);
+
+  const needsDpa = cart.some((i) => i.type === "document");
+  const checkoutAllowed = Boolean(
+    cart.length && legalTexts && buyerName.trim().length >= 3 &&
+    termsAccepted && immediateAccepted && withdrawalAcknowledged &&
+    (!needsDpa || dpaAccepted) &&
+    (!cart.some((i) => i.type === "kw") || kwLegitimatePurpose)
+  );
+  async function payForCart() {
+    if (!checkoutAllowed || paying) return;
+    setPaying(true);
+    setPayError("");
+    try {
+      const result = await startCheckout({ data: {
+        buyerName: buyerName.trim(),
+        cart: cart.map((i) => {
+          if (i.type === "course") return { kind: "course" as const, id: "academy" };
+          const pos = i.id.indexOf(":");
+          return { kind: i.type as "lesson" | "document" | "kw", id: i.id.slice(pos + 1) };
+        }),
+        terms: true, immediate: true, withdrawalAcknowledgement: true,
+        dpa: needsDpa && dpaAccepted, kwPurpose: kwLegitimatePurpose,
+      } });
+      window.location.assign(result.paymentUrl);
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Nie udało się rozpocząć płatności.");
+      setPaying(false);
+    }
+  }
 
   function checkKw(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -99,6 +152,8 @@ function Storefront() {
     setKw(check.value);
     setKwError("");
     setKwReady(true);
+    add({ id: "kw:" + check.compact, type: "kw" as CartItem["type"],
+      title: "Raport księgi wieczystej " + check.value, price: 99 });
   }
 
   return <MarketingShell page="sklep">
@@ -228,10 +283,10 @@ function Storefront() {
             <span>Potwierdzam, że mam uprawniony cel analizy danych zawartych w tej księdze wieczystej. <a href="/polityka-prywatnosci">Informacja o przetwarzaniu danych</a>.</span>
           </label>
           {kwError && <p id="fy-kw-error" className="fy-store-error" role="alert">{kwError}</p>}
-          <button type="submit" className="fy-store-add fy-store-kw-submit">Generuj raport — 99 zł</button>
+          <button type="submit" className="fy-store-add fy-store-kw-submit">Dodaj raport do koszyka — 99 zł</button>
           {kwReady && <div className="fy-store-kw-ready" role="status"><ShieldCheck size={20}/><div>
-            Numer <strong>{kw}</strong> jest poprawny formalnie. Zamówienie nie zostało jeszcze opłacone ani uruchomione.
-            <p>Bezpieczny checkout 99 zł i udostępnienie raportu po potwierdzeniu płatności wymagają ukończenia integracji.</p>
+            Numer <strong>{kw}</strong> jest poprawny formalnie. Raport został dodany do koszyka. Pobranie i analiza rozpoczną się dopiero po płatności.
+            <p>Po potwierdzeniu płatności pobierz raport na stronie „Moje zakupy”.</p>
           </div></div>}
           <p className="fy-store-fineprint"><LockKeyhole size={15}/> Bez potwierdzonej płatności nie pobieramy księgi ani nie generujemy płatnego raportu.</p>
         </form>
@@ -287,14 +342,42 @@ function Storefront() {
 
     <Section>
       <div id="koszyk" className="fy-store-cart" style={panelStyle}>
+        <p><MktButton variant="outline" size="sm" href="/sklep/moje-zakupy">Moje zakupy i pobrane raporty</MktButton></p>
         <div className="fy-store-cart-title"><ShoppingBag size={28}/><div><Eyebrow tone="gold">TWOJE WYBRANE PRODUKTY</Eyebrow><h2>Koszyk <span>({cart.length})</span></h2></div></div>
         {cart.length === 0 ? <p style={desc}>Wybierz lekcje lub dokumenty, klikając „Dodaj do koszyka”.</p> :
           <><ul>{cart.map((i) => <li key={i.id}><span>{i.title}</span><strong>{PLN(i.price)}</strong>
             <button aria-label={"Usuń " + i.title} onClick={() => remove(i.id)}><Trash2 size={18}/></button></li>)}</ul>
             <div className="fy-store-cart-total"><span>Łącznie</span><strong>{PLN(total)}</strong></div>
-            <div className="fy-store-cart-actions"><MktButton variant="gold" href={cartMail}>Wyślij zamówienie do potwierdzenia</MktButton>
-              <button className="fy-store-clear" onClick={() => setCart([])}>Wyczyść koszyk</button></div>
-            <p className="fy-store-fineprint">To nie jest jeszcze płatność: zamówienie przekazywane jest do Finance You w wiadomości e-mail. Płatności Tpay za pojedyncze produkty i automatyczne nadawanie dostępu wymagają uruchomienia osobnych SKU, uprawnień i regulaminu sprzedaży.</p>
+            <div className="fy-store-checkout-form">
+              <label htmlFor="fy-store-buyer">Imię i nazwisko / nazwa nabywcy</label>
+              <input id="fy-store-buyer" value={buyerName} onChange={(e) => setBuyerName(e.target.value)}
+                placeholder="Wpisz dane nabywcy" autoComplete="name" />
+              <p className="fy-store-fineprint">Do płatności wymagane jest zalogowane konto z potwierdzonym adresem e-mail. Potwierdzenie trafi na adres przypisany do konta. <a href="/logowanie" style={{ color: "#f0c667", textDecoration: "underline" }}>Zaloguj się</a> lub <a href="/rejestracja?role=inwestor" style={{ color: "#f0c667", textDecoration: "underline" }}>załóż konto inwestora</a>. Koszyk pozostanie w tej karcie po powrocie.</p>
+              <details><summary>Regulamin sklepu — przeczytaj pełną treść</summary>
+                <pre>{legalTexts?.terms.text ?? "Wczytywanie..."}</pre>
+              </details>
+              <label className="fy-store-consent"><input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)}/>
+                <span>Zapoznałem się z regulaminem sklepu i akceptuję jego treść (wersja {legalTexts?.terms.version}).</span>
+              </label>
+              <label className="fy-store-consent"><input type="checkbox" checked={immediateAccepted} onChange={(e) => setImmediateAccepted(e.target.checked)}/>
+                <span>Wyraźnie żądam rozpoczęcia dostarczania zakupionych treści cyfrowych przed upływem terminu odstąpienia.</span>
+              </label>
+              <label className="fy-store-consent"><input type="checkbox" checked={withdrawalAcknowledged} onChange={(e) => setWithdrawalAcknowledged(e.target.checked)}/>
+                <span>Przyjmuję do wiadomości, że po rozpoczęciu dostarczania treści cyfrowych mogę utracić ustawowe prawo odstąpienia, gdy spełnione zostaną wymagania prawa.</span>
+              </label>
+              {needsDpa && <><details><summary>Umowa powierzenia danych (art. 28 RODO) — przeczytaj</summary>
+                  <pre>{legalTexts?.dpa.text ?? "Wczytywanie..."}</pre></details>
+                <label className="fy-store-consent"><input type="checkbox" checked={dpaAccepted} onChange={(e) => setDpaAccepted(e.target.checked)}/>
+                  <span>Akceptuję odrębną umowę powierzenia danych w zakresie korzystania z generatora dokumentów (wersja {legalTexts?.dpa.version}).</span>
+                </label></>}
+              {payError && <p role="alert" className="fy-store-error">{payError}</p>}
+            </div>
+            <div className="fy-store-cart-actions">
+              <button type="button" className="fy-store-add fy-store-pay" disabled={!checkoutAllowed || paying}
+                onClick={() => void payForCart()}>{paying ? "Łączenie z Tpay..." : "Przejdź do płatności Tpay — " + PLN(total)}</button>
+              <button className="fy-store-clear" onClick={() => setCart([])}>Wyczyść koszyk</button>
+            </div>
+            <p className="fy-store-fineprint">Ceny są obliczane ponownie na serwerze. Sam powrót z bramki Tpay nie daje dostępu do materiałów — zakup uruchamia się po potwierdzeniu płatności z serwera Tpay.</p>
           </>}
       </div>
       <p className="fy-store-privacy">Dane wprowadzane do generatora dokumentów, analityka KW i podpisów mogą być danymi osobowymi. <a href="/polityka-prywatnosci">Polityka prywatności</a> · <a href="/regulamin">Regulamin</a>. Zapis na marketing nie jest wymagany do złożenia zapytania zakupowego.</p>
@@ -395,6 +478,15 @@ function Storefront() {
       .fy-store-cart-total strong{color:${GOLD};}
       .fy-store-cart-actions{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;}
       .fy-store-clear{border:0;background:none;color:#d1daeb;text-decoration:underline;cursor:pointer;}
+      .fy-store-checkout-form{display:grid;gap:1rem;margin:1.3rem 0;padding:1rem;border:1px solid rgba(255,255,255,.15);border-radius:.8rem;}
+      .fy-store-checkout-form>label:first-child{font-weight:700;font-size:.88rem;}
+      .fy-store-checkout-form>input{width:100%;padding:.8rem;border-radius:.5rem;background:#101b3e;color:#fff;border:1px solid #62749a;}
+      .fy-store-checkout-form details{border:1px solid rgba(255,255,255,.18);padding:.85rem;border-radius:.65rem;font-size:.85rem;}
+      .fy-store-checkout-form summary{cursor:pointer;color:#f0c667;font-weight:700;}
+      .fy-store-checkout-form pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto;font-family:inherit;line-height:1.6;color:#d0d9e9;margin-top:.85rem;}
+      .fy-store-consent{display:flex;align-items:flex-start;gap:.65rem;font-size:.8rem;line-height:1.5;color:#e2e8f6;}
+      .fy-store-consent input{flex-shrink:0;margin-top:.2rem;accent-color:#f0c667;}
+      .fy-store-pay{padding:1rem 1.25rem;font-size:.94rem;}
       .fy-store-privacy{color:var(--muted-foreground);font-size:.78rem;line-height:1.6;margin:1rem 0;}
       @media(max-width:1000px){.fy-store-catalog-grid,.fy-store-document-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.fy-store-course-banner{grid-template-columns:7rem 1fr;}.fy-store-course-banner>img{width:7rem;}.fy-store-course-price{grid-column:2;align-items:flex-start;}}
       @media(max-width:760px){

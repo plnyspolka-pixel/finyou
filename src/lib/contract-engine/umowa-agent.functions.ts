@@ -109,6 +109,8 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
     return { messages, umowa: d?.umowa ?? {}, calc };
   })
   .handler(async ({ data, context }): Promise<UmowaAgentResult> => {
+    const { assertCurrentStoreDpaAccepted } = await import("@/lib/storefront/checkout.functions");
+    await assertCurrentStoreDpaAccepted(context.userId);
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Agent umowy jest chwilowo niedostępny.");
 
@@ -194,6 +196,8 @@ export const previewUmowaAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { umowa: any }) => ({ umowa: d?.umowa ?? {} }))
   .handler(async ({ data, context }) => {
+    const { assertCurrentStoreDpaAccepted } = await import("@/lib/storefront/checkout.functions");
+    await assertCurrentStoreDpaAccepted(context.userId);
     const szkic = await dolaczProfilInwestora(
       context.userId as string,
       structuredClone(data.umowa),
@@ -226,6 +230,8 @@ export const generateUmowaAgentDocx = createServerFn({ method: "POST" })
   .inputValidator((d: { umowa: any }) => ({ umowa: d?.umowa ?? {} }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { assertCurrentStoreDpaAccepted } = await import("@/lib/storefront/checkout.functions");
+    await assertCurrentStoreDpaAccepted(userId);
     const szkic = await dolaczProfilInwestora(userId as string, structuredClone(data.umowa));
     const { umowa, problemy, autokorekty } = przetworzSzkic(szkic);
     const blocked = problemy.some((p) => p.poziom === "BLAD");

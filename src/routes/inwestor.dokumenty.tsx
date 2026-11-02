@@ -3,6 +3,7 @@ import { FileText } from "lucide-react";
 import { FancyPageHeader } from "@/components/layout/fancy-page-header";
 import { UmowaAgentPanel } from "@/components/inwestor/umowa-agent-panel";
 import { DocumentCreatorPage } from "@/components/document-creator/DocumentCreatorPage";
+import { StoreDpaGate } from "@/components/storefront/StoreDpaGate";
 
 /**
  * JEDEN ekran dokumentów inwestora (bez zakładek):
@@ -29,6 +30,7 @@ function DokumentyIUmowy() {
         subtitle="Kreator umowy pożyczki i wzory dokumentów w jednym miejscu: agent przygotowuje umowę w rozmowie (strony, kwota i warunki, nieruchomość z KW, zabezpieczenia), a kreator dokumentów uzupełnia gotowe wzory DOCX danymi z GUS, KRS i kalkulatora."
       />
 
+      <StoreDpaGate>
       <section id="kreator-umowy" className="space-y-3">
         <UmowaAgentPanel />
       </section>
@@ -42,6 +44,7 @@ function DokumentyIUmowy() {
             Kreator dokumentów jest dostępny dla każdego inwestora (w ramach dostępu do panelu). */}
         <DocumentCreatorPage excludeCategories={["umowa"]} embedded />
       </section>
+      </StoreDpaGate>
     </div>
   );
 }
