@@ -27,10 +27,11 @@ export const getMyStoreLegalState = createServerFn({method:"GET"})
       .select("id,document_code,document_version,document_sha256,accepted_at")
       .eq("user_id",context.userId);
     if(error) throw new Error("Nie można odczytać zaakceptowanych umów.");
-    const docs=await Promise.all(codes.map(async code=>({
-      code,version:legalVersion(code),sha256:await legalDigest(code),
-      accepted:(data??[]).some(r=>r.document_code===code&&r.document_sha256),
-    })));
+    const docs=await Promise.all(codes.map(async code=>{
+      const sha256=await legalDigest(code);
+      return {code,version:legalVersion(code),sha256,
+        accepted:(data??[]).some(r=>r.document_code===code&&r.document_sha256===sha256)};
+    }));
     return {docs,acceptedHistory:data??[]};
   });
 
