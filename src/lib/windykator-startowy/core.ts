@@ -2,7 +2,9 @@
 export const WINDYKATOR_PRICE_GROSZ = 5000 as const;
 export const WINDYKATOR_TERMS_VERSION = "windykator-startowy-2026-11-02-v1";
 
+import type { CourtEvidence } from "./court-routes";
 export interface SourceFacts {
+  courtEvidence?: CourtEvidence;
   documentType: "invoice" | "loan" | "other" | "unknown";
   creditor: string | null;
   debtor: string | null;
