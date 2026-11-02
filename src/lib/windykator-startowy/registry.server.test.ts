@@ -19,6 +19,11 @@ describe("KRS: samodzielna reprezentacja to warunek",()=>{
     expect(result.verified).toBe(false);
     expect(result.representationMode).toBe("joint_requires_cosign");
   });
+  it("prezes samodzielnie — nawet gdy inni członkowie wymagają współpodpisu",()=>{
+    const c={...company,representation:{...company.representation,
+      method:"Prezes zarządu samodzielnie albo dwóch pozostałych członków zarządu łącznie"}};
+    expect(verifyKrsRepresentation({...args,company:c}).verified).toBe(true);
+  });
   it("NIP i KRS nie są dowodem, że anonimowy użytkownik reprezentuje firmę",()=>{
     expect(verifyKrsRepresentation({...args,identityName:"Obca Osoba",identityPesel:null}).verified).toBe(false);
     expect(verifyKrsRepresentation({...args,claimedNip:"0000000000"}).verified).toBe(false);
