@@ -66,7 +66,17 @@ try {
       }catch{}
     });
     await page.getByPlaceholder("Podaj nr KRS").fill("0000304735");
-    await page.getByRole("button",{name:/^Szukaj$/i}).click();
+    await page.waitForTimeout(400);
+    const searchButton=page.getByRole("button",{name:/^Szukaj$/i});
+    const controls=await page.evaluate(()=>({
+      searchButtons:[...document.querySelectorAll("button")].filter(x=>x.innerText.includes("Szukaj")).map(x=>({
+        outer:x.outerHTML.slice(0,650),disabled:x.disabled,visible:x.getBoundingClientRect().width>0,
+      })),
+      radios:[...document.querySelectorAll('input[type="radio"]')].map(x=>({value:x.value,checked:x.checked})),
+    }));
+    console.log("MSIG_SEARCH_CONTROL "+JSON.stringify(controls));
+    try { await searchButton.click({timeout:5000,noWaitAfter:true}); }
+    catch(e){console.log("MSIG_SEARCH_CLICK_ERROR "+String(e?.message??e).slice(0,230))}
     await page.waitForTimeout(4500);
     const searchText=(await page.locator("body").innerText()).slice(0,3800);
     console.log("MSIG_SEARCH "+JSON.stringify({
