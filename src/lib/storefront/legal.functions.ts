@@ -23,14 +23,15 @@ export const getMyStoreLegalState = createServerFn({method:"GET"})
   .middleware([requireSupabaseAuth])
   .handler(async ({context}) => {
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
-    const {data, error}=await supabaseAdmin.from("store_legal_acceptances")
+    const db=supabaseAdmin as any;
+    const {data, error}=await db.from("store_legal_acceptances")
       .select("id,document_code,document_version,document_sha256,accepted_at")
       .eq("user_id",context.userId);
     if(error) throw new Error("Nie można odczytać zaakceptowanych umów.");
     const docs=await Promise.all(codes.map(async code=>{
       const sha256=await legalDigest(code);
       return {code,version:legalVersion(code),sha256,
-        accepted:(data??[]).some(r=>r.document_code===code&&r.document_sha256===sha256)};
+        accepted:(data??[]).some((r:any)=>r.document_code===code&&r.document_sha256===sha256)};
     }));
     return {docs,acceptedHistory:data??[]};
   });
@@ -61,7 +62,7 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
       statements:{termsConfirmed:code==="store_terms"?true:undefined,
         dpaConfirmed:code==="store_dpa"?true:undefined,controllerAuthority:code==="store_dpa"?true:undefined},
     })));
-    const {error}=await supabaseAdmin.from("store_legal_acceptances")
+    const {error}=await (supabaseAdmin as any).from("store_legal_acceptances")
       .upsert(records,{onConflict:"user_id,document_code,document_sha256",ignoreDuplicates:true});
     if(error)throw new Error("Nie udało się utrwalić akceptacji. Spróbuj ponownie.");
     return {accepted:unique.map(code=>({code,version:legalVersion(code)}))};
