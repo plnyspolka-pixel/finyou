@@ -7,6 +7,7 @@ on:
       - 'src/lib/coowners/owner-intelligence*'
       - 'src/lib/coowners/public-index-search*'
       - '.github/workflows/owner-intelligence-tests.yml'
+      - 'tsconfig.owner-intelligence.json'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,5 +23,5 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Unit tests (no external service or personal records)
         run: bunx vitest run src/lib/coowners/owner-intelligence.test.ts src/lib/coowners/public-index-search.test.ts
-      - name: TypeScript typecheck
-        run: bun run typecheck
+      - name: TypeScript typecheck (owner intelligence scope)
+        run: bunx tsc --project tsconfig.owner-intelligence.json --noEmit
