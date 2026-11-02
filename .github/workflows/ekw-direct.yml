@@ -20,4 +20,4 @@ jobs:
         with:
           node-version: "22"
       - run: node --test *.test.mjs
-      - run: node --check capture.mjs && node --check server.mjs
+      - run: node --check capture.mjs && node --check server.mjs && node --check diag-ekw-network.mjs
