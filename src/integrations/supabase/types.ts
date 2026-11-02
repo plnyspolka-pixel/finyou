@@ -1055,6 +1055,7 @@ export type Database = {
           id: string
           last_name: string | null
           nip: string | null
+          partner_kind: string
           pesel_encrypted: string | null
           phone: string | null
           referral_code: string | null
@@ -1088,6 +1089,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           nip?: string | null
+          partner_kind?: string
           pesel_encrypted?: string | null
           phone?: string | null
           referral_code?: string | null
@@ -1121,6 +1123,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           nip?: string | null
+          partner_kind?: string
           pesel_encrypted?: string | null
           phone?: string | null
           referral_code?: string | null
@@ -3878,6 +3881,33 @@ export type Database = {
           video_status?: string
           video_url?: string | null
           voice_id?: string
+        }
+        Relationships: []
+      }
+      broker_feedback_notifications: {
+        Row: {
+          application_id: string
+          broker_user_id: string
+          created_at: string
+          key: string
+          kind: string
+          sent_at: string | null
+        }
+        Insert: {
+          application_id: string
+          broker_user_id: string
+          created_at?: string
+          key: string
+          kind: string
+          sent_at?: string | null
+        }
+        Update: {
+          application_id?: string
+          broker_user_id?: string
+          created_at?: string
+          key?: string
+          kind?: string
+          sent_at?: string | null
         }
         Relationships: []
       }
@@ -6923,6 +6953,45 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investor_consultation_requests: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          owner_sms_error: string | null
+          owner_sms_sent_at: string | null
+          preferred_start: string
+          status: string
+          topic: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          owner_sms_error?: string | null
+          owner_sms_sent_at?: string | null
+          preferred_start: string
+          status?: string
+          topic?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          owner_sms_error?: string | null
+          owner_sms_sent_at?: string | null
+          preferred_start?: string
+          status?: string
+          topic?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
