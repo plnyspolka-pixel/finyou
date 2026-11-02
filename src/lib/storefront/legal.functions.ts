@@ -10,6 +10,7 @@ const AcceptSchema = z.object({
   termsConfirmed: z.boolean().default(false),
   dpaConfirmed: z.boolean().default(false),
   controllerAuthority: z.boolean().default(false),
+  controllerName: z.string().trim().max(300).optional(),
 });
 
 export const getStoreLegalDocuments = createServerFn({method:"GET"}).handler(async () => {
@@ -47,7 +48,7 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
     const unique=[...new Set(data.codes)] as StoreLegalCode[];
     if(unique.includes("store_terms")&&!data.termsConfirmed)
       throw new Error("Potwierdź akceptację regulaminu.");
-    if(unique.includes("store_dpa")&&(!data.dpaConfirmed||!data.controllerAuthority))
+    if(unique.includes("store_dpa")&&(!data.dpaConfirmed||!data.controllerAuthority||!data.controllerName?.trim()))
       throw new Error("Potwierdź umowę powierzenia oraz uprawnienie do działania jako administrator danych.");
     const request=getRequest();
     // The first forwarded address is used ONLY as non-decisive audit metadata.
@@ -60,7 +61,8 @@ export const acceptStoreLegalDocuments = createServerFn({method:"POST"})
       document_sha256:await legalDigest(code),document_text:legalText(code),
       auth_method:"authenticated_session",ip,user_agent:userAgent,
       statements:{termsConfirmed:code==="store_terms"?true:undefined,
-        dpaConfirmed:code==="store_dpa"?true:undefined,controllerAuthority:code==="store_dpa"?true:undefined},
+        dpaConfirmed:code==="store_dpa"?true:undefined,controllerAuthority:code==="store_dpa"?true:undefined,
+        controllerName:code==="store_dpa"?data.controllerName?.trim():undefined},
     })));
     const {error}=await (supabaseAdmin as any).from("store_legal_acceptances")
       .upsert(records,{onConflict:"user_id,document_code,document_sha256",ignoreDuplicates:true});
