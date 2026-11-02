@@ -106,3 +106,38 @@ Nie omijać ochrony, nie traktować HTTP 403 jako braku wpisów KRZ.
 W odróżnieniu od tego testu środowisko narzędziowe lokalne blokuje
 cały ruch internetowy, w tym DNS; błąd `ERR_BLOCKED_BY_ADMINISTRATOR`
 lokalnie nie był dowodem działania zabezpieczeń KRZ.
+
+## Indeksowanie KRZ/MSiG przez wyszukiwarkę — PoC
+**Działa niezależnie od portalu KRZ**, wykrywa publicznie zaindeksowane
+wzmianki o postępowaniach i wyświetla je jako `name_only`.
+
+- Kwerendy po imieniu i nazwisku/nazwie z działu II KW:
+  `site:krpu.pl "Imię Nazwisko"`,
+  `site:imsig.pl "Imię Nazwisko"`,
+  `"Imię Nazwisko" (KRZ OR "restrukturyzacja" OR "upadłość" OR "GRz-nu")`.
+- Silnik: jeśli `SERPER_API_KEY`, używane wyniki **Google przez Serper**.
+  Bez klucza próba oficjalnej publicznej strony Google HTML, a po blokadzie
+  wyraźnie oznaczony fallback DuckDuckGo. Nie obchodzić `/sorry/`, CAPTCHA.
+- Test przeglądarkowy Google na GitHub Actions:
+  https://github.com/plnyspolka-pixel/finyou/actions/runs/41441657795
+  **HTTP 200, ale przekierowanie na `google.com/sorry/index`**
+  z informacją o nietypowym ruchu. To jest BLOKADA odczytu organicznych
+  wyników, a nie działający scraping Google (naprawiono diagnostykę).
+- Dla opublikowanych w źródłach wtórnych sygnatur typu `GRz-nu`
+  rozpoznajemy **wzmiankę o sprawie o zatwierdzenie układu**,
+  bez orzekania o wyniku, aktualnym stanie lub tożsamości właściciela KW.
+  Weryfikacja znaczenia repertorium: Dz.U. 2021 poz. 2118 §2-5.
+- Nazwa + sygnatura w krótkim fragmencie z katalogów (`krpu.pl`)
+  jest sygnałem do ręcznej weryfikacji, nie potwierdzeniem długu.
+  Zwykłe wpisy kapitałowe KRS w MSiG są odrzucane przez klasyfikator.
+  KRS/NIP/PESEL nie trafiają do kwerend wyszukiwarkowych.
+- Wynik trafia do istniejącego JSONB i PDF bez nowej tabeli;
+  przy braku klucza iMSiG **status sądowy pozostaje częściowy**,
+  nawet gdy indeks pokaże trafienia.
+- Zakres weryfikacji: testy Vitest + dedykowany TypeScript
+  `bunx tsc --project tsconfig.owner-intelligence.json --noEmit`.
+  Pełny `tsc` repo wykazał dodatkowo błędy typowania
+  w niezwiązanych trasach Resend — nie są modyfikowane w tym PR.
+- **Nie wdrażać bez przeglądu RODO oraz ograniczenia natężenia zapytań**.
+  Zapytania po nazwisku są przesyłane do dostawców wyszukiwania;
+  dla wymagania wyłącznie UE wymagany dostawca i odpowiednie warunki.
