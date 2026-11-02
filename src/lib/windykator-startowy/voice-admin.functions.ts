@@ -24,10 +24,11 @@ export const provisionWindykatorVoiceAgent=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
   .handler(async ({context})=>{
     await requireAdmin(context);
-    const {ensureWindykatorVoiceAgent,ensureWindykatorPostCallWebhook}=await import("./voice.server");
+    const {ensureWindykatorVoiceAgent,ensureWindykatorPostCallWebhook,ensureWindykatorInboundWebhook}=await import("./voice.server");
     const agent=await ensureWindykatorVoiceAgent();
     const postcall=await ensureWindykatorPostCallWebhook();
-    return {...agent,postcallWebhookId:postcall.webhookId};
+    const inbound=await ensureWindykatorInboundWebhook();
+    return {...agent,postcallWebhookId:postcall.webhookId,inboundWebhookUrl:inbound.url};
   });
 export const syncWindykatorVoiceAgent=createServerFn({method:"POST"})
   .middleware([requireSupabaseAuth])
