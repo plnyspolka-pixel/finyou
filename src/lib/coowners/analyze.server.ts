@@ -30,7 +30,7 @@ function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalys
     checked: [],
     warnings: [],
     summary,
-    intelligence: await intelligencePromise,
+    intelligence: null,
   };
 }
 
@@ -220,5 +220,6 @@ export async function analyzeCoOwners(args: {
     checked,
     warnings,
     summary,
+    intelligence: await intelligencePromise,
   };
 }
