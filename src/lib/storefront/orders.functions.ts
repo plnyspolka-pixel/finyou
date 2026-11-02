@@ -30,9 +30,10 @@ export const getMyStoreOrders=createServerFn({method:"GET"})
   .middleware([requireSupabaseAuth])
   .handler(async({context})=>{
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+    const db=supabaseAdmin as any;
     const [orders,entitlements]=await Promise.all([
-      supabaseAdmin.from("store_orders").select("id,status,amount_grosz,created_at,items,paid_at").eq("user_id",context.userId).order("created_at",{ascending:false}).limit(30),
-      supabaseAdmin.from("store_entitlements").select("item_kind,item_id,created_at,source_order_id").eq("user_id",context.userId).limit(200),
+      db.from("store_orders").select("id,status,amount_grosz,created_at,items,paid_at").eq("user_id",context.userId).order("created_at",{ascending:false}).limit(30),
+      db.from("store_entitlements").select("item_kind,item_id,created_at,source_order_id").eq("user_id",context.userId).limit(200),
     ]);
     if(orders.error||entitlements.error)throw new Error("Błąd odczytu zamówień.");
     return {orders:orders.data??[],entitlements:entitlements.data??[]};
@@ -43,7 +44,7 @@ export const getMyStoreOrder=createServerFn({method:"POST"})
   .inputValidator((i:unknown)=>z.object({orderId:UuidSchema}).parse(i))
   .handler(async({context,data})=>{
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
-    const {data:row,error}=await supabaseAdmin.from("store_orders")
+    const {data:row,error}=await (supabaseAdmin as any).from("store_orders")
       .select("id,status,amount_grosz,created_at,paid_at,items").eq("id",data.orderId).eq("user_id",context.userId).maybeSingle();
     if(error)throw new Error("Nie można sprawdzić zamówienia.");
     return row??null;
