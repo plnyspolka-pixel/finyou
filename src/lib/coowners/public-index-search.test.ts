@@ -3,7 +3,7 @@ import { classifyIndexedCourtHit } from "./owner-intelligence.server";
 import { parseGoogleResultsHtml } from "./public-index-search.server";
 import type { IndexedSearchResult } from "./public-index-search.server";
 
-const owner = { kind: "person" as const, name: "Marcin Gerbatowski" };
+const owner = { kind: "person" as const, name: "Jan Kowalski" };
 const indexed = (url: string, title: string, snippet: string): IndexedSearchResult => ({
   url, title, snippet, engine: "google_serper",
 });
@@ -14,7 +14,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
       indexed(
         "https://www.krpu.pl/lista-syndykow/mazowieckie/paulina-pchla",
         "Lista spraw",
-        'GD1G/GRz-nu/125/2025 "SZYMEX" MARCIN GERBATOWSKI (Kościerzyna)',
+        'GD1G/GRz-nu/125/2025 "SZYMEX" JAN KOWALSKI (Kościerzyna)',
       ));
     expect(hit?.caseSignature).toBe("GD1G/GRz-nu/125/2025");
     expect(hit?.match).toBe("name_only");
@@ -25,7 +25,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
     const hit = classifyIndexedCourtHit(owner, indexed(
       "https://www.krpu.pl/lista",
       "Sprawy",
-      "GD1G/GRz-nu/125/2025 GERBATOWSKI MARCIN (Kościerzyna)",
+      "GD1G/GRz-nu/125/2025 KOWALSKI JAN (Kościerzyna)",
     ));
     expect(hit?.match).toBe("name_only");
   });
@@ -34,7 +34,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
     expect(classifyIndexedCourtHit(owner, indexed(
       "https://www.bizraport.pl/krs/0001013574",
       "Firma",
-      "Marcin Gerbatowski — nie figuruje w KRZ, brak wpisów",
+      "Jan Kowalski — nie figuruje w KRZ, brak wpisów",
     ))).toBeNull();
   });
 
@@ -42,7 +42,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
     expect(classifyIndexedCourtHit(owner, indexed(
       "https://www.krpu.pl/lista",
       "Lista spraw",
-      "GD1G/GRz/98/2025 Inny Dłużnik " + "X".repeat(250) + " Marcin Gerbatowski",
+      "GD1G/GRz/98/2025 Inny Dłużnik " + "X".repeat(250) + " Jan Kowalski",
     ))).toBeNull();
   });
 
@@ -50,7 +50,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
     expect(classifyIndexedCourtHit(owner, indexed(
       "https://www.imsig.pl/numer/2025/179",
       "Monitor Sądowy i Gospodarczy",
-      "Wpis do KRS, zmiana udziałów wspólnika Marcin Gerbatowski",
+      "Wpis do KRS, zmiana udziałów wspólnika Jan Kowalski",
     ))).toBeNull();
   });
 
@@ -67,7 +67,7 @@ describe("Publiczny indeks KRZ/MSiG — klasyfikacja", () => {
 
   it("parsuje jawny organiczny wynik Google bez linku przekierowującego", () => {
     const html = '<div><a href="https://www.krpu.pl/lista-syndykow"><h3>Sprawy KRZ</h3></a><span>' +
-      'GD1G/GRz-nu/125/2025 Marcin Gerbatowski</span></div>';
+      'GD1G/GRz-nu/125/2025 Jan Kowalski</span></div>';
     expect(parseGoogleResultsHtml(html)).toMatchObject([
       { title: "Sprawy KRZ", url: "https://www.krpu.pl/lista-syndykow", engine: "google_html" },
     ]);
