@@ -33,7 +33,7 @@ function WindykatorVoiceAdmin(){
     {info&&<p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{info}</p>}
     <section className="rounded-2xl border bg-white p-6">
       <h2 className="text-xl font-bold">1. Utwórz agenta A5 i webhook po rozmowie</h2>
-      <p className="mt-2 text-sm text-slate-600">Jedno wywołanie tworzy nowego agenta w ElevenLabs, zapisuje jego ID i konfiguruje izolowany webhook do zapisu ustaleń.</p>
+      <p className="mt-2 text-sm text-slate-600">Jedno wywołanie tworzy nowego agenta w ElevenLabs oraz konfiguruje automatycznie oba webhooki: przychodzący i po rozmowie. Nie używa Lovable.</p>
       <p className="mt-4 text-sm">Agent: <strong>{state?.agent_id??"nieutworzony"}</strong></p>
       <p className="text-sm">Webhook: <strong>{state?.postcallReady?"skonfigurowany":"brak"}</strong></p>
       <button type="button" disabled={busy} onClick={()=>void act(()=>provision())}
@@ -59,10 +59,8 @@ function WindykatorVoiceAdmin(){
     <section className="rounded-2xl border bg-white p-6 text-sm text-slate-700">
       <h2 className="text-xl font-bold text-slate-900">3. Rozmowy w obu kierunkach</h2>
       <p className="mt-2">Połączenia wychodzące są obsługiwane przez ElevenLabs API przy użyciu dedykowanego numeru i tylko dla aktywnych spraw po opłaceniu, weryfikacji salda i sprawdzeniu limitów.</p>
-      <p className="mt-3">Dla numeru A5 ustaw w zakładce Security → Fetch initiation client data from webhook:</p>
-      <code className="mt-2 block break-all rounded bg-slate-100 p-3">/api/public/hooks/windykator-voice-init</code>
-      <p className="mt-2">Wymagany nagłówek <code>x-webhook-secret</code> zgodny z serwerowym sekretem <code>WINDYKATOR_VOICE_INIT_SECRET</code>. Bez niego endpoint bezpiecznie odmawia dostępu.</p>
-      <p className="mt-3">Webhook po rozmowie jest tworzony osobno przez API ElevenLabs. Nie kieruj go na webhook A1/A4.</p>
+      <p className="mt-3">Oba webhooki ElevenLabs są konfigurowane automatycznie po utworzeniu A5, bez ręcznego wpisywania adresów i bez Lovable. Inicjalizację zabezpiecza prywatny nagłówek HTTP, a wyniki rozmów podpis HMAC.</p>
+      <p className="mt-3">Serwer wymaga sekretu <code>WINDYKATOR_VOICE_INIT_SECRET</code> oraz własnej domeny <code>app.financeyou.pl</code> lub <code>financeyou.pl</code>.</p>
       <p className="mt-3">Produkcja: flaga <code>WINDYKATOR_VOICE_OUTBOUND_ENABLED=true</code> dopiero po sprawdzeniu połączeń, warunków prawnych i retencji danych.</p>
     </section>
     <button onClick={()=>void reload()} type="button" className="rounded-lg border px-5 py-3 text-sm">Odśwież stan</button>
