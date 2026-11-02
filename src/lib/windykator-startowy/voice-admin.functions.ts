@@ -14,7 +14,8 @@ export const getWindykatorVoiceAdminState=createServerFn({method:"GET"})
     await requireAdmin(context);
     const {readWindVoiceSettings}=await import("./voice.server");
     const settings=await readWindVoiceSettings();
-    return {...settings,configured:Boolean(process.env.ELEVENLABS_API_KEY),
+    return {agent_id:settings.agent_id,phone_number_id:settings.phone_number_id,phone_e164:settings.phone_e164,
+      configured:Boolean(process.env.ELEVENLABS_API_KEY),
       outboundEnabled:process.env.WINDYKATOR_VOICE_OUTBOUND_ENABLED==="true",
       inboundReady:Boolean(settings.phone_e164&&settings.agent_id),
       postcallReady:Boolean((settings as any).post_call_webhook_id)};
