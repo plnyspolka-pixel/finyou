@@ -164,7 +164,7 @@ Zbadano **oficjalny portal** `https://wyszukiwarka-msig.ms.gov.pl/`
 jako opcjonalną kwerendę dla **właścicieli będących spółkami** po
 KRS/NIP (albo nazwie). Działa w istniejącym raporcie KW i PDF,
 bez nowej tabeli ani abonamentu.
-- Maksymalnie **4 spółki na raport**, 1 strona wyników na spółkę.
+- Jedna strona wyników na rozpoznanego właściciela; limit całej analizy 12 i maksymalnie 2 jednoczesne zapytania.
 - Zwykłe ogłoszenia KRS nie generują alarmu o zadłużeniu.
 - Wzmianki o likwidacji/upadłości/restrukturyzacji mają status
   `name_only`; należy porównać pełną nazwę, KRS i daty i sprawdzić
@@ -174,10 +174,42 @@ bez nowej tabeli ani abonamentu.
 - Oficjalny portal nie deklaruje wspieranego API i może zmienić schemat
   JSON lub ograniczyć ruch; interfejs nie jest przeznaczony do masowego
   pobierania. Nie uruchamiać skanowania hurtowego.
-- Kwerenda osoby fizycznej przez oficjalny portal wymaga odrębnej
-  walidacji na danych testowych i nie została włączona.
+- Weryfikację osób fizycznych po nazwisku i imieniu przetestowano osobno, jak opisano niżej.
 
 **Ograniczenia:** na razie nie przechodzimy do pełnej treści pozycji
 i nie potwierdzamy bieżących stanów postępowań. Link prowadzi do
 wyszukiwarki, nie do odpisu konkretnej sprawy. Przed merge sprawdzić
 regulamin, retencję i tolerancję na zmiany wewnętrznego JSON.
+
+## Osoby fizyczne w oficjalnym MSiG — test live i implementacja, 2026-11-02
+Po przetestowaniu spółek uruchomiono **tę samą publiczną usługę JSON**
+`/api/Monitor/Search` dla osoby fizycznej z opublikowanym historycznym
+ogłoszeniem w MSiG 123/2015 (poz. 9228). Log:
+https://github.com/plnyspolka-pixel/finyou/actions/runs/41448595187
+
+**Empiryczne wyniki:**
+- Nazwisko + imię: HTTP 200, **1 trafienie**; ID `6014927`,
+  Monitor `123/2015`, data `2015-06-29`, sygnatura obecna.
+- Imię + nazwisko: HTTP 200, **0 trafień**.
+- Samo nazwisko: dwa trafienia w krótkim zakresie dat — ryzyko homonimów.
+- Pole „Tekst w pozycji”: również dwa trafienia przy samym nazwisku.
+- W MSiG osoby fizyczne, także sprzed wprowadzenia KRZ, są publicznie
+  indeksowane. **Nie oznacza to dostępności pełnych aktualnych KRZ**.
+
+**Zmiana w kodzie:** `official-msig.server.ts` obsługuje
+`kind: "person"` i buduje zapytanie `Nazwisko Imię` z oddzielnych
+pól właściciela KW; **nie przesyła numeru PESEL** do tego endpointu.
+NIP przedsiębiorcy jest wykorzystywany, jeśli system go zna.
+Dopasowanie pozostaje `name_only` nawet przy wyszukaniu po NIP,
+jeżeli samo ogłoszenie nie ujawnia potwierdzającego identyfikatora.
+
+Wynik zawiera datę, sygnaturę oraz ogólną informację o ogłoszeniu.
+Sama sygnatura / nazwisko nie uprawniają do automatycznej kwalifikacji
+dłużnika jako upadłego. W przypadku braku tekstu o zdarzeniu
+wynik musi mieć neutralną etykietę „rodzaj sprawy nieustalony”.
+
+Limit MSiG zmieniono z 4 spółek na wszystkich
+rozpoznanych właścicieli podlegających limitowi całej analizy
+(12), przy dwóch równoczesnych żądaniach; bez masowego crawlowania.
+Pusty wynik oznacza wyłącznie brak wzmianki w pobranym zakresie,
+nie negatywną weryfikację KRZ, niewypłacalności czy zadłużenia.
