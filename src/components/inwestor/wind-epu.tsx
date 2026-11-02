@@ -67,7 +67,7 @@ export function WindEpuPanel({
   const latestReference = epuEvents.find((event) => event.metadata?.epu_sygnatura)
     ?.metadata?.epu_sygnatura as string | undefined;
 
-  const numericAmount = Number(amount.trim().replace(/\\s/g, "").replace(",", "."));
+  const numericAmount = Number(amount.trim().replace(/\s/g, "").replace(",", "."));
   const isValidAmount = amount.trim().length > 0 &&
     Number.isFinite(numericAmount) && numericAmount > 0;
   const plaintiff = creditor?.party?.legalName?.trim() ?? "";
