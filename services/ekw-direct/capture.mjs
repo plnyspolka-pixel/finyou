@@ -84,8 +84,28 @@ async function clickInput(page, name, timeout = 8000) {
 export async function captureKw(rawKw, options = {}) {
   const kw = parseKw(rawKw);
   const { chromium } = await import("playwright");
-  const browser = await chromium.launch({ headless: options.headless !== false });
-  const context = await browser.newContext({ locale: "pl-PL", acceptDownloads: false });
+  // Optional on-premise worker: reuse a dedicated, isolated Chrome profile.
+  // Never use the system/default Chrome profile; Playwright/Chrome 136+ do not support it.
+  // This preserves legitimate session state, but does NOT bypass WAF/CAPTCHA.
+  const profileDir = process.env.EKW_BROWSER_PROFILE_DIR?.trim();
+  const browserChannel = process.env.EKW_BROWSER_CHANNEL?.trim() || undefined;
+  const headless = options.headless !== false;
+  let browser = null;
+  let context;
+  if (profileDir) {
+    if (!/^([A-Za-z]:[\\/]|\/)/.test(profileDir) ||
+        /[\\/]Google[\\/]Chrome[\\/]User Data(?:[\\/]|$)|[\\/]Microsoft[\\/]Edge[\\/]User Data(?:[\\/]|$)/i.test(profileDir)) {
+      throw new EkwError("INVALID_PROFILE_DIR",
+        "EKW_BROWSER_PROFILE_DIR musi być odrębną, bezwzględną ścieżką, nie profilem zwykłego Chrome.");
+    }
+    context = await chromium.launchPersistentContext(profileDir, {
+      ...(browserChannel ? { channel: browserChannel } : {}),
+      headless, locale: "pl-PL", acceptDownloads: false,
+    });
+  } else {
+    browser = await chromium.launch({ headless, ...(browserChannel ? { channel: browserChannel } : {}) });
+    context = await browser.newContext({ locale: "pl-PL", acceptDownloads: false });
+  }
   const page = await context.newPage();
   page.setDefaultTimeout(12000);
   try {
@@ -163,6 +183,6 @@ export async function captureKw(rawKw, options = {}) {
     return result;
   } finally {
     await context.close().catch(() => {});
-    await browser.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
   }
 }
