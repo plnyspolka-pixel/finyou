@@ -250,3 +250,13 @@ export async function assertStoreDocumentGeneration(userId: string, templateId: 
 export async function assertStoreKwAccess(userId: string, compact: string) {
   await assertEntitled(await db(), userId, "kw", compact);
 }
+
+/** Art.28 document-processing agreement, independent of billing entitlement. */
+export async function assertCurrentStoreDpaAccepted(userId: string) {
+  const admin = await db();
+  const { data, error } = await admin.from("store_legal_acceptances")
+    .select("id").eq("user_id", userId)
+    .eq("document_code", "store_dpa")
+    .eq("document_sha256", await storeLegalSha("store_dpa")).maybeSingle();
+  if (error || !data) throw new Error("Przed przetwarzaniem danych w kreatorze zaakceptuj aktualną umowę powierzenia danych.");
+}
