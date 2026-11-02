@@ -1,0 +1,34 @@
+name: MSiG official public search diagnostic
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+    paths:
+      - 'scripts/msig-public-probe.ts'
+      - '.github/workflows/msig-public-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  msig:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Install isolated Chromium
+        shell: bash
+        run: |
+          mkdir -p /tmp/msig-playwright
+          npm install --prefix /tmp/msig-playwright --no-audit --no-fund playwright
+          cd /tmp/msig-playwright
+          npx playwright install --with-deps chromium
+          cp "$GITHUB_WORKSPACE/scripts/msig-public-probe.ts" ./
+          ln -s "$GITHUB_WORKSPACE/src" src
+      - name: Check official portal and iMSiG restrictions
+        shell: bash
+        run: |
+          cp scripts/msig-public-probe.ts /tmp/msig-playwright/msig-public-probe.ts
+          NODE_PATH=/tmp/msig-playwright/node_modules bun /tmp/msig-playwright/msig-public-probe.ts
