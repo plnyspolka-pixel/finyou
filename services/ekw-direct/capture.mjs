@@ -157,6 +157,9 @@ export async function captureKw(rawKw, options = {}) {
       }
       result[field] = html;
     }
+    // Timestamp describes the completion of the last successful source read,
+    // not the beginning of navigation through the portal.
+    result.fetched_at = new Date().toISOString();
     return result;
   } finally {
     await context.close().catch(() => {});
