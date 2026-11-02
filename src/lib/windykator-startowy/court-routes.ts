@@ -71,6 +71,7 @@ export function chooseCourtRoute(input:{
     missing:[...warnings,"Uzupełnij dane sądu, stron i dowody; skontroluj właściwy tryb postępowania i przedawnienie."],
     reason:"Sprawa nie ma udokumentowanego tytułu wykonawczego ani wykazanej możliwości skorzystania z EPU. Pozostaje zwykła droga sądowa."};
 }
+/** Roboczy, ścieżkowy wzór pisma + lista kontrolna. Nie jest automatycznie podpisywany ani wnoszony. */
 export function draftCourtPackage(input:{
   route:CourtRoutePlan;
   creditor:string;
@@ -81,24 +82,76 @@ export function draftCourtPackage(input:{
   evidenceList:string[];
 }):string {
   const route=input.route;
-  const lines=[
-    "ROBOCZY PAKIET SĄDOWY — NIE ZŁOŻONO DO SĄDU",
+  const amount=input.amount.toFixed(2)+" PLN";
+  const grounds=input.documentNo??"[NUMER I DATA DOKUMENTU]";
+  const evidence=input.evidenceList.length?input.evidenceList.map((x,i)=>String(i+1)+". "+x).join("\n"):"[WYKAZ DOWODÓW]";
+  const h=[
+    "WSTĘPNY PROJEKT — WYMAGA UZUPEŁNIENIA, KONTROLI I PODPISANIA",
     "Sugerowana ścieżka: "+route.label,
-    "Wierzyciel: "+input.creditor,
-    "Dłużnik: "+input.debtor,
-    "Kwota deklarowana: "+input.amount.toFixed(2)+" PLN",
-    "Wymagalność: "+input.dueDate,
-    "Dokument: "+(input.documentNo??"wymaga uzupełnienia"),
-    "Dowody: "+(input.evidenceList.join("; ")||"wymagają wskazania"),
-    "Wyjaśnienie: "+route.reason,
-    "Czynności poprzedzające: "+route.preparatoryDocuments.map(t=>DOCUMENT_LABELS[t]).join("; "),
-    "Etapy istniejącego workflow Finance You: "+route.stages.join(" → "),
-    ...route.missing.map(x=>"BRAK / KONTROLA: "+x),
-    "Dane do uzupełnienia: adresy, identyfikatory stron, żądanie procesowe, odsetki, opłaty i podpis.",
-    "Projekt wymaga prawnej oceny dopuszczalności, wymagalności, dowodów i aktualnego salda.",
-    "Niniejszy dokument nie jest prawomocnym tytułem wykonawczym ani potwierdzeniem wniesienia pisma."
+    "Powód / wierzyciel: "+input.creditor+" [ADRES, IDENTYFIKATOR]",
+    "Pozwany / dłużnik: "+input.debtor+" [ADRES, IDENTYFIKATOR]",
+    "Kwota: "+amount,
+    "Data wymagalności: "+input.dueDate,
+    "Podstawa: "+grounds,
+    ""
   ];
-  return lines.join("\n");
+  let body:string[];
+  if(route.route==="epu"){
+    body=[
+      "SZKIC POZWU O ZAPŁATĘ W ELEKTRONICZNYM POSTĘPOWANIU UPOMINAWCZYM",
+      "Wnoszę o zasądzenie od pozwanego na rzecz powoda kwoty "+amount+
+        " wraz z prawidłowo wyliczonymi odsetkami [UZUPEŁNIĆ RODZAJ I POCZĄTEK ODSETEK].",
+      "Uzasadnienie: roszczenie wynika z "+grounds+
+        ". Według oświadczenia wierzyciela do dnia przygotowania projektu nie zostało spłacone.",
+      "Podstawa faktyczna, termin i wysokość należności wymagają ostatecznej kontroli.",
+      "Dowody do wskazania w formularzu (nie dołącza się ich do pozwu EPU):\n"+evidence,
+    ];
+  } else if(route.route==="ordinary_lawsuit"){
+    body=[
+      "PROJEKT POZWU O ZAPŁATĘ — SĄD POWSZECHNY",
+      "Sąd właściwy: [USTALIĆ WŁAŚCIWOŚĆ RZECZOWĄ I MIEJSCOWĄ]",
+      "Wartość przedmiotu sporu: "+amount,
+      "Wnoszę o zasądzenie od pozwanego na rzecz powoda kwoty "+amount+
+        " wraz z należnymi, zweryfikowanymi odsetkami [UZUPEŁNIĆ].",
+      "Wnoszę o przeprowadzenie dowodów:\n"+evidence,
+      "Uzasadnienie faktyczne: [PRZEDSTAWIĆ ZAWARCIE UMOWY / WYKONANIE ŚWIADCZENIA / WYMIAR NALEŻNOŚCI].",
+      "Termin wymagalności według wierzyciela: "+input.dueDate,
+      "Próby polubownego rozwiązania: [UZUPEŁNIĆ FAKTYCZNĄ HISTORIĘ KONTAKTÓW].",
+      "Załączniki i opłata: [LISTA DOKUMENTÓW, PEŁNOMOCNICTWO JEŚLI DOTYCZY, WYLICZENIE OPŁATY].",
+    ];
+  } else if(route.route==="notarial_777_clause"){
+    body=[
+      "PROJEKT WNIOSKU O NADANIE KLAUZULI WYKONALNOŚCI",
+      "Sąd właściwy: [UZUPEŁNIĆ]",
+      "Tytuł egzekucyjny: akt notarialny [REPERTORIUM A, DATA, NOTARIUSZ].",
+      "Wniosek: o nadanie klauzuli wykonalności w granicach oświadczenia dłużnika",
+      "o poddaniu się egzekucji z art. 777 k.p.c. do kwoty [LIMIT Z AKTU],",
+      "zgodnie z zakresem i terminami wskazanymi w akcie.",
+      "Warunki uruchomienia egzekucji: [ZWERYFIKOWAĆ W TREŚCI AKTU, DATY I DOKUMENTY].",
+      "Dowody spełnienia warunków: "+evidence,
+      "Brak lub wadliwość dowodów spełnienia warunku uniemożliwia automatyczne uznanie sprawy za gotową do wniosku.",
+    ];
+  } else {
+    body=[
+      "PROJEKT WNIOSKU O WSZCZĘCIE EGZEKUCJI",
+      "Komornik: [WŁAŚCIWY ORGAN I ADRES]",
+      "Tytuł wykonawczy: [RODZAJ, DATA, SYGNATURA, POTWIERDZONA WYKONALNOŚĆ]",
+      "Wierzyciel wnosi o prowadzenie egzekucji należności "+amount+
+        " wraz z należnymi świadczeniami ubocznymi po potwierdzeniu salda.",
+      route.route==="mortgage_enforcement"
+        ? "Żądany sposób: egzekucja z nieruchomości [NUMER KSIĘGI WIECZYSTEJ, WŁAŚCICIEL, PODSTAWA HIPOTEKI]."
+        : "Żądane sposoby egzekucji: [OKREŚLIĆ ZGODNIE Z TYTUŁEM I WNIOSKIEM].",
+      "Dokumenty: "+evidence,
+      "Nie można rozpocząć egzekucji bez prawidłowego tytułu wykonawczego.",
+    ];
+  }
+  return [...h,...body,"","KONTROLA PRZED WNIESIENIEM",
+    route.reason,
+    ...route.missing.map(x=>"- "+x),
+    "- Zweryfikować aktualne saldo u wierzyciela (brak integracji bankowej).",
+    "- Sprawdzić przedawnienie, wymagalność, opłaty, status dłużnika i podpis osoby uprawnionej.",
+    "- Ten plik jest projektem. Nie wysłano go do sądu ani komornika."
+  ].join("\n");
 }
 export const EMPTY_COURT_EVIDENCE:CourtEvidence={
   hasNotarial777:false,hasEnforceableTitle:false,hasMortgage:false,
