@@ -1,0 +1,22 @@
+name: EKW Direct live form probe
+on:
+  pull_request:
+    paths:
+      - "services/ekw-direct/**"
+      - ".github/workflows/ekw-live-probe.yml"
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+        working-directory: services/ekw-direct
+      - run: npx playwright install --with-deps chromium
+        working-directory: services/ekw-direct
+      - name: Test official EKW search form (without KW or personal data)
+        run: node smoke.mjs
+        working-directory: services/ekw-direct
