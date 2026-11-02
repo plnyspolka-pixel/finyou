@@ -158,14 +158,20 @@ export async function assignWindykatorDedicatedNumber(phoneNumberId:string){
   if(!/^[A-Za-z0-9_-]{8,90}$/.test(id))throw Error("Nieprawidłowy identyfikator numeru ElevenLabs.");
   const current=await elevenRequest("/v1/convai/phone-numbers/"+encodeURIComponent(id));
   const phone=current.json?.phone_number??current.json?.twilio?.phone_number;
-  const assigned=current.json?.assigned_agent?.agent_id;
+  const assignment=current.json?.assigned_agent;
+  const assigned=typeof assignment==="string"?assignment:
+    (assignment?.agent_id??current.json?.agent_id??null);
   if(assigned&&assigned!==s.agent_id)throw Error("Ten numer jest już przypisany do innego agenta. Nie przejmuję numerów A1/A4.");
+  const db=await windVoiceDb();
+  const {data:oldChannels}=await db.from("voicebot_settings")
+    .select("agent_phone_number_id").eq("id",1).maybeSingle();
+  if(oldChannels?.agent_phone_number_id===id)
+    throw Error("Ten numer obsługuje istniejącego voicebota Finance You. Wybierz nowy numer A5.");
   const number=typeof phone==="string"?normalizeWindPhone(phone):null;
   if(!number)throw Error("ElevenLabs nie zwrócił jednoznacznego numeru telefonu.");
   await elevenRequest("/v1/convai/phone-numbers/"+encodeURIComponent(id),{
     method:"PATCH",json:{agent_id:s.agent_id}
   });
-  const db=await windVoiceDb();
   const {error}=await db.from("windykator_voice_settings")
     .update({phone_number_id:id,phone_e164:number,updated_at:new Date().toISOString()})
     .eq("id",1);
