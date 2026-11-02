@@ -89,7 +89,10 @@ export async function captureKw(rawKw, options = {}) {
   const page = await context.newPage();
   page.setDefaultTimeout(12000);
   try {
-    await page.goto(EKW_SEARCH_URL, { waitUntil: "domcontentloaded", timeout: 25000 });
+    const initial = await page.goto(EKW_SEARCH_URL, { waitUntil: "domcontentloaded", timeout: 25000 });
+    if (initial && (initial.status() === 403 || initial.status() === 429)) {
+      throw new EkwError("EKW_ACCESS_BLOCKED", "Serwer EKW odrzucił połączenie HTTP " + initial.status() + "; konieczna weryfikacja dopuszczonego środowiska.");
+    }
     await requireUnblocked(page);
     await page.locator("#kodWydzialuInput").fill(kw.court);
     await page.locator('input[name="numerKw"]').fill(kw.number);
