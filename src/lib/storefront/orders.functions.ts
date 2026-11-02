@@ -31,12 +31,13 @@ export const getMyStoreOrders=createServerFn({method:"GET"})
   .handler(async({context})=>{
     const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
     const db=supabaseAdmin as any;
-    const [orders,entitlements]=await Promise.all([
+    const [orders,entitlements,inquiries]=await Promise.all([
       db.from("store_orders").select("id,status,amount_grosz,created_at,items,paid_at").eq("user_id",context.userId).order("created_at",{ascending:false}).limit(30),
       db.from("store_entitlements").select("item_kind,item_id,created_at,source_order_id").eq("user_id",context.userId).limit(200),
+      db.from("store_inquiries").select("id,status,total_grosz,created_at,email_sent").eq("user_id",context.userId).order("created_at",{ascending:false}).limit(30),
     ]);
-    if(orders.error||entitlements.error)throw new Error("Błąd odczytu zamówień.");
-    return {orders:orders.data??[],entitlements:entitlements.data??[]};
+    if(orders.error||entitlements.error||inquiries.error)throw new Error("Błąd odczytu zamówień.");
+    return {orders:orders.data??[],entitlements:entitlements.data??[],inquiries:inquiries.data??[]};
   });
 
 export const getMyStoreOrder=createServerFn({method:"POST"})
