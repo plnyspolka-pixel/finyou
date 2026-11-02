@@ -75,8 +75,17 @@ export async function ensureWindykatorPostCallWebhook():Promise<{webhookId:strin
   const db=await windVoiceDb();
   const {data:row}=await db.from("windykator_voice_settings")
     .select("post_call_webhook_id,post_call_webhook_secret").eq("id",1).single();
-  if(row?.post_call_webhook_id&&row?.post_call_webhook_secret)
+  if(row?.post_call_webhook_id&&row?.post_call_webhook_secret){
+    // Retry po nieudanym przypięciu webhooka; nie twórz kolejnego w workspace.
+    await elevenRequest("/v1/convai/agents/"+encodeURIComponent(settings.agent_id),{
+      method:"PATCH",json:{platform_settings:{webhooks:{
+        post_call_webhook_id:row.post_call_webhook_id,
+        events:["transcript","call_initiation_failure"],
+        transcript_format:"json",send_audio:false
+      }}}
+    });
     return {webhookId:row.post_call_webhook_id};
+  }
   const {resolveAppBaseUrl}=await import("@/lib/access/urls.server");
   const url=resolveAppBaseUrl()+"/api/public/windykator-voice-postcall";
   const created=await elevenRequest("/v1/workspace/webhooks",{method:"POST",json:{
