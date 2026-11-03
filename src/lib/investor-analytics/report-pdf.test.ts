@@ -447,7 +447,7 @@ function risk(): InvestmentRiskAssessment {
       valuationConfidence: 70,
       legal: 60,
       borrowerLongevity: 45,
-      correspondence: 60,
+      courtRegistry: 60,
       documentCompleteness: 30,
       exitLiquidity: 86,
     },

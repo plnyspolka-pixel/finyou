@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   Scale,
   UserRound,
-  MessagesSquare,
   Landmark,
   Sparkles,
   HeartPulse,
@@ -143,7 +142,7 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           </h3>
           <p className="text-xs text-muted-foreground">
             Pipeline: KW (bramka — wymagane poprawne pobranie z KW Engine) → właściciel (PESEL/KRS)
-            → korespondencja → dane z portali (deweloperuch, otodom, morizon, gratka, adresowo, olx)
+            → KRZ/MSiG pożyczkobiorcy i właścicieli → dane z portali (deweloperuch, otodom, morizon, gratka, adresowo, olx)
             → wycena rynkowa (GUS pomocniczo — grunty rolne).
           </p>
         </div>
@@ -782,68 +781,55 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
         </CardContent>
       </Card>
 
-      {/* Korespondencja — wyłącznie twarde fakty */}
+      {/* KRZ / MSiG — pożyczkobiorca i właściciele z działu II KW */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <MessagesSquare className="h-4 w-4" /> Korespondencja — twarde fakty
+            <Gavel className="h-4 w-4" /> KRZ / MSiG — pożyczkobiorca i właściciele
           </CardTitle>
           <CardDescription>
-            Tylko konkretne fakty, rozbieżności i sygnały ryzyka z treści — bez oceny zaangażowania
-            czy sentymentu.
+            Ogłoszenia o upadłości, restrukturyzacji i egzekucji. Brak trafienia nie potwierdza
+            braku postępowań; zgodność samego nazwiska wymaga weryfikacji tożsamości.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm space-y-2">
-          {result.correspondence.available || result.correspondence.messagesAnalyzed > 0 ? (
+          {result.courtRegistry ? (
             <>
-              <div className="flex flex-wrap gap-x-6 gap-y-1">
-                <div>
-                  <span className="text-muted-foreground">Wiadomości:</span>{" "}
-                  {result.correspondence.messagesAnalyzed}
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Kanały:</span>{" "}
-                  {result.correspondence.channels.join(", ") || "—"}
-                </div>
-              </div>
-              {result.correspondence.statedFacts.length > 0 && (
-                <div>
-                  <span className="font-medium">Fakty podane przez klienta:</span>
-                  <ul className="list-disc pl-5">
-                    {result.correspondence.statedFacts.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
+              <p
+                className={
+                  result.courtRegistry.confirmedHits > 0
+                    ? "text-destructive font-medium"
+                    : result.courtRegistry.clientFullyChecked
+                      ? ""
+                      : "text-amber-700 dark:text-amber-400"
+                }
+              >
+                {result.courtRegistry.summary}
+              </p>
+              {result.courtRegistry.findings.length > 0 && (
+                <ul className="list-disc pl-5">
+                  {result.courtRegistry.findings.map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
               )}
-              {result.correspondence.redFlags.length > 0 && (
-                <div>
-                  <span className="text-destructive font-medium">Twarde sygnały ryzyka:</span>
-                  <ul className="list-disc pl-5">
-                    {result.correspondence.redFlags.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {result.correspondence.inconsistencies.length > 0 && (
-                <div>
-                  <span className="text-amber-700 dark:text-amber-400 font-medium">
-                    Niespójności z wnioskiem/KW:
+              {result.courtRegistry.report?.subjects.map((s, i) => (
+                <div key={i} className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {s.name}
+                    {s.role === "client" ? " (pożyczkobiorca)" : ""}
                   </span>
-                  <ul className="list-disc pl-5">
-                    {result.correspondence.inconsistencies.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
+                  {" — "}
+                  {s.courtStatus === "checked" ? "sprawdzono (API KRZ/MSiG)" : "sprawdzono częściowo"}
+                  {": "}
+                  {s.courtNote}
                 </div>
-              )}
-              {result.correspondence.summary && (
-                <p className="text-muted-foreground">{result.correspondence.summary}</p>
-              )}
+              ))}
             </>
           ) : (
-            <p className="text-muted-foreground">{result.correspondence.summary}</p>
+            <p className="text-muted-foreground">
+              Ocena sprzed włączenia KRZ/MSiG do analizy — uruchom ocenę ponownie.
+            </p>
           )}
         </CardContent>
       </Card>

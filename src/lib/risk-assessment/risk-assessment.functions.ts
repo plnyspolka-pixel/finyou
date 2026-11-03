@@ -1,6 +1,7 @@
 // Orkiestrator „Wycena i ocena ryzyka inwestycji".
 // Pipeline: BRAMKA KW (KW Engine — bez poprawnie pobranej księgi ocena nie startuje)
-// → stan prawny KW → właściciel (PESEL, trwanie życia) → korespondencja →
+// → stan prawny KW → właściciel (PESEL, trwanie życia) → KRZ/MSiG pożyczkobiorcy
+//   i właścicieli (korespondencja z klientem NIE jest elementem analizy) →
 // → OCR załączników klienta (status gruntu z wypisu/MPZP) →
 // → dane rynkowe bezpośrednio z portali (deweloperuch.pl transakcje + otodom, morizon,
 //   gratka, adresowo, olx oferty; Jina Reader jako fallback) →
@@ -22,7 +23,8 @@ import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
-import { analyzeCorrespondence } from "./correspondence-intel.server";
+import { isBuildingPropertyType, resolveBuildingArea } from "./building-area";
+import { checkCourtRegistry } from "./court-registry.server";
 import {
   analyzeSaleability,
   applyFloorToSaleability,
@@ -227,16 +229,6 @@ export interface RiskAssessmentSubject {
   property: Record<string, any> | null;
 }
 
-const NO_CORRESPONDENCE: InvestmentRiskAssessment["correspondence"] = {
-  available: false,
-  messagesAnalyzed: 0,
-  channels: [],
-  statedFacts: [],
-  inconsistencies: [],
-  redFlags: [],
-  summary: "Wniosek spoza Finance You — brak korespondencji z klientem w systemie.",
-};
-
 /** Pełna ocena inwestycji (kroki 1–9) — bez zapisu wyniku. */
 export async function assessInvestmentRisk(
   db: SupabaseLike,
@@ -315,9 +307,29 @@ export async function assessInvestmentRisk(
   // Parametry nieruchomości z działu I-O KW (oznaczenie) — źródło do wyceny.
   const kwParams = kwLegal.propertyParams;
   const kwFloorPietro = kwLegal.kondygnacja != null ? Math.max(0, kwLegal.kondygnacja - 1) : null;
-  const kwAreaSqm = kwParams.usableAreaM2 ?? kwParams.landAreaM2 ?? null;
+  // Dom/mieszkanie/lokal: do area_sqm trafia WYŁĄCZNIE powierzchnia użytkowa —
+  // obszar działki z KW nie jest powierzchnią domu (dom bez pow. użytkowej =
+  // powierzchnia nieznana). Działki/grunty: obszar działki.
+  const recordIsBuilding = isBuildingPropertyType(property?.property_type);
+  const kwAreaSqm = recordIsBuilding
+    ? (kwParams.usableAreaM2 ?? null)
+    : (kwParams.usableAreaM2 ?? kwParams.landAreaM2 ?? null);
+  const buildingArea = recordIsBuilding
+    ? resolveBuildingArea({
+        propertyType: property?.property_type,
+        kwUsableAreaM2: kwParams.usableAreaM2,
+        recordAreaM2: property?.area_sqm ?? null,
+        landAreaM2: kwParams.landAreaM2,
+        landAreaHa: kwParams.landAreaHa,
+      })
+    : null;
+  if (buildingArea?.note) warnings.push(buildingArea.note);
+  /** Powierzchnia przedmiotu wyceny z rekordu (dla budynków — bez obszaru działki). */
+  const recordAreaM2: number | null = buildingArea
+    ? buildingArea.areaM2
+    : (property?.area_sqm ?? null);
 
-  if (property && (kwAddr || kwAreaSqm != null)) {
+  if (property && (kwAddr || kwAreaSqm != null || buildingArea?.discardedLandArea)) {
     // Uzupełnij puste pola rekordu nieruchomości (dane z KW są urzędowe) —
     // dzięki temu widzi je też analiza zabezpieczenia i diagnostyka RCN.
     const patch: {
@@ -325,13 +337,15 @@ export async function assessInvestmentRisk(
       street?: string;
       city?: string;
       voivodeship?: string;
-      area_sqm?: number;
+      area_sqm?: number | null;
     } = {};
     if (!property.address && kwAddr?.fullAddress) patch.address = kwAddr.fullAddress;
     if (!property.street && kwAddr?.street) patch.street = kwAddr.street;
     if (!property.city && kwAddr?.city) patch.city = kwAddr.city;
     if (!property.voivodeship && kwAddr?.voivodeship) patch.voivodeship = kwAddr.voivodeship;
     if (property.area_sqm == null && kwAreaSqm != null) patch.area_sqm = kwAreaSqm;
+    // Wcześniejszy backfill wpisał obszar działki jako powierzchnię domu — kasujemy.
+    if (buildingArea?.discardedLandArea) (patch as any).area_sqm = null;
     if (Object.keys(patch).length > 0 && !property.id) {
       Object.assign(property, patch);
     } else if (Object.keys(patch).length > 0) {
@@ -373,7 +387,7 @@ export async function assessInvestmentRisk(
             address: property?.address ?? null,
             city: property?.city ?? null,
             voivodeship: property?.voivodeship ?? null,
-            usableAreaM2: property?.area_sqm ?? null,
+            usableAreaM2: recordAreaM2,
             declaredPropertyValuePln: declaredValue,
             requestedLoanAmountPln: loanAmount,
             documents: [],
@@ -454,37 +468,30 @@ export async function assessInvestmentRisk(
       })
       .join(" \n ") || null;
 
-  const [correspondence, saleabilityRaw] = await Promise.all([
-    applicationId
-      ? analyzeCorrespondence({ applicationId, clientId, declaredValue, loanAmount, city: effCity })
-      : Promise.resolve({ ...NO_CORRESPONDENCE }),
+  // KRZ/MSiG — pożyczkobiorca (zawsze) i właściciele z działu II KW.
+  const [courtRegistry, saleabilityRaw] = await Promise.all([
+    // Rola serwisowa: odczyt/zapis coowner_registry_checks i kartoteki klienta
+    // niezależnie od RLS wołającego (panel, MCP, cron).
+    checkCourtRegistry(supabaseAdmin as any, {
+      applicationId,
+      clientId,
+      kwNumber,
+      city: effCity,
+      voivodeship: effVoivodeship,
+    }).catch((e: any) => {
+      warnings.push(`KRZ/MSiG: sprawdzenie nie powiodło się (${e?.message ?? "błąd"}) — sprawdź pożyczkobiorcę ręcznie.`);
+      return undefined;
+    }),
     analyzeSaleability({
       propertyType: property?.property_type ?? "inna",
       address: effAddress,
       city: effCity,
       voivodeship: effVoivodeship,
-      areaM2: property?.area_sqm ?? null,
+      areaM2: recordAreaM2,
     }),
   ]);
-
-  // Rekonsyliacja sygnałów z korespondencji z AKTUALNYM stanem wniosku: flagi
-  // „brak numeru KW" / „brak adresu" wygasają, gdy dane są już uzupełnione
-  // (korespondencja bywa starsza niż dokumenty dosłane później).
-  const staleCorrespondenceFlag = (s: string) =>
-    (Boolean(kwNumber) && /brak\s+(numeru\s+)?(ksi[ęe]gi|kw\b)/i.test(s)) ||
-    (Boolean(effAddress) && /brak\s+adresu/i.test(s));
-  const staleFlags = [...correspondence.redFlags, ...correspondence.inconsistencies].filter(
-    staleCorrespondenceFlag,
-  );
-  if (staleFlags.length > 0) {
-    correspondence.redFlags = correspondence.redFlags.filter((s) => !staleCorrespondenceFlag(s));
-    correspondence.inconsistencies = correspondence.inconsistencies.filter(
-      (s) => !staleCorrespondenceFlag(s),
-    );
-    warnings.push(
-      `Pominięto ${staleFlags.length} nieaktualny(e) sygnał(y) z korespondencji (numer KW/adres są już uzupełnione we wniosku).`,
-    );
-  }
+  if (courtRegistry?.available && !courtRegistry.clientFullyChecked && applicationId)
+    warnings.push(courtRegistry.summary);
 
   // 4) Właściciel — potrzebuje wyników KW do porównania nazwiska; PESEL
   //    zaciągany bezpośrednio z działu II KW (rekord klienta tylko zapasowo).
@@ -546,7 +553,7 @@ export async function assessInvestmentRisk(
     city: effCity,
     voivodeship: effVoivodeship,
     soilClass: kwLegal.soilClass,
-    areaSqm: property?.area_sqm ?? null,
+    areaSqm: recordAreaM2,
     landAreaHa: kwParams.landAreaHa,
   }).catch((e) => {
     warnings.push(`GUS BDL (pomocniczo): ${e?.message ?? "błąd"}.`);
@@ -571,7 +578,7 @@ export async function assessInvestmentRisk(
   const isPlotType = /dzialka|działka|grunt|siedlisk/.test(effPropertyType.toLowerCase());
   const areaM2 = isPlotType
     ? (kwParams.landAreaM2 ?? property?.area_sqm ?? null)
-    : (kwParams.usableAreaM2 ?? property?.area_sqm ?? null);
+    : (buildingArea?.areaM2 ?? (recordIsBuilding ? null : (kwParams.usableAreaM2 ?? property?.area_sqm ?? null)));
   const master = computeMarketValuation({
     propertyType: effPropertyType,
     areaM2,
@@ -642,7 +649,7 @@ export async function assessInvestmentRisk(
     collateral,
     owner,
     kwLegal,
-    correspondence,
+    courtRegistry,
     ocr,
     saleability,
     plotBuildability,
@@ -654,7 +661,7 @@ export async function assessInvestmentRisk(
     ocr,
     kwLegal,
     owner,
-    correspondence,
+    courtRegistry,
     saleability,
     govBenchmark,
     collateral,
@@ -699,7 +706,7 @@ export async function assessInvestmentRisk(
     recommendation: combined.recommendation,
     owner,
     kwLegal,
-    correspondence,
+    courtRegistry,
     ocr,
     saleability,
     plotBuildability,
@@ -724,7 +731,7 @@ function buildDataSources(a: {
   ocr: InvestmentRiskAssessment["ocr"];
   kwLegal: InvestmentRiskAssessment["kwLegal"];
   owner: InvestmentRiskAssessment["owner"];
-  correspondence: InvestmentRiskAssessment["correspondence"];
+  courtRegistry: InvestmentRiskAssessment["courtRegistry"];
   saleability: InvestmentRiskAssessment["saleability"];
   govBenchmark: InvestmentRiskAssessment["govBenchmark"];
   collateral: InvestmentRiskAssessment["collateralAnalysis"];
@@ -843,16 +850,19 @@ function buildDataSources(a: {
     note: a.owner.businessActivity?.note,
   });
   sources.push({
-    source: "Korespondencja z klientem (e-mail / DM / transkrypcje)",
-    used: a.correspondence.available,
-    purpose: "analiza behawioralna, sygnały ostrzegawcze i niespójności",
-    dataLevel: `${a.correspondence.messagesAnalyzed} wiadomości${a.correspondence.channels.length ? " (" + a.correspondence.channels.join(", ") + ")" : ""}`,
+    source: "KRZ / MSiG (iMSiG API, wyszukiwarka MSiG, indeks stron)",
+    used: Boolean(a.courtRegistry?.available),
+    purpose: "postępowania upadłościowe, restrukturyzacyjne i egzekucyjne pożyczkobiorcy i właścicieli",
+    dataLevel: a.courtRegistry?.available
+      ? `${a.courtRegistry.subjectsChecked} podmiot(y)${a.courtRegistry.clientChecked ? ", w tym pożyczkobiorca" : ""}`
+      : "—",
     period: "",
-    status: a.correspondence.available
-      ? "success"
-      : a.correspondence.messagesAnalyzed > 0
-        ? "partial"
-        : "no_data",
+    status: !a.courtRegistry?.available
+      ? "no_data"
+      : a.courtRegistry.clientFullyChecked
+        ? "success"
+        : "partial",
+    note: a.courtRegistry?.summary,
   });
 
   sources.push({

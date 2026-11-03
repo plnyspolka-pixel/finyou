@@ -1,5 +1,6 @@
 // Orchestrator analizy zabezpieczenia — wycena z dzisiejszych danych portali nieruchomości
 // (deweloperuch, otodom, morizon, gratka, adresowo, olx) + komentarz Lovable AI.
+import { isBuildingPropertyType, resolveBuildingArea } from "@/lib/risk-assessment/building-area";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -165,6 +166,21 @@ export async function analyzePropertyCollateral(
 
     const warnings: string[] = [];
 
+    // Dom/mieszkanie/lokal: powierzchnią jest wyłącznie powierzchnia użytkowa.
+    // Obszar działki nie jest powierzchnią domu — bez innych danych powierzchnia
+    // domu jest nieznana (wartość równą obszarowi działki z KW odrzucamy).
+    if (isBuildingPropertyType(input.propertyType)) {
+      const ba = resolveBuildingArea({
+        propertyType: input.propertyType,
+        kwUsableAreaM2: kw?.usableAreaM2 ?? null,
+        recordAreaM2: input.usableAreaM2 ?? null,
+        landAreaM2: input.landAreaM2,
+        landAreaHa: input.landAreaHa,
+      });
+      input.usableAreaM2 = ba.areaM2;
+      if (ba.note) warnings.push(ba.note);
+    }
+
     // Lokalizacja z działu I-O KW ma pierwszeństwo przed adresem z wniosku —
     // wycena, geokodowanie i ocena lokalizacji mają dotyczyć nieruchomości
     // wskazanej w księdze, a nie tego, co wpisał lead.
@@ -303,7 +319,9 @@ export async function analyzePropertyCollateral(
 
     // 5) Benchmark wartości — z portali nieruchomości
     const isLand = input.propertyType === "grunt_rolny";
-    const areaM2 = input.usableAreaM2 ?? input.buildingAreaM2 ?? input.landAreaM2 ?? null;
+    const areaM2 = isBuildingPropertyType(input.propertyType)
+      ? (input.usableAreaM2 ?? input.buildingAreaM2 ?? null)
+      : (input.usableAreaM2 ?? input.buildingAreaM2 ?? input.landAreaM2 ?? null);
     const areaHa = input.landAreaHa ?? (input.landAreaM2 ? input.landAreaM2 / 10_000 : null);
 
     const pricePerM2Median = pv.pricePerM2Median;

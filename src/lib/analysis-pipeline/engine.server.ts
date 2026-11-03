@@ -498,11 +498,10 @@ async function advanceRun(
 
   const kwAvailable = steps.kw.status === "done";
 
-  // ── Krok 2: właściciele (dział II + rejestry) ──────────────────────────────
+  // ── Krok 2: właściciele (dział II + rejestry) i KRZ/MSiG pożyczkobiorcy ────
+  // Bez treści KW sprawdzamy przynajmniej pożyczkobiorcę w KRZ/MSiG.
   if (steps.coowners.status === "pending") {
-    if (!kwAvailable) {
-      markStep(steps, "coowners", "error", "Brak treści KW — nie sprawdzono właścicieli.");
-    } else {
+    {
       try {
         const [{ data: app }, { data: prop }] = await Promise.all([
           supabaseAdmin
@@ -518,21 +517,24 @@ async function advanceRun(
         ]);
         let primaryClientName: string | null = null;
         let primaryClientNip: string | null = (app as any)?.nip ?? null;
+        let primaryClientPesel: string | null = null;
         if (app?.client_id) {
           const { data: c } = await supabaseAdmin
             .from("clients")
-            .select("first_name, last_name, nip")
+            .select("first_name, last_name, nip, pesel")
             .eq("id", app.client_id)
             .maybeSingle();
           primaryClientName =
             [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || null;
           primaryClientNip = c?.nip || primaryClientNip;
+          primaryClientPesel = (c as any)?.pesel ?? null;
         }
         const { analyzeCoOwners } = await import("@/lib/coowners/analyze.server");
         const coResult = await analyzeCoOwners({
           kwNumber: run.kw_number,
           primaryClientName,
           primaryClientNip,
+          primaryClientPesel,
           city: prop?.city ?? null,
           voivodeship: prop?.voivodeship ?? null,
         });
@@ -549,7 +551,14 @@ async function advanceRun(
             { onConflict: "application_id" },
           );
         if (saveErr) throw new Error(saveErr.message);
-        markStep(steps, "coowners", "done");
+        if (kwAvailable) markStep(steps, "coowners", "done");
+        else
+          markStep(
+            steps,
+            "coowners",
+            "error",
+            "Brak treści KW — nie sprawdzono właścicieli (pożyczkobiorcę sprawdzono w KRZ/MSiG).",
+          );
       } catch (e: any) {
         markStep(steps, "coowners", "error", e?.message ?? "błąd sprawdzenia właścicieli");
       }

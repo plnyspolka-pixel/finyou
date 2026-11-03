@@ -41,6 +41,10 @@ function fmtPln(v: number | null | undefined): string {
 function fmtArea(input: PropertyAnalysisInput): string {
   if (input.usableAreaM2) return `${input.usableAreaM2} m² powierzchni użytkowej`;
   if (input.buildingAreaM2) return `${input.buildingAreaM2} m² powierzchni zabudowy`;
+  if (input.propertyType === "dom")
+    return input.landAreaM2
+      ? `nieznanej powierzchni domu (działka ${input.landAreaM2} m²)`
+      : "nieznanej powierzchni domu";
   if (input.landAreaHa) return `${input.landAreaHa} ha`;
   if (input.landAreaM2) return `${input.landAreaM2} m²`;
   return "nieokreślonej powierzchni";

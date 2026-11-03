@@ -5,6 +5,7 @@
 // i dopisuje tylko trend, komentarz o płynności i uzasadnienie — nie zgaduje cen.
 // Zastępuje dawną wycenę Perplexity (sonar-pro).
 
+import { isBuildingPropertyType } from "@/lib/risk-assessment/building-area";
 import type { PropertyType, RcnStats } from "./types";
 import { average, filterIqrOutliers, median, quartile } from "./cache.server";
 import {
@@ -97,6 +98,9 @@ function round(n: number | null): number | null {
 
 function subjectArea(input: PortalValuationInput, isLand: boolean): number | null {
   if (isLand) return input.landAreaM2 ?? (input.landAreaHa ? input.landAreaHa * 10_000 : null);
+  // Dom/mieszkanie/lokal: obszar działki nie jest powierzchnią budynku.
+  if (isBuildingPropertyType(String(input.propertyType ?? "")))
+    return input.usableAreaM2 ?? input.buildingAreaM2 ?? null;
   return input.usableAreaM2 ?? input.buildingAreaM2 ?? input.landAreaM2 ?? null;
 }
 
@@ -143,7 +147,11 @@ function buildPrompt(
   const typeLabel = PROPERTY_LABELS[String(input.propertyType)] ?? "nieruchomość";
   const loc = [input.address, input.city, input.voivodeship].filter(Boolean).join(", ") || "Polska";
   const params = [
-    input.usableAreaM2 ? `pow. użytkowa ${input.usableAreaM2} m²` : null,
+    input.usableAreaM2
+      ? `pow. użytkowa ${input.usableAreaM2} m²`
+      : String(input.propertyType) === "dom"
+        ? "powierzchnia domu NIEZNANA (nie przyjmuj obszaru działki jako powierzchni domu)"
+        : null,
     input.landAreaM2 ? `działka ${input.landAreaM2} m²` : null,
     input.landAreaHa ? `${input.landAreaHa} ha` : null,
     input.roomCount != null ? `${input.roomCount} izb` : null,

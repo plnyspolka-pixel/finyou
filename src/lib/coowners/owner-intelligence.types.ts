@@ -18,6 +18,8 @@ export interface OwnerIntelligenceHit {
 export interface OwnerIntelligenceSubject {
   name: string;
   kind: OwnerIntelligenceSubjectKind;
+  /** "client" = pożyczkobiorca z wniosku (sprawdzany zawsze, także spoza działu II KW). */
+  role?: "client" | "owner";
   courtStatus: OwnerIntelligenceSourceStatus;
   courtNote: string;
   exchangesStatus: OwnerIntelligenceSourceStatus;
