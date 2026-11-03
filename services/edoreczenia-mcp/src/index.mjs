@@ -55,7 +55,7 @@ function createServer() {
   }, safe(async ({boxId,taskId})=>sendTask(boxId,taskId)));
 
   server.registerTool('edoreczenia_create_draft', {
-    description:'Zapisz projekt pisma lokalnie. NIE wysyła. Do rzeczywistej wysyłki wymagany jest oficjalny obiekt uaPayload zgodny z UA API 3, a następnie zatwierdzenie przez człowieka poza MCP.',
+    description:'Zapisz projekt pisma lokalnie. NIE wysyła. Wiadomość tekstowa tworzy strukturę UA API 3 automatycznie; wysyłkę nadal zatwierdza człowiek poza MCP.',
     inputSchema:z.object({
       boxId:z.string().min(2).max(40),
       recipients:z.array(z.string().min(1).max(180)).min(1).max(100),
