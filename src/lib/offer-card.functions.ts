@@ -6,6 +6,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { INVESTOR_OFFERS_PAUSED, assertInvestorOffersOpen } from "@/lib/investor-offers-pause";
 import type { InvestmentRiskAssessment } from "@/lib/risk-assessment/types";
 
 type SupabaseLike = { from: (t: string) => any };
@@ -29,6 +30,7 @@ export const ensureOfferCardLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ applicationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     const supabase = context.supabase as unknown as SupabaseLike;
     await assertAdminOrOperator(supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -257,6 +259,8 @@ const KW_SECTIONS: Array<{ key: string; label: string }> = [
 export const getPublicOfferCard = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ token: z.string().min(24).max(64) }).parse(d))
   .handler(async ({ data }): Promise<PublicOfferCard | null> => {
+    // Wstrzymanie ofert dla inwestorów — link z maila nie pokazuje oferty.
+    if (INVESTOR_OFFERS_PAUSED) return null;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: app } = await supabaseAdmin

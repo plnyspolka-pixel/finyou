@@ -6,6 +6,7 @@
 // rdzeniem distributeOfferToInvestors — dokładnie jak dystrybucja ręczna.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { LEGACY_STATUS_MAP, normalizeLoanStatus } from "@/lib/loan-status";
+import { INVESTOR_OFFERS_PAUSED, INVESTOR_OFFERS_PAUSED_MESSAGE } from "@/lib/investor-offers-pause";
 
 /** Statusy, w których wniosek może kwalifikować się do dystrybucji. */
 const CANDIDATE_STATUSES = new Set([
@@ -98,6 +99,8 @@ export interface SyncResult {
  * Wywoływane przez cron tick; idempotentne (jedna otwarta propozycja per wniosek).
  */
 export async function syncAutoDistributionProposals(): Promise<SyncResult | { disabled: true }> {
+  // Wstrzymanie ofert dla inwestorów — bez nowych propozycji wysyłki.
+  if (INVESTOR_OFFERS_PAUSED) return { disabled: true };
   const settings = await loadAutoDistributionSettings();
   if (!settings.enabled) return { disabled: true };
 
@@ -240,6 +243,7 @@ export async function approveProposal(
   proposalId: string,
   decidedBy: string,
 ): Promise<{ ok: boolean; error?: string; sent?: string[]; skipped?: string[] }> {
+  if (INVESTOR_OFFERS_PAUSED) return { ok: false, error: INVESTOR_OFFERS_PAUSED_MESSAGE };
   const { data: proposal } = await (supabaseAdmin as any)
     .from("auto_distribution_proposals")
     .select("id, loan_application_id, matches, status")

@@ -6,6 +6,7 @@
 // loan_applications/clients/properties/documents nie trafiają do przeglądarki.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { INVESTOR_OFFERS_PAUSED } from "@/lib/investor-offers-pause";
 import {
   ACTIVE_MATCH_STATUSES,
   teasersForAcceptedOrders,
@@ -33,6 +34,7 @@ export interface InvestorOfferTeaser {
 export const listInvestorTeasers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InvestorOfferTeaser[]> => {
+    if (INVESTOR_OFFERS_PAUSED) return [];
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
 

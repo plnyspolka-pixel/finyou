@@ -28,6 +28,7 @@ import {
 } from "./order-cycle-core";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
+import { assertInvestorOffersOpen } from "@/lib/investor-offers-pause";
 
 const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
@@ -170,6 +171,7 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -231,6 +233,7 @@ export const requestDisclosure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -270,6 +273,7 @@ export const extendReservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -322,6 +326,7 @@ export const extendTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -650,6 +655,7 @@ export const createMatch = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     await (await srv()).assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return (await srv()).insertMatch(supabaseAdmin, {
@@ -666,6 +672,7 @@ export const releaseTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     await (await srv()).assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: m } = await loose(supabaseAdmin)

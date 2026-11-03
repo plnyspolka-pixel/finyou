@@ -43,6 +43,7 @@ import {
   TEASER_HOURS,
 } from "./order-cycle-core";
 import { getModuleSettings } from "@/lib/projects/guards.server";
+import { INVESTOR_OFFERS_PAUSED, INVESTOR_OFFERS_PAUSED_MESSAGE } from "@/lib/investor-offers-pause";
 
 const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
@@ -149,6 +150,8 @@ export interface MyOrderProjectsResult {
   }>;
   isConsumer: boolean;
   limits: ReturnType<typeof orderLimitsFromSettings>;
+  /** Pokazywanie Projektów i rezerwacje chwilowo wstrzymane (investor-offers-pause). */
+  paused?: boolean;
 }
 
 const APP_SELECT =
@@ -622,6 +625,9 @@ export async function loadMyOrderProjects(
             (myMatches ?? []).find(
               (m: any) => m.order_id === o.id && m.application_id === app.id,
             ) ?? null;
+          // Wstrzymanie: zostają wyłącznie Projekty już ujawnione (rezerwacja/transakcja).
+          if (INVESTOR_OFFERS_PAUSED && !(match && DISCLOSED_STATUSES.includes(match.status)))
+            continue;
           if (!match) {
             if (declined.has(`${o.id}:${app.id}`)) continue;
             if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
@@ -645,7 +651,12 @@ export async function loadMyOrderProjects(
         projects,
       });
     }
-    return { orders: result, isConsumer: Boolean(investor?.is_consumer), limits };
+    return {
+      orders: result,
+      isConsumer: Boolean(investor?.is_consumer),
+      limits,
+      paused: INVESTOR_OFFERS_PAUSED,
+    };
   }
 }
 
@@ -678,6 +689,9 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (INVESTOR_OFFERS_PAUSED && !(match && DISCLOSED_STATUSES.includes(match.status))) {
+    throw new Error(INVESTOR_OFFERS_PAUSED_MESSAGE);
+  }
   if (!match && !appFitsOrder(order, app)) {
     throw new Error("Ten Projekt nie mieści się w kwocie albo oknie czasowym Zlecenia.");
   }

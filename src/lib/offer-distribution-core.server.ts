@@ -5,6 +5,7 @@
 // Bez autoryzacji — wywołujący (server fn po assertAdminOrOperator albo
 // silnik cron) odpowiada za uprawnienia.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertInvestorOffersOpen } from "@/lib/investor-offers-pause";
 
 function fmtPln(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(Number(v))) return "—";
@@ -32,6 +33,7 @@ export async function distributeOfferToInvestors(input: {
   investorIds?: string[];
   note?: string;
 }): Promise<DistributionSendResult> {
+  assertInvestorOffersOpen();
   const { sendResendEmail } = await import("@/lib/resend-send.server");
   const { offerReplyAddress, offerCardUrl } = await import("@/lib/offer-replies.server");
 

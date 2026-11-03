@@ -173,6 +173,15 @@ function MyOrdersPage() {
           </Link>
           .
         </p>
+        {data.paused && (
+          <Alert className="mt-3">
+            <AlertDescription>
+              Pokazywanie Projektów i rezerwacje są chwilowo wstrzymane — nowe Projekty nie
+              pojawiają się na liście. Projekty, które już zarezerwowałeś, oraz Twoje umowy
+              pozostają dostępne.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       {data.orders.length === 0 ? (

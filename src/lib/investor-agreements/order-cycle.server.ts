@@ -13,6 +13,7 @@ import {
   TEASER_HOURS,
   type MatchStatus,
 } from "./order-cycle-core";
+import { INVESTOR_OFFERS_PAUSED } from "@/lib/investor-offers-pause";
 
 const loose = (c: unknown) => c as any;
 
@@ -221,6 +222,8 @@ export async function latestMergedAt(db: any, sinceIso: string): Promise<Map<str
  *  z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu i od razu
  *  udostępnia teaser. Wyłączność sekwencyjna pilnowana indeksem w bazie. */
 export async function autoMatchInvestorOrders(db: any, orders: any[]) {
+  // Wstrzymanie ofert dla inwestorów — bez nowych dopasowań.
+  if (INVESTOR_OFFERS_PAUSED) return;
   const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
   const now = Date.now();
   const eligible = orders.filter(
