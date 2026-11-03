@@ -82,3 +82,40 @@ Przekaż środowisko poprzez menedżer sekretów usługi/maszyny. `.env.example`
 ## Uwagi operacyjne
 
 Tryb `EDO_ENV=prod` i aktywacja wysyłki to oddzielne decyzje. Korespondencja do prywatnych podmiotów może wymagać płatnej usługi operatora. Nie pobieraj pełnych wiadomości w harmonogramie monitorującym.
+
+## Integracja z panelem Finance You
+
+Do aplikacji dodano `src/routes/admin.e-doreczenia.tsx` oraz
+`src/routes/api/admin/edoreczenia.ts`; moduł jest w nawigacji **Komunikacja → e-Doręczenia**.
+Panel odczytuje listy i tworzy projekty tylko przez serwer aplikacji po weryfikacji
+ważnej sesji Supabase oraz aktualnej roli `administrator`/`operator` z bazy.
+
+Uruchom **dwa osobne procesy** Node (najlepiej dwa kontenery/sekrety):
+
+- **Skrzynki firmy i fundacji:** `EDO_ALLOWED_MAILBOXES=financeyou,fundacja`,
+  `EDO_ALLOW_PERSONAL=NO`, `npm run bridge` i prywatny token `EDO_BRIDGE_TOKEN`.
+- **Skrzynka osobista:** `EDO_ALLOWED_MAILBOXES=personal`,
+  `EDO_ALLOW_PERSONAL=YES`, inny `EDO_BRIDGE_TOKEN`,
+  osobny `EDO_STATE_DIR`; `npm run bridge`. Usługa ma osobny proces i tajny klucz.
+
+W backendzie Finance You ustaw:
+
+```sh
+EDO_BRIDGE_URL=https://<wewnetrzny-host-biznesowy>
+EDO_BRIDGE_TOKEN=<secret-biznes>
+EDO_PRIVATE_BRIDGE_URL=https://<wewnetrzny-host-prywatny>
+EDO_PRIVATE_BRIDGE_TOKEN=<secret-prywatny>
+EDO_PERSONAL_OWNER_UID=<uuid-właściciela-z-auth.users>
+```
+
+W produkcji adresy mostów muszą być HTTPS. Nie wystawiaj natywnego serwera
+HTTP bez TLS i prywatnej sieci. Proxy aplikacji nigdy nie oddaje tokenów ani kluczy
+do JavaScriptu w przeglądarce.
+
+**Bieżący stan:** panel i adapter HTTP są zakodowane, ale przed podaniem
+konfiguracji i zweryfikowaniem certyfikatów pozostają nieaktywne. Nie jest to
+automatyczne połączenie z istniejącymi ADE.
+
+Zadanie wysyłkowe jest asynchroniczne (`edoreczenia_send_task_status`),
+a poprawny wynik zadania nie zastępuje dowodów doręczenia.
+
