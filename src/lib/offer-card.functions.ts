@@ -31,6 +31,8 @@ export const ensureOfferCardLink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as SupabaseLike;
     await assertAdminOrOperator(supabase, context.userId);
+    const { externalOfferCardsEnabled } = await import("@/lib/investor-agreements/project-visibility.server");
+    if (!externalOfferCardsEnabled()) throw new Error("Zewnętrzne karty projektów są wyłączone.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: app, error } = await supabaseAdmin
@@ -257,6 +259,8 @@ const KW_SECTIONS: Array<{ key: string; label: string }> = [
 export const getPublicOfferCard = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ token: z.string().min(24).max(64) }).parse(d))
   .handler(async ({ data }): Promise<PublicOfferCard | null> => {
+    const { externalOfferCardsEnabled } = await import("@/lib/investor-agreements/project-visibility.server");
+    if (!externalOfferCardsEnabled()) return null;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: app } = await supabaseAdmin

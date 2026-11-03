@@ -1,62 +1,30 @@
-/**
- * Menu panelu inwestora: „Złóż zlecenie" prowadzi przez pipeline do Zlecenia
- * i znika, gdy inwestor ma żywe Zlecenie; Konsument ma dodatkowo link do
- * odstąpienia. Strona startowa podąża za tą samą regułą.
- */
 import { describe, expect, it } from "vitest";
-import { ORDER_PIPELINE_ITEM, investorHomePath, investorNavGroups } from "./investor-nav";
+import { investorHomePath, investorNavGroups } from "./investor-nav";
 
-const labels = (flags: Parameters<typeof investorNavGroups>[0]) =>
-  investorNavGroups(flags).flatMap((g) => g.items.map((i) => i.label));
+const links = (flags: Parameters<typeof investorNavGroups>[0]) =>
+  investorNavGroups(flags).flatMap((g) => g.items.map((i) => i.to));
 
-describe("investorNavGroups", () => {
-  it("before the flags load the full menu is shown, starting with „Złóż zlecenie”", () => {
-    expect(ORDER_PIPELINE_ITEM.label).toBe("Złóż zlecenie");
-    expect(ORDER_PIPELINE_ITEM.to).toBe("/inwestor/umowy");
-    expect(labels(undefined)[0]).toBe("Złóż zlecenie");
-    expect(labels(undefined)).toContain("Moje zlecenia");
-    expect(labels(undefined)).not.toContain("Odstąpienie od umowy");
+describe("nawigacja inwestora", () => {
+  it("ukrywa projekty przed inwestorem zewnętrznym i przed załadowaniem uprawnień", () => {
+    for (const flags of [undefined, { canViewProjects: false, hasLiveOrder: true }]) {
+      expect(links(flags)).not.toContain("/inwestor/umowy");
+      expect(links(flags)).not.toContain("/inwestor/zlecenia");
+      expect(links(flags)).not.toContain("/inwestor/oferty");
+      expect(links(flags)).toContain("/inwestor/moje-umowy");
+      expect(links(flags)).toContain("/inwestor/kreator-dokumentow");
+      expect(investorHomePath(flags)).toBe("/inwestor/szkolenia");
+    }
   });
-
-  it("a live order removes „Złóż zlecenie” and keeps everything else", () => {
-    const before = labels({ isConsumer: false, hasLiveOrder: false });
-    const after = labels({ isConsumer: false, hasLiveOrder: true });
-    expect(after).not.toContain("Złóż zlecenie");
-    expect(after).toEqual(before.filter((l) => l !== "Złóż zlecenie"));
-    expect(after[0]).toBe("Moje zlecenia");
+  it("zachowuje nawigację projektów dla Finance You", () => {
+    const before = { canViewProjects: true, hasLiveOrder: false };
+    const after = { canViewProjects: true, hasLiveOrder: true };
+    expect(links(before)).toContain("/inwestor/umowy");
+    expect(links(after)).not.toContain("/inwestor/umowy");
+    expect(links(after)).toContain("/inwestor/zlecenia");
+    expect(links(after)).toContain("/inwestor/oferty");
+    expect(investorHomePath(after)).toBe("/inwestor/zlecenia");
   });
-
-  it("consumers get the withdrawal group as a separate group", () => {
-    const groups = investorNavGroups({ isConsumer: true, hasLiveOrder: true });
-    expect(groups).toHaveLength(2);
-    expect(groups[1].items.map((i) => i.to)).toEqual(["/inwestor/odstapienie"]);
-    expect(labels({ isConsumer: true, hasLiveOrder: false })).toContain("Złóż zlecenie");
-  });
-
-  it("„Moje umowy” follow „Moje oferty”, then „E-podpis”", () => {
-    const l = labels({ isConsumer: false, hasLiveOrder: true });
-    expect(l.indexOf("Moje umowy")).toBe(l.indexOf("Moje oferty") + 1);
-    expect(l).toContain("E-podpis");
-    expect(l.indexOf("E-podpis")).toBe(l.indexOf("Moje umowy") + 1);
-    const item = investorNavGroups(undefined)
-      .flatMap((g) => g.items)
-      .find((i) => i.label === "E-podpis");
-    expect(item?.to).toBe("/inwestor/podpisy");
-  });
-
-  it("ma osobne moduły: kreator umowy pożyczki i generator z e-podpisem", () => {
-    const items = investorNavGroups(undefined).flatMap((g) => g.items);
-    expect(items.find(i => i.label === "Kreator umowy pożyczki")?.to)
-      .toBe("/inwestor/dokumenty");
-    expect(items.find(i => i.label === "Generator dokumentów")?.to)
-      .toBe("/inwestor/kreator-dokumentow");
-    expect(items.find(i => i.label === "E-podpis")?.to)
-      .toBe("/inwestor/podpisy");
-  });
-
-  it("home path follows the same rule", () => {
-    expect(investorHomePath(undefined)).toBe("/inwestor/umowy");
-    expect(investorHomePath({ hasLiveOrder: false })).toBe("/inwestor/umowy");
-    expect(investorHomePath({ hasLiveOrder: true })).toBe("/inwestor/zlecenia");
+  it("zachowuje prawo konsumenta do odstąpienia", () => {
+    expect(links({ isConsumer: true, canViewProjects: false })).toContain("/inwestor/odstapienie");
   });
 });

@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { formatPLN } from "@/lib/labels";
 import type { PublicLead } from "@/lib/public-leads.functions";
 import { property3dIcon, propertyLabel } from "@/lib/property-3d-icons";
-import { ExampleProjectsSection } from "@/components/landing/example-projects-section";
 
 // Embed bez logowania pokazuje WYŁĄCZNIE przykładowe projekty (ilustracja) —
 // prawdziwe wnioski widzi tylko inwestor z przyjętym Zleceniem (decyzja nr 7).
@@ -51,7 +50,7 @@ function EmbedLeads() {
   return (
     <div className="bg-[#0a1030] p-4 sm:p-6 text-slate-100">
       <div className="mx-auto max-w-6xl">
-        <ExampleProjectsSection />
+        <p className="text-sm">Projekty inwestycyjne są dostępne wyłącznie dla Finance You.</p>
       </div>
     </div>
   );

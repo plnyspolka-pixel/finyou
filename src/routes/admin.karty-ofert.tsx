@@ -1,7 +1,7 @@
 // Moduł „Karta oferty" — lista tematów z publicznymi linkami dla inwestorów.
 // Każdy wniosek dostępny dla inwestorów ma tokenowaną, zewnętrzną stronę
 // /karta/<token> z pełnym dossier (treść KW, mapa, okolica, analiza ryzyka).
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,7 @@ import { formatPLN, loanStatusLabels } from "@/lib/labels";
 import { ensureOfferCardLink } from "@/lib/offer-card.functions";
 
 export const Route = createFileRoute("/admin/karty-ofert")({
+  beforeLoad: () => { throw redirect({ to: "/admin/projekty" }); },
   component: KartyOfertPage,
 });
 

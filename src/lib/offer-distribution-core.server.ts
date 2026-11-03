@@ -32,6 +32,10 @@ export async function distributeOfferToInvestors(input: {
   investorIds?: string[];
   note?: string;
 }): Promise<DistributionSendResult> {
+  const { externalOfferCardsEnabled } = await import("@/lib/investor-agreements/project-visibility.server");
+  if (!externalOfferCardsEnabled()) {
+    throw new Error("Wysyłka projektów do inwestorów zewnętrznych jest wyłączona.");
+  }
   const { sendResendEmail } = await import("@/lib/resend-send.server");
   const { offerReplyAddress, offerCardUrl } = await import("@/lib/offer-replies.server");
 

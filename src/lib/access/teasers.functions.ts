@@ -35,6 +35,8 @@ export const listInvestorTeasers = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<InvestorOfferTeaser[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
+    const { canViewFinanceYouProjects } = await import("@/lib/investor-agreements/project-visibility.server");
+    if (!(await canViewFinanceYouProjects(db, context.userId))) return [];
 
     const { data: rolesRows } = await db
       .from("user_roles")

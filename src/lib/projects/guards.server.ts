@@ -65,6 +65,8 @@ export function isApprovedInvestor(row: ModuleAccessRow | null): boolean {
  * `approved_investor`. Zwraca wiersz dostępu do dalszych sprawdzeń.
  */
 export async function assertApprovedInvestor(userId: string): Promise<ModuleAccessRow> {
+  const { assertFinanceYouProjects } = await import("@/lib/investor-agreements/project-visibility.server");
+  await assertFinanceYouProjects(db, userId);
   const row = await getModuleAccessRow(userId);
   if (!isApprovedInvestor(row)) {
     throw new Error("MODULE_ACCESS: Ta funkcja wymaga aktywnego dostępu do modułu projektów.");

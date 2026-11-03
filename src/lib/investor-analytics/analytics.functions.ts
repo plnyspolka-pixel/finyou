@@ -76,6 +76,10 @@ interface Scope {
 
 /** Zakres wniosków inwestora: ujawnione okazje + jego oferty + wnioski mu przekazane. */
 async function loadScope(db: any, userId: string): Promise<Scope> {
+  const { canViewFinanceYouProjects } = await import("@/lib/investor-agreements/project-visibility.server");
+  if (!(await canViewFinanceYouProjects(db, userId))) {
+    return { hasOrder: false, offerAppIds: new Set(), sharedAppIds: new Set(), matchByApp: new Map() };
+  }
   const [{ data: inv }, { data: orders }] = await Promise.all([
     db.from("investors").select("id").eq("user_id", userId).maybeSingle(),
     db.from("investor_orders").select("id, status").eq("user_id", userId),

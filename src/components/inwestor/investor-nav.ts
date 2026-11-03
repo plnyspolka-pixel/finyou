@@ -25,6 +25,7 @@ import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
 export interface InvestorNavFlags {
   isConsumer: boolean;
+  canViewProjects: boolean;
   /** Złożone albo przyjęte i ważne Zlecenie (`hasLiveOrder`). */
   hasLiveOrder: boolean;
 }
@@ -74,9 +75,10 @@ const WITHDRAWAL_GROUP: NavGroup = {
 
 /** Grupy menu dla flag konta; bez flag (przed wczytaniem) — pełne menu. */
 export function investorNavGroups(flags: Partial<InvestorNavFlags> | undefined): NavGroup[] {
-  const items = flags?.hasLiveOrder
-    ? MAIN_ITEMS.filter((i) => i !== ORDER_PIPELINE_ITEM)
-    : MAIN_ITEMS;
+  const items = MAIN_ITEMS.filter((item) => {
+    if (!flags?.canViewProjects && ["/inwestor/umowy", "/inwestor/zlecenia", "/inwestor/oferty"].includes(item.to)) return false;
+    return !(flags?.hasLiveOrder && item === ORDER_PIPELINE_ITEM);
+  });
   const groups: NavGroup[] = [{ items }];
   if (flags?.isConsumer) groups.push(WITHDRAWAL_GROUP);
   return groups;
@@ -84,5 +86,6 @@ export function investorNavGroups(flags: Partial<InvestorNavFlags> | undefined):
 
 /** Strona startowa panelu: z żywym Zleceniem — „Moje zlecenia", inaczej pipeline. */
 export function investorHomePath(flags: Partial<InvestorNavFlags> | undefined): string {
+  if (!flags?.canViewProjects) return "/inwestor/szkolenia";
   return flags?.hasLiveOrder ? "/inwestor/zlecenia" : ORDER_PIPELINE_ITEM.to;
 }

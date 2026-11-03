@@ -614,6 +614,10 @@ export async function replyToOfferDistribution(args: {
   /** Jak w `sendEmailFromInbox`: `transactional` dla wiadomości pisanej przez operatora z panelu. */
   category?: SendCategory;
 }): Promise<{ ok: boolean; id: string | null; to: string }> {
+  const { externalOfferCardsEnabled } = await import("@/lib/investor-agreements/project-visibility.server");
+  if (!externalOfferCardsEnabled()) {
+    throw new Error("Wysyłka projektów do inwestorów zewnętrznych jest wyłączona.");
+  }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { sendResendEmail } = await import("./resend-send.server");
   const { offerReplyAddress } = await import("./offer-replies.server");
