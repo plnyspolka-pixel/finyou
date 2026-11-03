@@ -8,10 +8,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type Action = "list_mailboxes" | "list_messages" | "read_message" | "evidences" |
-  "create_draft" | "list_drafts" | "get_draft" | "send_approved";
+  "create_draft" | "list_drafts" | "get_draft" | "send_approved" | "send_task_status";
 const actions = new Set<Action>([
   "list_mailboxes","list_messages","read_message","evidences",
-  "create_draft","list_drafts","get_draft","send_approved"
+  "create_draft","list_drafts","get_draft","send_approved","send_task_status"
 ]);
 const noStore = {
   "Cache-Control": "no-store, private, max-age=0",
