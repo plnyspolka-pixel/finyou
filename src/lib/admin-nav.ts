@@ -341,6 +341,13 @@ export const adminSections: AdminSection[] = [
         badgeKey: "nieprzeczytaneMaile",
       },
       {
+        to: "/admin/e-doreczenia",
+        label: "e-Doręczenia",
+        icon: Mail,
+        description: "Urzędowe doręczenia: trzy osobne skrzynki ADE, odebrane, dowody i projekty pism.",
+        synonyms: ["edoręczenia", "e-doreczenia", "ade", "purde", "urzedy", "MCP", "fundacja"],
+      },
+      {
         to: "/admin/messenger",
         label: "Messenger / Instagram DM",
         icon: MessageCircle,
