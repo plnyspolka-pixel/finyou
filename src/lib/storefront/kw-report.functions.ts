@@ -70,7 +70,7 @@ export const getPurchasedKwReport = createServerFn({ method: "POST" })
       title: "Raport księgi " + kw.value, version: "1.0" });
     const path = "generated/" + context.userId + "/kw-" + kw.compact + ".pdf";
     const { error: upErr } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)
-      .upload(path, new Blob([bytes],{type:"application/pdf"}),
+      .upload(path, new Blob([new Uint8Array(bytes)],{type:"application/pdf"}),
         { upsert: true, contentType: "application/pdf" });
     if (upErr) throw new Error("Nie udało się zapisać raportu PDF.");
     const { data: signed, error: signErr } = await supabaseAdmin.storage.from(CLIENT_FILES_BUCKET)

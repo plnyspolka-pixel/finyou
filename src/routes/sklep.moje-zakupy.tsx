@@ -47,7 +47,10 @@ function StoreLibrary() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [getPurchases,getCatalog,getLegal]);
-  const entitlements = purchases?.entitlements ?? [];
+  type Entitlement = { item_kind: string; item_id: string };
+  type Order = { id: string; status: string; created_at: string; amount_grosz: number };
+  const entitlements: Entitlement[] = (purchases?.entitlements ?? []) as Entitlement[];
+  const orders: Order[] = (purchases?.orders ?? []) as Order[];
   const hasCourse = entitlements.some((i) => i.item_kind === "course" && i.item_id === "academy");
   const lessons = useMemo(() => (catalog?.lessons ?? []).filter((l) =>
     l.number !== 1 && (hasCourse || entitlements.some((e) => e.item_kind === "lesson" && e.item_id === l.id))
