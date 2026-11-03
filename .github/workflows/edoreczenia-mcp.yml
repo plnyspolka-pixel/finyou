@@ -1,0 +1,24 @@
+name: e-Doręczenia MCP — core tests
+on:
+  push:
+    paths:
+      - 'services/edoreczenia-mcp/**'
+      - '.github/workflows/edoreczenia-mcp.yml'
+  pull_request:
+    paths:
+      - 'services/edoreczenia-mcp/**'
+      - '.github/workflows/edoreczenia-mcp.yml'
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Node syntax checks
+        run: |
+          for f in services/edoreczenia-mcp/src/*.mjs; do node --check "$f"; done
+      - name: Core security tests (offline)
+        working-directory: services/edoreczenia-mcp
+        run: node --test test/*.test.mjs
