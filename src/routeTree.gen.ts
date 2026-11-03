@@ -44,10 +44,12 @@ import { Route as PozyczkaPodZastawZiemiRolnejRouteImport } from './routes/pozyc
 import { Route as RaportLokalizacjeRouteImport } from './routes/raport-lokalizacje'
 import { Route as RegulaminRouteImport } from './routes/regulamin'
 import { Route as RegulaminInwestoraRouteImport } from './routes/regulamin-inwestora'
+import { Route as RegulaminWindykatorAiRouteImport } from './routes/regulamin-windykator-ai'
 import { Route as RejestracjaRouteImport } from './routes/rejestracja'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SklepRouteImport } from './routes/sklep'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as WindykatorAiRouteImport } from './routes/windykator-ai'
 import { Route as WyborPaneluRouteImport } from './routes/wybor-panelu'
 import { Route as WyborRoliRouteImport } from './routes/wybor-roli'
 import { Route as ZapomnianeHasloRouteImport } from './routes/zapomniane-haslo'
@@ -199,6 +201,7 @@ import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as SCodeRouteImport } from './routes/s.$code'
+import { Route as SklepMojeZakupyRouteImport } from './routes/sklep.moje-zakupy'
 import { Route as WebinarIndexRouteImport } from './routes/webinar.index'
 import { Route as WebinarPokojRouteImport } from './routes/webinar.pokoj'
 import { Route as WeryfikacjaCodeRouteImport } from './routes/weryfikacja.$code'
@@ -232,6 +235,8 @@ import { Route as AdminProgramPosrednikowWyplatyRouteImport } from './routes/adm
 import { Route as AdminProgramPosrednikowZdarzeniaRouteImport } from './routes/admin.program-posrednikow.zdarzenia'
 import { Route as AdminScreeningSprawaCaseIdRouteImport } from './routes/admin.screening-sprawa.$caseId'
 import { Route as AdminWnioskiIdRouteImport } from './routes/admin.wnioski.$id'
+import { Route as ApiAdminResendInboxRouteImport } from './routes/api/admin/resend-inbox'
+import { Route as ApiInternalResendSingleRunRouteImport } from './routes/api/internal/resend-single-run'
 import { Route as ApiMigrationStorageManifestRouteImport } from './routes/api/migration/storage-manifest'
 import { Route as ApiPublicAgentConfigRouteImport } from './routes/api/public/agent-config'
 import { Route as ApiPublicAgentToolsRouteImport } from './routes/api/public/agent-tools'
@@ -511,6 +516,11 @@ const RegulaminInwestoraRoute = RegulaminInwestoraRouteImport.update({
   path: '/regulamin-inwestora',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegulaminWindykatorAiRoute = RegulaminWindykatorAiRouteImport.update({
+  id: '/regulamin-windykator-ai',
+  path: '/regulamin-windykator-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RejestracjaRoute = RejestracjaRouteImport.update({
   id: '/rejestracja',
   path: '/rejestracja',
@@ -529,6 +539,11 @@ const SklepRoute = SklepRouteImport.update({
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WindykatorAiRoute = WindykatorAiRouteImport.update({
+  id: '/windykator-ai',
+  path: '/windykator-ai',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WyborPaneluRoute = WyborPaneluRouteImport.update({
@@ -1293,6 +1308,11 @@ const SCodeRoute = SCodeRouteImport.update({
   path: '/s/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SklepMojeZakupyRoute = SklepMojeZakupyRouteImport.update({
+  id: '/moje-zakupy',
+  path: '/moje-zakupy',
+  getParentRoute: () => SklepRoute,
+} as any)
 const WebinarIndexRoute = WebinarIndexRouteImport.update({
   id: '/webinar/',
   path: '/webinar/',
@@ -1473,6 +1493,17 @@ const AdminWnioskiIdRoute = AdminWnioskiIdRouteImport.update({
   path: '/wnioski/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiAdminResendInboxRoute = ApiAdminResendInboxRouteImport.update({
+  id: '/api/admin/resend-inbox',
+  path: '/api/admin/resend-inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInternalResendSingleRunRoute =
+  ApiInternalResendSingleRunRouteImport.update({
+    id: '/api/internal/resend-single-run',
+    path: '/api/internal/resend-single-run',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMigrationStorageManifestRoute =
   ApiMigrationStorageManifestRouteImport.update({
     id: '/api/migration/storage-manifest',
@@ -2069,10 +2100,12 @@ export interface FileRoutesByFullPath {
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
+  '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRoute
+  '/sklep': typeof SklepRouteWithChildren
   '/start': typeof StartRoute
+  '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2213,6 +2246,7 @@ export interface FileRoutesByFullPath {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/sklep/moje-zakupy': typeof SklepMojeZakupyRoute
   '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -2253,6 +2287,8 @@ export interface FileRoutesByFullPath {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/admin/resend-inbox': typeof ApiAdminResendInboxRoute
+  '/api/internal/resend-single-run': typeof ApiInternalResendSingleRunRoute
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -2387,10 +2423,12 @@ export interface FileRoutesByTo {
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
+  '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRoute
+  '/sklep': typeof SklepRouteWithChildren
   '/start': typeof StartRoute
+  '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2526,6 +2564,7 @@ export interface FileRoutesByTo {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/sklep/moje-zakupy': typeof SklepMojeZakupyRoute
   '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -2566,6 +2605,8 @@ export interface FileRoutesByTo {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/admin/resend-inbox': typeof ApiAdminResendInboxRoute
+  '/api/internal/resend-single-run': typeof ApiInternalResendSingleRunRoute
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -2707,10 +2748,12 @@ export interface FileRoutesById {
   '/raport-lokalizacje': typeof RaportLokalizacjeRoute
   '/regulamin': typeof RegulaminRoute
   '/regulamin-inwestora': typeof RegulaminInwestoraRoute
+  '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRoute
+  '/sklep': typeof SklepRouteWithChildren
   '/start': typeof StartRoute
+  '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
   '/wybor-roli': typeof WyborRoliRoute
   '/zapomniane-haslo': typeof ZapomnianeHasloRoute
@@ -2851,6 +2894,7 @@ export interface FileRoutesById {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
+  '/sklep/moje-zakupy': typeof SklepMojeZakupyRoute
   '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -2891,6 +2935,8 @@ export interface FileRoutesById {
   '/admin/program-posrednikow/zdarzenia': typeof AdminProgramPosrednikowZdarzeniaRoute
   '/admin/screening-sprawa/$caseId': typeof AdminScreeningSprawaCaseIdRoute
   '/admin/wnioski/$id': typeof AdminWnioskiIdRoute
+  '/api/admin/resend-inbox': typeof ApiAdminResendInboxRoute
+  '/api/internal/resend-single-run': typeof ApiInternalResendSingleRunRoute
   '/api/migration/storage-manifest': typeof ApiMigrationStorageManifestRoute
   '/api/public/agent-config': typeof ApiPublicAgentConfigRoute
   '/api/public/agent-tools': typeof ApiPublicAgentToolsRoute
@@ -3033,10 +3079,12 @@ export interface FileRouteTypes {
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
+    | '/regulamin-windykator-ai'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/sklep'
     | '/start'
+    | '/windykator-ai'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3177,6 +3225,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/sklep/moje-zakupy'
     | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
@@ -3217,6 +3266,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/admin/resend-inbox'
+    | '/api/internal/resend-single-run'
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -3351,10 +3402,12 @@ export interface FileRouteTypes {
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
+    | '/regulamin-windykator-ai'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/sklep'
     | '/start'
+    | '/windykator-ai'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3490,6 +3543,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/sklep/moje-zakupy'
     | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
@@ -3530,6 +3584,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/admin/resend-inbox'
+    | '/api/internal/resend-single-run'
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -3670,10 +3726,12 @@ export interface FileRouteTypes {
     | '/raport-lokalizacje'
     | '/regulamin'
     | '/regulamin-inwestora'
+    | '/regulamin-windykator-ai'
     | '/rejestracja'
     | '/sitemap.xml'
     | '/sklep'
     | '/start'
+    | '/windykator-ai'
     | '/wybor-panelu'
     | '/wybor-roli'
     | '/zapomniane-haslo'
@@ -3814,6 +3872,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
+    | '/sklep/moje-zakupy'
     | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
@@ -3854,6 +3913,8 @@ export interface FileRouteTypes {
     | '/admin/program-posrednikow/zdarzenia'
     | '/admin/screening-sprawa/$caseId'
     | '/admin/wnioski/$id'
+    | '/api/admin/resend-inbox'
+    | '/api/internal/resend-single-run'
     | '/api/migration/storage-manifest'
     | '/api/public/agent-config'
     | '/api/public/agent-tools'
@@ -3995,10 +4056,12 @@ export interface RootRouteChildren {
   RaportLokalizacjeRoute: typeof RaportLokalizacjeRoute
   RegulaminRoute: typeof RegulaminRoute
   RegulaminInwestoraRoute: typeof RegulaminInwestoraRoute
+  RegulaminWindykatorAiRoute: typeof RegulaminWindykatorAiRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  SklepRoute: typeof SklepRoute
+  SklepRoute: typeof SklepRouteWithChildren
   StartRoute: typeof StartRoute
+  WindykatorAiRoute: typeof WindykatorAiRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
   WyborRoliRoute: typeof WyborRoliRoute
   ZapomnianeHasloRoute: typeof ZapomnianeHasloRoute
@@ -4035,6 +4098,8 @@ export interface RootRouteChildren {
   WebinarIndexRoute: typeof WebinarIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiAdminResendInboxRoute: typeof ApiAdminResendInboxRoute
+  ApiInternalResendSingleRunRoute: typeof ApiInternalResendSingleRunRoute
   ApiMigrationStorageManifestRoute: typeof ApiMigrationStorageManifestRoute
   ApiPublicAgentConfigRoute: typeof ApiPublicAgentConfigRoute
   ApiPublicAgentToolsRoute: typeof ApiPublicAgentToolsRoute
@@ -4359,6 +4424,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegulaminInwestoraRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/regulamin-windykator-ai': {
+      id: '/regulamin-windykator-ai'
+      path: '/regulamin-windykator-ai'
+      fullPath: '/regulamin-windykator-ai'
+      preLoaderRoute: typeof RegulaminWindykatorAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rejestracja': {
       id: '/rejestracja'
       path: '/rejestracja'
@@ -4385,6 +4457,13 @@ declare module '@tanstack/react-router' {
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/windykator-ai': {
+      id: '/windykator-ai'
+      path: '/windykator-ai'
+      fullPath: '/windykator-ai'
+      preLoaderRoute: typeof WindykatorAiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wybor-panelu': {
@@ -5444,6 +5523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sklep/moje-zakupy': {
+      id: '/sklep/moje-zakupy'
+      path: '/moje-zakupy'
+      fullPath: '/sklep/moje-zakupy'
+      preLoaderRoute: typeof SklepMojeZakupyRouteImport
+      parentRoute: typeof SklepRoute
+    }
     '/webinar/': {
       id: '/webinar/'
       path: '/webinar'
@@ -5674,6 +5760,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/wnioski/$id'
       preLoaderRoute: typeof AdminWnioskiIdRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/api/admin/resend-inbox': {
+      id: '/api/admin/resend-inbox'
+      path: '/api/admin/resend-inbox'
+      fullPath: '/api/admin/resend-inbox'
+      preLoaderRoute: typeof ApiAdminResendInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/resend-single-run': {
+      id: '/api/internal/resend-single-run'
+      path: '/api/internal/resend-single-run'
+      fullPath: '/api/internal/resend-single-run'
+      preLoaderRoute: typeof ApiInternalResendSingleRunRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/migration/storage-manifest': {
       id: '/api/migration/storage-manifest'
@@ -6854,6 +6954,16 @@ const PosrednikRouteWithChildren = PosrednikRoute._addFileChildren(
   PosrednikRouteChildren,
 )
 
+interface SklepRouteChildren {
+  SklepMojeZakupyRoute: typeof SklepMojeZakupyRoute
+}
+
+const SklepRouteChildren: SklepRouteChildren = {
+  SklepMojeZakupyRoute: SklepMojeZakupyRoute,
+}
+
+const SklepRouteWithChildren = SklepRoute._addFileChildren(SklepRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbonamentInwestoraRoute: AbonamentInwestoraRoute,
@@ -6891,10 +7001,12 @@ const rootRouteChildren: RootRouteChildren = {
   RaportLokalizacjeRoute: RaportLokalizacjeRoute,
   RegulaminRoute: RegulaminRoute,
   RegulaminInwestoraRoute: RegulaminInwestoraRoute,
+  RegulaminWindykatorAiRoute: RegulaminWindykatorAiRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  SklepRoute: SklepRoute,
+  SklepRoute: SklepRouteWithChildren,
   StartRoute: StartRoute,
+  WindykatorAiRoute: WindykatorAiRoute,
   WyborPaneluRoute: WyborPaneluRoute,
   WyborRoliRoute: WyborRoliRoute,
   ZapomnianeHasloRoute: ZapomnianeHasloRoute,
@@ -6932,6 +7044,8 @@ const rootRouteChildren: RootRouteChildren = {
   WebinarIndexRoute: WebinarIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiAdminResendInboxRoute: ApiAdminResendInboxRoute,
+  ApiInternalResendSingleRunRoute: ApiInternalResendSingleRunRoute,
   ApiMigrationStorageManifestRoute: ApiMigrationStorageManifestRoute,
   ApiPublicAgentConfigRoute: ApiPublicAgentConfigRoute,
   ApiPublicAgentToolsRoute: ApiPublicAgentToolsRoute,
