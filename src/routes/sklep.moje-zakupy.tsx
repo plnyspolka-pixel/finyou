@@ -47,7 +47,10 @@ function StoreLibrary() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [getPurchases,getCatalog,getLegal]);
-  const entitlements = purchases?.entitlements ?? [];
+  type Entitlement = { item_kind: string; item_id: string };
+  type Order = { id: string; status: string; created_at: string; amount_grosz: number };
+  const entitlements: Entitlement[] = (purchases?.entitlements ?? []) as Entitlement[];
+  const orders: Order[] = (purchases?.orders ?? []) as Order[];
   const hasCourse = entitlements.some((i) => i.item_kind === "course" && i.item_id === "academy");
   const lessons = useMemo(() => (catalog?.lessons ?? []).filter((l) =>
     l.number !== 1 && (hasCourse || entitlements.some((e) => e.item_kind === "lesson" && e.item_id === l.id))
@@ -106,7 +109,7 @@ function StoreLibrary() {
       {message && <p role="status" className="fy-store-library-status">{message}</p>}
       {download && <p className="fy-store-library-status"><a href={download.url} target="_blank" rel="noopener noreferrer">{download.label}</a></p>}
       {purchases && <>
-        {purchases.orders.some((o)=>o.status === "pending" || o.status === "created") &&
+        {orders.some((o)=>o.status === "pending" || o.status === "created") &&
           <div className="fy-store-library-panel">Masz płatność oczekującą na potwierdzenie. Po jej rozliczeniu odśwież tę stronę. Nie udostępniamy treści na podstawie samego powrotu z Tpay.</div>}
         <section>
           <h2>Zakupione lekcje {hasCourse ? "— cała Akademia" : ""}</h2>
@@ -167,7 +170,7 @@ function StoreLibrary() {
         <section>
           <h2>Historia zamówień</h2>
           <div className="fy-store-library-panel">
-            {purchases.orders.length===0?"Brak zamówień.":purchases.orders.map((o)=>
+            {orders.length===0?"Brak zamówień.":orders.map((o)=>
               <p key={o.id}>{new Date(o.created_at).toLocaleDateString("pl-PL")} · {o.status==="paid"?"Opłacone":o.status==="pending"?"Oczekuje":o.status} · {(o.amount_grosz/100).toLocaleString("pl-PL")} zł</p>)}
           </div>
         </section>
