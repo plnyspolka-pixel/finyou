@@ -48,7 +48,9 @@ export function summarizeCourtRegistry(
   const scope = client
     ? clientFullyChecked
       ? "pożyczkobiorca sprawdzony w KRZ/MSiG (API)"
-      : "pożyczkobiorca sprawdzony CZĘŚCIOWO (bez pełnego API KRZ/MSiG — wymagane ręczne sprawdzenie w krz.ms.gov.pl)"
+      : client.courtNote.startsWith("Oficjalny MSiG")
+        ? "pożyczkobiorca sprawdzony w oficjalnym MSiG; KRZ (krz.ms.gov.pl) nie jest automatycznie dostępny — sprawdź ręcznie"
+        : "pożyczkobiorca sprawdzony CZĘŚCIOWO — oficjalny MSiG nie odpowiedział; sprawdź ręcznie w MSiG i KRZ (krz.ms.gov.pl)"
     : "pożyczkobiorca NIE sprawdzony";
   const summary =
     `KRZ/MSiG: ${scope}; podmiotów: ${report.subjects.length}. ` +

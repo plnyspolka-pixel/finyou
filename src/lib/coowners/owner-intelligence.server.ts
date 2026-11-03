@@ -89,7 +89,9 @@ async function checkCourt(input: OwnerIntelligenceInput): Promise<{
 }> {
   const key = process.env.IMSIG_API_KEY?.trim();
   if (!key) {
-    return { status: "unavailable", note: "Nie skonfigurowano IMSIG_API_KEY — KRZ/MSiG nie zostały automatycznie sprawdzone.", hits: [] };
+    // iMSiG (komercyjne API) jest opcjonalne — podstawą jest oficjalna
+    // wyszukiwarka MSiG (searchOfficialMsig) i indeks stron KRZ.
+    return { status: "unavailable", note: "", hits: [] };
   }
   const params = new URLSearchParams({ stream: "none", append_first_entry: "true" });
   // Najpierw stabilny identyfikator, dopiero później nazwa. Nie wykonujemy
@@ -335,7 +337,8 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
       // „checked" tylko z pełnego API KRZ/MSiG; samo wyszukiwanie w indeksie
       // stron to co najwyżej częściowe sprawdzenie.
       courtStatus: court.status === "checked" ? "checked" : "partial",
-      courtNote: court.note + " | " + official.note + " | " + indexed.note,
+      // Najpierw oficjalny MSiG (źródło podstawowe), potem pozostałe.
+      courtNote: [official.note, court.note, indexed.note].filter(Boolean).join(" | "),
       exchangesStatus: exchanges.status, exchangesNote: exchanges.note,
       hits: [...court.hits, ...official.hits, ...indexed.hits, ...exchanges.hits].slice(0, maxItems),
     };

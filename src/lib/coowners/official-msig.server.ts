@@ -29,6 +29,7 @@ export interface OfficialMsigRow {
 
 export const OFFICIAL_MSIG_ENDPOINT = "https://wyszukiwarka-msig.ms.gov.pl/api/Monitor/Search";
 export const OFFICIAL_MSIG_HOME = "https://wyszukiwarka-msig.ms.gov.pl/";
+export const OFFICIAL_MSIG_USER_AGENT = "FinanceYou-KYC/1.0 (+https://financeyou.pl)";
 
 const PL_CHARS: Record<string,string>={ą:"a",ć:"c",ę:"e",ł:"l",ń:"n",ó:"o",ś:"s",ź:"z",ż:"z"};
 function normalize(value: string): string {
@@ -151,19 +152,41 @@ export async function searchOfficialMsig(input: OfficialMsigInput): Promise<Offi
     from:"2001-01-01",to:end,page:"1",
   };
   for (const [key,val] of Object.entries(params)) url.searchParams.set(key,val);
-  try {
-    const response = await fetch(url.toString(),{
-      headers:{Accept:"application/json","Accept-Language":"pl-PL,pl;q=0.9"},
-      signal:AbortSignal.timeout(12_000),
-    });
+  // Jedno ponowienie przy błędzie sieci/timeoucie — portal bywa wolny z
+  // centrów danych; nie ponawiamy przy odpowiedzi HTTP (żadnego zalewania).
+  let lastError = "";
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(url.toString(),{
+        headers:{
+          Accept:"application/json",
+          "Accept-Language":"pl-PL,pl;q=0.9",
+          // Jawna identyfikacja klienta (jak przy OSM/blogu) — bez podszywania się.
+          "User-Agent":OFFICIAL_MSIG_USER_AGENT,
+        },
+        signal:AbortSignal.timeout(20_000),
+      });
+    } catch (e: unknown) {
+      lastError = e instanceof Error ? `${e.name}: ${e.message}` : "błąd sieci";
+      continue;
+    }
     if (!response.ok) return {
       status:"unavailable",
       note:"Oficjalna wyszukiwarka MSiG HTTP "+response.status+" — nie oznacza to braku wpisów.",hits:[],
     };
-    const data = await response.json() as {list?:unknown;page?:number};
-    if (!data || !Array.isArray(data.list)) return {
-      status:"unavailable",note:"Nieznany format odpowiedzi MSiG; pominięto.",hits:[],
-    };
+    const body = await response.text().catch(() => "");
+    let data: {list?:unknown;page?:number} | null = null;
+    try { data = JSON.parse(body); } catch { data = null; }
+    if (!data || !Array.isArray(data.list)) {
+      const type = response.headers.get("content-type") ?? "?";
+      const blocked = /incapsula|access denied|captcha|<html/i.test(body.slice(0, 2000));
+      return {
+        status:"unavailable",
+        note:`Oficjalna wyszukiwarka MSiG zwróciła ${blocked ? "stronę HTML zamiast danych (prawdopodobnie filtr ruchu portalu)" : "nieznany format odpowiedzi"} — HTTP ${response.status}, ${type}. Nie oznacza to braku wpisów.`,
+        hits:[],
+      };
+    }
     const hits = classifyOfficialMsigRows(input,data.list);
     return {
       // Pierwsza strona / nieudokumentowany interfejs / brak wglądu w KRZ:
@@ -174,7 +197,10 @@ export async function searchOfficialMsig(input: OfficialMsigInput): Promise<Offi
         " Baza KRZ NIE została w ten sposób sprawdzona; zwykłe wpisy KRS pominięto.",
       hits,
     };
-  } catch {
-    return {status:"unavailable",note:"Oficjalna wyszukiwarka MSiG niedostępna — nie oznacza to braku wpisów.",hits:[]};
   }
+  return {
+    status:"unavailable",
+    note:`Oficjalna wyszukiwarka MSiG nie odpowiedziała (${lastError || "błąd sieci"}, 2 próby) — nie oznacza to braku wpisów.`,
+    hits:[],
+  };
 }

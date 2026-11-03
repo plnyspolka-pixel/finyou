@@ -78,7 +78,9 @@ export function intelligenceWarnings(report: OwnerIntelligenceReport | null | un
     }
     if (s.role === "client" && s.courtStatus !== "checked")
       out.push(
-        `${who}: KRZ/MSiG sprawdzone tylko częściowo (${s.courtNote.split(" | ")[0]}) — przed decyzją sprawdź ręcznie w KRZ (krz.ms.gov.pl) i MSiG.`,
+        s.courtNote.startsWith("Oficjalny MSiG")
+          ? `${who}: sprawdzono w oficjalnym MSiG; KRZ (krz.ms.gov.pl) wymaga ręcznego sprawdzenia przed decyzją.`
+          : `${who}: KRZ/MSiG niesprawdzone (${s.courtNote.split(" | ")[0]}) — przed decyzją sprawdź ręcznie w MSiG i KRZ (krz.ms.gov.pl).`,
       );
   }
   if (!report.subjects.some((s) => s.role === "client"))

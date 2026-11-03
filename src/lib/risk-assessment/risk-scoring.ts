@@ -209,7 +209,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
       keyRisks.push("Pożyczkobiorca nie został sprawdzony w KRZ/MSiG — sprawdź ręcznie przed decyzją.");
     else if (!cr.clientFullyChecked)
       keyRisks.push(
-        "KRZ/MSiG pożyczkobiorcy sprawdzone tylko częściowo (bez pełnego API) — potwierdź ręcznie w krz.ms.gov.pl.",
+        "KRZ pożyczkobiorcy nie jest dostępny automatycznie (sprawdzono MSiG) — potwierdź ręcznie w krz.ms.gov.pl.",
       );
   }
   const cat = i.saleability.sellabilityCategory;
