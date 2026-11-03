@@ -3,7 +3,7 @@
 import { createServer } from 'node:http';
 import { timingSafeEqual } from 'node:crypto';
 import { accessibleBoxes, requireBox } from './config.mjs';
-import { listMessages, readMessage, messageEvidences, sendRawMessage } from './ua-client.mjs';
+import { listMessages, readMessage, messageEvidences, sendRawMessage, sendTask } from './ua-client.mjs';
 import { createDraft, listDrafts, getDraft, sendApprovedDraft } from './outbox.mjs';
 
 const secret = process.env.EDO_BRIDGE_TOKEN || '';
@@ -58,6 +58,9 @@ async function command(body) {
       if (args.ackLegalEffect!==true) throw new Error('Explicit legal-effect acknowledgement required');
       if (typeof args.messageId!=='string'||!args.messageId) throw new Error('messageId required');
       return readMessage(args.boxId,args.messageId);
+    case 'send_task_status':
+      if (typeof args.taskId!=='string'||!args.taskId) throw new Error('taskId required');
+      return sendTask(args.boxId,args.taskId);
     case 'evidences':
       if (typeof args.messageId!=='string'||!args.messageId) throw new Error('messageId required');
       return messageEvidences(args.boxId,args.messageId);
