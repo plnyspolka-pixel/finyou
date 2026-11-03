@@ -89,14 +89,14 @@ export async function uaRequest(boxId, method, suffix, options={}, env=process.e
 }
 
 export function listMessages(boxId, label='INBOX', env=process.env) {
-  if (!['INBOX','SENT','DRAFT','TRASH'].includes(label)) throw new Error('Invalid folder');
+  if (!['INBOX','OUTBOX','SENT','TRASH'].includes(label)) throw new Error('Invalid folder');
   // Only list-level metadata, NEVER individual FULL read or bulk archive here.
-  return uaRequest(boxId, 'GET', '/messages', { query: { label } }, env);
+  return uaRequest(boxId, 'GET', '/messages', { query: { label, format:'metadata', limit:50 } }, env);
 }
 export function readMessage(boxId, messageId, env=process.env) {
   // LEGAL EFFECT: individual GET can count as opening the correspondence.
   // This function MUST only run as an explicit user-initiated MCP tool call.
-  return uaRequest(boxId, 'GET', '/messages/' + encodeURIComponent(messageId), {}, env);
+  return uaRequest(boxId, 'GET', '/messages/' + encodeURIComponent(messageId), { query:{format:'full'} }, env);
 }
 export function messageEvidences(boxId, messageId, env=process.env) {
   return uaRequest(boxId, 'GET',
@@ -108,4 +108,8 @@ export function sendRawMessage(boxId, payload, env=process.env) {
   if (env.EDO_ENABLE_LIVE_SEND !== 'YES') throw new Error('Sending disabled: EDO_ENABLE_LIVE_SEND != YES');
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new Error('UA payload required');
   return uaRequest(boxId, 'POST', '/messages', { body: payload }, env);
+}
+
+export function sendTask(boxId,taskId,env=process.env) {
+  return uaRequest(boxId,'GET','/messages/tasks/'+encodeURIComponent(taskId),{},env);
 }
