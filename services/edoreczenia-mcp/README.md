@@ -59,7 +59,7 @@ Przekaż środowisko poprzez menedżer sekretów usługi/maszyny. `.env.example`
 ## Bezpieczeństwo wysyłki
 
 - Domyślnie `EDO_ENABLE_LIVE_SEND=NO`.
-- Do faktycznej wysyłki trzeba przygotować `uaPayload` **zgodny z oficjalnym schematem POST /{eDeliveryAddress}/messages UA API 3.0.8**. Funkcja nie próbuje zgadywać formatu dokumentów czy odbiorców; niezweryfikowany JSON zostanie odrzucony przez operatora.
+- Dla wiadomości **czysto tekstowej** `uaPayload` powstaje automatycznie z nadawcy ADE, odbiorców ADE, tematu i treści (limit treści 5000 znaków). Załączniki i wiadomości hybrydowe wymagają osobnego rozszerzenia i testów INT.
 - Uruchom lokalnie `node src/approve.mjs <draftUUID>` w interaktywnym terminalu. CLI wyświetla całą treść, odbiorców i kompletny payload, a następnie wymaga dosłownego `ZATWIERDZAM <pierwsze-12-znaków-SHA>`.
 - Serwer **nie** publikuje narzędzia zatwierdzającego projekt. Model nie może zatwierdzić własnego pisma wyłącznie poprzez MCP.
 - Dopiero `EDO_ENABLE_LIVE_SEND=YES` i `edoreczenia_send_approved` uruchomią pojedyncze POST.
