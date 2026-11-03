@@ -8,7 +8,6 @@ export type SourceCategory =
   | "instytucja_rzadowa"
   | "dane_geoprzestrzenne"
   | "rynek_nieruchomosci"
-  | "korespondencja"
   | "ai_analiza";
 
 export interface DataSourceSpec {
@@ -32,7 +31,6 @@ export const CATEGORY_LABELS: Record<SourceCategory, string> = {
   instytucja_rzadowa: "Instytucje rządowe (API)",
   dane_geoprzestrzenne: "Dane geoprzestrzenne",
   rynek_nieruchomosci: "Rynek nieruchomości",
-  korespondencja: "Korespondencja z klientem",
   ai_analiza: "Warstwa analityczna AI",
 };
 
@@ -91,16 +89,17 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provides: "e(x) — dalsze przeciętne trwanie życia wg wieku i płci",
     provider: "GUS — Trwanie życia 2022",
   },
-  // 4. Korespondencja
+  // 4. KRZ / MSiG
   {
-    key: "correspondence",
-    name: "Korespondencja z klientem",
-    category: "korespondencja",
-    governmental: false,
+    key: "krz_msig",
+    name: "KRZ / MSiG — ogłoszenia sądowe",
+    category: "rejestr_publiczny",
+    governmental: true,
     purpose:
-      "Ekstrakcja twardych faktów, rozbieżności z wnioskiem/KW i sygnałów ryzyka (bez oceny zaangażowania/sentymentu)",
-    provides: "E-maile, wiadomości DM/Messenger, transkrypcje rozmów (voicebot)",
-    provider: "lead_communications (Gmail, Messenger, ElevenLabs)",
+      "Upadłość, restrukturyzacja i egzekucja pożyczkobiorcy (zawsze) oraz właścicieli z działu II KW",
+    provides: "Ogłoszenia KRZ/MSiG (sygnatura, data, rodzaj postępowania), zgodność po PESEL/NIP/KRS lub nazwisku",
+    provider: "iMSiG API + oficjalna wyszukiwarka MSiG (Ministerstwo Sprawiedliwości) + indeks stron",
+    envKey: "IMSIG_API_KEY",
   },
   // 5. Instytucje rządowe / rejestry
   {

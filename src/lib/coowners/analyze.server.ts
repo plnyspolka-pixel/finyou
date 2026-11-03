@@ -19,7 +19,12 @@ import type { CeidgActivity } from "@/lib/risk-assessment/types";
 import { mergeKwOwners, maskPesel, personNamesOverlap } from "./core";
 import { searchKrsForPerson, emptyKrsCheck } from "./krs-person-search.server";
 import type { CoOwnersAnalysis, CoOwnerRegistryCheck } from "./types";
-import { checkOwnerPublicIntelligence, extractCompanyOwnersFromKw } from "./owner-intelligence.server";
+import {
+  checkOwnerPublicIntelligence,
+  extractCompanyOwnersFromKw,
+  type OwnerIntelligenceInput,
+} from "./owner-intelligence.server";
+import type { OwnerIntelligenceReport } from "./owner-intelligence.types";
 
 function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalysis {
   return {
@@ -38,6 +43,49 @@ function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalys
  * Działalność gospodarcza osoby: CEIDG, a gdy nie potwierdzi (brak wpisu,
  * odmowa API) — wykaz podatników VAT MF. Notatka CEIDG zostaje w wyniku.
  */
+/** Wejście KRZ/MSiG dla pożyczkobiorcy z wniosku (null, gdy brak nazwiska). */
+function clientIntelligenceInput(args: {
+  primaryClientName?: string | null;
+  primaryClientNip?: string | null;
+  primaryClientPesel?: string | null;
+}): OwnerIntelligenceInput | null {
+  const name = (args.primaryClientName ?? "").trim().replace(/\s+/g, " ");
+  if (name.split(" ").length < 2) return null;
+  const pesel = args.primaryClientPesel && parsePesel(args.primaryClientPesel).valid
+    ? args.primaryClientPesel
+    : null;
+  const nip = /^\d{10}$/.test((args.primaryClientNip ?? "").replace(/\D/g, ""))
+    ? (args.primaryClientNip ?? "").replace(/\D/g, "")
+    : null;
+  const [firstName, ...rest] = name.split(" ");
+  return { kind: "person", name, firstName, lastName: rest.join(" "), pesel, nip, role: "client" };
+}
+
+/**
+ * Ostrzeżenia z wywiadu KRZ/MSiG: każde ogłoszenie sądowe jest sygnałem dla
+ * operatora; brak pełnego sprawdzenia pożyczkobiorcy też (nie jest „czysto").
+ */
+export function intelligenceWarnings(report: OwnerIntelligenceReport | null | undefined): string[] {
+  if (!report) return ["KRZ/MSiG: wywiad nie został wykonany (błąd) — sprawdź pożyczkobiorcę ręcznie w KRZ i MSiG."];
+  const out: string[] = [];
+  for (const s of report.subjects) {
+    const who = s.role === "client" ? `Pożyczkobiorca ${s.name}` : s.name;
+    for (const h of s.hits.filter((x) => x.category === "court_notice")) {
+      out.push(
+        `${who}: ${h.title}${h.caseSignature ? ` (sygn. ${h.caseSignature})` : ""}${h.publicationDate ? `, ${h.publicationDate}` : ""} — ` +
+          (h.match === "identifier" ? "zgodny identyfikator (PESEL/NIP/KRS)." : "zgodność tylko po nazwisku — zweryfikuj tożsamość."),
+      );
+    }
+    if (s.role === "client" && s.courtStatus !== "checked")
+      out.push(
+        `${who}: KRZ/MSiG sprawdzone tylko częściowo (${s.courtNote.split(" | ")[0]}) — przed decyzją sprawdź ręcznie w KRZ (krz.ms.gov.pl) i MSiG.`,
+      );
+  }
+  if (!report.subjects.some((s) => s.role === "client"))
+    out.push("KRZ/MSiG: pożyczkobiorca nie został sprawdzony (brak imienia i nazwiska klienta we wniosku).");
+  return out;
+}
+
 async function lookupBusiness(args: {
   firstName: string | null;
   lastName: string | null;
@@ -68,13 +116,28 @@ export async function analyzeCoOwners(args: {
   primaryClientName?: string | null;
   /** NIP klienta wniosku (kartoteka / wniosek) — sprawdzany przy jego wierszu. */
   primaryClientNip?: string | null;
+  /** PESEL klienta wniosku (kartoteka) — identyfikator do KRZ/MSiG. */
+  primaryClientPesel?: string | null;
   city?: string | null;
   voivodeship?: string | null;
 }): Promise<CoOwnersAnalysis> {
   // kw_documents.kw_number przechowuje formę kompaktową (13 znaków).
   const kw =
     compactKwNumber(args.kwNumber) ?? (args.kwNumber ?? "").replace(/\s|\//g, "").toUpperCase();
-  if (!kw) return emptyAnalysis(null, "Brak numeru KW — nie przeanalizowano współwłaścicieli.");
+  // Pożyczkobiorca jest sprawdzany w KRZ/MSiG ZAWSZE — także gdy nie figuruje
+  // w dziale II KW (inna pisownia nazwiska, nieruchomość osoby trzeciej) i gdy
+  // treść KW jest niedostępna.
+  const clientInput = clientIntelligenceInput(args);
+  const clientOnly = async (kwNumber: string | null, summary: string) => ({
+    ...emptyAnalysis(kwNumber, summary),
+    ...(clientInput
+      ? await (async () => {
+          const intelligence = await checkOwnerPublicIntelligence([clientInput]).catch(() => null);
+          return { intelligence, warnings: intelligenceWarnings(intelligence) };
+        })()
+      : {}),
+  });
+  if (!kw) return clientOnly(null, "Brak numeru KW — nie przeanalizowano współwłaścicieli.");
 
   const { data: row } = await supabaseAdmin
     .from("kw_documents")
@@ -84,7 +147,7 @@ export async function analyzeCoOwners(args: {
   // Zapisany dział II analizujemy nawet przy statusie błędu odświeżenia —
   // raz pobrana treść pozostaje dostępna.
   if (!row || (row.status !== "ready" && !row.dzial_2)) {
-    return emptyAnalysis(
+    return clientOnly(
       kw,
       "Treść działu II KW niedostępna — pobierz księgę wieczystą i uruchom sprawdzenie ponownie.",
     );
@@ -95,32 +158,40 @@ export async function analyzeCoOwners(args: {
   // Osoby prawne też są właścicielami; dotychczasowa analiza CEIDG/KRS
   // dotyczyła tylko osób fizycznych. Wywiad obejmuje oba typy podmiotów.
   const companies = extractCompanyOwnersFromKw(row.dzial_2);
-  const intelligencePromise = checkOwnerPublicIntelligence([
-    ...owners.map((o) => ({
+  const ownerInputs: OwnerIntelligenceInput[] = owners.map((o) => {
+    const isClient = personNamesOverlap(args.primaryClientName, o.fullName);
+    return {
       kind: "person" as const,
       name: o.fullName,
       firstName: o.firstName,
       lastName: o.lastName,
-      pesel: parsePesel(o.pesel).valid ? o.pesel : null,
-      nip: personNamesOverlap(args.primaryClientName, o.fullName) ? args.primaryClientNip : null,
-    })),
+      pesel: parsePesel(o.pesel).valid ? o.pesel : isClient ? (clientInput?.pesel ?? null) : null,
+      nip: isClient ? args.primaryClientNip : null,
+      role: isClient ? ("client" as const) : ("owner" as const),
+    };
+  });
+  const clientAmongOwners = ownerInputs.some((o) => o.role === "client");
+  const intelligencePromise = checkOwnerPublicIntelligence([
+    ...ownerInputs,
     ...companies,
+    ...(clientInput && !clientAmongOwners ? [clientInput] : []),
   ]).catch((e: unknown) => {
     console.error("[coowners] owner intelligence failed", e instanceof Error ? e.message : "unknown");
     return null;
   });
   if (owners.length === 0) {
+    const intelligence = await intelligencePromise;
     return {
       available: true,
       kwNumber: kw,
       generatedAt: new Date().toISOString(),
       totalOwnersInKw,
       checked: [],
-      warnings: [],
+      warnings: intelligenceWarnings(intelligence),
       summary: companies.length
         ? `Dział II KW: zidentyfikowano ${companies.length} podmiotów prawnych do sprawdzenia w rejestrach.`
         : "W dziale II KW nie rozpoznano właścicieli do sprawdzenia.",
-      intelligence: await intelligencePromise,
+      intelligence,
     };
   }
 
@@ -214,6 +285,9 @@ export async function analyzeCoOwners(args: {
     `Działalność gospodarcza (CEIDG): ${withDg ? `${withDg} os.` : "nie stwierdzono"}. ` +
     `Obecność w KRS: ${inKrs ? `${inKrs} os.` : "nie stwierdzono"}.`;
 
+  const intelligence = await intelligencePromise;
+  warnings.push(...intelligenceWarnings(intelligence));
+
   return {
     available: true,
     kwNumber: kw,
@@ -222,6 +296,6 @@ export async function analyzeCoOwners(args: {
     checked,
     warnings,
     summary,
-    intelligence: await intelligencePromise,
+    intelligence,
   };
 }

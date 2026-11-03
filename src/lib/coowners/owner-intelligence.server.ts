@@ -22,6 +22,8 @@ export interface OwnerIntelligenceInput {
   nip?: string | null;
   regon?: string | null;
   krs?: string | null;
+  /** "client" = pożyczkobiorca z wniosku; domyślnie właściciel z działu II KW. */
+  role?: "client" | "owner";
 }
 
 const EXCHANGES = [
@@ -291,9 +293,23 @@ async function checkExchanges(input: OwnerIntelligenceInput): Promise<{
 
 export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInput[]): Promise<OwnerIntelligenceReport> {
   const checkedAt = new Date().toISOString();
-  const unique = [...new Map(inputs.filter((o) => o.name.trim()).map((o) => [
-    `${o.kind}:${normalize(o.name)}`, o,
-  ] as const)).values()].slice(0, maxItems);
+  // Deduplikacja po nazwie; przy zbiegu klient wygrywa (rola), a brakujące
+  // identyfikatory uzupełniamy z drugiego wpisu.
+  const byKey = new Map<string, OwnerIntelligenceInput>();
+  for (const o of inputs) {
+    if (!o.name.trim()) continue;
+    const key = `${o.kind}:${normalize(o.name)}`;
+    const prev = byKey.get(key);
+    byKey.set(key, prev ? {
+      ...prev, ...o,
+      pesel: o.pesel || prev.pesel, nip: o.nip || prev.nip, regon: o.regon || prev.regon, krs: o.krs || prev.krs,
+      role: o.role === "client" || prev.role === "client" ? "client" : "owner",
+    } : o);
+  }
+  // Klient na początku — nie może wypaść poza limit podmiotów.
+  const unique = [...byKey.values()]
+    .sort((a, b) => Number(b.role === "client") - Number(a.role === "client"))
+    .slice(0, maxItems);
   // Przetwarzamy WSZYSTKICH rozpoznanych właścicieli z działu II (do limitu
   // analizy 12), ale maksymalnie dwa jednoczesne zapytania do publicznego
   // interfejsu MSiG. Nie przekazujemy tam PESEL.
@@ -315,7 +331,9 @@ export async function checkOwnerPublicIntelligence(inputs: OwnerIntelligenceInpu
       checkExchanges(input),
     ]);
     return {
-      name: cap(input.name, 160), kind: input.kind,
+      name: cap(input.name, 160), kind: input.kind, role: input.role ?? "owner",
+      // „checked" tylko z pełnego API KRZ/MSiG; samo wyszukiwanie w indeksie
+      // stron to co najwyżej częściowe sprawdzenie.
       courtStatus: court.status === "checked" ? "checked" : "partial",
       courtNote: court.note + " | " + official.note + " | " + indexed.note,
       exchangesStatus: exchanges.status, exchangesNote: exchanges.note,

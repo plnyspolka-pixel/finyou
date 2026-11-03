@@ -7,6 +7,7 @@ import type {
   PropertyAnalysisResult,
 } from "@/lib/property-analysis/types";
 import type { KwAddress } from "@/lib/kw-address-core";
+import type { OwnerIntelligenceReport } from "@/lib/coowners/owner-intelligence.types";
 import type { LifeExpectancyResult } from "./life-expectancy";
 import type { FloorFactorResult } from "./floor-factor";
 import type { PlotBuildabilityResult } from "./plot-buildability";
@@ -168,20 +169,26 @@ export interface KwLegalAnalysis {
   summary: string;
 }
 
-// ---- Korespondencja: wyłącznie TWARDE FAKTY ----
-// Nie oceniamy zaangażowania klienta w rozmowę, sentymentu ani „poziomu współpracy" —
-// wyciągamy tylko konkretne, weryfikowalne fakty, rozbieżności i twarde sygnały ryzyka.
-export interface CorrespondenceIntel {
+// ---- KRZ / MSiG: pożyczkobiorca i właściciele z działu II KW ----
+// Wynik wywiadu owner-intelligence (iMSiG API, oficjalna wyszukiwarka MSiG,
+// indeks publicznych stron). Brak trafień ≠ potwierdzenie braku postępowań.
+export interface CourtRegistryCheck {
   available: boolean;
-  messagesAnalyzed: number;
-  channels: string[];
-  /** Twarde fakty o nieruchomości/sytuacji prawno-finansowej podane wprost przez klienta. */
-  statedFacts: string[];
-  /** Niespójności względem danych z wniosku / KW (twarde rozbieżności, np. inna kwota, adres, właściciel). */
-  inconsistencies: string[];
-  /** Twarde sygnały ryzyka wynikające z faktów (np. wzmianka o egzekucji, innym wierzycielu, sporze o własność, planowanej sprzedaży). */
-  redFlags: string[];
+  /** Pożyczkobiorca z wniosku został objęty kwerendą. */
+  clientChecked: boolean;
+  /** Pełne sprawdzenie pożyczkobiorcy (API KRZ/MSiG), nie tylko indeks stron. */
+  clientFullyChecked: boolean;
+  checkedAt: string | null;
+  subjectsChecked: number;
+  /** Ogłoszenia sądowe z identyfikatorem zgodnym z PESEL/NIP/KRS. */
+  confirmedHits: number;
+  /** Ogłoszenia zgodne tylko po nazwisku/nazwie — do weryfikacji. */
+  unconfirmedHits: number;
+  /** Ogłoszenia dotyczące pożyczkobiorcy (dowolne dopasowanie). */
+  clientHits: number;
+  findings: string[];
   summary: string;
+  report: OwnerIntelligenceReport | null;
 }
 
 // ---- OCR dokumentów ----
@@ -363,7 +370,8 @@ export interface RiskComponentScores {
   valuationConfidence: number;
   legal: number;
   borrowerLongevity: number;
-  correspondence: number;
+  /** KRZ / MSiG — postępowania upadłościowe/restrukturyzacyjne/egzekucyjne. */
+  courtRegistry: number;
   documentCompleteness: number;
   exitLiquidity: number; // prognozowana łatwość sprzedaży / wyjścia z inwestycji
 }
@@ -379,7 +387,8 @@ export interface InvestmentRiskAssessment {
 
   owner: OwnerProfile;
   kwLegal: KwLegalAnalysis;
-  correspondence: CorrespondenceIntel;
+  /** KRZ / MSiG pożyczkobiorcy i właścicieli (brak w ocenach sprzed zmiany). */
+  courtRegistry?: CourtRegistryCheck;
   ocr: OcrSummary;
   saleability: SaleabilityForecast;
   plotBuildability: PlotBuildabilityResult;

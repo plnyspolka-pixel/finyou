@@ -546,30 +546,34 @@ export const analyzeKw = defineTool({
           return { analysis_id: r.analysisId, result: r.result };
         }),
         args.check_owners
-          ? section(errors, "właściciele (CEIDG/KRS)", async () => {
+          ? section(errors, "właściciele (CEIDG/KRS) + KRZ/MSiG pożyczkobiorcy", async () => {
               let primaryClientName: string | null = null;
               let primaryClientNip: string | null = loan?.nip ?? null;
+              let primaryClientPesel: string | null = null;
               if (loan?.client_id) {
                 const c = await oneOf<{
                   first_name: string | null;
                   last_name: string | null;
                   nip: string | null;
+                  pesel: string | null;
                 }>(
                   admin
                     .from("clients")
-                    .select("first_name, last_name, nip")
+                    .select("first_name, last_name, nip, pesel")
                     .eq("id", loan.client_id),
                   "clients",
                 );
                 primaryClientName =
                   [c?.first_name, c?.last_name].filter(Boolean).join(" ").trim() || null;
                 primaryClientNip = c?.nip || primaryClientNip;
+                primaryClientPesel = c?.pesel ?? null;
               }
               const { analyzeCoOwners } = await import("@/lib/coowners/analyze.server");
               const co = await analyzeCoOwners({
                 kwNumber: compact,
                 primaryClientName,
                 primaryClientNip,
+                primaryClientPesel,
                 city: prop?.city ?? null,
                 voivodeship: prop?.voivodeship ?? null,
               });

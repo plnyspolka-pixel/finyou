@@ -7,7 +7,7 @@ import type {
   RiskGrade,
   OwnerProfile,
   KwLegalAnalysis,
-  CorrespondenceIntel,
+  CourtRegistryCheck,
   OcrSummary,
   MasterValuation,
   SaleabilityForecast,
@@ -27,7 +27,7 @@ export const WEIGHTS: Record<keyof RiskComponentScores, number> = {
   collateral: 0.18,
   valuationConfidence: 0.1,
   borrowerLongevity: 0.09,
-  correspondence: 0.07,
+  courtRegistry: 0.07,
   documentCompleteness: 0.06,
 };
 
@@ -66,15 +66,14 @@ function valuationConfidenceScore(
   return Math.max(0, Math.min(100, score));
 }
 
-// Ocena komponentu korespondencji WYŁĄCZNIE z twardych faktów — bez oceny
-// zaangażowania/sentymentu. Startujemy wysoko i odejmujemy za twarde sygnały
-// ryzyka i rozbieżności z wnioskiem/KW.
-function correspondenceFactsScore(c: CorrespondenceIntel): number {
-  if (!c.available) return 60; // brak korespondencji — neutralnie
-  let score = 85;
-  score -= Math.min(45, c.redFlags.length * 15); // twarde sygnały ryzyka
-  score -= Math.min(30, c.inconsistencies.length * 12); // rozbieżności z wnioskiem/KW
-  return Math.max(0, Math.min(100, score));
+// KRZ / MSiG: ogłoszenie ze zgodnym identyfikatorem (PESEL/NIP/KRS) to twardy
+// sygnał; zgodność tylko po nazwisku — umiarkowany (do weryfikacji). Niepełne
+// sprawdzenie pożyczkobiorcy nie jest „czysto" — ocena neutralna.
+function courtRegistryScore(c: CourtRegistryCheck | null | undefined): number {
+  if (!c || !c.available || !c.clientChecked) return 50;
+  if (c.confirmedHits > 0) return 10;
+  if (c.unconfirmedHits > 0) return 45;
+  return c.clientFullyChecked ? 90 : 65;
 }
 
 function documentCompletenessScore(ocr: OcrSummary): number {
@@ -88,7 +87,7 @@ export interface CombineInput {
   collateral: PropertyAnalysisResult | null;
   owner: OwnerProfile;
   kwLegal: KwLegalAnalysis;
-  correspondence: CorrespondenceIntel;
+  courtRegistry?: CourtRegistryCheck | null;
   ocr: OcrSummary;
   saleability: SaleabilityForecast;
   plotBuildability?: PlotBuildabilityResult | null;
@@ -124,7 +123,7 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     valuationConfidence: valuationConfidenceScore(i.collateral, i.master),
     legal: i.kwLegal.available ? i.kwLegal.legalRiskScore : 55,
     borrowerLongevity,
-    correspondence: correspondenceFactsScore(i.correspondence),
+    courtRegistry: courtRegistryScore(i.courtRegistry),
     documentCompleteness: documentCompletenessScore(i.ocr),
     exitLiquidity: i.saleability.available ? i.saleability.score : 45,
   };
@@ -163,9 +162,9 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     investmentScore = Math.min(investmentScore, 39);
     hardCaps.push("bardzo wysokie ryzyko powodziowe");
   }
-  if (i.correspondence.redFlags.length >= 3) {
-    investmentScore = Math.min(investmentScore, 55);
-    hardCaps.push("liczne sygnały ostrzegawcze w korespondencji");
+  if ((i.courtRegistry?.confirmedHits ?? 0) > 0) {
+    investmentScore = Math.min(investmentScore, 39);
+    hardCaps.push("ogłoszenie w KRZ/MSiG ze zgodnym identyfikatorem");
   }
 
   investmentScore = Math.max(0, Math.min(100, investmentScore));
@@ -203,8 +202,16 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
     keyRisks.push(
       `Ryzyko dożycia/sukcesji właściciela: ${i.owner.lifeExpectancy.longevityRiskBand}.`,
     );
-  keyRisks.push(...i.correspondence.redFlags.map((r) => `Korespondencja (fakt): ${r}`));
-  keyRisks.push(...i.correspondence.inconsistencies.map((r) => `Niespójność: ${r}`));
+  const cr = i.courtRegistry;
+  if (cr) {
+    keyRisks.push(...cr.findings.map((f) => `KRZ/MSiG: ${f}`));
+    if (!cr.clientChecked)
+      keyRisks.push("Pożyczkobiorca nie został sprawdzony w KRZ/MSiG — sprawdź ręcznie przed decyzją.");
+    else if (!cr.clientFullyChecked)
+      keyRisks.push(
+        "KRZ/MSiG pożyczkobiorcy sprawdzone tylko częściowo (bez pełnego API) — potwierdź ręcznie w krz.ms.gov.pl.",
+      );
+  }
   const cat = i.saleability.sellabilityCategory;
   if (cat && (cat.category === "D" || cat.category === "E"))
     keyRisks.push(`Kategoria zbywalności ${cat.category} (${cat.label}) — ${cat.rationale}`);
@@ -256,12 +263,8 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
       `Właściciel jest przedsiębiorcą — aktywna działalność w CEIDG${c?.name ? ` (${c.name})` : ""}${c?.startDate ? `, od ${c.startDate}` : ""}; obniża ryzyko.`,
     );
   }
-  if (
-    i.correspondence.available &&
-    i.correspondence.redFlags.length === 0 &&
-    i.correspondence.inconsistencies.length === 0
-  )
-    keyStrengths.push("Korespondencja bez twardych sygnałów ryzyka i rozbieżności z wnioskiem/KW.");
+  if (cr?.clientFullyChecked && cr.confirmedHits + cr.unconfirmedHits === 0)
+    keyStrengths.push("Brak ogłoszeń w KRZ/MSiG dla pożyczkobiorcy i właścicieli.");
   if (
     i.saleability.available &&
     (i.saleability.band === "bardzo_latwa" || i.saleability.band === "latwa")

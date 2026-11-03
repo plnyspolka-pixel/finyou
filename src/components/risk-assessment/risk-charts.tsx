@@ -85,7 +85,7 @@ const COMPONENT_LABELS: Record<keyof RiskComponentScores, string> = {
   valuationConfidence: "Pewność wyceny",
   legal: "Stan prawny (KW)",
   borrowerLongevity: "Ryzyko dożycia",
-  correspondence: "Korespondencja",
+  courtRegistry: "KRZ / MSiG",
   documentCompleteness: "Dokumenty (OCR)",
   exitLiquidity: "Łatwość sprzedaży",
 };
