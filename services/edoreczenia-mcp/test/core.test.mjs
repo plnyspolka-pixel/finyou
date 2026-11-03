@@ -44,9 +44,12 @@ test('draft needs independent approval, cannot send twice',async()=>{
   const local={...env,EDO_STATE_DIR:dir,EDO_ENABLE_LIVE_SEND:'YES'};
   try {
     const created=await createDraft({boxId:'financeyou',recipients:['AE:PL-99999999'],
-      subject:'Test',text:'Only test',uaPayload:{any:'provider-validates-schema'}},local);
+      subject:'Test',text:'Only test'},local);
     await assert.rejects(()=>sendApprovedDraft(created.id,async()=>({ok:true}),local),/needs separate human approval/);
     const row=await getDraft(created.id,local);
+    assert.equal(row.data.uaPayload.messageMetadata.from.eDeliveryAddress,'AE:PL-01234567');
+    assert.equal(row.data.uaPayload.messageMetadata.shippingService,'electronic');
+    assert.equal(row.data.uaPayload.textBody,'Only test');
     await approveDraft(created.id,row.hash,local);
     let sends=0;
     const submitted=await sendApprovedDraft(created.id,async()=>{sends++;return {taskId:'test'};},local);
@@ -60,7 +63,7 @@ test('unknown transport outcome never causes resend',async()=>{
   const local={...env,EDO_STATE_DIR:dir,EDO_ENABLE_LIVE_SEND:'YES'};
   try {
     const d=await createDraft({boxId:'financeyou',recipients:['AE:PL-99999999'],
-      subject:'Test',text:'Only test',uaPayload:{test:1}},local);
+      subject:'Test',text:'Only test'},local);
     await approveDraft(d.id,d.hash,local);
     await assert.rejects(()=>sendApprovedDraft(d.id,async()=>{throw new Error('network timeout');},local),/UNKNOWN/);
     assert.equal((await getDraft(d.id,local)).status,'unknown');
