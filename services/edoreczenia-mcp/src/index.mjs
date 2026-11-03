@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import * as z from 'zod/v4';
 import { accessibleBoxes, environment } from './config.mjs';
-import { listMessages, readMessage, messageEvidences, sendRawMessage } from './ua-client.mjs';
+import { listMessages, readMessage, messageEvidences, sendRawMessage, sendTask } from './ua-client.mjs';
 import { createDraft, listDrafts, getDraft, sendApprovedDraft } from './outbox.mjs';
 
 const success = (value) => ({
@@ -35,19 +35,24 @@ function createServer() {
     description:'Sprawdź listę/metadane pism (nie pobiera treści pojedynczej wiadomości). Zalecane jako pierwsze narzędzie.',
     inputSchema:z.object({
       boxId:z.string().min(2).max(40),
-      label:z.enum(['INBOX','SENT','DRAFT','TRASH']).default('INBOX')
+      label:z.enum(['INBOX','OUTBOX','SENT','TRASH']).default('INBOX')
     })
   }, safe(async ({boxId,label})=>listMessages(boxId,label)));
 
   server.registerTool('edoreczenia_read_message', {
     description:'UWAGA SKUTKI PRAWNE: pobranie pełnej wiadomości może stanowić jej odbiór. Użyj TYLKO na wyraźne żądanie uprawnionego człowieka dotyczące konkretnego pisma. Nie używaj do automatycznego skanowania.',
-    inputSchema:z.object({boxId:z.string().min(2).max(40), messageId:z.string().min(1).max(200)})
+    inputSchema:z.object({boxId:z.string().min(2).max(40), messageId:z.string().min(1).max(200), ackLegalEffect:z.literal(true)})
   }, safe(async ({boxId,messageId})=>readMessage(boxId,messageId)));
 
   server.registerTool('edoreczenia_evidences', {
     description:'Pobierz listę dowodów nadania/odbioru dla wskazanego pisma; to nie jest potwierdzenie doręczenia samo w sobie.',
     inputSchema:z.object({boxId:z.string().min(2).max(40),messageId:z.string().min(1).max(200)})
   }, safe(async ({boxId,messageId})=>messageEvidences(boxId,messageId)));
+
+  server.registerTool('edoreczenia_send_task_status', {
+    description:'Sprawdź status asynchronicznego zadania wysłania. Status zadania nie zastępuje dowodu doręczenia.',
+    inputSchema:z.object({boxId:z.string().min(2).max(40),taskId:z.string().min(1).max(200)})
+  }, safe(async ({boxId,taskId})=>sendTask(boxId,taskId)));
 
   server.registerTool('edoreczenia_create_draft', {
     description:'Zapisz projekt pisma lokalnie. NIE wysyła. Do rzeczywistej wysyłki wymagany jest oficjalny obiekt uaPayload zgodny z UA API 3, a następnie zatwierdzenie przez człowieka poza MCP.',
