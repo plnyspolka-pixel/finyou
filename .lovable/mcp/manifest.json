@@ -736,7 +736,7 @@
       {
         "name": "calculate_loan_installment",
         "title": "Calculate loan installment",
-        "description": "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
+        "description": "Kalkulator raty pożyczki Finance You (jeden silnik): Kwota Udzielona, prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT — potrącana z wypłaty), kwota na rękę, rata, balon, do spłaty i koszt całkowity. Oprocentowanie nie może przekraczać odsetek maksymalnych (art. 359 § 2¹ KC).",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -5865,7 +5865,7 @@
       {
         "name": "calculate_repayment_schedule",
         "title": "Calculate repayment schedule",
-        "description": "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
+        "description": "Harmonogram spłat pożyczki w modelu Finance You (jeden silnik): odsetki od kapitału pozostającego do spłaty, pułap raty steruje kapitałem, nadwyżka trafia do ostatniej raty (balon), stała prowizja inwestora rozłożona równo w ratach. Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) jest potrącana z wypłaty i nie wchodzi do rat. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity + listę rat. Oprocentowanie ponad odsetki maksymalne (art. 359 § 2¹ KC) jest blokowane. Czysta matematyka, bez bazy.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -6681,7 +6681,7 @@
       {
         "name": "create_loan_proposal",
         "title": "Create loan proposal (kreator)",
-        "description": "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (5% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
+        "description": "Tworzy propozycję pożyczki z kreatora w JEDNYM modelu matematycznym (silnik Finance You): odsetki od salda, pułap raty steruje kapitałem (reszta w ostatniej racie — balon), stała prowizja inwestora w ratach, Prowizja Finance You (7% Kwoty Udzielonej, min 5 000 zł, bez VAT) potrącana z wypłaty. Zwraca zawsze: kwota udzielona, prowizja FY, na rękę, rata, balon, do spłaty, koszt całkowity. Oprocentowanie ponad odsetki maksymalne jest blokowane. Zapisuje harmonogram jako szkic. Tylko administrator/operator.",
         "annotations": {
           "readOnlyHint": false,
           "destructiveHint": false,
@@ -7179,7 +7179,7 @@
             "finance_you_fee": {
               "type": "boolean",
               "default": false,
-              "description": "Czy doliczyć Prowizję Finance You (5 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji."
+              "description": "Czy doliczyć Prowizję Finance You (7 %, min 5 000 zł) potrącaną z wypłaty. Ignorowane, gdy inwestorem jest Finance You (admin+inwestor albo profil FY) — wtedy zawsze bez prowizji."
             },
             "note": {
               "type": "string",
@@ -15675,6 +15675,36 @@
           "required": [
             "message"
           ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "run_ania_e2e",
+        "title": "Run Ania end-to-end test",
+        "description": "Test end-to-end Ani na produkcji — URUCHAMIAJ PRZED KAŻDĄ PUBLIKACJĄ zmian w botach. Scenariusze z prawdziwych rozmów (formularz inwestorski, „Proszę zadzwonić”, „Dzięki”, informacje ogólne, komentarze) idą przez ten sam kod co wiadomość z Facebooka i przez prawdziwych agentów ElevenLabs; nic nie wychodzi do klientów (nadawca testowy e2e-…, narzędzia z prawdziwym skutkiem tylko się notują). Sprawdza: odpowiedź zamiast powitania, brak zerwania rozmowy w ElevenLabs, właściwego agenta, typ i status leada, całą wypowiedź (bez ucinania), formę żeńską, brak emoji i notatek wewnętrznych oraz trafność (model oceniający). Po teście dane są usuwane. Trwa ok. 1–2 min, ok. 15 tur ElevenLabs. Tylko administrator.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "only": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Id scenariuszy do uruchomienia (domyślnie wszystkie)."
+            },
+            "keep_data": {
+              "type": "boolean",
+              "default": false,
+              "description": "Zostaw testowe leady i wiadomości do obejrzenia (PSID e2e-…)."
+            }
+          },
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
