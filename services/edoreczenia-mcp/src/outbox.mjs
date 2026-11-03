@@ -2,6 +2,7 @@ import { mkdir, open, readFile, rename, readdir, stat, writeFile } from 'node:fs
 import { join } from 'node:path';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { requireBox, stateDir } from './config.mjs';
+import { verifiedPayload } from './message-payload.mjs';
 
 const canonical = (v) => JSON.stringify(v);
 export const digest = (value) => createHash('sha256').update(canonical(value)).digest('hex');
@@ -27,8 +28,10 @@ export function draftData(input) {
 }
 
 export async function createDraft(input, env=process.env) {
-  requireBox(input.boxId, env);
+  const box = requireBox(input.boxId, env);
   const data = draftData(input);
+  // Build a text-only UA API Message automatically; raw payloads must match the visible draft.
+  data.uaPayload = verifiedPayload(box,data);
   const id = randomUUID();
   const row = { id, data, hash: digest(data), status:'draft',
     createdAt: new Date().toISOString(), approvedAt:null, sentAt:null, task:null };
