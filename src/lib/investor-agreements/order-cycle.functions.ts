@@ -41,6 +41,8 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { canViewFinanceYouProjects } = await import("./project-visibility.server");
+    const canViewProjects = await canViewFinanceYouProjects(supabaseAdmin, userId);
 
     const { data: orders } = await loose(supabaseAdmin)
       .from("investor_orders")
@@ -49,7 +51,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
       .order("submitted_at", { ascending: false });
     // Zlecenia nie wymagają decyzji admina — wcześniej złożone przyjmujemy teraz.
     const pending = (orders ?? []).filter((o: any) => o.status === "zlozone");
-    if (pending.length > 0) {
+    if (canViewProjects && pending.length > 0) {
       const { autoAcceptOrder } = await import("./legal-pack.functions");
       for (const o of pending) {
         try {
@@ -68,17 +70,17 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
     }
     // Najpierw wygaszamy przeterminowane teasery/rezerwacje — dopiero wtedy
     // automat widzi Zlecenie jako wolne i może dobrać kolejny Projekt.
-    await (await srv()).expireStaleMatches(supabaseAdmin);
+    if (canViewProjects) await (await srv()).expireStaleMatches(supabaseAdmin);
     // Automat dopasowań: nowy pasujący Projekt pojawia się przy otwarciu widoku.
     try {
-      await (await srv()).autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
+      if (canViewProjects) await (await srv()).autoMatchInvestorOrders(supabaseAdmin, orders ?? []);
     } catch (e) {
       console.error("[auto-match] nieudane:", e);
     }
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
     let matches: any[] = [];
-    if (orderIds.length > 0) {
+    if (canViewProjects && orderIds.length > 0) {
       const { data } = await loose(supabaseAdmin)
         .from("investor_order_matches")
         .select(
@@ -152,7 +154,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
             open: !withdrawal && isWithinWithdrawalWindow(acceptedAt, new Date()),
           }
         : null,
-      accessions: accessions ?? [],
+      accessions: canViewProjects ? (accessions ?? []) : [],
     };
   });
 
@@ -674,6 +676,10 @@ export const releaseTeaser = createServerFn({ method: "POST" })
       .eq("id", data.matchId)
       .maybeSingle();
     if (!m) throw new Error("Nie znaleziono Dopasowania.");
+    const { data: order } = await loose(supabaseAdmin)
+      .from("investor_orders").select("user_id").eq("id", m.order_id).maybeSingle();
+    const { assertFinanceYouProjects } = await import("./project-visibility.server");
+    await assertFinanceYouProjects(supabaseAdmin, order?.user_id ?? "");
     await (
       await srv()
     ).transition(supabaseAdmin, m, "teaser", {

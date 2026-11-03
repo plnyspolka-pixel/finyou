@@ -3,6 +3,8 @@ import { publicCase } from "./investor-sales-public";
 
 /** Explicit public projection: never return underlying applications, identities or raw teaser JSON. */
 export const getInvestorPublicProof = createServerFn({ method: "GET" }).handler(async () => {
+  const { externalOfferCardsEnabled } = await import("@/lib/investor-agreements/project-visibility.server");
+  if (!externalOfferCardsEnabled()) return { cases: [] };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const db = supabaseAdmin;
   const [matches] = await Promise.all([

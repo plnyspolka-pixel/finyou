@@ -93,6 +93,8 @@ async function verifyCallerForOffer(userId: string, offerId: string) {
   // (płatnego) dostępu inwestora — albo Ujawnienia danych kontaktowych
   // klienta w „Moich zleceniach" (rezerwacja/transakcja tego Projektu).
   if (side === "investor") {
+    const { assertFinanceYouProjects } = await import("@/lib/investor-agreements/project-visibility.server");
+    await assertFinanceYouProjects(supabaseAdmin as any, userId);
     const { disclosedApplicationIds } =
       await import("@/lib/investor-agreements/order-projects.functions");
     const disclosed = await disclosedApplicationIds(supabaseAdmin, userId);

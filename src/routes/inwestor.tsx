@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyInvestorFlags } from "@/lib/investor-agreements/legal-pack.functions";
@@ -15,12 +15,15 @@ export const Route = createFileRoute("/inwestor")({
 // src/components/inwestor/investor-nav.ts (czysta funkcja od flag konta).
 function InwestorLayout() {
   const fetchFlags = useServerFn(getMyInvestorFlags);
-  const { data: flags } = useQuery({
+  const { data: flags, isError: flagsError } = useQuery({
     queryKey: ["investor-flags"],
     queryFn: () => fetchFlags(),
     staleTime: 10 * 60_000,
   });
   const groups = investorNavGroups(flags);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const projectRoute = ["/inwestor/umowy", "/inwestor/zlecenia", "/inwestor/oferty", "/inwestor/projekty", "/inwestor/wniosek"]
+    .some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   return (
     <PanelShell
       title="Panel inwestora"
@@ -28,7 +31,11 @@ function InwestorLayout() {
       groups={groups}
       wrapOutlet={(outlet) => (
         <ConsentGate audience="inwestor">
-          <InvestorSubscriptionGate>{outlet}</InvestorSubscriptionGate>
+          {projectRoute && !flags?.canViewProjects ? (
+              <p className="text-sm text-muted-foreground">
+                {flags || flagsError ? "Projekty inwestycyjne są dostępne wyłącznie dla Finance You." : "Sprawdzanie dostępu…"}
+              </p>
+            ) : <InvestorSubscriptionGate>{outlet}</InvestorSubscriptionGate>}
         </ConsentGate>
       )}
     />

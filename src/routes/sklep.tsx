@@ -19,7 +19,7 @@ import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
 export const Route = createFileRoute("/sklep")({
   head: () => ({ meta: [
     { title: "Sklep inwestora — Akademia, dokumenty i analizy | Finance You" },
-    { name: "description", content: "Lekcje Akademii Inwestora, Kancelaria AI, analiza księgi wieczystej i zlecenia poszukiwania okazji w Finance You." },
+    { name: "description", content: "Lekcje Akademii Inwestora, Kancelaria AI i analiza księgi wieczystej w Finance You." },
   ], links: [{ rel: "canonical", href: "https://financeyou.pl/sklep" }] }),
   component: Storefront,
 });
@@ -182,7 +182,7 @@ function Storefront() {
 
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
       <a href="#akademia">Akademia</a><a href="#kancelaria">Generator dokumentów</a>
-      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
+      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a><a href="#centrum">Zarządzanie</a>
       <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
 
@@ -303,23 +303,9 @@ function Storefront() {
       </div>
     </Section>
 
-    <Section>
-      <div id="siecsprzedazy" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
-        <div><Icon3D name="investors" size={64}/><Eyebrow tone="gold">05 / OGÓLNOPOLSKA SIEĆ SPRZEDAŻY</Eyebrow>
-          <h2>Zleć nam poszukiwanie okazji.</h2>
-          <p>Nasi specjaliści wybiorą dla Ciebie okazje inwestycyjne dopasowane do wskazanego przedziału finansowego. Otrzymasz do pięciu propozycji finansowania wraz z kompletnymi raportami, które pomogą Ci ocenić zabezpieczenia i ryzyko.</p>
-          <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Przed złożeniem zlecenia przejdziesz istniejącą weryfikację KYC, screening PEP/sankcji, oświadczenie o źródle środków oraz akceptację umowy ramowej, NDA i RODO.</span></div>
-          <div className="fy-store-actions"><MktButton variant="gold" href="/inwestor/umowy">Złóż zlecenie</MktButton>
-            <MktButton variant="outline" href="/rejestracja?role=inwestor">Nie masz konta? Zarejestruj się</MktButton></div>
-          <small>Formularz i dostęp do danych klientów są odblokowywane przez istniejące kontrole po stronie serwera. Liczba propozycji zależy od dostępnych spraw spełniających kryteria.</small>
-        </div>
-        <img src="/marketing/moduly/siec-sprzedazy-1.webp" alt="Ogólnopolska Sieć Sprzedaży Finance You" loading="lazy"/>
-      </div>
-    </Section>
-
     <Section tint>
       <div className="fy-store-bundle" style={panelStyle}>
-        <div><MktBadge variant="gold">WSZYSTKO W JEDNYM</MktBadge><h2>Finance You Kompletny</h2><p>Aktualny abonament inwestora: program szkoleniowy, narzędzia panelu i konsultacje. Dostęp do spraw zgodnie z obowiązującymi warunkami i po spełnieniu wymagań KYC/AML.</p></div>
+        <div><MktBadge variant="gold">WSZYSTKO W JEDNYM</MktBadge><h2>Finance You Kompletny</h2><p>Aktualny abonament inwestora: program szkoleniowy, narzędzia panelu i konsultacje.</p></div>
         <div><strong>7 000 zł <small>/ rok</small></strong><MktButton variant="gold" size="lg" href="/abonament-inwestora">Kup abonament</MktButton></div>
       </div>
     </Section>

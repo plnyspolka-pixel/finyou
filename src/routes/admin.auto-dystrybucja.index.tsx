@@ -1,6 +1,6 @@
 // Auto-dystrybucja — kolejka propozycji wysyłek do instytucji (zatwierdź /
 // odrzuć), kryteria kwotowe per instytucja i ustawienia globalne silnika.
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -30,6 +30,7 @@ import {
 } from "@/lib/institution-mail-agent/institution-mail.functions";
 
 export const Route = createFileRoute("/admin/auto-dystrybucja/")({
+  beforeLoad: () => { throw redirect({ to: "/admin/projekty" }); },
   component: AutoDystrybucjaPage,
 });
 

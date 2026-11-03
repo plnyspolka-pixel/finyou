@@ -241,22 +241,6 @@ export const adminSections: AdminSection[] = [
         synonyms: ["followup", "braki", "przypomnienia o brakach"],
       },
       {
-        to: "/admin/auto-dystrybucja",
-        label: "Auto-dystrybucja",
-        icon: Send,
-        description:
-          "Automatyczne dopasowanie kompletnych wniosków do instytucji wg kryteriów; wysyłka po zatwierdzeniu.",
-        synonyms: [
-          "auto dystrybucja",
-          "automat wysylki",
-          "kryteria instytucji",
-          "do zatwierdzenia",
-          "inwestorzy instytucjonalni",
-        ],
-        badgeKey: "autoDystrybucjaDoZatwierdzenia",
-        exact: true,
-      },
-      {
         to: "/admin/auto-dystrybucja/pytania",
         label: "Pytania instytucji",
         icon: MessageCircle,
@@ -422,20 +406,6 @@ export const adminSections: AdminSection[] = [
         icon: Tag,
         description: "Oferty inwestycyjne publikowane dla inwestorów.",
         synonyms: ["oferta", "oferty inwestycyjne"],
-      },
-      {
-        to: "/admin/dystrybucja",
-        label: "Dystrybucja ofert",
-        icon: Send,
-        description: "Wysyłka ofert do inwestorów i śledzenie odpowiedzi.",
-        synonyms: ["dystrybucja", "wysylka ofert"],
-      },
-      {
-        to: "/admin/karty-ofert",
-        label: "Karty ofert",
-        icon: IdCard,
-        description: "Graficzne karty ofert do udostępniania.",
-        synonyms: ["karty", "pdf oferty"],
       },
       {
         to: "/admin/szkolenia",

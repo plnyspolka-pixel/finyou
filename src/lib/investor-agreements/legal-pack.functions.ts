@@ -516,6 +516,8 @@ export const submitInvestorOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { assertFinanceYouProjects } = await import("./project-visibility.server");
+    await assertFinanceYouProjects(supabaseAdmin, userId);
 
     // Bramka: komplet pipeline'u (dane pożyczkodawcy, rachunek do spłaty,
     // KYC, screening sankcyjny, oświadczenie o źródle środków i pakiet dokumentów).
@@ -813,6 +815,7 @@ export const getMyInvestorFlags = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { hasLiveOrder } = await import("./order-cycle-core");
+    const { canViewFinanceYouProjects } = await import("./project-visibility.server");
     const [inv, { data: orders }] = await Promise.all([
       myInvestorRow(supabaseAdmin, context.userId),
       loose(supabaseAdmin)
@@ -826,5 +829,6 @@ export const getMyInvestorFlags = createServerFn({ method: "GET" })
       // Pipeline przeszedł do złożenia Zlecenia → zakładka „Złóż zlecenie"
       // znika z menu, a panel startuje od „Moich zleceń".
       hasLiveOrder: hasLiveOrder((orders ?? []) as any[]),
+      canViewProjects: await canViewFinanceYouProjects(supabaseAdmin, context.userId),
     };
   });

@@ -63,8 +63,7 @@ export function SubscriptionRequiredCard({ title }: { title?: string }) {
         </p>
         <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
           <li>Opłacasz abonament.</li>
-          <li>Uzupełniasz dane i akceptujesz Umowę ramową, NDA i umowę RODO.</li>
-          <li>Akceptacja otwiera moduł ofert: Zlecenia, dopasowane Projekty i oferty.</li>
+          <li>Korzystasz ze szkoleń i narzędzi dostępnych w swoim panelu.</li>
         </ol>
         <Button asChild>
           <Link to="/inwestor/abonament">Wykup abonament</Link>

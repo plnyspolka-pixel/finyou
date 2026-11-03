@@ -1,7 +1,7 @@
 // Dystrybucja ofert — wysyłka tematów pożyczkowych e-mailem do inwestorów
 // instytucjonalnych (wszystkich lub zaznaczonych). Odpowiedzi instytucji
 // wracają dedykowanym aliasem zwrotnym prosto na kartę wniosku.
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { OfferDistributionPanel } from "@/components/admin/offer-distribution-pa
 import { OfferCardSection } from "@/components/admin/offer-card-section";
 
 export const Route = createFileRoute("/admin/dystrybucja")({
+  beforeLoad: () => { throw redirect({ to: "/admin/projekty" }); },
   component: DystrybucjaPage,
 });
 

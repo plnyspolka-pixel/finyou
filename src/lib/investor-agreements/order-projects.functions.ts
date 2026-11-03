@@ -198,6 +198,8 @@ export function contractUnlocked(offerStatus: string): boolean {
 }
 
 async function myAcceptedOrder(db: any, userId: string, orderId: string) {
+  const { assertFinanceYouProjects } = await import("./project-visibility.server");
+  await assertFinanceYouProjects(db, userId);
   const { data: order } = await loose(db)
     .from("investor_orders")
     .select(
@@ -465,6 +467,14 @@ export async function loadMyOrderProjects(
   userId: string,
   readOnly: boolean,
 ): Promise<MyOrderProjectsResult> {
+  const { canViewFinanceYouProjects } = await import("./project-visibility.server");
+  if (!(await canViewFinanceYouProjects(supabaseAdmin, userId))) {
+    return {
+      orders: [],
+      isConsumer: false,
+      limits: orderLimitsFromSettings(await getModuleSettings()),
+    };
+  }
   {
     const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
 
@@ -1138,6 +1148,8 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MyOfferRow[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { canViewFinanceYouProjects } = await import("./project-visibility.server");
+    if (!(await canViewFinanceYouProjects(supabaseAdmin, context.userId))) return [];
     const db = loose(supabaseAdmin);
     const { data: inv } = await db
       .from("investors")

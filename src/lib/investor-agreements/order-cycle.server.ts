@@ -120,10 +120,12 @@ export async function insertMatch(
 ) {
   const { data: order } = await loose(db)
     .from("investor_orders")
-    .select("id, order_seq, status, expires_at, amount_pln")
+    .select("id, user_id, order_seq, status, expires_at, amount_pln")
     .eq("id", input.orderId)
     .maybeSingle();
   if (!order) throw new Error("Nie znaleziono Zlecenia.");
+  const { assertFinanceYouProjects } = await import("./project-visibility.server");
+  await assertFinanceYouProjects(db, order.user_id);
   if (order.status !== "przyjete")
     throw new Error(`Zlecenie ma status ${order.status} (wymagane: przyjęte).`);
   if (order.expires_at && new Date(order.expires_at).getTime() < Date.now()) {
@@ -341,6 +343,8 @@ export async function issueTransferCard(
 }
 
 export async function myMatch(db: any, userId: string, matchId: string) {
+  const { assertFinanceYouProjects } = await import("./project-visibility.server");
+  await assertFinanceYouProjects(db, userId);
   const { data: m } = await loose(db)
     .from("investor_order_matches")
     .select("*, investor_orders!inner(id, user_id, order_seq, status)")
