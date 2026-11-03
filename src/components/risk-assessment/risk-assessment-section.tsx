@@ -43,6 +43,7 @@ import {
 import { InvestmentScoreGauge, ComponentScoresChart, ValuationLadderChart } from "./risk-charts";
 import { RiskDisclaimer } from "./risk-disclaimer";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
+import { PropertyLocationMap } from "@/components/property-analysis/property-location-map";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
 function fmtPln(v: number | null | undefined): string {
@@ -208,6 +209,14 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
       </Card>
 
       <RiskDisclaimer />
+
+      {result.collateralAnalysis && (
+        <Card>
+          <CardContent className="py-4">
+            <PropertyLocationMap result={result.collateralAnalysis} />
+          </CardContent>
+        </Card>
+      )}
 
       {result.warnings?.length > 0 && (
         <Alert>

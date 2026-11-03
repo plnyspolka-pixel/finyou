@@ -783,3 +783,54 @@ describe("podsumowanie wyceny dla inwestora", () => {
     expect(buildInvestorValuationSummary(r).riskGrade).toBe("D");
   });
 });
+
+describe("lokalizacja i mapa w raporcie", () => {
+  // Minimalny PNG 1×1 — renderer mapy podmieniony (w testach brak przeglądarki).
+  const PNG_1X1 = Uint8Array.from(
+    atob(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  it("raport z dokładnym położeniem ma mapę okolicy i zbliżenie z pinezką", () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const maps = model.blocks.filter((b) => b.t === "map");
+    expect(maps).toHaveLength(2);
+    expect(maps.every((m) => m.t === "map" && m.marker)).toBe(true);
+    expect(reportModelText(model)).toContain("Lokalizacja i nieruchomość");
+  });
+
+  it("wersja przed rezerwacją nie ma mapy ani współrzędnych", () => {
+    const model = buildInvestorReportModel({
+      kind: "zlecenie",
+      detail: teaserOrderDetail(),
+      project: PROJECT,
+    });
+    expect(model.blocks.some((b) => b.t === "map")).toBe(false);
+    expect(reportModelText(model)).not.toMatch(/54\.46/);
+  });
+
+  it("mapa trafia do PDF-u przez renderer", async () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const calls: number[] = [];
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      mapRenderer: async (spec) => {
+        calls.push(spec.zoom);
+        return PNG_1X1;
+      },
+    });
+    expect(calls).toEqual([12, 17]);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(2);
+  });
+
+  it("brak mapy (renderer null) — PDF z samymi współrzędnymi", async () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      mapRenderer: async () => null,
+    });
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+  });
+});

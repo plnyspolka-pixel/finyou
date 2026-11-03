@@ -92,7 +92,17 @@ export type ReportBlock =
   | { t: "table"; columns: TableColumn[]; rows: string[][] }
   | { t: "score"; label: string; value: number; color?: string; caption?: string | null }
   | { t: "gradeScale"; grade: RiskGrade }
-  | { t: "note"; text: string; tone?: "info" | "warning" };
+  | { t: "note"; text: string; tone?: "info" | "warning" }
+  | {
+      t: "map";
+      lat: number;
+      lng: number;
+      zoom: number;
+      /** Pinezka w dokładnym punkcie (false = mapa poglądowa). */
+      marker: boolean;
+      polygon?: Array<[number, number]> | null;
+      caption: string;
+    };
 
 export interface InvestorReportModel {
   kind: ReportKind;
@@ -491,6 +501,168 @@ function saleabilityBlocks(v: InvestorValuationSummary): ReportBlock[] {
   return blocks;
 }
 
+const POI_LABEL: Record<string, string> = {
+  schools: "Szkoły",
+  kindergartens: "Przedszkola",
+  groceryStores: "Sklepy spożywcze",
+  pharmacies: "Apteki",
+  clinics: "Przychodnie i szpitale",
+  publicTransport: "Przystanki komunikacji",
+  parks: "Parki",
+  restaurants: "Gastronomia",
+  banks: "Banki i bankomaty",
+  shopping: "Centra handlowe",
+};
+
+const fmtDistance = (m: number) =>
+  m >= 1000 ? `${(m / 1000).toFixed(1).replace(".", ",")} km` : `${Math.round(m)} m`;
+
+const fmtCoord = (v: number) => v.toFixed(6);
+
+/** Lokalizacja i parametry nieruchomości: mapy, działka (ULDK), infrastruktura OSM. */
+export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] {
+  const blocks: ReportBlock[] = [{ t: "heading", text: "Lokalizacja i nieruchomość" }];
+  if (!c) {
+    blocks.push({
+      t: "paragraph",
+      muted: true,
+      text: "Mapa i dane lokalizacyjne pojawią się po zakończeniu analizy zabezpieczenia.",
+    });
+    return blocks;
+  }
+  const p = c.property;
+  const lat = p.latitude;
+  const lng = p.longitude;
+  const parcel = p.parcel ?? null;
+  const area = (v: number | null | undefined, unit = "m²") =>
+    v != null && v > 0 ? `${fmtNum(v)} ${unit}` : null;
+
+  blocks.push({
+    t: "keyValues",
+    rows: rowsWithText([
+      ["Rodzaj", propertyLabel(p.type)],
+      ["Adres", p.address],
+      ["Powiat / województwo", [p.county, p.voivodeship].filter(Boolean).join(", ") || null],
+      [
+        "Współrzędne",
+        lat != null && lng != null
+          ? `${fmtCoord(lat)}, ${fmtCoord(lng)}${p.locationApproximate ? " (przybliżone — centrum miejscowości)" : ""}`
+          : null,
+      ],
+      [
+        "Powierzchnia użytkowa",
+        area(p.usableAreaM2) ??
+          (p.type === "dom" ? "nieznana (brak w KW i we wniosku)" : null),
+      ],
+      ["Powierzchnia działki (KW)", area(p.landAreaM2)],
+      ["Obszar (KW)", p.landAreaHa ? `${String(p.landAreaHa).replace(".", ",")} ha` : null],
+      ["Numer działki (wniosek/KW)", p.parcelNumber],
+    ]),
+  });
+
+  if (lat != null && lng != null) {
+    const exact = !p.locationApproximate;
+    blocks.push({
+      t: "map",
+      lat,
+      lng,
+      zoom: 12,
+      marker: exact,
+      caption: exact
+        ? "Położenie nieruchomości na tle okolicy (OpenStreetMap)."
+        : "Okolica miejscowości — dokładnego adresu nie ustalono (OpenStreetMap).",
+    });
+    if (exact) {
+      blocks.push({
+        t: "map",
+        lat,
+        lng,
+        zoom: 17,
+        marker: true,
+        polygon: parcel?.polygon ?? null,
+        caption: parcel
+          ? `Zbliżenie: punkt adresu i obrys działki ewidencyjnej ${parcel.number} (ULDK GUGiK, OpenStreetMap).`
+          : "Zbliżenie na punkt adresu (OpenStreetMap).",
+      });
+    }
+  } else {
+    blocks.push({
+      t: "note",
+      tone: "info",
+      text: "Mapa niedostępna: brak ustalonego położenia (w wersji przed rezerwacją dokładna lokalizacja jest ukryta).",
+    });
+  }
+
+  if (parcel) {
+    blocks.push({ t: "subheading", text: "Działka ewidencyjna (ULDK GUGiK)" });
+    blocks.push({
+      t: "keyValues",
+      rows: rowsWithText([
+        ["Identyfikator działki", parcel.id],
+        ["Numer działki", parcel.number],
+        ["Obręb", parcel.region],
+        ["Gmina", parcel.commune],
+        ["Powiat", parcel.county],
+        ["Województwo", parcel.voivodeship],
+        ["Powierzchnia z geometrii", area(parcel.areaM2)],
+        [
+          "Zgodność z KW",
+          p.landAreaM2 && parcel.areaM2
+            ? Math.abs(parcel.areaM2 - p.landAreaM2) / p.landAreaM2 <= 0.05
+              ? `zgodna z obszarem w KW (${fmtNum(p.landAreaM2)} m²)`
+              : `różna od obszaru w KW (${fmtNum(p.landAreaM2)} m²) — punkt adresu może wskazywać inną działkę lub KW obejmuje kilka działek`
+            : null,
+        ],
+      ]),
+    });
+    blocks.push({ t: "paragraph", muted: true, text: parcel.note });
+  }
+
+  const loc = c.locationScore;
+  blocks.push({ t: "subheading", text: "Infrastruktura w okolicy (OpenStreetMap)" });
+  if (loc?.available === false) {
+    blocks.push({ t: "paragraph", muted: true, text: loc.summary });
+  } else if (loc) {
+    blocks.push({
+      t: "score",
+      label: "Dostępność infrastruktury",
+      value: loc.score,
+      color: NEUTRAL_BAR,
+      caption: loc.liquidityComment,
+    });
+    const counts = loc.poiCountsAll ?? loc.poiCounts ?? {};
+    const keys = Object.keys(POI_LABEL).filter((k) => counts[k] != null || loc.nearest?.[k]);
+    if (keys.length) {
+      blocks.push({
+        t: "table",
+        columns: [
+          { label: "Kategoria", width: 2.6 },
+          { label: `Liczba (${fmtDistance(loc.radiusM ?? 1500)})`, width: 1.4, align: "right" },
+          { label: "Najbliższy punkt", width: 4 },
+          { label: "Odległość", width: 1.4, align: "right" },
+        ],
+        rows: keys.map((k) => {
+          const n = loc.nearest?.[k];
+          return [
+            POI_LABEL[k],
+            counts[k] != null ? (counts[k] >= 20 ? "20+" : String(counts[k])) : "—",
+            n ? (n.name ?? "(bez nazwy)") : "—",
+            n ? fmtDistance(n.distanceM) : "—",
+          ];
+        }),
+      });
+      blocks.push({
+        t: "paragraph",
+        muted: true,
+        text: "Odległości w linii prostej od punktu adresu; dane OpenStreetMap mogą być niekompletne.",
+      });
+    } else {
+      blocks.push({ t: "paragraph", text: loc.summary });
+    }
+  }
+  return blocks;
+}
+
 function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
   const cs = c.collateralScore;
   const blocks: ReportBlock[] = [
@@ -522,6 +694,94 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
       ["Opis ryzyka powodziowego", flood ? c.investmentOfferText?.floodRiskSummary : null],
     ]),
   });
+  const comp = cs.components;
+  if (comp) {
+    blocks.push({ t: "subheading", text: "Składowe oceny zabezpieczenia" });
+    blocks.push({
+      t: "table",
+      columns: [
+        { label: "Składowa", width: 5 },
+        { label: "Wynik", width: 1.2, align: "right" },
+      ],
+      rows: [
+        ["Stan prawny i dokumenty", comp.legalAndDocuments],
+        ["Wartość i LTV", comp.valueAndLtv],
+        ["Płynność rynku", comp.marketLiquidity],
+        ["Ryzyka techniczne i użytkowe", comp.technicalAndUseRisks],
+        ["Jakość danych", comp.dataQuality],
+      ]
+        .filter((r) => r[1] != null && Number.isFinite(r[1] as number))
+        .map(([k, v]) => [String(k), String(Math.round(v as number))]),
+    });
+  }
+
+  const pv = c.portalValuation ?? c.perplexityValuation ?? null;
+  if (pv && pv.status === "success") {
+    blocks.push({ t: "subheading", text: "Porównania rynkowe (portale nieruchomości)" });
+    blocks.push({
+      t: "keyValues",
+      rows: rowsWithText([
+        [
+          "Porównania",
+          `${pv.comparablesFound}${pv.transactionsFound ? ` (w tym transakcje: ${pv.transactionsFound})` : ""}`,
+        ],
+        ["Mediana zł/m²", pv.pricePerM2Median != null ? `${formatPLN(pv.pricePerM2Median)}/m²` : null],
+        ["Średnia zł/m²", pv.pricePerM2Average != null ? `${formatPLN(pv.pricePerM2Average)}/m²` : null],
+        [
+          "Rozpiętość zł/m²",
+          pv.pricePerM2Min != null && pv.pricePerM2Max != null
+            ? `${formatPLN(pv.pricePerM2Min)} – ${formatPLN(pv.pricePerM2Max)}`
+            : null,
+        ],
+        ["Cena za ha", pv.pricePerHa != null ? `${formatPLN(pv.pricePerHa)}/ha` : null],
+        [
+          "Zakres wartości z porównań",
+          pv.estimatedValueLowPln != null || pv.estimatedValueHighPln != null
+            ? `${formatPLN(pv.estimatedValueLowPln)} – ${formatPLN(pv.estimatedValueHighPln)}`
+            : null,
+        ],
+        ["Trend rynku", pv.marketTrend ? (TREND_LABEL[pv.marketTrend] ?? pv.marketTrend) : null],
+        ["Płynność", pv.liquidityComment],
+        ["Źródła", pv.sourcesSummary],
+      ]),
+    });
+    if (pv.rationale) blocks.push({ t: "paragraph", muted: true, text: pv.rationale });
+  }
+  if (c.marketLiquidity?.summary) {
+    blocks.push({
+      t: "keyValues",
+      rows: [["Rynek lokalny", c.marketLiquidity.summary]],
+    });
+  }
+
+  const fr = c.floodRisk;
+  if (fr?.available) {
+    const yes = (b: boolean) => (b ? "tak" : "nie");
+    blocks.push({ t: "subheading", text: "Ryzyko powodziowe (ISOK / Wody Polskie)" });
+    blocks.push({
+      t: "keyValues",
+      rows: rowsWithText([
+        ["Poziom", FLOOD_LABEL[fr.riskLevel] ?? (fr.riskLevel === "none" ? "brak w mapach zagrożenia" : fr.riskLevel)],
+        ["Scenariusz 10% (raz na 10 lat)", yes(fr.scenario10Percent)],
+        ["Scenariusz 1% (raz na 100 lat)", yes(fr.scenario1Percent)],
+        ["Scenariusz 0,2% (raz na 500 lat)", yes(fr.scenario02Percent)],
+        ["Obszar szczególnego zagrożenia", yes(fr.specialFloodHazardArea)],
+        ["Głębokość wody", fr.waterDepth != null ? `${String(fr.waterDepth).replace(".", ",")} m` : null],
+        ["Prędkość przepływu", fr.flowVelocity != null ? `${String(fr.flowVelocity).replace(".", ",")} m/s` : null],
+        [
+          "Podstawa",
+          fr.geometryUsed === "parcel_geometry"
+            ? "geometria działki"
+            : fr.geometryUsed === "address_geocoding"
+              ? "punkt adresu"
+              : fr.geometryUsed === "point"
+                ? "punkt"
+                : null,
+        ],
+      ]),
+    });
+  }
+
   if (cs.mainStrengths.length) {
     blocks.push({ t: "subheading", text: "Mocne strony zabezpieczenia" });
     blocks.push({ t: "bullets", items: cs.mainStrengths });
@@ -529,6 +789,10 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
   if (cs.mainRisks.length) {
     blocks.push({ t: "subheading", text: "Ryzyka zabezpieczenia" });
     blocks.push({ t: "bullets", items: cs.mainRisks });
+  }
+  if (c.warnings?.length) {
+    blocks.push({ t: "subheading", text: "Uwagi z analizy danych" });
+    blocks.push({ t: "bullets", items: [...new Set(c.warnings)].slice(0, 15) });
   }
   return blocks;
 }
@@ -808,6 +1072,7 @@ function resultBlocks(a: {
 }): ReportBlock[] {
   const blocks: ReportBlock[] = [];
   if (a.grade) blocks.push(...gradeBlocks(a.grade), ...(a.gradeExtra ?? []));
+  blocks.push(...locationBlocks(a.collateral));
   if (a.valuation) blocks.push(...valuationBlocks(a.valuation), ...saleabilityBlocks(a.valuation));
   if (a.collateral) blocks.push(...collateralBlocks(a.collateral));
   blocks.push(...(a.highlights ?? []));
@@ -1059,6 +1324,9 @@ export function reportModelText(model: InvestorReportModel): string {
       case "gradeScale":
         out.push(b.grade);
         break;
+      case "map":
+        out.push(b.caption);
+        break;
     }
   }
   return out.join("\n");
@@ -1084,11 +1352,34 @@ export function reportPdfFilename(model: InvestorReportModel, date: Date = new D
   return `FY-${prefix[model.kind]}${parts.join("")}-${warsawDateStamp(date)}.pdf`;
 }
 
+/** Rysuje mapę do PNG — w przeglądarce kafelki OSM; w testach można podmienić. */
+export type MapRenderer = (spec: {
+  lat: number;
+  lng: number;
+  zoom: number;
+  width: number;
+  height: number;
+  marker: boolean;
+  polygon?: Array<[number, number]> | null;
+}) => Promise<Uint8Array | null>;
+
+async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uint8Array | null> {
+  if (typeof document === "undefined") return null;
+  const { renderStaticMapPng, zoomToFit } = await import("@/lib/pdf/static-map");
+  const zoom =
+    spec.polygon && spec.polygon.length >= 3 && spec.zoom >= 15
+      ? Math.min(spec.zoom, zoomToFit(spec.polygon, spec.width, spec.height))
+      : spec.zoom;
+  return renderStaticMapPng({ ...spec, zoom });
+}
+
 export interface RenderReportOptions {
   /** Imię i nazwisko / nazwa inwestora (albo e-mail) — stopka „Przygotowano dla”. */
   preparedFor: string;
   generatedAt?: Date;
   fonts?: ReportFonts;
+  /** Renderer mapy (domyślnie kafelki OSM w przeglądarce). */
+  mapRenderer?: MapRenderer;
 }
 
 /** PDF (bajty) z modelu raportu. */
@@ -1135,6 +1426,27 @@ export async function renderInvestorReportPdf(
       case "note":
         w.note(b.text, { tone: b.tone });
         break;
+      case "map": {
+        const png = await (opts.mapRenderer ?? defaultMapRenderer)({
+          lat: b.lat,
+          lng: b.lng,
+          zoom: b.zoom,
+          width: 520,
+          height: 300,
+          marker: b.marker,
+          polygon: b.polygon,
+        }).catch(() => null);
+        if (png) {
+          await w.image(png, { format: "png", maxHeight: 300, align: "center", after: 4 });
+          w.paragraph(b.caption, { muted: true, size: 8 });
+        } else {
+          w.paragraph(
+            `${b.caption} Mapy nie udało się wczytać — położenie: ${b.lat.toFixed(6)}, ${b.lng.toFixed(6)}.`,
+            { muted: true, size: 8 },
+          );
+        }
+        break;
+      }
     }
   }
   return w.save();

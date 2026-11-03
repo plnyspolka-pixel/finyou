@@ -166,6 +166,8 @@ export function sanitizeCollateralForTeaser(
       parcelNumber: null,
       latitude: null,
       longitude: null,
+      // Działka (ULDK) wskazuje dokładne położenie — dopiero po rezerwacji.
+      parcel: null,
     },
     locationScore: {
       ...result.locationScore,

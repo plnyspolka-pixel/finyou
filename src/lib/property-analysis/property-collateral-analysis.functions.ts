@@ -1,6 +1,7 @@
 // Orchestrator analizy zabezpieczenia — wycena z dzisiejszych danych portali nieruchomości
 // (deweloperuch, otodom, morizon, gratka, adresowo, olx) + komentarz Lovable AI.
 import { isBuildingPropertyType, resolveBuildingArea } from "@/lib/risk-assessment/building-area";
+import { fetchParcelByPoint } from "./uldk.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -301,6 +302,21 @@ export async function analyzePropertyCollateral(
       );
     }
 
+    // 3b) Działka ewidencyjna pod punktem (ULDK GUGiK) — tylko przy dokładnym
+    //     adresie; przy centrum miejscowości działka byłaby przypadkowa.
+    const exactPoint = input.latitude != null && input.longitude != null && !geo?.approximate;
+    const parcel = exactPoint
+      ? await fetchParcelByPoint(input.latitude!, input.longitude!).catch(() => null)
+      : null;
+    sourcesUsed.push({
+      source: "ULDK GUGiK (działki ewidencyjne)",
+      used: parcel != null,
+      purpose: "identyfikator, obręb, gmina i obrys działki pod punktem lokalizacji",
+      dataLevel: parcel ? `działka ${parcel.id}` : exactPoint ? "—" : "brak dokładnego adresu",
+      period: "",
+      status: parcel ? "success" : "no_data",
+    });
+
     // 4) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
       lat: input.latitude ?? null,
@@ -505,6 +521,8 @@ export async function analyzePropertyCollateral(
       },
       floodAlerts: flood.alerts,
     });
+    result.property.locationApproximate = Boolean(geo?.approximate);
+    result.property.parcel = parcel;
     result.portalValuation = {
       status: pv.status,
       pricePerM2Median: pv.pricePerM2Median,

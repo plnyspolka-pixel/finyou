@@ -44,6 +44,7 @@ import { ExternalKwChecks } from "@/components/inwestor/external-kw-checks";
 import { ReportPdfButton } from "@/components/inwestor/report-pdf-button";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
+import { PropertyLocationMap } from "@/components/property-analysis/property-location-map";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import {
   RISK_STEP_ETA_TEXT,
@@ -806,6 +807,7 @@ function DetailPanel({ applicationId }: { applicationId: string }) {
       >
         {d.valuation || d.collateral ? (
           <div className="space-y-4">
+            <PropertyLocationMap result={d.collateral} />
             <InvestorValuationCard applicationId={item.id} summary={d.valuation} />
             <InvestorSummaryCard applicationId={item.id} result={d.collateral} />
           </div>

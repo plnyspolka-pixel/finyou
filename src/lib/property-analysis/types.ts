@@ -1,5 +1,6 @@
 // Typy współdzielone modułu Analiza Zabezpieczenia.
 // Plik bezpieczny do importu zarówno po stronie klienta, jak i serwera.
+import type { UldkParcel } from "./uldk";
 
 export type PropertyType =
   | "mieszkanie"
@@ -100,6 +101,11 @@ export interface LocationScoreResult {
   summary: string;
   liquidityComment: string;
   poiCounts?: Record<string, number>;
+  /** Liczby punktów we wszystkich kategoriach OSM (szersze niż scoring). */
+  poiCountsAll?: Record<string, number>;
+  /** Najbliższy punkt w kategorii: nazwa i odległość w linii prostej (m). */
+  nearest?: Record<string, { name: string | null; distanceM: number }>;
+  radiusM?: number;
 }
 
 export interface LegalRiskResult {
@@ -170,6 +176,10 @@ export interface PropertyAnalysisResult {
     usableAreaM2: number | null;
     landAreaM2: number | null;
     landAreaHa: number | null;
+    /** Lokalizacja przybliżona (centrum miejscowości) — bez dokładnego adresu. */
+    locationApproximate?: boolean;
+    /** Działka ewidencyjna pod punktem (ULDK GUGiK). */
+    parcel?: UldkParcel | null;
   };
   dataSourcesUsed: DataSourceUsage[];
   valuationBenchmark: ValuationBenchmark;

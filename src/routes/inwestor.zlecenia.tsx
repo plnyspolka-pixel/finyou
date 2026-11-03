@@ -59,6 +59,7 @@ import {
 import { KwAnalysisReport, KwStatusBadge } from "@/components/kw-analysis/kw-analysis-section";
 import { InvestorValuationCard } from "@/components/risk-assessment/investor-valuation-card";
 import { InvestorSummaryCard } from "@/components/property-analysis/investor-summary-card";
+import { PropertyLocationMap } from "@/components/property-analysis/property-location-map";
 import { RiskDisclaimer } from "@/components/risk-assessment/risk-disclaimer";
 import {
   ProjectPhotoGallery,
@@ -972,6 +973,7 @@ function ReportPanel({
       <StepCard meta={ANALYTICS_STEPS[3]} status={status("risk")} error={r.steps.risk?.error}>
         {d.valuation || d.collateral ? (
           <div className="space-y-4">
+            <PropertyLocationMap result={d.collateral} />
             <InvestorValuationCard applicationId={applicationId} summary={d.valuation} />
             <InvestorSummaryCard applicationId={applicationId} result={d.collateral} />
           </div>
