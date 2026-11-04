@@ -105,16 +105,19 @@ export const ANONYMIZED_REPORT_NOTE =
   "Wersja anonimowa — numer KW zamaskowany, bez treści księgi; imiona, nazwiska, adres, " +
   "działka i współrzędne usunięte. Dokumenty klienta nie są dołączane.";
 
-export const SALES_BUTTON_LABEL = "Zainwestuj w ten Projekt";
+export const SALES_BUTTON_LABEL = "Zostań partnerem Finance You";
 
-/** Link przycisku sprzedażowego — rejestracja inwestora z numerem Projektu i UTM. */
+/**
+ * Link przycisku sprzedażowego — ten sam cel, co „Zostań partnerem” na stronie
+ * (cennik na /dla-inwestora), z numerem Projektu i UTM.
+ */
 export function salesButtonUrl(projectRef: string | null): string {
-  const q = new URLSearchParams({ role: "inwestor" });
+  const q = new URLSearchParams();
   if (projectRef) q.set("projekt", projectRef);
   q.set("utm_source", "raport-pdf");
   q.set("utm_medium", "pdf");
   q.set("utm_campaign", "raport-sprzedazowy");
-  return `https://financeyou.pl/rejestracja?${q.toString()}`;
+  return `https://financeyou.pl/dla-inwestora?${q.toString()}#cennik`;
 }
 
 export type ReportBlock =

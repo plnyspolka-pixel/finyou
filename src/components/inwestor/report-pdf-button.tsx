@@ -32,7 +32,7 @@ const VARIANTS: Array<{ id: ReportVariant; label: string; hint: string }> = [
   {
     id: "sprzedazowy",
     label: "Raport sprzedażowy",
-    hint: "Anonimowy + przycisk „Zainwestuj w ten Projekt” na każdej stronie",
+    hint: "Anonimowy + przycisk „Zostań partnerem Finance You” na każdej stronie",
   },
 ];
 

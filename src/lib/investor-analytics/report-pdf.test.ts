@@ -924,7 +924,7 @@ describe("lokalizacja i mapa w raporcie", () => {
       label: SALES_BUTTON_LABEL,
       url: salesButtonUrl("FY-Z-4-P1"),
     });
-    expect(model.salesButton!.url).toMatch(/^https:\/\/financeyou\.pl\/rejestracja\?/);
+    expect(model.salesButton!.url).toMatch(/^https:\/\/financeyou\.pl\/dla-inwestora\?.*#cennik$/);
     expect(model.salesButton!.url).toContain("projekt=FY-Z-4-P1");
     expect(reportModelText(model)).not.toMatch(/Żukowsk|Grażyn|Kwiatowa|SL1S\/00012344/);
     const bytes = await renderInvestorReportPdf(model, {
@@ -943,7 +943,7 @@ describe("lokalizacja i mapa w raporcie", () => {
     const link = doc.context.lookup(first.get(0)) as import("pdf-lib").PDFDict;
     const action = link.lookup(PDFName.of("A")) as import("pdf-lib").PDFDict;
     const uri = action.lookup(PDFName.of("URI"));
-    expect(String(uri)).toContain("financeyou.pl/rejestracja");
+    expect(String(uri)).toContain("financeyou.pl/dla-inwestora");
   });
 
   it("pełny: dokument PDF doklejony stronami, zdjęcie osadzone", async () => {
