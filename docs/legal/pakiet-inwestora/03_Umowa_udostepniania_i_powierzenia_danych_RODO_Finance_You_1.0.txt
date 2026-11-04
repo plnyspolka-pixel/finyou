@@ -45,7 +45,7 @@ Państwo Trzecie oznacza państwo poza Europejskim Obszarem Gospodarczym, a Tran
 Umowa Pośrednictwa i NDA mają znaczenie nadane im w odrębnych dokumentach Stron. W razie sprzeczności w sprawach ochrony danych pierwszeństwo ma niniejsza Umowa i Karta Transferu, a dla prawidłowo uruchomionego powierzenia — Karta Polecenia.
 § 2. Zasady wspólne dla każdego ujawnienia
 Strony przetwarzają wyłącznie dane adekwatne, stosowne i ograniczone do niezbędnych dla konkretnego, zgodnego z prawem celu. Umowa nie zobowiązuje Finance You do przekazywania wszystkich posiadanych danych ani całej dokumentacji.
-Ujawnienie odbywa się etapowo: teaser anonimowy, pakiet zanonimizowany lub spseudonimizowany, następnie ograniczony pakiet identyfikujący, a pełniejsze dokumenty dopiero po wykazaniu potrzeby. Dane szczególnych kategorii i dane dotyczące wyroków skazujących lub naruszeń prawa są co do zasady wyłączone i wymagają odrębnej udokumentowanej podstawy, testu niezbędności i dodatkowych zabezpieczeń.
+Ujawnienie odbywa się etapowo — w systemie Finance You albo innym kanałem, w szczególności telefonicznie, SMS-em, e-mailem lub osobiście: opis zanonimizowany lub spseudonimizowany, następnie ograniczony pakiet identyfikujący, a pełniejsze dokumenty dopiero po wykazaniu potrzeby. Przy przekazaniu danych telefonicznie, SMS-em lub e-mailem Finance You ogranicza zakres do niezbędnego minimum, a dokumenty zawierające Dane Projektowe przekazuje odnośnikiem do systemu albo w zabezpieczonym załączniku. Dane szczególnych kategorii i dane dotyczące wyroków skazujących lub naruszeń prawa są co do zasady wyłączone i wymagają odrębnej udokumentowanej podstawy, testu niezbędności i dodatkowych zabezpieczeń.
 Każde ujawnienie musi być przypisane do imiennego użytkownika, Projektu, zakresu, wersji dokumentów i czasu dostępu. Konta współdzielone są zabronione.
 Strona otrzymująca nie może używać danych do marketingu, wzbogacania baz, oceny osób poza Projektem, trenowania modeli, sprzedaży leadów, pozyskiwania klientów poza Umową Pośrednictwa ani łączenia z zewnętrznymi zbiorami w celu niedozwolonej reidentyfikacji.
 Dane mogą zostać ujawnione wyłącznie osobom rzeczywiście zaangażowanym w ocenę lub realizację Projektu, związanym poufnością i posiadającym zakres uprawnień zgodny z zasadą niezbędnej wiedzy.
@@ -95,7 +95,7 @@ Dostawca wykonujący czynności wyłącznie w imieniu Inwestora może być jego 
 Dane nie mogą zostać sprzedane, udostępnione brokerowi danych, wykorzystane w publicznym rejestrze prywatnym ani ujawnione potencjalnemu finansującemu „na próbę” bez uprzedniego objęcia go właściwą strukturą umowną.
 Na żądanie Finance You Inwestor wskaże kategorie lub tożsamość dalszych odbiorców w zakresie koniecznym do wykazania zgodności i poinformowania osoby, z zastrzeżeniem tajemnicy zawodowej.
 § 8. Przechowywanie, ograniczenie i usunięcie
-Jeżeli Projekt zostanie odrzucony, rezerwacja wygaśnie albo Inwestor nie kontynuuje analizy, pełne Dane Projektowe usuwa się z aktywnych systemów w terminie 14 dni, chyba że konkretny obowiązek prawny lub udokumentowana potrzeba ochrony roszczeń wymaga dłuższego, ograniczonego przechowania.
+Jeżeli Projekt zostanie odrzucony, jego prezentacja zakończy się albo Inwestor nie kontynuuje analizy, pełne Dane Projektowe usuwa się z aktywnych systemów w terminie 14 dni, chyba że konkretny obowiązek prawny lub udokumentowana potrzeba ochrony roszczeń wymaga dłuższego, ograniczonego przechowania.
 Inwestor może zachować minimalny zestaw dowodowy konieczny do wykazania oceny, źródła relacji, konfliktu lub obrony roszczeń, z odseparowaniem, ograniczeniem dostępu i zakazem ponownego użycia operacyjnego. Finance You może zachować identyfikator Klienta, Projektu, Ujawnienia, akceptacje i logi przez pięcioletni okres ochronny oraz właściwy ustawowy okres dochodzenia roszczeń.
 Dla zrealizowanego Finansowania Administrator określa okres na podstawie celu obsługi, przepisów rachunkowych, podatkowych, AML — jeżeli mają zastosowanie — oraz przedawnienia. Okresy muszą być wpisane w Karcie Transferu lub wewnętrznym harmonogramie retencji.
 Kopie zapasowe mogą podlegać rotacyjnemu nadpisaniu, co do zasady nie później niż w ciągu 90 dni, pod warunkiem że są odseparowane, niedostępne operacyjnie i usuwane przy zwykłym cyklu odtwarzania. Wcześniejsze usunięcie stosuje się, jeżeli technicznie wykonalne i proporcjonalne.
@@ -188,7 +188,7 @@ Dane podwyższonego ryzyka
 Paczka / dokumenty
 identyfikator paczki, lista plików i poziom redakcji: ________________________________________________
 Etap ujawnienia
-☐ teaser anonimowy  ☐ pakiet zanonimizowany  ☐ pakiet identyfikujący  ☐ dokumentacja rozszerzona
+☐ opis anonimowy  ☐ pakiet zanonimizowany  ☐ pakiet identyfikujący  ☐ dokumentacja rozszerzona
 Podstawa Finance You
 art. 6 ust. 1 lit. ______ RODO; opis / test: ________________________________________________
 Podstawa Inwestora
@@ -356,7 +356,7 @@ ________________________________________________________________
 Zakres danych
 ________________________________________________________________
 Podstawa usunięcia
-☐ odrzucenie  ☐ wygaśnięcie rezerwacji  ☐ koniec celu  ☐ żądanie  ☐ koniec powierzenia  ☐ inna
+☐ odrzucenie  ☐ zakończenie prezentacji  ☐ koniec celu  ☐ żądanie  ☐ koniec powierzenia  ☐ inna
 Aktywne systemy
 usunięto dnia: __________________  metoda: ________________________________________________
 Urządzenia / wydruki
