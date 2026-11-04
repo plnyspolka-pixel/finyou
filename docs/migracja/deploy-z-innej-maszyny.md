@@ -42,3 +42,10 @@ VAPID_SUBJECT (domyślne `mailto:kontakt@financeyou.pl`), FINANCEYOU_WEBHOOK_SEC
 ELEVENLABS_WEBHOOK_SECRET), TPAY_API_BASE. Do dodania zostały: KSEF_TOKEN_FINANCE_YOU,
 KSEF_TOKEN_FUNDACJA_IM_PIECZAKA, GUS_BIR_API_KEY, GUS_BDL_API_KEY, CEIDG_JWT_TOKEN (opcjonalnie EU_FSF_TOKEN,
 CAPTION_BURNER_URL/SECRET). REMOTION_AWS_* i OWNER_ALERT_PHONE nie są czytane przez Workera.
+
+## Wariant bez własnej maszyny: GitHub Actions
+
+Workflow `.github/workflows/deploy-worker.yml` buduje i wdraża Workera na maszynie GitHub po każdym
+pushu na gałąź `claude/dazzling-ritchie-qn9w8w` (albo ręcznie: Actions > Deploy Worker finyou > Run workflow).
+Jednorazowo trzeba dodać sekret repozytorium `CLOUDFLARE_API_TOKEN`
+(https://github.com/plnyspolka-pixel/finyou/settings/secrets/actions, token z uprawnieniem Workers Scripts: Edit).
