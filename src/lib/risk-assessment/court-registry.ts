@@ -1,6 +1,7 @@
 // Podsumowanie KRZ/MSiG dla oceny ryzyka — czysta logika (testowalna).
 import type { OwnerIntelligenceReport } from "@/lib/coowners/owner-intelligence.types";
 import type { CourtRegistryCheck } from "./types";
+import { proceedingStatusLabel } from "@/lib/coowners/court-proceeding-format";
 
 export function summarizeCourtRegistry(
   report: OwnerIntelligenceReport | null,
@@ -38,7 +39,7 @@ export function summarizeCourtRegistry(
       findings.push(
         `${who}: ${h.title}${h.caseSignature ? ` (sygn. ${h.caseSignature})` : ""}${h.publicationDate ? `, ${h.publicationDate}` : ""} — ${
           h.match === "identifier"
-            ? "identyfikator zgodny"
+            ? `identyfikator zgodny${h.proceeding ? `; postępowanie: ${proceedingStatusLabel[h.proceeding.status]}, ostatnie ogłoszenie ${h.proceeding.lastPublication}` : ""}`
             : "zgodność tylko po nazwisku, do weryfikacji"
         }.`,
       );

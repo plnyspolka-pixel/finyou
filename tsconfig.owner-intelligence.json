@@ -6,7 +6,13 @@
     "src/lib/coowners/owner-intelligence.types.ts",
     "src/lib/coowners/owner-intelligence.test.ts",
     "src/lib/coowners/public-index-search.server.ts",
-    "src/lib/coowners/public-index-search.test.ts"
+    "src/lib/coowners/public-index-search.test.ts",
+    "src/lib/coowners/official-msig.server.ts",
+    "src/lib/coowners/official-msig-detail.ts",
+    "src/lib/coowners/court-proceeding-format.ts",
+    "src/lib/coowners/official-msig.test.ts",
+    "src/lib/coowners/official-msig-detail.test.ts",
+    "src/lib/risk-assessment/court-registry.ts"
   ],
   "compilerOptions": {
     "types": [
