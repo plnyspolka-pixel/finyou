@@ -121,7 +121,9 @@ export function easyMkwOrderContent(
   return call<unknown>("/v1/orders", {
     method: "POST",
     body: {
-      name: opts?.name ?? `FY treść KW ${kw}`,
+      // Nazwa zamówienia musi być unikalna w EasyMKW — stała nazwa per KW
+      // powodowała „Brak unikalności" przy każdym ponownym zamówieniu księgi.
+      name: opts?.name ?? `FY treść KW ${kw} ${new Date().toISOString()}`,
       kws: [kw],
       // API parsuje to pole przez java.time.Period.parse; przy tym samym
       // startDate i endDate P1D uruchamia dokładnie jedno pobranie.

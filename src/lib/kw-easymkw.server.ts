@@ -28,6 +28,11 @@ function pickContentJob(jobs: EasyMkwJob[]): EasyMkwJob | null {
   return sorted.find((j) => j.stepNumber === CONTENT_STEP) ?? sorted[0] ?? null;
 }
 
+/** EasyMKW odrzuca zamówienie duplikujące istniejące („Brak unikalności"). */
+export function isEasyMkwDuplicateError(msg: string | null | undefined): boolean {
+  return /unikaln|unique|duplicat/i.test(msg ?? "");
+}
+
 /** Zapisuje wynik JSON w cache kw_documents i oznacza księgę jako gotową. */
 async function storeJson(kw: string, jobId: string, json: unknown) {
   // KLUCZOWE: oprócz surowego JSON-a zapisujemy też działy w formacie HTML
@@ -141,9 +146,19 @@ export async function fetchAndStoreKwEasyMkw(
   }
 
   // Zadanie już zlecone — nie zamawiaj ponownie, tylko dociągnij wynik.
+  // Gdy zadanie wciąż trwa, NIE składamy drugiego zamówienia: EasyMKW odrzuca
+  // duplikat („Brak unikalności"), a nieudana próba zjada limit zamówień
+  // księgi i zostawia rekord w „error", którego cron już nie dopytuje.
   if (cached?.easymkw_job_id && !opts?.force) {
     const synced = await syncEasyMkwJob(kw);
-    if (synced.status !== "processing") return synced;
+    if (synced.status === "processing") {
+      await supabaseAdmin
+        .from("kw_documents")
+        .update({ status: "processing", provider: "easymkw" })
+        .eq("kw_number", kw)
+        .neq("status", "ready");
+    }
+    return synced;
   }
 
   const claim = await supabaseAdmin.rpc("kw_claim_order", { _kw: kw, _max_attempts: 2 });
@@ -169,6 +184,17 @@ export async function fetchAndStoreKwEasyMkw(
   }
 
   const order = await easyMkwOrderContent(kw, "json");
+  if (!order.ok && isEasyMkwDuplicateError(order.error)) {
+    // Zamówienie na tę księgę już istnieje po stronie EasyMKW — to nie błąd
+    // pobrania. Zostaw rekord w „processing" (cron dociągnie wynik) i spróbuj
+    // od razu odczytać istniejące zadanie.
+    await supabaseAdmin
+      .from("kw_documents")
+      .update({ status: "processing", provider: "easymkw", last_error: null })
+      .eq("kw_number", kw);
+    const synced = await syncEasyMkwJob(kw);
+    return synced.status === "processing" ? { ...synced, error: undefined } : synced;
+  }
   if (!order.ok) {
     const msg = order.error ?? "EasyMKW: nie udało się złożyć zamówienia.";
     await markError(kw, msg);
