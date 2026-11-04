@@ -30,7 +30,7 @@ export const TRACK_SCRIPT_RULES: Record<Track, string> = {
 - Mów po prostu o pożyczkach pod zastaw nieruchomości. NIE akcentuj, że oferta jest tylko dla firm: słowa „firma”, „przedsiębiorca”, „działalność” (i odmiany) najwyżej RAZ w całym tekście i tylko, gdy temat tego wymaga — najlepiej wcale. Warunki (w tym działalność gospodarcza) klient poznaje przy wniosku.
 - Widzem może być każdy właściciel nieruchomości, także ktoś, kto dopiero zakłada firmę — obsługujemy start-upy od pierwszego dnia działalności i możesz to powiedzieć („także dla firm od pierwszego dnia”), to jedna wzmianka.
 - Nie obiecuj finansowania celów konsumpcyjnych: nigdy „na dowolny cel”, „na wakacje”, „na wesele”, „na samochód”, „dla osób prywatnych”, „kredyt konsumencki”.
-- Bez obietnic („dla każdego”, „bez BIK”, „bez sprawdzania”, „100% decyzji”), bez presji czasu, bez kosztu/oprocentowania jako hasła.
+- Możesz mówić „bez BIK” i „bez formalności” (decyduje nieruchomość). Bez obietnic („dla każdego”, „bez sprawdzania”, „100% decyzji”), bez presji czasu, bez kosztu/oprocentowania jako hasła.
 - Widz jest bohaterem; pokazujemy, co może zrobić. Rolka sprzedażowa: fakty i korzyść, bez zdań o ryzyku i koszcie („droższe niż bank”, „ryzyko utraty nieruchomości”) — widz to wie, nie myślimy za niego.`,
   inwestor: `TOR: inwestor prywatny — szanse, nie straszenie; „zarabiaj tak, jak banki od stuleci”, zarabianie na nieruchomościach bez kupowania i remontowania.
 - Przedstawiaj fakty i mechanizm, bez oceniania ryzyka: ŻADNYCH zdań o ryzyku, możliwej stracie kapitału ani formułek („nie stanowi oferty”, „zwrot nie jest gwarantowany”) — inwestor wie, że może stracić. Bez stóp zwrotu, gwarancji, odkupu, „sam inwestuję” i zamkniętych grup.`,

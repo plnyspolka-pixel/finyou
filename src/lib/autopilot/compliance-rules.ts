@@ -12,7 +12,7 @@
 import { COMPANY_DATA } from "@/lib/company";
 import type { ContentKind, PublishPlatform, Track } from "./types";
 
-export const COMPLIANCE_RULES_VERSION = "2026-11-04.1";
+export const COMPLIANCE_RULES_VERSION = "2026-11-04.2";
 
 export type RuleSeverity = "block" | "require";
 
@@ -139,10 +139,11 @@ const PATTERNS: PatternRule[] = [
   {
     code: "bez_weryfikacji",
     re: re(
-      "bez\\s+(?:sprawdzania|weryfikacji|bik\\p{L}*|big\\p{L}*|zdolności|formalności)|100\\s?%\\s+(?:decyzji\\s+)?pozytywn\\p{L}*|(?:decyzj\\p{L}*|akceptacj\\p{L}*)\\s+(?:dla\\s+)?100\\s?%",
+      "bez\\s+(?:sprawdzania|weryfikacji|zdolności)|100\\s?%\\s+(?:decyzji\\s+)?pozytywn\\p{L}*|(?:decyzj\\p{L}*|akceptacj\\p{L}*)\\s+(?:dla\\s+)?100\\s?%",
     ),
-    // „bez zaświadczeń o dochodach” jest prawdą (decyduje nieruchomość) — dozwolone od 2026-11-04.
-    message: "Nie obiecujemy finansowania bez weryfikacji, BIK ani zdolności.",
+    // Decyzja właściciela 2026-11-04: „bez BIK”, „bez BIG”, „bez formalności” i „bez zaświadczeń”
+    // są dozwolone (decyduje nieruchomość). Blokujemy obietnicę braku weryfikacji i zdolności.
+    message: "Nie obiecujemy finansowania bez weryfikacji ani bez zdolności.",
     tracks: ["pozyczkobiorca"],
   },
   {
