@@ -6,7 +6,7 @@
  * zbywalności mają osobne tytuły, a każdy znak mieści się w foncie.
  */
 import { describe, expect, it } from "vitest";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFName } from "pdf-lib";
 import type { KwAnalysisResult, KwFinding } from "@/lib/kw-analysis/types";
 import { REPORT_DISCLAIMER } from "@/lib/kw-analysis/policy";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
@@ -19,7 +19,10 @@ import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-p
 import { charsOutsideFont } from "@/lib/pdf/report-writer";
 import type { AnalyticsCoOwners, AnalyticsDetail, KwCheckDetail } from "./types";
 import {
+  ANONYMIZED_REPORT_NOTE,
   GRADE_SECTION_TITLE,
+  SALES_BUTTON_LABEL,
+  salesButtonUrl,
   RISK_DISCLAIMER_TEXT,
   SELLABILITY_SECTION_TITLE,
   VALUATION_NOT_APPRAISAL,
@@ -675,7 +678,9 @@ describe("model raportu PDF", () => {
 
   it("raport Projektu: pełny numer KW, bez notki o rezerwacji, numer Projektu i KW w nazwie pliku", () => {
     const model = buildInvestorReportModel(SOURCES[2][1]);
-    expect(model.teaser).toBe(false);
+    expect(model.variant).toBe("pelny");
+    expect(model.anonymized).toBe(false);
+    expect(model.salesButton).toBeNull();
     const text = reportModelText(model);
     expect(text).toContain("SL1S/00012344/8");
     expect(text).not.toMatch(/rezerwac|zamaskowan/i);
@@ -869,5 +874,111 @@ describe("lokalizacja i mapa w raporcie", () => {
       mapRenderer: async () => null,
     });
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+  });
+
+  // ── trzy warianty raportu Projektu ─────────────────────────────────────────
+  const VARIANT_PROJECT = {
+    ...PROJECT,
+    photos: [{ url: "https://x/foto1.png", name: "foto1.png" }],
+    files: [{ url: "https://x/operat.pdf", name: "operat.pdf" }],
+    contactName: "Grażyna Żukowska",
+  };
+  const variantModel = (variant: "pelny" | "anonimowy" | "sprzedazowy") =>
+    buildInvestorReportModel({
+      kind: "zlecenie",
+      detail: orderDetail(),
+      project: VARIANT_PROJECT,
+      variant,
+    });
+
+  it("pełny: zdjęcia i dokumenty w modelu, nazwiska i adres zostają", () => {
+    const model = variantModel("pelny");
+    expect(model.blocks.some((b) => b.t === "photos")).toBe(true);
+    expect(model.blocks.some((b) => b.t === "documents")).toBe(true);
+    const text = reportModelText(model);
+    expect(text).toMatch(/Żukowsk/);
+    expect(text).toContain("SL1S/00012344/8");
+  });
+
+  it("anonimowy: KW zamaskowany, bez nazwisk, adresu, map i dokumentów; zdjęcia zostają", () => {
+    const model = variantModel("anonimowy");
+    expect(model.anonymized).toBe(true);
+    expect(model.salesButton).toBeNull();
+    const text = reportModelText(model);
+    expect(text).toContain(ANONYMIZED_REPORT_NOTE);
+    expect(text).toContain("SL1S/00****44/8");
+    expect(text).not.toContain("SL1S/00012344/8");
+    expect(text).not.toMatch(/Żukowsk|Grażyn|Kwiatowa/);
+    expect(model.blocks.some((b) => b.t === "map")).toBe(false);
+    expect(model.blocks.some((b) => b.t === "documents")).toBe(false);
+    expect(model.blocks.some((b) => b.t === "photos")).toBe(true);
+    expect(reportPdfFilename(model, DATE)).toBe(
+      "FY-raport-projektu-FY-Z-4-P1-anonimowy-2026-10-10.pdf",
+    );
+  });
+
+  it("sprzedażowy: anonimowy + przycisk z linkiem na każdej stronie", async () => {
+    const model = variantModel("sprzedazowy");
+    expect(model.anonymized).toBe(true);
+    expect(model.salesButton).toEqual({
+      label: SALES_BUTTON_LABEL,
+      url: salesButtonUrl("FY-Z-4-P1"),
+    });
+    expect(model.salesButton!.url).toMatch(/^https:\/\/financeyou\.pl\/rejestracja\?/);
+    expect(model.salesButton!.url).toContain("projekt=FY-Z-4-P1");
+    expect(reportModelText(model)).not.toMatch(/Żukowsk|Grażyn|Kwiatowa|SL1S\/00012344/);
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      generatedAt: DATE,
+      mapRenderer: async () => null,
+      fileLoader: async () => PNG_1X1,
+    });
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
+    for (const page of doc.getPages()) {
+      const annots = page.node.Annots();
+      expect(annots?.size() ?? 0).toBeGreaterThanOrEqual(1);
+    }
+    const first = doc.getPages()[0].node.Annots()!;
+    const link = doc.context.lookup(first.get(0)) as import("pdf-lib").PDFDict;
+    const action = link.lookup(PDFName.of("A")) as import("pdf-lib").PDFDict;
+    const uri = action.lookup(PDFName.of("URI"));
+    expect(String(uri)).toContain("financeyou.pl/rejestracja");
+  });
+
+  it("pełny: dokument PDF doklejony stronami, zdjęcie osadzone", async () => {
+    const attached = await PDFDocument.create();
+    attached.addPage([300, 400]).drawText("Operat str. 1", { x: 20, y: 360 });
+    attached.addPage([300, 400]).drawText("Operat str. 2", { x: 20, y: 360 });
+    const attachedBytes = await attached.save();
+    const base = await renderInvestorReportPdf(variantModel("anonimowy"), {
+      preparedFor: "x",
+      generatedAt: DATE,
+      mapRenderer: async () => null,
+      fileLoader: async () => PNG_1X1,
+    });
+    const full = await renderInvestorReportPdf(variantModel("pelny"), {
+      preparedFor: "x",
+      generatedAt: DATE,
+      mapRenderer: async () => null,
+      fileLoader: async (url) => (url.endsWith(".pdf") ? attachedBytes : PNG_1X1),
+    });
+    const fullPages = (await PDFDocument.load(full)).getPageCount();
+    const basePages = (await PDFDocument.load(base)).getPageCount();
+    // Dwie strony załącznika ponad wersję bez dokumentów (± sekcje z nazwiskami/mapami).
+    expect(fullPages).toBeGreaterThanOrEqual(basePages + 2);
+  });
+
+  it("wadliwy dokument PDF nie wywraca raportu — trafia do listy pominiętych", async () => {
+    const broken = await PDFDocument.create();
+    broken.addPage([300, 400]); // strona bez Contents — pdf-lib nie umie jej osadzić
+    const brokenBytes = await broken.save();
+    const bytes = await renderInvestorReportPdf(variantModel("pelny"), {
+      preparedFor: "x",
+      generatedAt: DATE,
+      mapRenderer: async () => null,
+      fileLoader: async (url) => (url.endsWith(".pdf") ? brokenBytes : PNG_1X1),
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(2);
   });
 });

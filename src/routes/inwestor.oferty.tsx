@@ -348,7 +348,7 @@ function OfferProject({ project: p }: { project: NonNullable<MyOfferRow["project
             </span>
           ) : null}
           <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5" /> KW: {p.kwMasked ?? "brak"}
+            <ShieldCheck className="h-3.5 w-3.5" /> KW: {p.kwNumber ?? "brak"}
           </span>
         </div>
         {p.description ? (

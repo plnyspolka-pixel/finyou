@@ -17,6 +17,7 @@
  */
 import {
   PDFDocument,
+  PDFString,
   degrees,
   rgb,
   type PDFFont,
@@ -48,6 +49,9 @@ const ZEBRA = rgb(0.975, 0.98, 0.99);
 const TRACK = rgb(0.92, 0.93, 0.95);
 const AMBER = rgb(0.96, 0.62, 0.04);
 const AMBER_SOFT = rgb(1, 0.97, 0.9);
+/** Przycisk sprzedażowy w pasku górnym — złoto Finance You, granatowy tekst. */
+const BUTTON_BG = rgb(0.96, 0.75, 0.25);
+const BUTTON_INK = rgb(0.07, 0.1, 0.24);
 
 export type ReportFonts = { regular: string | Uint8Array; bold: string | Uint8Array };
 
@@ -68,6 +72,11 @@ export interface ReportWriterOptions {
   footerLeft?: string;
   /** Znak wodny (np. „WZÓR”) — ukośnie, jasnoszary, na każdej stronie. */
   watermark?: string;
+  /**
+   * Przycisk z linkiem w pasku górnym KAŻDEJ strony (raport sprzedażowy) —
+   * zastępuje tytuł dokumentu po prawej stronie paska.
+   */
+  headerButton?: { label: string; url: string };
 }
 
 export interface TableColumn {
@@ -389,6 +398,68 @@ export class ReportWriter {
     const x = opts.align === "center" ? MARGIN.left + (CONTENT_W - w) / 2 : MARGIN.left;
     this.page.drawImage(img, { x, y: this.y - h, width: w, height: h });
     this.y -= h + (opts.after ?? 10);
+  }
+
+  /**
+   * Dokleja strony innego PDF-u (np. dokumentu klienta) — każda na osobnej
+   * stronie raportu, przeskalowana do obszaru treści, z podpisem nad nią.
+   * Zwraca liczbę doklejonych stron (0, gdy PDF jest zaszyfrowany/uszkodzony).
+   */
+  async embedPdfPages(bytes: Uint8Array, caption: string, maxPages = 30): Promise<number> {
+    let src: PDFDocument;
+    try {
+      src = await PDFDocument.load(bytes, { ignoreEncryption: false });
+    } catch {
+      return 0;
+    }
+    const count = Math.min(src.getPageCount(), maxPages);
+    if (count === 0) return 0;
+    // pdf-lib osadza strony leniwie (przy zapisie), a nieudana strona zostaje
+    // w kolejce i wywraca save(). Każdą stronę sprawdzamy więc najpierw na
+    // dokumencie roboczym; do raportu osadzamy tylko te, które przeszły.
+    const okIndices: number[] = [];
+    for (let i = 0; i < count; i++) {
+      try {
+        const probe = await PDFDocument.create();
+        const [pg] = await probe.embedPdf(src, [i]);
+        await pg.embed();
+        okIndices.push(i);
+      } catch {
+        // strona bez treści / uszkodzona — pomijamy
+      }
+    }
+    if (okIndices.length === 0) return 0;
+    const embedded = await this.doc.embedPdf(src, okIndices);
+
+    const label = this.clean(caption);
+    embedded.forEach((pg, i) => {
+      this.newPage();
+      const head = embedded.length > 1 ? `${label} — strona ${i + 1} z ${embedded.length}` : label;
+      this.page.drawText(truncate(head, this.bold, 9, CONTENT_W), {
+        x: MARGIN.left,
+        y: this.y - 9,
+        size: 9,
+        font: this.bold,
+        color: NAVY,
+      });
+      const top = this.y - 18;
+      const availH = top - MARGIN.bottom;
+      const scale = Math.min(CONTENT_W / pg.width, availH / pg.height, 1);
+      const w = pg.width * scale;
+      const h = pg.height * scale;
+      const x = MARGIN.left + (CONTENT_W - w) / 2;
+      this.page.drawRectangle({
+        x: x - 0.5,
+        y: top - h - 0.5,
+        width: w + 1,
+        height: h + 1,
+        borderColor: LIGHT,
+        borderWidth: 0.5,
+      });
+      this.page.drawPage(pg, { x, y: top - h, width: w, height: h });
+      this.y = MARGIN.bottom;
+    });
+    return embedded.length;
   }
 
   /** Osadza PNG (np. ikonę okładki) do późniejszego użycia. */
@@ -1361,6 +1432,9 @@ export class ReportWriter {
     );
     const watermark = this.opts.watermark ? this.clean(this.opts.watermark) : null;
     const docTitle = this.clean(this.opts.title);
+    const button = this.opts.headerButton
+      ? { label: this.clean(this.opts.headerButton.label), url: this.opts.headerButton.url }
+      : null;
     pages.forEach((page, i) => {
       const { width: w, height: h } = page.getSize();
       page.drawRectangle({ x: 0, y: h - HEADER_H, width: w, height: HEADER_H, color: NAVY_SOFT });
@@ -1379,16 +1453,43 @@ export class ReportWriter {
         font: this.bold,
         color: NAVY,
       });
-      const titleMaxW = w - MARGIN.right - (MARGIN.left + 30 + brandW + 20);
-      const t = truncate(docTitle, this.regular, 8, titleMaxW);
-      const tw = this.regular.widthOfTextAtSize(t, 8);
-      page.drawText(t, {
-        x: w - MARGIN.right - tw,
-        y: h - HEADER_H + 17,
-        size: 8,
-        font: this.regular,
-        color: GRAY,
-      });
+      if (button) {
+        // Przycisk sprzedażowy: wypełniony prostokąt + adnotacja Link (URI).
+        const size = 9;
+        const bw = this.bold.widthOfTextAtSize(button.label, size) + 22;
+        const bh = 22;
+        const bx = w - MARGIN.right - bw;
+        const by = h - HEADER_H + (HEADER_H - bh) / 2;
+        page.drawRectangle({ x: bx, y: by, width: bw, height: bh, color: BUTTON_BG });
+        page.drawText(button.label, {
+          x: bx + 11,
+          y: by + (bh - size) / 2 + 1.5,
+          size,
+          font: this.bold,
+          color: BUTTON_INK,
+        });
+        const annot = this.doc.context.register(
+          this.doc.context.obj({
+            Type: "Annot",
+            Subtype: "Link",
+            Rect: [bx, by, bx + bw, by + bh],
+            Border: [0, 0, 0],
+            A: { Type: "Action", S: "URI", URI: PDFString.of(button.url) },
+          }),
+        );
+        page.node.addAnnot(annot);
+      } else {
+        const titleMaxW = w - MARGIN.right - (MARGIN.left + 30 + brandW + 20);
+        const t = truncate(docTitle, this.regular, 8, titleMaxW);
+        const tw = this.regular.widthOfTextAtSize(t, 8);
+        page.drawText(t, {
+          x: w - MARGIN.right - tw,
+          y: h - HEADER_H + 17,
+          size: 8,
+          font: this.regular,
+          color: GRAY,
+        });
+      }
 
       page.drawLine({
         start: { x: MARGIN.left, y: FOOTER_Y + 12 },

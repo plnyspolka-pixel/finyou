@@ -109,7 +109,8 @@ export interface OrderProject {
   areaSqm: number | null;
   description: string | null;
   locationScore: number | null;
-  kwMasked: string | null;
+  /** Numer KW w pełnym zapisie (bez maskowania — w systemie nie ma rezerwacji). */
+  kwNumber: string | null;
   hasKw: boolean;
   photos: OrderProjectFile[];
   files: OrderProjectFile[];
@@ -123,9 +124,9 @@ export interface OrderProject {
     teaserExpiresAt: string | null;
     teaserExtended: boolean;
   } | null;
-  /** Dane kontaktowe — tylko po Ujawnieniu (rezerwacja / transakcja). */
+  /** Dane kontaktowe klienta (zawsze — w systemie nie ma rezerwacji). */
   contact: OrderProjectContact | null;
-  /** Id klienta — tylko po Ujawnieniu (prefill e-podpisu). */
+  /** Id klienta (prefill e-podpisu). */
   clientId: string | null;
   /** Ostatnia złożona (nie szkic) oferta tego inwestora do Projektu. */
   myOfferId: string | null;
@@ -399,15 +400,13 @@ async function buildProject(
   myOfferId: string | null = null,
 ): Promise<OrderProject> {
   const p = propertyOf(app);
-  const { maskKwRaw } = await import("@/lib/location-scoring/masking");
   const kwRaw = String(p?.land_register_number ?? "").trim();
   const locationScore =
     app.location_potential_score != null ? Number(app.location_potential_score) : null;
-  const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
   const [{ photos, files }, report, contact] = await Promise.all([
     loadProjectFiles(db, app.id, (p?.photos as string[] | null) ?? null),
     loadProjectReport(db, app),
-    disclosed ? loadContact(db, app.client_id ?? null) : Promise.resolve(null),
+    loadContact(db, app.client_id ?? null),
   ]);
   return {
     applicationId: app.id,
@@ -425,7 +424,7 @@ async function buildProject(
     areaSqm: p?.area_sqm != null ? Number(p.area_sqm) : null,
     description: app.investor_description ?? app.situation_description ?? null,
     locationScore,
-    kwMasked: kwRaw ? maskKwRaw(kwRaw) : null,
+    kwNumber: kwRaw ? (formatKwNumber(kwRaw) ?? kwRaw) : null,
     hasKw: Boolean(kwRaw),
     photos,
     files,
@@ -441,7 +440,7 @@ async function buildProject(
         }
       : null,
     contact,
-    clientId: disclosed ? (app.client_id ?? null) : null,
+    clientId: app.client_id ?? null,
     myOfferId,
   };
 }
@@ -1103,7 +1102,7 @@ export interface MyOfferRow {
     areaSqm: number | null;
     estimatedValue: number | null;
     loanAmount: number | null;
-    kwMasked: string | null;
+    kwNumber: string | null;
     description: string | null;
     photos: OrderProjectFile[];
   } | null;
@@ -1134,7 +1133,6 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
       .eq("investor_id", inv.id)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const { maskKwRaw } = await import("@/lib/location-scoring/masking");
     return Promise.all(
       (offers ?? []).map(async (o: any): Promise<MyOfferRow> => {
         const app = o.loan_application;
@@ -1159,7 +1157,7 @@ export const getMyInvestorOffers = createServerFn({ method: "GET" })
             areaSqm: p?.area_sqm != null ? Number(p.area_sqm) : null,
             estimatedValue: p?.estimated_value != null ? Number(p.estimated_value) : null,
             loanAmount: app.loan_amount != null ? Number(app.loan_amount) : null,
-            kwMasked: kwRaw ? maskKwRaw(kwRaw) : null,
+            kwNumber: kwRaw ? (formatKwNumber(kwRaw) ?? kwRaw) : null,
             description: app.investor_description ?? app.situation_description ?? null,
             photos,
           },

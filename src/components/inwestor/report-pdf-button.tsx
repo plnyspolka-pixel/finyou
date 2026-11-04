@@ -1,15 +1,40 @@
 // „Pobierz PDF” raportu analitycznego (Analityka, analiza własnego wniosku,
 // raport Projektu w „Moich zleceniach”). PDF powstaje w przeglądarce z danych,
 // które widok już wczytał; pdf-lib z fontami ładujemy dopiero po kliknięciu.
+// Raport Projektu ma trzy warianty (menu): pełny, anonimowy i sprzedażowy.
 import { useMutation } from "@tanstack/react-query";
-import { FileDown, Loader2 } from "lucide-react";
+import { ChevronDown, FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadBytes } from "@/lib/download-file";
-import type { InvestorReportSource } from "@/lib/investor-analytics/report-pdf";
+import type { InvestorReportSource, ReportVariant } from "@/lib/investor-analytics/report-pdf";
+
+const VARIANTS: Array<{ id: ReportVariant; label: string; hint: string }> = [
+  {
+    id: "pelny",
+    label: "Raport pełny",
+    hint: "Wszystko: pełny numer i treść KW, dane właścicieli, zdjęcia i dokumenty",
+  },
+  {
+    id: "anonimowy",
+    label: "Raport anonimowy",
+    hint: "Ta sama analiza i zdjęcia, bez danych osobowych, adresu, KW i dokumentów",
+  },
+  {
+    id: "sprzedazowy",
+    label: "Raport sprzedażowy",
+    hint: "Anonimowy + przycisk „Zainwestuj w ten Projekt” na każdej stronie",
+  },
+];
 
 /** Nazwa do stopki „Przygotowano dla”: profil inwestora, potem dane konta, na końcu e-mail. */
 async function investorDisplayName(user: User | null): Promise<string> {
@@ -39,21 +64,26 @@ export function ReportPdfButton({
   source,
   disabled = false,
   label = "Pobierz PDF",
+  withVariants = false,
 }: {
   /** Dane widoku (te same, które widać na ekranie). */
   source: InvestorReportSource;
   /** Np. dopóki żaden krok analizy nie jest gotowy. */
   disabled?: boolean;
   label?: string;
+  /** Raport Projektu: menu z wariantami pełny / anonimowy / sprzedażowy. */
+  withVariants?: boolean;
 }) {
   const { user } = useAuth();
   const pdf = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (variant: ReportVariant) => {
       const [mod, preparedFor] = await Promise.all([
         import("@/lib/investor-analytics/report-pdf"),
         investorDisplayName(user),
       ]);
-      const model = mod.buildInvestorReportModel(source);
+      const src: InvestorReportSource =
+        source.kind === "zlecenie" ? { ...source, variant } : source;
+      const model = mod.buildInvestorReportModel(src);
       const bytes = await mod.renderInvestorReportPdf(model, { preparedFor });
       downloadBytes(bytes, mod.reportPdfFilename(model));
     },
@@ -64,6 +94,13 @@ export function ReportPdfButton({
       toast.error("Nie udało się przygotować PDF. Odśwież stronę i spróbuj ponownie.");
     },
   });
+
+  const icon = pdf.isPending ? (
+    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  ) : (
+    <FileDown className="mr-2 h-4 w-4" />
+  );
+  const text = pdf.isPending ? "Przygotowuję PDF…" : label;
 
   // Wyłączony przycisk nie łapie najechania (pointer-events-none) — podpowiedź
   // trzyma otoczka.
@@ -76,19 +113,39 @@ export function ReportPdfButton({
           : "Pobierz raport analityczny jako PDF"
       }
     >
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={disabled || pdf.isPending}
-        onClick={() => pdf.mutate()}
-      >
-        {pdf.isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <FileDown className="mr-2 h-4 w-4" />
-        )}
-        {pdf.isPending ? "Przygotowuję PDF…" : label}
-      </Button>
+      {withVariants && source.kind === "zlecenie" ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" disabled={disabled || pdf.isPending}>
+              {icon}
+              {text}
+              <ChevronDown className="ml-1 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            {VARIANTS.map((v) => (
+              <DropdownMenuItem
+                key={v.id}
+                className="flex flex-col items-start gap-0.5"
+                onSelect={() => pdf.mutate(v.id)}
+              >
+                <span className="font-semibold">{v.label}</span>
+                <span className="text-xs text-muted-foreground">{v.hint}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={disabled || pdf.isPending}
+          onClick={() => pdf.mutate("pelny")}
+        >
+          {icon}
+          {text}
+        </Button>
+      )}
     </span>
   );
 }

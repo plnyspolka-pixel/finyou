@@ -20,7 +20,6 @@ import {
   Loader2,
   MapPin,
   PenLine,
-  Phone,
   Send,
   ShieldCheck,
   Sparkles,
@@ -71,7 +70,6 @@ import {
   getMyOrderProjects,
   getOrderProjectReportDetail,
   orderProjectReport,
-  reserveOrderProject,
   submitOrderProjectOffer,
   type OrderProject,
   type OrderProjectReport,
@@ -236,13 +234,7 @@ function MyOrdersPage() {
                   </p>
                 ) : (
                   o.projects.map((p) => (
-                    <ProjectCard
-                      key={p.applicationId}
-                      project={p}
-                      isConsumer={data.isConsumer}
-                      assignmentHours={data.limits?.assignmentHours ?? 24}
-                      onChanged={refresh}
-                    />
+                    <ProjectCard key={p.applicationId} project={p} onChanged={refresh} />
                   ))
                 )}
               </CardContent>
@@ -259,33 +251,12 @@ function MyOrdersPage() {
 
 // ── Projekt ──────────────────────────────────────────────────────────────────
 
-function ProjectCard({
-  project: p,
-  isConsumer,
-  assignmentHours,
-  onChanged,
-}: {
-  project: OrderProject;
-  isConsumer: boolean;
-  assignmentHours: number;
-  onChanged: () => void;
-}) {
+function ProjectCard({ project: p, onChanged }: { project: OrderProject; onChanged: () => void }) {
   const qc = useQueryClient();
   const reportFn = useServerFn(orderProjectReport);
-  const reserveFn = useServerFn(reserveOrderProject);
   const [report, setReport] = useState<OrderProjectReport>(p.report);
   const [showReport, setShowReport] = useState(p.report.status === "done");
-  const [kartaOk, setKartaOk] = useState(false);
-  const [karaOk, setKaraOk] = useState(false);
   const [showOffer, setShowOffer] = useState(false);
-  const [reserved, setReserved] = useState<{
-    contact: OrderProject["contact"];
-    reservationExpiresAt: string | null;
-  } | null>(
-    p.match && ["rezerwacja", "transakcja"].includes(p.match.status)
-      ? { contact: p.contact, reservationExpiresAt: p.match.reservationExpiresAt }
-      : null,
-  );
   // Nowe dane z serwera (np. dokończona ocena ryzyka) nadpisują lokalny stan.
   if (p.report.finishedAt && p.report.finishedAt !== report.finishedAt) setReport(p.report);
 
@@ -324,26 +295,6 @@ function ProjectCard({
       void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
     },
   });
-  const reserveMut = useMutation({
-    mutationFn: () =>
-      reserveFn({
-        data: {
-          orderId: p.orderId,
-          applicationId: p.applicationId,
-          kartaLeadaConfirmed: true,
-          karaConfirmed: karaOk,
-        },
-      }),
-    onSuccess: (res) => {
-      setReserved({ contact: res.contact, reservationExpiresAt: res.reservationExpiresAt });
-      toast.success(`Projekt zarezerwowany na ${assignmentHours} h — dane kontaktowe odsłonięte.`);
-      // Po Ujawnieniu raport dostaje komplet: numer i treść KW, nazwiska, adres.
-      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
-      onChanged();
-    },
-    onError: (e) => toast.error(errMsg(e)),
-  });
-
   const declineFn = useServerFn(declineMatch);
   const extendTeaserFn = useServerFn(extendTeaser);
   const dismissFn = useServerFn(dismissOrderProject);
@@ -401,7 +352,7 @@ function ProjectCard({
             ) : null}
             <LocationScore score={p.locationScore} />
             <span className="inline-flex items-center gap-1 text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" /> KW: {p.kwMasked ?? "brak"}
+              <ShieldCheck className="h-3.5 w-3.5" /> KW: {p.kwNumber ?? "brak"}
             </span>
             <span className="text-muted-foreground">
               w systemie od {new Date(p.createdAt).toLocaleDateString("pl-PL")}
@@ -509,7 +460,13 @@ function ProjectCard({
           </div>
           {showReport && (report.status === "done" || report.status === "running") ? (
             <ReportPanel
-              project={{ ref: p.match?.projectRef ?? null, loanAmount: p.loanAmount }}
+              project={{
+                ref: p.match?.projectRef ?? null,
+                loanAmount: p.loanAmount,
+                photos: p.photos,
+                files: p.files,
+                contactName: p.contact?.name ?? null,
+              }}
               orderId={p.orderId}
               applicationId={p.applicationId}
               report={report}
@@ -526,53 +483,12 @@ function ProjectCard({
             />
           ) : null}
 
-          {/* Pobierz dane kontaktowe i rezerwuj */}
-          {reserved ? (
-            <ContactBox
-              contact={reserved.contact}
-              applicationId={p.applicationId}
-              reservationExpiresAt={reserved.reservationExpiresAt}
-              clientId={p.clientId}
-            />
-          ) : (
-            <div className="space-y-2 rounded-md bg-muted/40 p-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id={`karta-${p.applicationId}`}
-                  checked={kartaOk}
-                  onCheckedChange={(v) => setKartaOk(Boolean(v))}
-                />
-                <Label htmlFor={`karta-${p.applicationId}`} className="text-xs leading-snug">
-                  Przyjmuję Kartę Leada (Zał. 1) dla tego Projektu i rezerwuję go na{" "}
-                  {assignmentHours} h — po Ujawnieniu otrzymuję dane kontaktowe klienta.
-                </Label>
-              </div>
-              {isConsumer ? (
-                <div className="flex items-start gap-2">
-                  <Checkbox
-                    id={`kara-${p.applicationId}`}
-                    checked={karaOk}
-                    onCheckedChange={(v) => setKaraOk(Boolean(v))}
-                  />
-                  <Label htmlFor={`kara-${p.applicationId}`} className="text-xs leading-snug">
-                    Jako Konsument indywidualnie uzgadniam Karę Obejściową (§ 11 Umowy ramowej).
-                  </Label>
-                </div>
-              ) : null}
-              <Button
-                size="sm"
-                disabled={!kartaOk || (isConsumer && !karaOk) || reserveMut.isPending}
-                onClick={() => reserveMut.mutate()}
-              >
-                {reserveMut.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Phone className="mr-2 h-4 w-4" />
-                )}
-                Pobierz dane kontaktowe i rezerwuj
-              </Button>
-            </div>
-          )}
+          <ContactBox
+            contact={p.contact}
+            applicationId={p.applicationId}
+            reservationExpiresAt={p.match?.reservationExpiresAt ?? null}
+            clientId={p.clientId}
+          />
         </div>
       )}
     </div>
@@ -795,8 +711,14 @@ function ReportPanel({
   report,
   riskNote,
 }: {
-  /** Numer Projektu i kwota z karty — do nagłówka i nazwy pliku PDF. */
-  project: { ref: string | null; loanAmount: number | null };
+  /** Z karty Projektu: numer, kwota, zdjęcia i dokumenty, klient (do anonimizacji PDF). */
+  project: {
+    ref: string | null;
+    loanAmount: number | null;
+    photos: OrderProject["photos"];
+    files: OrderProject["files"];
+    contactName: string | null;
+  };
   orderId: string;
   applicationId: string;
   report: OrderProjectReport;
@@ -867,6 +789,7 @@ function ReportPanel({
             <ReportPdfButton
               source={{ kind: "zlecenie", detail: d, project }}
               disabled={done === 0}
+              withVariants
             />
             <Button size="sm" variant="outline" asChild>
               <Link to="/inwestor/analityka" search={{ app: applicationId }}>
@@ -1075,7 +998,7 @@ function ContactBox({
   return (
     <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-medium text-emerald-900">Projekt zarezerwowany — dane kontaktowe</div>
+        <div className="font-medium text-emerald-900">Dane kontaktowe klienta</div>
         {reservationExpiresAt ? (
           <span className="inline-flex items-center gap-1 text-xs text-emerald-900">
             <Clock className="h-3.5 w-3.5" /> rezerwacja do{" "}

@@ -3,8 +3,10 @@
 // Trzy widoki raportu w panelu inwestora mają już w pamięci komplet danych —
 // dokładnie te, które widać na ekranie: Analityka (AnalyticsDetail), analiza
 // własnego wniosku spoza Finance You (KwCheckDetail) i raport Projektu
-// w „Moich zleceniach” (OrderProjectReportDetail; przed rezerwacją serwer
-// oczyszcza go z danych identyfikujących). PDF składamy w przeglądarce z tych
+// w „Moich zleceniach” (OrderProjectReportDetail, zawsze komplet). Raport
+// Projektu ma trzy warianty: pełny (wszystko + zdjęcia i dokumenty),
+// anonimowy (report-anonymize) i sprzedażowy (anonimowy + przycisk z linkiem
+// w pasku górnym każdej strony). PDF składamy w przeglądarce z tych
 // danych — bez nowych zapytań do serwera. Moduł ładowany dynamicznie dopiero
 // po kliknięciu „Pobierz PDF” (pdf-lib i fonty nie trafiają do głównej paczki).
 //
@@ -20,6 +22,7 @@
 //    tylko gdy raport zawiera analizę KW),
 //  • kroki bez wyniku mają w PDF-ie notkę, jak puste karty kroków na ekranie.
 import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-projects.functions";
+import { anonymizeOrderReportDetail } from "./report-anonymize";
 import type {
   FindingCategory,
   ImpactLevel,
@@ -86,6 +89,34 @@ import {
 
 export type ReportKind = "analityka" | "kw_check" | "zlecenie";
 
+/** Wariant raportu Projektu. */
+export type ReportVariant = "pelny" | "anonimowy" | "sprzedazowy";
+
+export const REPORT_VARIANT_LABELS: Record<ReportVariant, string> = {
+  pelny: "Raport pełny",
+  anonimowy: "Raport anonimowy",
+  sprzedazowy: "Raport sprzedażowy",
+};
+
+/** Plik Projektu (zdjęcie / dokument) — podpisany URL ze Storage. */
+export type ReportFile = { url: string; name: string };
+
+export const ANONYMIZED_REPORT_NOTE =
+  "Wersja anonimowa — numer KW zamaskowany, bez treści księgi; imiona, nazwiska, adres, " +
+  "działka i współrzędne usunięte. Dokumenty klienta nie są dołączane.";
+
+export const SALES_BUTTON_LABEL = "Zainwestuj w ten Projekt";
+
+/** Link przycisku sprzedażowego — rejestracja inwestora z numerem Projektu i UTM. */
+export function salesButtonUrl(projectRef: string | null): string {
+  const q = new URLSearchParams({ role: "inwestor" });
+  if (projectRef) q.set("projekt", projectRef);
+  q.set("utm_source", "raport-pdf");
+  q.set("utm_medium", "pdf");
+  q.set("utm_campaign", "raport-sprzedazowy");
+  return `https://financeyou.pl/rejestracja?${q.toString()}`;
+}
+
 export type ReportBlock =
   | { t: "heading"; text: string }
   | { t: "subheading"; text: string }
@@ -122,6 +153,10 @@ export type ReportBlock =
       rows: Array<{ label: string; distanceM: number; thresholdM: number; alert: boolean }>;
     }
   | { t: "bars"; max?: number; rows: Array<{ label: string; value: number; valueLabel: string }> }
+  /** Zdjęcia nieruchomości (osadzane w PDF-ie). */
+  | { t: "photos"; items: ReportFile[] }
+  /** Dokumenty Projektu: PDF-y doklejane stronami, obrazy osadzane, reszta wymieniona. */
+  | { t: "documents"; items: ReportFile[] }
   | {
       t: "map";
       lat: number;
@@ -141,12 +176,16 @@ export interface InvestorReportModel {
   kind: ReportKind;
   title: string;
   subtitle: string | null;
-  /** Numer KW tak, jak podaje źródło — przed rezerwacją zamaskowany. */
+  /** Numer KW tak, jak podaje źródło — w wariancie anonimowym zamaskowany. */
   kwNumber: string | null;
   /** Numer Projektu z cyklu Zlecenia (np. FY-Z-4-P1) — nie identyfikuje właściciela. */
   projectRef: string | null;
-  /** Wersja przed rezerwacją (Zlecenia) — bez danych identyfikujących. */
-  teaser: boolean;
+  /** Wariant raportu (raport Projektu; pozostałe widoki zawsze „pelny”). */
+  variant: ReportVariant;
+  /** Bez danych identyfikujących (wariant anonimowy i sprzedażowy). */
+  anonymized: boolean;
+  /** Przycisk w pasku górnym każdej strony (wariant sprzedażowy). */
+  salesButton: { label: string; url: string } | null;
   /** Ile z czterech kroków analizy jest gotowych. */
   stepsDone: number;
   blocks: ReportBlock[];
@@ -159,8 +198,17 @@ export type InvestorReportSource =
   | {
       kind: "zlecenie";
       detail: OrderProjectReportDetail;
-      /** Z karty Projektu — raport sam nie niesie numeru Projektu ani kwoty. */
-      project?: { ref: string | null; loanAmount: number | null };
+      /** Z karty Projektu — raport sam nie niesie numeru Projektu, kwoty ani plików. */
+      project?: {
+        ref: string | null;
+        loanAmount: number | null;
+        photos?: ReportFile[];
+        files?: ReportFile[];
+        /** Imię i nazwisko klienta — do usunięcia w wariancie anonimowym. */
+        contactName?: string | null;
+      };
+      /** Domyślnie „pelny”. */
+      variant?: ReportVariant;
     };
 
 export const GRADE_SECTION_TITLE = "Ocena inwestycyjna A–E";
@@ -1562,7 +1610,9 @@ function fromAnalytics(d: AnalyticsDetail): InvestorReportModel {
     subtitle: `${itemTitle(item)} · ${formatPLN(item.loanAmount)}`,
     kwNumber: item.kwNumber,
     projectRef: item.projectRef,
-    teaser: false,
+    variant: "pelny",
+    anonymized: false,
+    salesButton: null,
     stepsDone: done,
     blocks: [
       { t: "heading", text: "Podsumowanie" },
@@ -1619,7 +1669,9 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
     subtitle: `${item.label || "Wniosek spoza Finance You"} · KW ${item.kwNumber}`,
     kwNumber: item.kwNumber,
     projectRef: null,
-    teaser: false,
+    variant: "pelny",
+    anonymized: false,
+    salesButton: null,
     stepsDone: done,
     blocks: [
       { t: "heading", text: "Podsumowanie" },
@@ -1640,9 +1692,12 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
 }
 
 function fromOrderReport(
-  d: OrderProjectReportDetail,
-  project: { ref: string | null; loanAmount: number | null } | undefined,
+  full: OrderProjectReportDetail,
+  project: Extract<InvestorReportSource, { kind: "zlecenie" }>["project"],
+  variant: ReportVariant,
 ): InvestorReportModel {
+  const anonymized = variant !== "pelny";
+  const d = anonymized ? anonymizeOrderReportDetail(full, [project?.contactName]) : full;
   const r = d.report;
   const src = orderReportStepSource(r);
   const done = analyticsDoneCount(src);
@@ -1662,7 +1717,8 @@ function fromOrderReport(
     error: "zakończony z błędem",
   };
   const rows = rowsWithText([
-    ["Źródło", ANALYTICS_SOURCE_LABELS["okazja"]],
+    // Raport sprzedażowy trafia do osób z zewnątrz — bez „Projekt z Twojego Zlecenia”.
+    ["Źródło", variant === "sprzedazowy" ? null : ANALYTICS_SOURCE_LABELS["okazja"]],
     ["Projekt", projectRef],
     ["Wnioskowana kwota", project?.loanAmount != null ? formatPLN(project.loanAmount) : null],
     ["Numer KW", d.kwNumber ?? "—"],
@@ -1678,9 +1734,16 @@ function fromOrderReport(
     ["Postęp analizy", `${done} z ${ANALYTICS_STEPS.length} kroków`],
   ]);
   const blocks: ReportBlock[] = [{ t: "heading", text: "Podsumowanie" }];
+  if (anonymized) blocks.push({ t: "note", tone: "info", text: ANONYMIZED_REPORT_NOTE });
   blocks.push(
     { t: "keyValues", rows },
     stepsTable((k) => analyticsStepStatus(src, k)),
+  );
+  const photos = project?.photos ?? [];
+  if (photos.length > 0) {
+    blocks.push({ t: "heading", text: "Zdjęcia nieruchomości" }, { t: "photos", items: photos });
+  }
+  blocks.push(
     ...resultBlocks({
       grade: gradeFromValuation(d.valuation),
       valuation: d.valuation,
@@ -1690,13 +1753,31 @@ function fromOrderReport(
       sources: d.collateral?.dataSourcesUsed ?? [],
     }),
   );
+  // Dokumenty (skany, operaty, KW) zawierają dane osobowe — tylko w raporcie pełnym.
+  const files = variant === "pelny" ? (project?.files ?? []) : [];
+  if (files.length > 0) {
+    blocks.push(
+      { t: "heading", text: "Załączniki — dokumenty Projektu" },
+      { t: "documents", items: files },
+    );
+  }
+  const titles: Record<ReportVariant, string> = {
+    pelny: "Raport analityczny Projektu",
+    anonimowy: "Raport analityczny Projektu (anonimowy)",
+    sprzedazowy: "Oferta inwestycyjna — raport Projektu",
+  };
   return {
     kind: "zlecenie",
-    title: "Raport analityczny Projektu",
+    title: titles[variant],
     subtitle,
     kwNumber: d.kwNumber,
     projectRef,
-    teaser: false,
+    variant,
+    anonymized,
+    salesButton:
+      variant === "sprzedazowy"
+        ? { label: SALES_BUTTON_LABEL, url: salesButtonUrl(projectRef) }
+        : null,
     stepsDone: done,
     blocks,
   };
@@ -1712,7 +1793,7 @@ export function buildInvestorReportModel(src: InvestorReportSource): InvestorRep
       ? fromAnalytics(src.detail)
       : src.kind === "kw_check"
         ? fromKwCheck(src.detail)
-        : fromOrderReport(src.detail, src.project);
+        : fromOrderReport(src.detail, src.project, src.variant ?? "pelny");
   return JSON.parse(JSON.stringify(model), (_key, value) =>
     typeof value === "string" ? maskPeselInText(value) : value,
   ) as InvestorReportModel;
@@ -1762,8 +1843,13 @@ export function reportModelText(model: InvestorReportModel): string {
       case "bars":
         out.push(...b.rows.flatMap((r) => [r.label, r.valueLabel]));
         break;
+      case "photos":
+      case "documents":
+        out.push(...b.items.map((f) => f.name));
+        break;
     }
   }
+  if (model.salesButton) out.push(model.salesButton.label);
   return out.join("\n");
 }
 
@@ -1782,8 +1868,14 @@ export function reportPdfFilename(model: InvestorReportModel, date: Date = new D
     model.kind === "zlecenie" && model.projectRef
       ? model.projectRef.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
       : "";
-  const kw = !model.teaser && model.kwNumber ? formatKwNumber(model.kwNumber) : null;
-  const parts = [ref, kw ? kw.replace(/\//g, "-") : ""].filter(Boolean).map((p) => `-${p}`);
+  const kw = !model.anonymized && model.kwNumber ? formatKwNumber(model.kwNumber) : null;
+  const suffix =
+    model.variant === "anonimowy"
+      ? "anonimowy"
+      : model.variant === "sprzedazowy"
+        ? "sprzedazowy"
+        : "";
+  const parts = [ref, kw ? kw.replace(/\//g, "-") : "", suffix].filter(Boolean).map((p) => `-${p}`);
   return `FY-${prefix[model.kind]}${parts.join("")}-${warsawDateStamp(date)}.pdf`;
 }
 
@@ -1868,6 +1960,72 @@ async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uin
   });
 }
 
+/** Pobiera plik Projektu (zdjęcie / dokument) — w testach można podmienić. */
+export type FileLoader = (url: string) => Promise<Uint8Array | null>;
+
+async function defaultFileLoader(url: string): Promise<Uint8Array | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return new Uint8Array(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+type SniffedKind = "png" | "jpg" | "pdf" | "other";
+
+export function sniffFileKind(bytes: Uint8Array): SniffedKind {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e)
+    return "png";
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)
+    return "jpg";
+  if (
+    bytes.length >= 5 &&
+    bytes[0] === 0x25 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x44 &&
+    bytes[3] === 0x46
+  )
+    return "pdf";
+  return "other";
+}
+
+/**
+ * Obraz do osadzenia: PNG/JPEG bez zmian; inne formaty (WebP, GIF, AVIF…)
+ * w przeglądarce przez canvas → JPEG. Duże zdjęcia zmniejszamy (dłuższy bok
+ * ≤ 1600 px), żeby PDF nie ważył dziesiątek MB.
+ */
+async function toEmbeddableImage(
+  bytes: Uint8Array,
+): Promise<{ bytes: Uint8Array; format: "png" | "jpg" } | null> {
+  const kind = sniffFileKind(bytes);
+  const canConvert = typeof document !== "undefined" && typeof createImageBitmap === "function";
+  if (!canConvert) {
+    return kind === "png" || kind === "jpg" ? { bytes, format: kind } : null;
+  }
+  if ((kind === "png" || kind === "jpg") && bytes.length < 1_500_000) {
+    return { bytes, format: kind };
+  }
+  try {
+    const bmp = await createImageBitmap(new Blob([bytes as BlobPart]));
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bmp.width * scale));
+    canvas.height = Math.max(1, Math.round(bmp.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+    if (!blob) return null;
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), format: "jpg" };
+  } catch {
+    return kind === "png" || kind === "jpg" ? { bytes, format: kind } : null;
+  }
+}
+
 export interface RenderReportOptions {
   /** Imię i nazwisko / nazwa inwestora (albo e-mail) — stopka „Przygotowano dla”. */
   preparedFor: string;
@@ -1875,6 +2033,8 @@ export interface RenderReportOptions {
   fonts?: ReportFonts;
   /** Renderer mapy (domyślnie kafelki OSM w przeglądarce). */
   mapRenderer?: MapRenderer;
+  /** Pobieranie zdjęć i dokumentów Projektu (domyślnie fetch). */
+  fileLoader?: FileLoader;
 }
 
 /** PDF (bajty) z modelu raportu. */
@@ -1884,13 +2044,15 @@ export async function renderInvestorReportPdf(
 ): Promise<Uint8Array> {
   const w = await ReportWriter.create({
     title: model.title,
-    subject: [model.subtitle, model.kwNumber && !model.teaser ? `KW ${model.kwNumber}` : null]
+    subject: [model.subtitle, model.kwNumber && !model.anonymized ? `KW ${model.kwNumber}` : null]
       .filter(Boolean)
       .join(" · "),
     preparedFor: opts.preparedFor,
     generatedAt: opts.generatedAt,
     fonts: opts.fonts,
+    headerButton: model.salesButton ?? undefined,
   });
+  const load = opts.fileLoader ?? defaultFileLoader;
   w.title(model.title, model.subtitle);
   for (const b of model.blocks) {
     switch (b.t) {
@@ -1940,6 +2102,69 @@ export async function renderInvestorReportPdf(
       case "bars":
         w.barList(b.rows, { max: b.max });
         break;
+      case "photos": {
+        let shown = 0;
+        for (const f of b.items) {
+          const raw = await load(f.url).catch(() => null);
+          const img = raw ? await toEmbeddableImage(raw) : null;
+          if (!img) continue;
+          try {
+            await w.image(img.bytes, {
+              format: img.format,
+              maxHeight: 300,
+              align: "center",
+              after: 8,
+            });
+            shown += 1;
+          } catch {
+            // Uszkodzony plik — pomijamy, reszta zdjęć idzie dalej.
+          }
+        }
+        if (shown < b.items.length) {
+          w.paragraph(
+            shown === 0
+              ? "Zdjęć nie udało się wczytać do PDF-u — są dostępne na karcie Projektu."
+              : `Pominięto ${b.items.length - shown} z ${b.items.length} zdjęć (nie udało się ich wczytać).`,
+            { muted: true, size: 8 },
+          );
+        }
+        break;
+      }
+      case "documents": {
+        const skipped: string[] = [];
+        w.bullets(b.items.map((f) => f.name));
+        for (const f of b.items) {
+          const raw = await load(f.url).catch(() => null);
+          if (!raw) {
+            skipped.push(f.name);
+            continue;
+          }
+          const kind = sniffFileKind(raw);
+          if (kind === "pdf") {
+            const n = await w.embedPdfPages(raw, f.name);
+            if (n === 0) skipped.push(f.name);
+            continue;
+          }
+          const img = await toEmbeddableImage(raw);
+          if (!img) {
+            skipped.push(f.name);
+            continue;
+          }
+          try {
+            w.subheading(f.name);
+            await w.image(img.bytes, { format: img.format, maxHeight: 620, align: "center" });
+          } catch {
+            skipped.push(f.name);
+          }
+        }
+        if (skipped.length > 0) {
+          w.note(
+            `Nie udało się dołączyć do PDF-u (format nieobsługiwany albo plik zabezpieczony): ${skipped.join(", ")}. Pliki są dostępne na karcie Projektu.`,
+            { tone: "warning" },
+          );
+        }
+        break;
+      }
       case "map": {
         const png = await (opts.mapRenderer ?? defaultMapRenderer)({
           lat: b.lat,
