@@ -1,0 +1,49 @@
+# Build Vite + wrangler deploy Workera `finyou` na maszynie GitHub (ok. 7-16 GB RAM).
+# Wymaga sekretu repozytorium CLOUDFLARE_API_TOKEN (Settings > Secrets and variables > Actions).
+# Deploy idzie na finyou.financeyou.workers.dev; sekrety Workera i SUPABASE_URL są już w Cloudflare.
+name: Deploy Worker finyou
+
+on:
+  push:
+    branches: [claude/dazzling-ritchie-qn9w8w]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-worker-finyou
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Zależności
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build (vite)
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          node node_modules/vite/bin/vite.js build
+          test -f .output/server/index.mjs
+
+      - name: wrangler deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 9dcf6ebe33b66eac13bbb74240ec4c42
+          wranglerVersion: "4"
+          command: deploy
+
+      - name: Smoke test
+        run: |
+          for p in / /robots.txt; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://finyou.financeyou.workers.dev$p")
+            echo "$p -> $code"; [ "$code" = "200" ] || exit 1
+          done
