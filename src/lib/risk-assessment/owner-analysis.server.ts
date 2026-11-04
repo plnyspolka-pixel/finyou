@@ -10,6 +10,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parsePesel, type PeselInfo } from "./pesel";
 import { estimateLifeExpectancy } from "./life-expectancy";
+import { fetchRegionalLongevity } from "./regional-longevity.server";
 import { extractKwOwnerPesels, type KwOwnerPesel } from "./kw-parser.server";
 import { lookupCeidgActivity, emptyCeidg } from "./ceidg-lookup.server";
 import type { OwnerProfile, KwOwnerProfile, KwLegalAnalysis } from "./types";
@@ -111,7 +112,16 @@ export async function analyzeOwner(args: {
   /** Lokalizacja nieruchomości/klienta — pomaga dopasować wpis w CEIDG. */
   city?: string | null;
   voivodeship?: string | null;
+  /** Powiat nieruchomości (dział I-O KW) — regionalny współczynnik dożycia GUS BDL. */
+  county?: string | null;
 }): Promise<OwnerProfile> {
+  const regionalFor = (age: number | null, sex: "M" | "K" | null) =>
+    fetchRegionalLongevity({
+      age,
+      sex,
+      county: args.county ?? null,
+      voivodeship: args.voivodeship ?? null,
+    }).catch(() => null);
   const emptyLE = estimateLifeExpectancy({
     age: null,
     sex: null,
@@ -203,24 +213,29 @@ export async function analyzeOwner(args: {
 
   // Profile WSZYSTKICH właścicieli z KW (wiek/płeć/dożycie każdego) — RODO:
   // do JSON-a oceny trafiają wyłącznie cechy wyprowadzone, nie same numery.
-  const kwOwnerProfiles: KwOwnerProfile[] = kwCandidates.flatMap((c) => {
-    const p = parsePesel(c.pesel);
-    if (!p.valid) return [];
-    return [
-      {
-        name: c.ownerName,
-        birthDate: p.birthDate,
-        sex: p.sex,
-        age: p.age,
-        lifeExpectancy: estimateLifeExpectancy({
-          age: p.age,
-          sex: p.sex,
-          loanTermYears: args.loanTermYears ?? null,
-        }),
-        isApplicant: applicantPick?.candidate.pesel === c.pesel,
-      },
-    ];
-  });
+  const kwOwnerProfiles: KwOwnerProfile[] = (
+    await Promise.all(
+      kwCandidates.map(async (c): Promise<KwOwnerProfile[]> => {
+        const p = parsePesel(c.pesel);
+        if (!p.valid) return [];
+        return [
+          {
+            name: c.ownerName,
+            birthDate: p.birthDate,
+            sex: p.sex,
+            age: p.age,
+            lifeExpectancy: estimateLifeExpectancy({
+              age: p.age,
+              sex: p.sex,
+              loanTermYears: args.loanTermYears ?? null,
+              regional: await regionalFor(p.age, p.sex),
+            }),
+            isApplicant: applicantPick?.candidate.pesel === c.pesel,
+          },
+        ];
+      }),
+    )
+  ).flat();
   const multipleEstates = kwOwnerProfiles.length >= 2;
   if (multipleEstates) {
     notes.push(
@@ -245,6 +260,7 @@ export async function analyzeOwner(args: {
     age: pesel.age,
     sex: pesel.sex,
     loanTermYears: args.loanTermYears ?? null,
+    regional: pesel.valid ? await regionalFor(pesel.age, pesel.sex) : null,
   });
 
   if (!pesel.valid) {

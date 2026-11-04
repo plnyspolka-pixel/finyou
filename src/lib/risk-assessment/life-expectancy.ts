@@ -4,6 +4,7 @@
 // ryzyka zabezpieczenia (horyzont pożyczki, ryzyko sukcesji/spadkobrania).
 //
 // Źródło: GUS, „Trwanie życia w 2022 r." — dalsze przeciętne trwanie życia e(x).
+import type { RegionalLongevity } from "./regional-longevity";
 
 import type { Sex } from "./pesel";
 
@@ -109,6 +110,10 @@ export interface LifeExpectancyResult {
   source: string;
   /** Zastrzeżenie prawne/etyczne. */
   disclaimer: string;
+  /** e(x) z tablicy krajowej przed korektą regionalną. */
+  nationalRemainingYears?: number | null;
+  /** Regionalny współczynnik dożycia (GUS BDL, podregion/województwo nieruchomości). */
+  regional?: RegionalLongevity | null;
 }
 
 const DISCLAIMER =
@@ -168,6 +173,8 @@ export interface EstimateLifeExpectancyInput {
   sex: Sex | null;
   /** Okres pożyczki w latach — opcjonalny; wpływa na banding i prawdopodobieństwo. */
   loanTermYears?: number | null;
+  /** Korekta regionalna e(x) (GUS BDL) — gdy dostępna, mnoży tablicę krajową. */
+  regional?: RegionalLongevity | null;
 }
 
 export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): LifeExpectancyResult {
@@ -196,7 +203,11 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
   }
 
   const table = sex === "M" ? EX_MEN : EX_WOMEN;
-  const remainingYears = Math.round(interpolateEx(table, Math.max(0, age)) * 10) / 10;
+  const nationalRemaining = Math.round(interpolateEx(table, Math.max(0, age)) * 10) / 10;
+  const regional = input.regional?.available && input.regional.factor ? input.regional : null;
+  const remainingYears = regional
+    ? Math.round(nationalRemaining * (regional.factor as number) * 10) / 10
+    : nationalRemaining;
   const projectedAgeAtDeath = Math.round((age + remainingYears) * 10) / 10;
   const survival =
     termYears != null
@@ -219,12 +230,20 @@ export function estimateLifeExpectancy(input: EstimateLifeExpectancyInput): Life
   const rangePart = ` Dożycie dla pożyczek 1–5 lat: P(1 rok) ≈ ${Math.round(survival1y * 100)}%, P(5 lat) ≈ ${Math.round(survival5y * 100)}%.`;
   const summary =
     `Właściciel: ${sex === "M" ? "mężczyzna" : "kobieta"}, wiek ${age} lat. ` +
-    `Dalsze przeciętne trwanie życia wg GUS ≈ ${remainingYears} lat (przewidywany wiek dożycia ≈ ${projectedAgeAtDeath}).` +
+    `Dalsze przeciętne trwanie życia wg GUS ≈ ${remainingYears} lat (przewidywany wiek dożycia ≈ ${projectedAgeAtDeath})` +
+    (regional
+      ? ` — z korektą regionalną ×${String(regional.factor).replace(".", ",")} (${regional.unitName}; tablica krajowa: ${nationalRemaining} lat).`
+      : ".") +
     termPart +
     rangePart;
 
   return {
     ...base,
+    source: regional
+      ? `GUS — Tablice trwania życia 2022 × współczynnik regionalny GUS BDL ${regional.year} (${regional.unitName})`
+      : base.source,
+    nationalRemainingYears: nationalRemaining,
+    regional: input.regional ?? null,
     available: true,
     remainingYears,
     projectedAgeAtDeath,

@@ -23,6 +23,7 @@ import { CLIENT_FILES_BUCKET } from "@/lib/storage-buckets";
 import { ocrDocuments } from "./document-ocr.server";
 import { analyzeKwLegal } from "./kw-parser.server";
 import { analyzeOwner } from "./owner-analysis.server";
+import { bandLabel } from "./life-expectancy";
 import { isBuildingPropertyType, resolveBuildingArea } from "./building-area";
 import { checkCourtRegistry } from "./court-registry.server";
 import {
@@ -502,6 +503,7 @@ export async function assessInvestmentRisk(
     kwNumber: kwLegal.kwNumber,
     city: effCity,
     voivodeship: effVoivodeship,
+    county: kwAddr?.powiat ?? null,
   });
   warnings.push(
     ...owner.notes.filter((n) =>
@@ -523,7 +525,14 @@ export async function assessInvestmentRisk(
   //     (budowa zasadniczo tylko dla rolnika) obniża płynność i sugeruje wycenę rolną.
   const plotBuildability = assessPlotBuildability({
     propertyType: property?.property_type ?? "inna",
-    mpzpInfo: (property as any)?.mpzp_info ?? null,
+    // MPZP z wniosku, a gdy brak — przeznaczenie terenu z Krajowej Integracji MPZP.
+    mpzpInfo:
+      (property as any)?.mpzp_info ??
+      (collateral?.mpzp?.status === "found"
+        ? collateral.mpzp.plans
+            .map((p) => `MPZP ${p.planName ?? ""} ${p.symbol ?? ""}: ${p.purpose ?? ""}`)
+            .join("; ")
+        : null),
     landRegistryExtract: (property as any)?.land_registry_extract ?? null,
     // Treść dokumentów klienta z OCR (wypis/MPZP/WZ/operat) — najbardziej
     // aktualne źródło statusu gruntu, rozstrzyga przed użytkiem z KW.
@@ -945,7 +954,31 @@ export const getInvestmentRiskAssessment = createServerFn({ method: "GET" })
 // wymuszoną sprzedaż oraz ludność/otoczenie. NIE zawiera danych właściciela
 // (PESEL/trwanie życia) ani analizy korespondencji. Ocena inwestycyjna A–E
 // (wynik, klasa, profil ryzyka) to zapisane kolumny oceny, nie dane osobowe.
+/** Dożycie właściciela dla inwestora — bez imion, PESEL i dat urodzenia; wiek w przedziale 5-letnim. */
+export interface InvestorOwnerLongevity {
+  role: string;
+  ageRange: string | null;
+  sex: "M" | "K" | null;
+  remainingYears: number | null;
+  nationalRemainingYears: number | null;
+  regionalFactor: number | null;
+  regionalNote: string | null;
+  survivalOverTerm: number | null;
+  loanTermYears: number | null;
+  band: string;
+}
+
 export interface InvestorValuationSummary {
+  /** Dożycie właścicieli (z korektą regionalną GUS BDL). */
+  ownerLongevity?: InvestorOwnerLongevity[];
+  /** KRZ / MSiG pożyczkobiorcy i właścicieli — podsumowanie (szczegóły w sekcji właścicieli). */
+  courtRegistry?: {
+    summary: string;
+    confirmedHits: number;
+    unconfirmedHits: number;
+    clientChecked: boolean;
+    clientFullyChecked: boolean;
+  } | null;
   /** Klasa ryzyka A–E (skala GRADE_BANDS); null = ocena bez wyniku. */
   riskGrade: RiskGrade | null;
   /** Ocena inwestycyjna 0–100 (wyżej = bezpieczniej). */
@@ -1057,7 +1090,46 @@ export function buildInvestorValuationSummary(
   const cb = r.collateralAnalysis?.valuationBenchmark ?? null;
   const score = Number.isFinite(r.investmentScore) ? Math.round(r.investmentScore) : null;
   const recommendation = r.recommendation ?? null;
+  const ageRange = (age: number | null) =>
+    age == null ? null : `${Math.floor(age / 5) * 5}–${Math.floor(age / 5) * 5 + 4} lat`;
+  const longevity = (
+    role: string,
+    age: number | null,
+    sex: "M" | "K" | null,
+    le: InvestmentRiskAssessment["owner"]["lifeExpectancy"],
+  ): InvestorOwnerLongevity => ({
+    role,
+    ageRange: ageRange(age),
+    sex,
+    remainingYears: le.remainingYears,
+    nationalRemainingYears: le.nationalRemainingYears ?? le.remainingYears,
+    regionalFactor: le.regional?.available ? (le.regional.factor ?? null) : null,
+    regionalNote: le.regional?.note ?? null,
+    survivalOverTerm: le.survivalProbabilityOverTerm,
+    loanTermYears: le.loanTermYears,
+    band: bandLabel(le.longevityRiskBand),
+  });
+  const profiles = r.owner?.kwOwnerProfiles ?? [];
+  let co = 0;
+  const ownerLongevity: InvestorOwnerLongevity[] = profiles.length
+    ? profiles.map((p) =>
+        longevity(p.isApplicant ? "Pożyczkobiorca" : `Współwłaściciel ${++co}`, p.age, p.sex, p.lifeExpectancy),
+      )
+    : r.owner?.lifeExpectancy?.available
+      ? [longevity("Pożyczkobiorca", r.owner.age, r.owner.sex, r.owner.lifeExpectancy)]
+      : [];
+  const cr = r.courtRegistry;
   return {
+    ownerLongevity,
+    courtRegistry: cr
+      ? {
+          summary: cr.summary,
+          confirmedHits: cr.confirmedHits,
+          unconfirmedHits: cr.unconfirmedHits,
+          clientChecked: cr.clientChecked,
+          clientFullyChecked: cr.clientFullyChecked,
+        }
+      : null,
     riskGrade: r.riskGrade ?? (score != null ? gradeFromScore(score) : null),
     investmentScore: score,
     recommendation,

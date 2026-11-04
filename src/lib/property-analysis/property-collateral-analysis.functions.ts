@@ -1,6 +1,9 @@
 // Orchestrator analizy zabezpieczenia — wycena z dzisiejszych danych portali nieruchomości
 // (deweloperuch, otodom, morizon, gratka, adresowo, olx) + komentarz Lovable AI.
 import { isBuildingPropertyType, resolveBuildingArea } from "@/lib/risk-assessment/building-area";
+import { fetchParcelByPoint } from "./uldk.server";
+import { fetchMpzpAtPoint } from "./mpzp.server";
+import { fetchSurroundings } from "./surroundings.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -301,6 +304,98 @@ export async function analyzePropertyCollateral(
       );
     }
 
+    // 3b) Działka ewidencyjna pod punktem (ULDK GUGiK) — tylko przy dokładnym
+    //     adresie; przy centrum miejscowości działka byłaby przypadkowa.
+    const exactPoint = input.latitude != null && input.longitude != null && !geo?.approximate;
+    const [parcel, mpzp, surroundings] = await Promise.all([
+      exactPoint
+        ? fetchParcelByPoint(input.latitude!, input.longitude!).catch(() => null)
+        : Promise.resolve(null),
+      exactPoint
+        ? fetchMpzpAtPoint(input.latitude!, input.longitude!).catch(() => null)
+        : Promise.resolve(null),
+      fetchSurroundings({
+        lat: input.latitude ?? null,
+        lng: input.longitude ?? null,
+        exactPoint,
+        county: input.county ?? null,
+      }).catch(() => null),
+    ]);
+    sourcesUsed.push(
+      {
+        source: "EEA — Natura 2000 i krajowe formy ochrony przyrody",
+        used: surroundings?.protectedAreas?.status === "checked",
+        purpose: "obszary chronione w punkcie nieruchomości (ograniczenia zabudowy)",
+        dataLevel: surroundings?.protectedAreas?.areas.length
+          ? surroundings.protectedAreas.areas.map((a) => a.name).join(", ").slice(0, 120)
+          : "brak obszarów w punkcie",
+        period: "",
+        status: surroundings?.protectedAreas?.status === "checked" ? "success" : "no_data",
+      },
+      {
+        source: "OpenStreetMap — uciążliwości w promieniu 2 km",
+        used: surroundings?.nuisances?.status === "checked",
+        purpose: "drogi szybkiego ruchu, kolej, lotniska, linie WN, przemysł, wysypiska, cmentarze",
+        dataLevel: surroundings?.nuisances ? `${surroundings.nuisances.hits.length} kategorii` : "—",
+        period: "",
+        status: surroundings?.nuisances?.status === "checked" ? "success" : "no_data",
+      },
+      {
+        source: "ULDK GUGiK — budynek ewidencyjny (EGiB)",
+        used: surroundings?.building != null,
+        purpose: "obrys i powierzchnia zabudowy budynku pod punktem",
+        dataLevel: surroundings?.building ? `budynek ${surroundings.building.id}` : "—",
+        period: "",
+        status: surroundings?.building ? "success" : "no_data",
+      },
+      {
+        source: "GUS BDL — statystyki powiatu",
+        used: surroundings?.powiat?.status === "checked",
+        purpose: "ludność i jej zmiana, migracje, bezrobocie, wynagrodzenia",
+        dataLevel: surroundings?.powiat?.unitName ?? "—",
+        period: surroundings?.powiat?.year ?? "",
+        status: surroundings?.powiat?.status === "checked" ? "success" : "no_data",
+      },
+    );
+    // Dom bez powierzchni użytkowej: powierzchnia zabudowy z EGiB tylko jako
+    // wskazówka — NIE jest powierzchnią użytkową i nie trafia do wyceny.
+    if (
+      input.propertyType === "dom" &&
+      input.usableAreaM2 == null &&
+      surroundings?.building?.footprintM2
+    ) {
+      warnings.push(
+        `Powierzchnia użytkowa domu nadal nieznana; budynek pod punktem adresu ma w ewidencji ok. ${surroundings.building.footprintM2.toLocaleString("pl-PL")} m² powierzchni zabudowy (EGiB) — to nie jest powierzchnia użytkowa, ustal ją z klientem.`,
+      );
+    }
+    if (surroundings?.protectedAreas?.areas.length) {
+      warnings.push(
+        `Obszar chroniony: ${surroundings.protectedAreas.areas.map((a) => `${a.name} (${a.type})`).join("; ")} — sprawdź ograniczenia zabudowy.`,
+      );
+    }
+    sourcesUsed.push({
+      source: "Krajowa Integracja MPZP (GUGiK)",
+      used: mpzp != null && mpzp.status !== "unavailable",
+      purpose: "miejscowy plan w punkcie: nazwa planu, symbol i przeznaczenie terenu, uchwała",
+      dataLevel: mpzp?.status === "found"
+        ? `${mpzp.plans[0]?.symbol ?? "plan"} — ${mpzp.plans[0]?.purpose ?? ""}`.slice(0, 120)
+        : mpzp?.status === "none"
+          ? `brak planu (gmina ${mpzp.commune ?? "—"})`
+          : exactPoint
+            ? "—"
+            : "brak dokładnego adresu",
+      period: "",
+      status: mpzp && mpzp.status !== "unavailable" ? "success" : "no_data",
+    });
+    sourcesUsed.push({
+      source: "ULDK GUGiK (działki ewidencyjne)",
+      used: parcel != null,
+      purpose: "identyfikator, obręb, gmina i obrys działki pod punktem lokalizacji",
+      dataLevel: parcel ? `działka ${parcel.id}` : exactPoint ? "—" : "brak dokładnego adresu",
+      period: "",
+      status: parcel ? "success" : "no_data",
+    });
+
     // 4) Lokalizacja
     const loc: LocationScoreResult = await locationScore({
       lat: input.latitude ?? null,
@@ -505,6 +600,10 @@ export async function analyzePropertyCollateral(
       },
       floodAlerts: flood.alerts,
     });
+    result.property.locationApproximate = Boolean(geo?.approximate);
+    result.property.parcel = parcel;
+    result.mpzp = mpzp;
+    result.surroundings = surroundings;
     result.portalValuation = {
       status: pv.status,
       pricePerM2Median: pv.pricePerM2Median,

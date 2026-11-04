@@ -4,7 +4,7 @@
 // więc analiza zabezpieczenia, benchmark GUS i ryzyko powodziowe korzystają
 // z OSM bez własnych zmian.
 import type { LocationScoreResult } from "./types";
-import { osmGeocode, osmNearby } from "@/lib/osm.server";
+import { OSM_POI_CATEGORIES, osmGeocode, osmNearby, type OsmPlace } from "@/lib/osm.server";
 
 /** Kategorie punktów w scoringu zabezpieczenia (promień 1,5 km, maks. 20 na kategorię). */
 const SCORE_CATEGORIES: Record<string, string> = {
@@ -15,6 +15,20 @@ const SCORE_CATEGORIES: Record<string, string> = {
   parks: "parki",
   clinics: "przychodnie i szpitale",
 };
+
+/** Najbliższy punkt każdej kategorii (nazwa + odległość) — do raportu inwestora. */
+function nearestByCategory(
+  nearby: Record<string, OsmPlace[]>,
+): Record<string, { name: string | null; distanceM: number }> {
+  const out: Record<string, { name: string | null; distanceM: number }> = {};
+  for (const [cat, places] of Object.entries(nearby)) {
+    const best = places
+      .filter((p): p is OsmPlace & { distance: number } => p.distance != null)
+      .sort((a, b) => a.distance - b.distance)[0];
+    if (best) out[cat] = { name: best.name?.slice(0, 80) ?? null, distanceM: best.distance };
+  }
+  return out;
+}
 
 export async function locationScore(args: {
   lat: number | null;
@@ -31,7 +45,9 @@ export async function locationScore(args: {
       liquidityComment: "Płynność trudna do oceny bez geolokalizacji.",
     };
   }
-  const nearby = await osmNearby(lat, lng, 1500, Object.keys(SCORE_CATEGORIES), 20).catch(
+  // Pobieramy wszystkie kategorie OSM (raport pokazuje pełną infrastrukturę);
+  // scoring liczy się — jak dotąd — tylko z SCORE_CATEGORIES.
+  const nearby = await osmNearby(lat, lng, 1500, Object.keys(OSM_POI_CATEGORIES), 20).catch(
     () => null,
   );
   if (!nearby) {
@@ -61,6 +77,11 @@ export async function locationScore(args: {
         ? "Lokalizacja sprzyja płynności rynkowej."
         : "Lokalizacja może obniżać płynność rynkową.",
     poiCounts: counts,
+    poiCountsAll: Object.fromEntries(
+      Object.keys(OSM_POI_CATEGORIES).map((k) => [k, nearby[k]?.length ?? 0]),
+    ),
+    nearest: nearestByCategory(nearby),
+    radiusM: 1500,
   };
 }
 

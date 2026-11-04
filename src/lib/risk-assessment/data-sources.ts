@@ -101,6 +101,16 @@ export const DATA_SOURCE_CATALOG: DataSourceSpec[] = [
     provider: "iMSiG API + oficjalna wyszukiwarka MSiG (Ministerstwo Sprawiedliwości) + indeks stron",
     envKey: "IMSIG_API_KEY",
   },
+  // 4b. Działki ewidencyjne
+  {
+    key: "uldk",
+    name: "ULDK — działki ewidencyjne (GUGiK)",
+    category: "dane_geoprzestrzenne",
+    governmental: true,
+    purpose: "Działka pod punktem lokalizacji: identyfikator TERYT, obręb, gmina, obrys i powierzchnia",
+    provides: "Identyfikator działki, jednostki administracyjne, geometria działki (mapa w raporcie)",
+    provider: "uldk.gugik.gov.pl (GetParcelByXY)",
+  },
   // 5. Instytucje rządowe / rejestry
   {
     key: "ceidg",

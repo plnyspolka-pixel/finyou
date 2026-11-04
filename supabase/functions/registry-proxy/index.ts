@@ -29,8 +29,15 @@ const ALLOWED_HOSTS = new Set([
   "api-krs.ms.gov.pl", // KRS — odpisy
   "nominatim.openstreetmap.org", // OSM — geokodowanie adresów
   "overpass-api.de", // OSM — punkty w okolicy
+  "overpass.kumi.systems", // OSM Overpass — serwer zapasowy
+  "overpass.private.coffee", // OSM Overpass — serwer zapasowy
   "services.gugik.gov.pl", // GUGiK — geokodowanie adresów (UUG)
   "photon.komoot.io", // Photon — geokodowanie (dane OSM)
+  "wyszukiwarka-msig.ms.gov.pl", // MSiG — oficjalna wyszukiwarka ogłoszeń
+  "uldk.gugik.gov.pl", // ULDK — działki i budynki ewidencyjne
+  "mapy.geoportal.gov.pl", // Krajowa Integracja MPZP (GetFeatureInfo)
+  "bdl.stat.gov.pl", // GUS BDL — trwanie życia, statystyki powiatów
+  "bio.discomap.eea.europa.eu", // EEA — Natura 2000 i krajowe formy ochrony
 ]);
 
 /** Nagłówki przekazywane do rejestru (reszta odrzucana). */

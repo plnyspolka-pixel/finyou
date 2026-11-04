@@ -92,7 +92,8 @@ function OfferCardPage() {
   if (!card) {
     return (
       <div className="grid min-h-screen place-items-center text-muted-foreground">
-        Karta oferty nie istnieje lub link wygasł.
+        Karta oferty jest niedostępna — link wygasł albo prezentowanie ofert jest chwilowo
+        wstrzymane.
       </div>
     );
   }

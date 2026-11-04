@@ -783,3 +783,119 @@ describe("podsumowanie wyceny dla inwestora", () => {
     expect(buildInvestorValuationSummary(r).riskGrade).toBe("D");
   });
 });
+
+describe("lokalizacja i mapa w raporcie", () => {
+  it("otoczenie: obszary chronione, uciążliwości, budynek i powiat trafiają do raportu", async () => {
+    const d = analyticsDetail();
+    d.collateral = {
+      ...d.collateral!,
+      locationScore: {
+        ...d.collateral!.locationScore,
+        poiCountsAll: { schools: 4, groceryStores: 20 },
+        nearest: { schools: { name: "SP nr 3", distanceM: 420 } },
+      },
+      surroundings: {
+        protectedAreas: {
+          status: "checked",
+          areas: [
+            {
+              kind: "natura2000",
+              code: "PLB120002",
+              name: "Puszcza Niepołomicka",
+              type: "Natura 2000 — OSO",
+            },
+          ],
+          note: "Nieruchomość w granicach obszaru chronionego.",
+        },
+        nuisances: {
+          status: "checked",
+          radiusM: 2000,
+          hits: [{ key: "motorway", name: "A4", distanceM: 250, alert: true }],
+          note: "W bliskiej odległości są uciążliwości.",
+        },
+        building: { id: "X_BUD", footprintM2: 140, polygon: [], source: "ULDK GUGiK (EGiB)" },
+        powiat: {
+          status: "checked",
+          unitName: "Powiat wielicki",
+          year: "2025",
+          population: 146697,
+          populationChange5yPct: 5.9,
+          migrationPer1000: 9.5,
+          unemploymentPct: 4.2,
+          unemploymentPolandPct: 5.7,
+          wageIndexPl100: 93.4,
+          note: "",
+        },
+      },
+    };
+    const model = buildInvestorReportModel({ kind: "analityka", detail: d });
+    const text = reportModelText(model);
+    expect(text).toContain("Puszcza Niepołomicka");
+    expect(text).toContain("Autostrada / droga ekspresowa");
+    expect(text).toContain("nie powierzchnia użytkowa");
+    expect(text).toContain("Powiat wielicki");
+    expect(model.blocks.some((b) => b.t === "map" && b.overlay === "protected")).toBe(true);
+    // Wykresy zamiast tabel: kafelki, odległości, powiat vs Polska, zmiany wokół zera.
+    for (const t of ["tiles", "distances", "compare", "diverging", "bars"] as const)
+      expect(model.blocks.some((b) => b.t === t)).toBe(true);
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      mapRenderer: async () => null,
+    });
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(3);
+    expect(await charsOutsideFont(text)).toEqual([]);
+  });
+
+  // Minimalny PNG 1×1 — renderer mapy podmieniony (w testach brak przeglądarki).
+  const PNG_1X1 = Uint8Array.from(
+    atob(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  it("raport z dokładnym położeniem: okolica, zbliżenie, ortofoto, MPZP i mapa powodziowa", () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const maps = model.blocks.filter((b) => b.t === "map");
+    expect(maps).toHaveLength(5); // bez danych o otoczeniu (stara analiza) — bez mapy obszarów chronionych
+    expect(maps.every((m) => m.t === "map" && m.marker)).toBe(true);
+    expect(
+      maps.map((m) => (m.t === "map" ? (m.base ?? "osm") + ":" + (m.overlay ?? "-") : "")),
+    ).toEqual(["osm:-", "osm:-", "orto:-", "osm:mpzp", "osm:flood"]);
+    expect(reportModelText(model)).toContain("Plan miejscowy (MPZP) i studium");
+    expect(reportModelText(model)).toContain("Lokalizacja i nieruchomość");
+  });
+
+  it("wersja przed rezerwacją nie ma mapy ani współrzędnych", () => {
+    const model = buildInvestorReportModel({
+      kind: "zlecenie",
+      detail: teaserOrderDetail(),
+      project: PROJECT,
+    });
+    expect(model.blocks.some((b) => b.t === "map")).toBe(false);
+    expect(reportModelText(model)).not.toMatch(/54\.46/);
+  });
+
+  it("mapa trafia do PDF-u przez renderer", async () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const calls: number[] = [];
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      mapRenderer: async (spec) => {
+        calls.push(spec.zoom);
+        return PNG_1X1;
+      },
+    });
+    expect(calls).toEqual([12, 17, 17, 16, 14]);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(2);
+  });
+
+  it("brak mapy (renderer null) — PDF z samymi współrzędnymi", async () => {
+    const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
+    const bytes = await renderInvestorReportPdf(model, {
+      preparedFor: "inwestor@example.com",
+      mapRenderer: async () => null,
+    });
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe("%PDF-");
+  });
+});

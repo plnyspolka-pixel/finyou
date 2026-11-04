@@ -3,6 +3,7 @@
 // z odczytu wyszukiwania widocznego w portalu, bez logowania i bez omijania ochrony.
 // Źródło NIE obejmuje KRZ i nie dowodzi braku upadłości po 2021 r.
 import type { OwnerIntelligenceHit, OwnerIntelligenceSourceStatus } from "./owner-intelligence.types";
+import { registryGet } from "@/lib/registry-fetch.server";
 
 export interface OfficialMsigInput {
   kind: "person" | "company";
@@ -152,34 +153,36 @@ export async function searchOfficialMsig(input: OfficialMsigInput): Promise<Offi
     from:"2001-01-01",to:end,page:"1",
   };
   for (const [key,val] of Object.entries(params)) url.searchParams.set(key,val);
-  // Jedno ponowienie przy błędzie sieci/timeoucie — portal bywa wolny z
-  // centrów danych; nie ponawiamy przy odpowiedzi HTTP (żadnego zalewania).
+  // registryGet: najpierw bezpośrednio, a przy blokadzie sieci Cloudflare
+  // (403/429/5xx, błąd sieci) — przez registry-proxy w sieci Supabase.
   let lastError = "";
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(url.toString(),{
-        headers:{
-          Accept:"application/json",
-          "Accept-Language":"pl-PL,pl;q=0.9",
-          // Jawna identyfikacja klienta (jak przy OSM/blogu) — bez podszywania się.
-          "User-Agent":OFFICIAL_MSIG_USER_AGENT,
-        },
-        signal:AbortSignal.timeout(20_000),
-      });
-    } catch (e: unknown) {
+    const response = await registryGet(url.toString(), {
+      headers: {
+        Accept: "application/json",
+        "Accept-Language": "pl-PL,pl;q=0.9",
+        // Jawna identyfikacja klienta (jak przy OSM/blogu) — bez podszywania się.
+        "User-Agent": OFFICIAL_MSIG_USER_AGENT,
+      },
+      timeoutMs: 20_000,
+      prefer: "direct",
+    }).catch((e: unknown) => {
       lastError = e instanceof Error ? `${e.name}: ${e.message}` : "błąd sieci";
+      return null;
+    });
+    if (!response || response.status === 0) {
+      lastError ||= "brak odpowiedzi";
       continue;
     }
     if (!response.ok) return {
       status:"unavailable",
-      note:"Oficjalna wyszukiwarka MSiG HTTP "+response.status+" — nie oznacza to braku wpisów.",hits:[],
+      note:"Oficjalna wyszukiwarka MSiG HTTP "+response.status+(response.viaProxy ? " (przez registry-proxy)" : "")+" — nie oznacza to braku wpisów.",hits:[],
     };
-    const body = await response.text().catch(() => "");
+    const body = response.text;
     let data: {list?:unknown;page?:number} | null = null;
     try { data = JSON.parse(body); } catch { data = null; }
     if (!data || !Array.isArray(data.list)) {
-      const type = response.headers.get("content-type") ?? "?";
+      const type = response.viaProxy ? "przez registry-proxy" : "bezpośrednio";
       const blocked = /incapsula|access denied|captcha|<html/i.test(body.slice(0, 2000));
       return {
         status:"unavailable",

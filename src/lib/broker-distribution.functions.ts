@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertInvestorOffersOpen } from "@/lib/investor-offers-pause";
 
 /** Buduje draft maila (temat + treść) do inwestorów — NIE wysyła. */
 export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
@@ -15,6 +16,7 @@ export const buildInvestorDistributionDraft = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    assertInvestorOffersOpen();
     // Dystrybucja jest dostępna dla personelu wewnętrznego (dowolny wniosek)
     // oraz dla pośrednika — także darmowego — ale wyłącznie dla JEGO ofert.
     const { assertBrokerOrStaff } = await import("@/lib/access/guards.server");
