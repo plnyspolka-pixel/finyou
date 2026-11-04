@@ -464,9 +464,9 @@ export function SiteFooter() {
           color: "var(--muted-foreground)",
         }}
       >
-        © 2026 Finance You sp. z o.o. · Pożyczki dla firm zabezpieczone nieruchomościami oraz
-        szkolenie i narzędzia dla inwestorów. Materiały mają charakter informacyjny i nie stanowią
-        oferty.
+        © 2026 Finance You sp. z o.o. · Pożyczki pod zastaw nieruchomości — także dla firm od
+        pierwszego dnia działalności — oraz szkolenie i narzędzia dla inwestorów. Materiały mają
+        charakter informacyjny i nie stanowią oferty.
       </div>
     </footer>
   );

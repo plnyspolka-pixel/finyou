@@ -82,6 +82,22 @@ describe("compliance – tory", () => {
     expect(codes("Pieniądze dla każdego", ctx)).toContain("dla_kazdego");
   });
 
+  it("pożyczkobiorca: złagodzone reguły (2026-11-04)", () => {
+    const ctx = { kind: "script" as const, track: "pozyczkobiorca" as const };
+    // informacja z zaprzeczeniem i start-upy nie blokują
+    expect(codes("Finansujemy działalność, nie na cele konsumpcyjne.", ctx)).not.toContain(
+      "konsument",
+    );
+    expect(codes("Także dla firm od pierwszego dnia działalności.", ctx)).toHaveLength(0);
+    expect(codes("Bez zaświadczeń o dochodach — liczy się nieruchomość.", ctx)).not.toContain(
+      "bez_weryfikacji",
+    );
+    // obietnice konsumenckie nadal blokują
+    expect(codes("Oferta dla osób prywatnych", ctx)).toContain("konsument");
+    expect(codes("Pieniądze na wakacje", ctx)).toContain("konsument");
+    expect(codes("Bez formalności i bez BIK", ctx)).toContain("bez_weryfikacji");
+  });
+
   it("reguły pożyczkobiorcy nie dotyczą inwestora i odwrotnie", () => {
     expect(codes("Pożyczka na dowolny cel", { kind: "script", track: "inwestor" })).not.toContain(
       "konsument",

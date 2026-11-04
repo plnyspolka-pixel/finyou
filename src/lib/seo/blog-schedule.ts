@@ -68,7 +68,7 @@ export const EVERGREEN_GUIDES: { topic: string; keyword: string; target: string 
     target: "/pozyczka-dla-rolnikow",
   },
   {
-    topic: "Finansowanie dla nowej firmy bez historii kredytowej — zabezpieczenie nieruchomością",
+    topic: "Pożyczka dla firmy od pierwszego dnia działalności — bez historii kredytowej, pod zastaw nieruchomości",
     keyword: "pożyczka dla nowej firmy",
     target: "/pozyczka-dla-nowych-firm",
   },

@@ -329,7 +329,7 @@ async function writeArticleFromNews(
   } else if (audience === "investor") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (mechanizm zarabiania na odsetkach jak bank, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja – BEZ podawania stóp zwrotu jako obietnicy). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: PRZEDSIĘBIORCA szukający finansowania WYŁĄCZNIE NA CEL GOSPODARCZY pod zastaw nieruchomości (bank odmówił lub trwa to za długo, II hipoteka, płynność firmy, inwestycja w firmie). Platforma jest B2B – nie kieruj treści do konsumentów i nie obiecuj finansowania „bez BIK” ani „bez zdolności”. Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, który potrzebuje finansowania szybciej lub łatwiej niż w banku (odmowa banku, II hipoteka, płynność, inwestycja, start działalności). Piszesz do przedsiębiorców w szerokim sensie — także do osób, które dopiero zakładają firmę: obsługujemy start-upy od pierwszego dnia działalności, staż firmy nie jest wymagany. Nie akcentuj co akapit, że oferta jest „tylko dla firm” — wystarczy jedna naturalna wzmianka o celu związanym z działalnością. Nie pisz o finansowaniu celów konsumpcyjnych (wakacje, samochód, wesele) i nie obiecuj finansowania „bez BIK” ani „bez zdolności”. Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
   const sys = `${currentDateContextPl()}\nJesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
@@ -470,8 +470,8 @@ async function writeEvergreenGuide(
     )
     .join("\n");
   const sys = `${currentDateContextPl()}
-Jesteś senior copywriterem finansowym i ekspertem SEO dla Finance You (pożyczki pod zastaw nieruchomości w PL, platforma B2B — finansowanie WYŁĄCZNIE na cel gospodarczy). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów". Poradnik ma być lepszy niż to, co dziś jest w top 10 Google na tę frazę: praktyczny, z przykładami, listami kroków, tabelą tam, gdzie pomaga.
-GRUPA DOCELOWA: PRZEDSIĘBIORCA / właściciel nieruchomości szukający finansowania firmy pod zastaw nieruchomości. Nie kieruj treści do konsumentów, nie obiecuj finansowania „bez BIK” ani „bez zdolności”.
+Jesteś senior copywriterem finansowym i ekspertem SEO dla Finance You (pożyczki pod zastaw nieruchomości w PL na cel związany z działalnością — także dla firm od pierwszego dnia). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów". Poradnik ma być lepszy niż to, co dziś jest w top 10 Google na tę frazę: praktyczny, z przykładami, listami kroków, tabelą tam, gdzie pomaga.
+GRUPA DOCELOWA: właściciel nieruchomości i przedsiębiorca — także osoba, która dopiero zakłada firmę (obsługujemy start-upy od pierwszego dnia działalności, staż nie jest wymagany). O celu związanym z działalnością wspomnij raz, naturalnie — nie powtarzaj „tylko dla firm”. Nie pisz o finansowaniu celów konsumpcyjnych, nie obiecuj finansowania „bez BIK” ani „bez zdolności”.
 NIE podawaj konkretnych statystyk, stóp, prowizji ani dat, których nie znasz na pewno — opisuj mechanizm i przykładowe wyliczenia wyraźnie oznaczone jako orientacyjne.
 
 ${STYLE_GUIDE}

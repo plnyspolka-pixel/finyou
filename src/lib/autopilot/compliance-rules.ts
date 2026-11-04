@@ -12,7 +12,7 @@
 import { COMPANY_DATA } from "@/lib/company";
 import type { ContentKind, PublishPlatform, Track } from "./types";
 
-export const COMPLIANCE_RULES_VERSION = "2026-10-23.1";
+export const COMPLIANCE_RULES_VERSION = "2026-11-04.1";
 
 export type RuleSeverity = "block" | "require";
 
@@ -121,8 +121,11 @@ const PATTERNS: PatternRule[] = [
     re: re(
       "na\\s+dowolny\\s+cel|na\\s+cele\\s+(?:konsumpcyjn|prywatn)\\p{L}*|na\\s+(?:wakacje|wesele|samochód|auto|święta)|dla\\s+osób\\s+prywatnych|kredyt\\p{L}*\\s+konsumenck\\p{L}*",
     ),
-    message: "Finansowanie wyłącznie na cel gospodarczy (B2B) – bez kierowania do konsumentów.",
+    message:
+      "Nie obiecujemy finansowania celów konsumpcyjnych ani nie adresujemy treści „do osób prywatnych”. Zamiast tego: właściciele nieruchomości, przedsiębiorcy, firmy od pierwszego dnia działalności.",
     tracks: ["pozyczkobiorca"],
+    // „nie na cele konsumpcyjne” to informacja, nie obietnica (2026-11-04).
+    allowNegated: true,
   },
   {
     code: "dla_kazdego",
@@ -136,8 +139,9 @@ const PATTERNS: PatternRule[] = [
   {
     code: "bez_weryfikacji",
     re: re(
-      "bez\\s+(?:sprawdzania|weryfikacji|bik\\p{L}*|big\\p{L}*|zdolności|formalności|zaświadczeń)|100\\s?%\\s+(?:decyzji\\s+)?pozytywn\\p{L}*|(?:decyzj\\p{L}*|akceptacj\\p{L}*)\\s+(?:dla\\s+)?100\\s?%",
+      "bez\\s+(?:sprawdzania|weryfikacji|bik\\p{L}*|big\\p{L}*|zdolności|formalności)|100\\s?%\\s+(?:decyzji\\s+)?pozytywn\\p{L}*|(?:decyzj\\p{L}*|akceptacj\\p{L}*)\\s+(?:dla\\s+)?100\\s?%",
     ),
+    // „bez zaświadczeń o dochodach” jest prawdą (decyduje nieruchomość) — dozwolone od 2026-11-04.
     message: "Nie obiecujemy finansowania bez weryfikacji, BIK ani zdolności.",
     tracks: ["pozyczkobiorca"],
   },
@@ -287,7 +291,7 @@ export const AI_DISCLOSURE_LINE = "Treść wygenerowana z użyciem AI (awatar i 
 export const SENDER_LINE = `${COMPANY_DATA.legalName}, KRS ${COMPANY_DATA.krs} · ok. 15 lat na rynku finansowania pozabankowego.`;
 export const RISK_LINES: Record<Track, string> = {
   pozyczkobiorca:
-    "Materiał edukacyjny dla przedsiębiorców (finansowanie wyłącznie na cel gospodarczy). Kalkulacje są orientacyjne, decyzję podejmują finansujący, a zabezpieczenie na nieruchomości oznacza ryzyko jej utraty przy braku spłaty.",
+    "Materiał edukacyjny. Finansujemy cel gospodarczy — także firmy od pierwszego dnia działalności. Kalkulacje są orientacyjne, decyzję podejmują finansujący, a zabezpieczenie na nieruchomości oznacza ryzyko jej utraty przy braku spłaty.",
   inwestor:
     "Materiał edukacyjny – nie stanowi oferty ani rekomendacji inwestycyjnej. Inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału; decyzja należy do inwestora.",
 };

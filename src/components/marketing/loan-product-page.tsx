@@ -364,8 +364,9 @@ export function LoanProductPage({ slug }: { slug: string }) {
       <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem 2rem" }}>
         <ComplianceNote style={{ marginTop: "1.5rem" }}>
           Materiał ma charakter informacyjny i nie stanowi oferty w rozumieniu art. 66 Kodeksu
-          cywilnego. Finansowanie wyłącznie na cel związany z działalnością gospodarczą lub rolniczą
-          (B2B). Finance You nie gwarantuje udzielenia finansowania — decyzja należy do inwestorów.
+          cywilnego. Finansowanie na cel związany z działalnością gospodarczą lub rolniczą — także
+          dla firm od pierwszego dnia działalności. Finance You nie gwarantuje udzielenia
+          finansowania — decyzja należy do inwestorów.
         </ComplianceNote>
       </div>
     </MarketingShell>

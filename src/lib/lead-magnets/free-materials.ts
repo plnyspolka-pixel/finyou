@@ -121,7 +121,7 @@ export const FREE_MATERIALS_COPY: Record<
 };
 
 export const FREE_MATERIALS_NOTE =
-  "Materiały edukacyjne przygotowane z użyciem AI i zweryfikowane przez zespół Finance You. Nie stanowią porady prawnej, podatkowej ani inwestycyjnej. Finansowanie wyłącznie na cel gospodarczy; inwestowanie wiąże się z ryzykiem, w tym utraty kapitału.";
+  "Materiały edukacyjne przygotowane z użyciem AI i zweryfikowane przez zespół Finance You. Nie stanowią porady prawnej, podatkowej ani inwestycyjnej. Finansowanie na cel gospodarczy, także dla firm od pierwszego dnia działalności; inwestowanie wiąże się z ryzykiem, w tym utraty kapitału.";
 
 export function freeMaterialHref(audience: LeadMagnetAudience, slug: string): string {
   const q = new URLSearchParams(freeMaterialSearch(audience));

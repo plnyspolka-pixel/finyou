@@ -11,7 +11,11 @@ describe("procedura przyjmowania zgłoszenia", () => {
   });
   it("mieszkanie: tylko KW i zdjęcia; dom: także powierzchnia", () => {
     const m = INTAKE_PROPERTY_TYPES.find((t) => t.key === "mieszkanie")!;
-    expect(m.docs).toEqual(["Numer księgi wieczystej", "Zdjęcia każdego pomieszczenia", "Zdjęcia z zewnątrz"]);
+    expect(m.docs).toEqual([
+      "Numer księgi wieczystej",
+      "Zdjęcia każdego pomieszczenia",
+      "Zdjęcia z zewnątrz",
+    ]);
     const d = INTAKE_PROPERTY_TYPES.find((t) => t.key === "dom")!;
     expect(d.docs).toContain("Powierzchnia użytkowa");
   });
@@ -23,7 +27,9 @@ describe("procedura przyjmowania zgłoszenia", () => {
     expect(rules).toContain("NIE PRZYJMUJESZ WNIOSKU PRZEZ TELEFON");
     expect(rules).toContain("financeyou.pl");
   });
-  it("nie mówi o firmie i nie sprawdza celu gospodarczego", () => {
-    expect(rules).toContain("NIE mówisz, że finansujemy tylko firmy");
+  it("nie mówi o firmie z własnej inicjatywy, a zapytany odpowiada zgodnie z prawdą", () => {
+    expect(rules).toContain("NIE mówisz z własnej inicjatywy, że finansujemy tylko firmy");
+    expect(rules).toContain("nawet założona dzisiaj");
+    expect(rules).toContain("Nie zaprzeczasz warunkowi celu gospodarczego");
   });
 });

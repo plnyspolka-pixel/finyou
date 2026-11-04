@@ -208,7 +208,7 @@ export function LoanGuideBottom({
           <SectionHead
             eyebrow="Dla kogo"
             title="Dla jakich firm — przykłady z wniosków"
-            sub="Finansujemy wyłącznie cele związane z działalnością gospodarczą lub rolniczą."
+            sub="Finansujemy cele związane z działalnością gospodarczą lub rolniczą — także firm od pierwszego dnia działalności."
           />
           <div
             style={{

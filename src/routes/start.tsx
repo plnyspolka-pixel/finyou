@@ -99,9 +99,9 @@ function LinkHubPage() {
 
         <footer className="text-center text-xs leading-relaxed text-muted-foreground">
           <p>
-            Materiały edukacyjne. Finansowanie wyłącznie na cel gospodarczy; decyzję podejmują
-            finansujący. Inwestowanie wiąże się z ryzykiem, w tym utraty kapitału. Treści w
-            serwisach społecznościowych przygotowujemy z użyciem AI.
+            Materiały edukacyjne. Finansowanie na cel gospodarczy, także dla firm od pierwszego
+            dnia; decyzję podejmują finansujący. Inwestowanie wiąże się z ryzykiem, w tym utraty
+            kapitału. Treści w serwisach społecznościowych przygotowujemy z użyciem AI.
           </p>
           <p className="mt-2">
             {COMPANY_DATA.legalName} · KRS {COMPANY_DATA.krs} · {COMPANY_DATA.email}

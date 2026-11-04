@@ -920,7 +920,7 @@ export function SinglePageApplicationForm({
                   >
                     <option value="">— wybierz —</option>
                     <option value="prowadzi">Prowadzę działalność</option>
-                    <option value="zamierza">Zamierzam założyć działalność</option>
+                    <option value="zamierza">Zakładam działalność (także od dziś)</option>
                     <option value="nie_zamierza">Reprezentuję spółkę / inny podmiot</option>
                   </select>
                 </div>

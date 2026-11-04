@@ -100,7 +100,7 @@ export const PRODUCT_GUIDES: Record<string, ProductGuide> = {
       {
         h: "Pożyczka pod zastaw mieszkania dla firmy — na jakie cele?",
         p: [
-          "Finansujemy wyłącznie cele gospodarcze. Najczęściej przedsiębiorcy sięgają po nią, gdy potrzebują pieniędzy szybciej, niż pozwala procedura bankowa, albo gdy bank odmówił z powodu krótkiego stażu firmy, sezonowości przychodów lub chwilowej straty w bilansie.",
+          "Finansujemy cele związane z działalnością — także firm od pierwszego dnia. Najczęściej przedsiębiorcy sięgają po nią, gdy potrzebują pieniędzy szybciej, niż pozwala procedura bankowa, albo gdy bank odmówił z powodu krótkiego stażu firmy, sezonowości przychodów lub chwilowej straty w bilansie.",
         ],
         list: [
           "kapitał obrotowy: zatowarowanie, zaliczki dla podwykonawców, finansowanie kontraktu,",
