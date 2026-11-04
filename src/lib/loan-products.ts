@@ -60,7 +60,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
   ];
 }
 
-const B2B_FAQ: LoanProductFaq[] = [
+export const B2B_FAQ: LoanProductFaq[] = [
   {
     q: "Ile kosztuje złożenie wniosku?",
     a: "Nic. Wniosek jest bezpłatny i niezobowiązujący.",

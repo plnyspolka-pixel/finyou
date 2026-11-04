@@ -19,6 +19,9 @@ import {
   type LoanProduct,
 } from "@/lib/loan-products";
 
+import { LoanGuideBottom, LoanGuideTop } from "@/components/marketing/loan-product-guide";
+import { productFaq, productGuide } from "@/lib/loan-product-guides";
+
 const FORM_ANCHOR = "#wniosek";
 
 function docsHintFor(p: LoanProduct): string {
@@ -30,6 +33,7 @@ export function LoanProductPage({ slug }: { slug: string }) {
   const p = getLoanProduct(slug);
   const steps = procedureSteps(docsHintFor(p));
   const others = LOAN_PRODUCTS.filter((x) => x.slug !== p.slug);
+  const guide = productGuide(p);
 
   return (
     <MarketingShell page="klient" sticky={{ label: "Złóż bezpłatny wniosek", href: FORM_ANCHOR }}>
@@ -195,6 +199,8 @@ export function LoanProductPage({ slug }: { slug: string }) {
         </div>
       </Section>
 
+      {guide && <LoanGuideTop guide={guide} productName={p.menuLabel} />}
+
       <Section tint id="procedura">
         <div style={{ maxWidth: "52rem", margin: "0 auto" }}>
           <SectionHead
@@ -287,9 +293,11 @@ export function LoanProductPage({ slug }: { slug: string }) {
         </div>
       </Section>
 
+      {guide && <LoanGuideBottom guide={guide} productName={p.menuLabel} />}
+
       <Section id="faq">
         <SectionHead center eyebrow="FAQ" title={`${p.menuLabel} — najczęstsze pytania`} />
-        <FAQ items={p.faq} />
+        <FAQ items={productFaq(p)} />
       </Section>
 
       <Section tint>
