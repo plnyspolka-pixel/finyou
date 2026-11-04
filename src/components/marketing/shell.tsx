@@ -14,7 +14,6 @@ import { MktButton } from "./primitives";
 import { TRUSTPILOT_PROFILE_URL } from "@/lib/trustpilot";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
-import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 
 /**
  * Finance You — marketing chrome (header, footer, sticky CTA) + shell wrapper.
@@ -75,9 +74,6 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   kalkulator: "/kalkulator-ltv",
 };
 
-/** Pozycja nawigacji podświetlana na danej stronie — podstrony modułów należą do „Inwestor". */
-const NAV_KEY: Partial<Record<MarketingPage, string>> = { inwestorModul: "inwestor" };
-
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
   klient: { label: "Złóż wniosek", href: "/rejestracja?role=klient" },
@@ -92,19 +88,6 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
-
-/** Kotwice podstron inwestora na /dla-inwestora — sub-menu pod pozycją "Inwestor".
- *  `hidden` zdejmuje wpis z menu, gdy sekcja jest schowana na landingu
- *  (flagi SHOW w routes/dla-inwestora.tsx) — wpis zostaje, żeby dało się go przywrócić. */
-const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
-  { label: "Szkolenie — program", hash: "#akademia", hidden: true },
-  { label: "7 warstw ochrony inwestycji", hash: "#ochrona", hidden: true },
-  { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
-  { label: "Co zyskujesz", hash: "#korzysci", hidden: true },
-  { label: "Cennik", hash: "#cennik" },
-  // Darmowe materiały są w stopce (osobna kolumna), nie w menu.
-  { label: "Darmowe materiały", hash: "#materialy", hidden: true },
-];
 
 /** Rozwijane menu „Klient” — podstrony produktów z lib/loan-products. */
 const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string }[] }[] = [
@@ -126,23 +109,6 @@ const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string 
     ],
   },
 ];
-
-type InvestorMenuLink = { label: string; href: string; sep?: boolean };
-
-/** Sub-menu "Inwestor": najpierw podstrony modułów (/dla-inwestora/<moduł>),
- *  potem kotwice landingu — na samym landingu same hashe, gdzie indziej pełna ścieżka. */
-function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
-  const modules = INVESTOR_MODULES.map((m) => ({
-    label: m.menuLabel,
-    href: investorModulePath(m.slug),
-  }));
-  const anchors = INVESTOR_ANCHORS.filter((a) => !a.hidden).map((a, i) => ({
-    label: a.label,
-    href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
-    sep: i === 0,
-  }));
-  return [...modules, ...anchors];
-}
 
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const client = page === "klient" || page === "kalkulator";

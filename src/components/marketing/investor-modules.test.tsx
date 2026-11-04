@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   INVESTOR_MODULES,
   LEGACY_MODULE_SLUGS,
@@ -10,6 +10,14 @@ import {
 } from "./investor-modules";
 import { WEIGHTS } from "@/lib/risk-assessment/risk-scoring";
 import { SiteHeader } from "./shell";
+
+// Nagłówek czyta bieżącą ścieżkę z routera (podświetlenie aria-current). W teście
+// nie ma RouterProvider, więc podstawiamy sam hook — reszta pakietu bez zmian.
+const routerState = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useRouterState: () => routerState.pathname,
+}));
 
 describe("szkolenie i moduły partnera — dane podstron", () => {
   it("ma sieć sprzedaży, szkolenie i cztery narzędzia z unikalnymi slugami w formacie URL", () => {
@@ -120,41 +128,41 @@ describe("szkolenie i moduły partnera — dane podstron", () => {
   });
 });
 
-/** Odnośniki z rozwijanego panelu "Inwestor" (desktop) w kolejności z DOM. */
-function dropdownHrefs(page: "inwestor" | "inwestorModul") {
-  const { container, unmount } = render(<SiteHeader page={page} />);
-  // Panel pod pozycją „Inwestor” (menu „Klient” ma własny panel z grupami).
-  const drop = Array.from(container.querySelectorAll(".fy-nav-drop")).find(
-    (d) => d.querySelector(":scope > a")?.textContent === "Inwestor",
-  );
-  const hrefs = Array.from(drop?.querySelectorAll(".fy-nav-drop-panel a") ?? []).map((a) =>
-    a.getAttribute("href"),
-  );
-  unmount();
-  return hrefs;
-}
-
-describe("sub-menu „Inwestor” — podstrony modułów", () => {
-  it("zaczyna się od podstron modułów, potem kotwice landingu", () => {
-    const modules = INVESTOR_MODULES.map((m) => investorModulePath(m.slug));
-    expect(dropdownHrefs("inwestor")).toEqual([...modules, "#korzysci", "#cennik"]);
+describe("nagłówek marketingowy — menu górne", () => {
+  it("płaskie menu (decyzja 28.10.2026) bez pozycji „Sklep” — sklep jest w panelu /inwestor/sklep", () => {
+    const { container, unmount } = render(<SiteHeader page="inwestorModul" />);
+    const links = Array.from(container.querySelectorAll(".fy-sales-nav-desktop a"));
+    expect(links.map((a) => a.textContent)).toEqual([
+      "Inwestor",
+      "Klient",
+      "Pośrednik",
+      "Cennik",
+      "O nas",
+      "Blog",
+      "FAQ",
+      "Zaloguj",
+    ]);
+    expect(links.map((a) => a.getAttribute("href"))).not.toContain("/sklep");
+    // Dawne rozwijane sub-menu „Inwestor” zniknęło razem z płaskim menu (26.10.2026).
+    expect(container.querySelector(".fy-nav-drop")).toBeNull();
+    unmount();
   });
 
-  it("poza landingiem kotwice prowadzą pełną ścieżką na /dla-inwestora", () => {
-    const hrefs = dropdownHrefs("inwestorModul");
-    expect(hrefs).toContain("/dla-inwestora#korzysci");
-    expect(hrefs).toContain("/dla-inwestora#cennik");
-    expect(hrefs.some((h) => h?.startsWith("#"))).toBe(false);
-  });
-
-  it("na podstronie modułu CTA i FAQ prowadzą na landing inwestora", () => {
+  it("na podstronie modułu CTA i FAQ prowadzą na landing inwestora (stronę główną)", () => {
     render(<SiteHeader page="inwestorModul" />);
     for (const a of screen.getAllByRole("link", { name: "Zostań partnerem" })) {
-      expect(a).toHaveAttribute("href", "/dla-inwestora#cennik");
+      expect(a).toHaveAttribute("href", "/#cennik");
     }
-    expect(screen.getAllByRole("link", { name: "FAQ" })[0]).toHaveAttribute(
-      "href",
-      "/dla-inwestora#faq",
+    expect(screen.getAllByRole("link", { name: "FAQ" })[0]).toHaveAttribute("href", "/#faq");
+  });
+
+  it("podświetla bieżącą ścieżkę z routera (aria-current)", () => {
+    routerState.pathname = "/blog";
+    render(<SiteHeader page="blog" />);
+    expect(screen.getAllByRole("link", { name: "Blog" })[0]).toHaveAttribute(
+      "aria-current",
+      "page",
     );
+    expect(screen.getAllByRole("link", { name: "Klient" })[0]).not.toHaveAttribute("aria-current");
   });
 });
