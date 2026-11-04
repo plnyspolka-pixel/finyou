@@ -20,7 +20,6 @@ describe("sendResendEmail — ukryta kopia (bcc)", () => {
 
   beforeEach(() => {
     calls.length = 0;
-    process.env.LOVABLE_API_KEY = "lovable-test";
     process.env.RESEND_API_KEY = "resend-test";
     vi.stubGlobal("fetch", async (url: string, init: { body: string }) => {
       calls.push({ url, body: JSON.parse(init.body) });

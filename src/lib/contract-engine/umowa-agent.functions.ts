@@ -14,6 +14,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Problem } from "./validator";
 import type { KorektaGroszowa } from "./schedule";
@@ -111,7 +112,7 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<UmowaAgentResult> => {
     const { assertCurrentStoreDpaAccepted } = await import("@/lib/storefront/checkout.functions");
     await assertCurrentStoreDpaAccepted(context.userId);
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("Agent umowy jest chwilowo niedostępny.");
 
     let szkic = data.umowa && typeof data.umowa === "object" ? structuredClone(data.umowa) : {};
@@ -148,7 +149,7 @@ export const sendUmowaAgentMessage = createServerFn({ method: "POST" })
       ...history.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    const res = await fetch(GATEWAY, {
+    const res = await aiFetch(GATEWAY, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({

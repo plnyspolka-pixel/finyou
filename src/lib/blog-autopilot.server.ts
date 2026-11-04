@@ -516,8 +516,8 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
 export async function runDailyBlogTick(
   opts: { force?: boolean; kind?: PostKind } = {},
 ): Promise<{ ok: boolean; reason?: string; results: (TickResult & { kind: PostKind })[] }> {
-  if (!process.env.LOVABLE_API_KEY)
-    return { ok: false, reason: "LOVABLE_API_KEY missing", results: [] };
+  if (!process.env.ANTHROPIC_API_KEY)
+    return { ok: false, reason: "ANTHROPIC_API_KEY missing", results: [] };
 
   const kinds: PostKind[] = [];
   if (opts.kind) kinds.push(opts.kind);

@@ -5,7 +5,7 @@ name: Deploy Worker finyou
 
 on:
   push:
-    branches: [claude/dazzling-ritchie-qn9w8w]
+    branches: [claude/dazzling-ritchie-qn9w8w, migracja-na-main]
   workflow_dispatch:
 
 concurrency:

@@ -9,7 +9,7 @@ Sekrety Workera (58 sztuk) i zmienna SUPABASE_URL są już w Cloudflare — nic 
 1. Pobierz gałąź:
    ```bash
    git clone https://github.com/plnyspolka-pixel/finyou.git && cd finyou
-   git checkout claude/dazzling-ritchie-qn9w8w
+   git checkout migracja-na-main
    ```
 2. Zaloguj się do Cloudflare zwykłą sesją (konto z Workerem `finyou`, account 9dcf6ebe33b66eac13bbb74240ec4c42):
    ```bash
@@ -46,6 +46,15 @@ CAPTION_BURNER_URL/SECRET). REMOTION_AWS_* i OWNER_ALERT_PHONE nie są czytane p
 ## Wariant bez własnej maszyny: GitHub Actions
 
 Workflow `.github/workflows/deploy-worker.yml` buduje i wdraża Workera na maszynie GitHub po każdym
-pushu na gałąź `claude/dazzling-ritchie-qn9w8w` (albo ręcznie: Actions > Deploy Worker finyou > Run workflow).
+pushu na gałąź `migracja-na-main` (albo ręcznie: Actions > Deploy Worker finyou > Run workflow).
 Jednorazowo trzeba dodać sekret repozytorium `CLOUDFLARE_API_TOKEN`
 (https://github.com/plnyspolka-pixel/finyou/settings/secrets/actions, token z uprawnieniem Workers Scripts: Edit).
+
+## Gałąź `migracja-na-main` (2026-11-04)
+
+Stara gałąź `claude/dazzling-ritchie-qn9w8w` stała na kodzie z 9.10, a `main` (produkcja Lovable) poszedł
+o ~435 commitów dalej. Gałąź `migracja-na-main` = aktualny `main` + commity migracji (skrypty, dokumenty,
+wrangler.jsonc, workflow) + ponownie nałożone „odlovable'owanie” kodu: wszystkie wywołania bramki AI przez
+`aiFetch` (src/lib/ai.server.ts, Claude), bez `LOVABLE_API_KEY`, `metrics: false` w MCP. Przy konfliktach
+logiki biznesowej (prowizja, pakiet prawny, kalkulatory) wygrywała wersja z `main`. Dodatkowo `aiFetch`
+obsługuje części `type: "file"` (PDF → blok `document` Claude), których wcześniej nie tłumaczył.

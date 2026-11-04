@@ -1,6 +1,6 @@
 // Server-side wrapper for the ElevenLabs text agent.
 // Strategy: pobieramy konfigurację agenta z ElevenLabs (system prompt, first message,
-// opcjonalne tools z UI), a samą rozmowę prowadzimy przez Lovable AI Gateway
+// opcjonalne tools z UI), a samą rozmowę prowadzimy przez warstwę ai.server (Claude)
 // (Gemini 2.5 Flash) z tym samym promptem + naszymi tools. Pozwala to odpisywać
 // autonomicznie 24/7 server-side (EL text mode jest tylko WebSocket/browser).
 //
@@ -21,6 +21,7 @@
 //                  (investor-assistant.functions.ts), nie przez runAgentTurn.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { aiFetch } from "@/lib/ai.server";
 import { buildIntakeChecklistRules } from "@/lib/property-intake-checklist";
 import { buildInvestorSalesScript } from "@/lib/investor-sales-script";
 import { normalizeKwNumber } from "./kw";
@@ -645,14 +646,14 @@ export async function runAgentTurn(opts: {
     messages.push({ role: "user", content: userMsg });
   }
 
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
   const toolResults: AgentReply["toolCalls"] = [];
 
   // Pętla maks 3 iteracji (tool call → wynik → kolejna odpowiedź).
   for (let iter = 0; iter < 3; iter++) {
-    const res = await fetch(GATEWAY, {
+    const res = await aiFetch(GATEWAY, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({

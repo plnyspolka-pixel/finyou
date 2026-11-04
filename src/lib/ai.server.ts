@@ -58,6 +58,7 @@ export function isImageModel(model?: string | null): boolean {
 type OaiPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string; detail?: string } }
+  | { type: "file"; file: { filename?: string; file_data: string } }
   | { type: string; [k: string]: any };
 export type OaiMessage = {
   role: "system" | "user" | "assistant" | "tool" | "developer";
@@ -118,9 +119,44 @@ function partsToBlocks(content: OaiMessage["content"]): Anthropic.Beta.BetaConte
       if (b) out.push(b);
     } else if (p.type === "image" && (p as any).source) {
       out.push(p as any);
+    } else if (p.type === "file") {
+      const b = toDocumentBlock((p as any).file?.file_data ?? "", (p as any).file?.filename);
+      if (b) out.push(b);
     }
   }
   return out;
+}
+
+const PDF_RE = /^data:application\/pdf;base64,(.+)$/s;
+
+/**
+ * Część `{ type: "file", file: { file_data } }` z formatu OpenAI (PDF-y z OCR dokumentów,
+ * ksiąg wieczystych, umów): PDF → blok `document` Claude, obraz → blok `image`,
+ * zwykły tekst z data-URL → blok `text`.
+ */
+function toDocumentBlock(url: string, filename?: string): Anthropic.Beta.BetaContentBlockParam | null {
+  const u = url.trim();
+  const pdf = PDF_RE.exec(u);
+  if (pdf) {
+    return {
+      type: "document",
+      source: { type: "base64", media_type: "application/pdf", data: pdf[1].replace(/\s+/g, "") },
+      ...(filename ? { title: filename } : {}),
+    } as Anthropic.Beta.BetaContentBlockParam;
+  }
+  const img = toImageBlock(u);
+  if (img) return img;
+  const txt = /^data:text\/[a-z+.-]+(?:;charset=[^;,]+)?;base64,(.+)$/s.exec(u);
+  if (txt) {
+    try {
+      const text = Buffer.from(txt[1].replace(/\s+/g, ""), "base64").toString("utf8");
+      return text ? { type: "text", text: `[${filename ?? "plik"}]
+${text}` } : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
 }
 
 function textOf(content: OaiMessage["content"]): string {

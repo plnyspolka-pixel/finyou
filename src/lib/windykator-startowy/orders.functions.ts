@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { aiFetch } from "@/lib/ai.server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assembleStartPackage, WINDYKATOR_PRICE_GROSZ, WINDYKATOR_TERMS_VERSION, type SourceFacts } from "./core";
@@ -216,7 +217,7 @@ function extract(raw:string):SourceFacts {
 /** Odczyt tylko na etapie kwalifikacji; nie generuje płatnego raportu. */
 async function readFactsForQualification(o:any):Promise<SourceFacts>{
   const db=await dbAdmin();
-  const key=process.env.LOVABLE_API_KEY;
+  const key=process.env.ANTHROPIC_API_KEY;
   if(!key)throw Error("AI offline");
   const {data:file,error:fileError}=await db.storage.from("windykator-private")
     .download(o.source_storage_path);
@@ -235,7 +236,7 @@ async function readFactsForQualification(o:any):Promise<SourceFacts>{
   const content=o.source_mime==="application/pdf" ?
     [{type:"text",text:prompt},{type:"file",file:{filename:o.source_file_name,file_data:url}}] :
     [{type:"text",text:prompt},{type:"image_url",image_url:{url}}];
-  const res=await fetch("https://ai.gateway.lovable.dev/v1/chat/completions",{
+  const res=await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions",{
     method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+key},
     body:JSON.stringify({model:"google/gemini-2.5-flash",
       messages:[{role:"system",content:"Zwracaj tylko JSON z udokumentowanymi danymi."},
