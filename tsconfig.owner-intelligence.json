@@ -12,7 +12,11 @@
     "src/lib/coowners/court-proceeding-format.ts",
     "src/lib/coowners/official-msig.test.ts",
     "src/lib/coowners/official-msig-detail.test.ts",
-    "src/lib/risk-assessment/court-registry.ts"
+    "src/lib/risk-assessment/court-registry.ts",
+    "src/lib/coowners/business-profile.ts",
+    "src/lib/coowners/business-profile.types.ts",
+    "src/lib/coowners/business-profile.server.ts",
+    "src/lib/coowners/business-profile.test.ts"
   ],
   "compilerOptions": {
     "types": [
