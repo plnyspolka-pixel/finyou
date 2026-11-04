@@ -31,7 +31,7 @@ Preambuła
 Finance You dysponuje danymi pozyskanymi w związku z kwalifikacją Projektów finansowania gospodarczego zabezpieczonego hipoteką.
 Po otrzymaniu danych Inwestor co do zasady samodzielnie określa cel oceny ryzyka i decyzji o Finansowaniu, przez co działa jako odrębny administrator, a nie jako podmiot przetwarzający wyłącznie na polecenie Finance You.
 Powierzenie przetwarzania ma zastosowanie tylko wtedy, gdy Karta Polecenia wyraźnie opisuje czynność wykonywaną przez jedną Stronę w imieniu i wyłącznie według instrukcji drugiej.
-Strony chcą zapewnić etapowe, minimalne i bezpieczne ujawnianie danych oraz możliwość wykazania legalności, zakresu i czasu każdego dostępu.
+Strony chcą zapewnić etapowe, minimalne i bezpieczne ujawnianie danych oraz możliwość wykazania legalności, zakresu i czasu każdego przekazania danych.
 Domyślny model RODO.  Ocena klienta na potrzeby własnej decyzji finansowej oznacza odrębne administrowanie. Moduł powierzenia z art. 28 RODO uruchamia się tylko podpisaną Kartą Polecenia; sama nazwa „umowa powierzenia” nie zmienia rzeczywistej roli Strony.
 § 1. Definicje i interpretacja
 RODO oznacza rozporządzenie Parlamentu Europejskiego i Rady (UE) 2016/679 oraz właściwe krajowe przepisy o ochronie danych.
@@ -45,8 +45,8 @@ Państwo Trzecie oznacza państwo poza Europejskim Obszarem Gospodarczym, a Tran
 Umowa Pośrednictwa i NDA mają znaczenie nadane im w odrębnych dokumentach Stron. W razie sprzeczności w sprawach ochrony danych pierwszeństwo ma niniejsza Umowa i Karta Transferu, a dla prawidłowo uruchomionego powierzenia — Karta Polecenia.
 § 2. Zasady wspólne dla każdego ujawnienia
 Strony przetwarzają wyłącznie dane adekwatne, stosowne i ograniczone do niezbędnych dla konkretnego, zgodnego z prawem celu. Umowa nie zobowiązuje Finance You do przekazywania wszystkich posiadanych danych ani całej dokumentacji.
-Ujawnienie odbywa się etapowo — w systemie Finance You albo innym kanałem, w szczególności telefonicznie, SMS-em, e-mailem lub osobiście: opis zanonimizowany lub spseudonimizowany, następnie ograniczony pakiet identyfikujący, a pełniejsze dokumenty dopiero po wykazaniu potrzeby. Przy przekazaniu danych telefonicznie, SMS-em lub e-mailem Finance You ogranicza zakres do niezbędnego minimum, a dokumenty zawierające Dane Projektowe przekazuje odnośnikiem do systemu albo w zabezpieczonym załączniku. Dane szczególnych kategorii i dane dotyczące wyroków skazujących lub naruszeń prawa są co do zasady wyłączone i wymagają odrębnej udokumentowanej podstawy, testu niezbędności i dodatkowych zabezpieczeń.
-Każde ujawnienie musi być przypisane do imiennego użytkownika, Projektu, zakresu, wersji dokumentów i czasu dostępu. Konta współdzielone są zabronione.
+Ujawnienie odbywa się etapowo, w ramach pośrednictwa 1:1 odrębnego od systemu informatycznego Finance You, wyłącznie w drodze komunikacji osobistej — w szczególności telefonicznie, SMS-em, e-mailem, za pośrednictwem komunikatorów internetowych lub osobiście: opis zanonimizowany lub spseudonimizowany, następnie ograniczony pakiet identyfikujący, a pełniejsze dokumenty dopiero po wykazaniu potrzeby. Przy przekazaniu danych telefonicznie, SMS-em lub e-mailem Finance You ogranicza zakres do niezbędnego minimum, a dokumenty zawierające Dane Projektowe przekazuje w zabezpieczonym (zaszyfrowanym) załączniku. System informatyczny Finance You nie służy do udostępniania Danych Projektowych Inwestorowi. Dane szczególnych kategorii i dane dotyczące wyroków skazujących lub naruszeń prawa są co do zasady wyłączone i wymagają odrębnej udokumentowanej podstawy, testu niezbędności i dodatkowych zabezpieczeń.
+Każde przekazanie danych jest odnotowywane w ewidencji Finance You (CRM) z oznaczeniem odbiorcy, Projektu, zakresu, kanału i czasu. Inwestor odbiera dane wyłącznie na imienne adresy e-mail, numery telefonów i konta komunikatorów; skrzynki i konta współdzielone są zabronione.
 Strona otrzymująca nie może używać danych do marketingu, wzbogacania baz, oceny osób poza Projektem, trenowania modeli, sprzedaży leadów, pozyskiwania klientów poza Umową Pośrednictwa ani łączenia z zewnętrznymi zbiorami w celu niedozwolonej reidentyfikacji.
 Dane mogą zostać ujawnione wyłącznie osobom rzeczywiście zaangażowanym w ocenę lub realizację Projektu, związanym poufnością i posiadającym zakres uprawnień zgodny z zasadą niezbędnej wiedzy.
 Strony prowadzą dokumentację pozwalającą wykazać legalność, cel, źródło, odbiorców, okres przechowywania i zastosowane zabezpieczenia. Karta Transferu nie zastępuje rejestru czynności ani analizy podstaw prawnych wymaganej od każdego Administratora.
@@ -103,11 +103,11 @@ Legal hold może zawiesić usunięcie tylko w zakresie rzeczywiście koniecznym 
 Na żądanie Strona otrzymująca składa certyfikat usunięcia według Załącznika nr 5. Anonimizacja musi być trwała i uwzględniać rozsądnie dostępne środki ponownej identyfikacji.
 § 9. Bezpieczeństwo
 Każda Strona wdraża TOM odpowiednie do ryzyka, charakteru danych, kosztu i stanu wiedzy technicznej. Minimalny standard określa Załącznik nr 2; Karta Transferu może ustanowić środki wyższe.
-Pełne dane są dostępne wyłącznie przez imienne konto z uwierzytelnianiem wieloskładnikowym, uprawnieniami opartymi na rolach i automatycznym wygaśnięciem dostępu. Udostępnianie haseł i kont jest zabronione.
-Dokumenty powinny być szyfrowane w transmisji i spoczynku, oznaczone znakiem wodnym zawierającym co najmniej użytkownika, Projekt i czas oraz — gdy to możliwe — udostępniane przez wygasające linki bez prawa dalszego udostępnienia.
+Inwestor przechowuje otrzymane dane wyłącznie na imiennych kontach i urządzeniach zabezpieczonych uwierzytelnianiem wieloskładnikowym, z dostępem ograniczonym do Osób Upoważnionych. Udostępnianie haseł i kont jest zabronione.
+Dokumenty powinny być szyfrowane w transmisji i spoczynku, oznaczone znakiem wodnym zawierającym co najmniej odbiorcę, Projekt i czas oraz przekazywane bez prawa dalszego udostępnienia.
 Kopiowanie lokalne, drukowanie, fotografowanie i zrzuty ekranu są zakazane, chyba że Karta Transferu dopuszcza je jako niezbędne i wskazuje zabezpieczenia. Dopuszczona kopia podlega temu samemu okresowi retencji i ewidencji.
 Każda Strona zapewnia aktualizacje bezpieczeństwa, ochronę stacji końcowych, szyfrowanie dysków, blokadę ekranu, kopie zapasowe, kontrolę podatności, szkolenia i procedury odbierania uprawnień.
-Finance You może zablokować dostęp bez uprzedzenia, jeżeli istnieje uzasadnione podejrzenie naruszenia, przejęcia konta, nietypowego pobierania, braku MFA lub nieaktualnych danych użytkownika.
+Finance You może bez uprzedzenia wstrzymać przekazywanie danych, jeżeli istnieje uzasadnione podejrzenie naruszenia, przejęcia konta poczty lub komunikatora Inwestora albo nieaktualnych danych kontaktowych.
 § 10. Incydenty i zawiadomienia
 Strona, która wykryje Incydent dotyczący Danych Projektowych, zawiadamia drugą Stronę bez zbędnej zwłoki, nie później niż w ciągu 12 godzin od jego stwierdzenia, na adres kontakt@financeyou.pl oraz telefon 889 888 700, a następnie aktualizuje informacje w miarę postępu analizy.
 Pierwsze zgłoszenie nie może być opóźniane z powodu braku pełnych danych. Powinno zawierać co najmniej czas, system, kategorie i przybliżoną liczbę osób oraz rekordów, możliwe skutki, zastosowane środki, status zabezpieczenia dowodów i kontakt do osoby prowadzącej.
@@ -156,7 +156,7 @@ Administrator może zawiesić instrukcję lub dostęp, jeżeli Podmiot Przetwarz
 § 17. Odpowiedzialność, zmiana podmiotu i postanowienia końcowe
 Każda Strona odpowiada za naruszenia przypisane jej zgodnie z RODO i prawem krajowym. Roszczenia między Stronami obejmują udokumentowaną szkodę i rozsądne koszty spowodowane zawinionym naruszeniem Umowy, z uwzględnieniem zakresu odpowiedzialności, decyzji organów i zakazu przenoszenia sankcji wbrew prawu.
 Kary z NDA za ten sam Incydent nie są pobierane podwójnie; Finance You może wybrać podstawę. Postanowienia o karach nie mają zastosowania do Konsumenta ani osoby korzystającej z ochrony konsumenckiej.
-Osoba fizyczna nie może przekazać danych swojej obecnej lub przyszłej spółce przed podpisaniem przez spółkę właściwego przystąpienia, oznaczonych wersji Umów, Karty Transferu i — jeśli dotyczy — Karty Polecenia oraz przed aktywacją imiennego dostępu przez Finance You. Osoba fizyczna i spółka są odrębnymi podmiotami i odrębnymi Administratorami, chyba że rzeczywiste role są inne. Aktywacja działa na przyszłość i nie legalizuje wcześniejszego ujawnienia.
+Osoba fizyczna nie może przekazać danych swojej obecnej lub przyszłej spółce przed podpisaniem przez spółkę właściwego przystąpienia, oznaczonych wersji Umów, Karty Transferu i — jeśli dotyczy — Karty Polecenia oraz przed rozpoczęciem przekazywania danych spółce przez Finance You. Osoba fizyczna i spółka są odrębnymi podmiotami i odrębnymi Administratorami, chyba że rzeczywiste role są inne. Rozpoczęcie przekazywania danych działa na przyszłość i nie legalizuje wcześniejszego ujawnienia.
 Umowa obowiązuje przez czas współpracy, a po jej ustaniu tak długo, jak Strona posiada Dane Projektowe lub ciążą na niej obowiązki dotyczące bezpieczeństwa, usunięcia, dowodów i roszczeń.
 Zmiany wymagają formy dokumentowej. Zmiana TOM obniżająca poziom ochrony albo rozszerzenie kategorii danych wymaga uprzedniej oceny ryzyka i akceptacji właściwej Karty.
 Umowa podlega prawu polskiemu. Spory B2B rozpoznaje sąd właściwy dla siedziby Finance You, o ile uzgodnienie właściwości zostało utrwalone w formie wymaganej przez prawo procesowe; w przeciwnym razie właściwość wynika z przepisów ogólnych. Wobec Konsumenta właściwość wynika z przepisów bezwzględnych. Nieważność części nie narusza pozostałych postanowień.
@@ -211,7 +211,7 @@ do końca Okresu Ochronnego i właściwego okresu roszczeń; szczegóły: ______
 ________________________________________________________________
 Status i zatwierdzenia
 ☐ projekt  ☐ privacy/IOD  ☐ właściciel Projektu  ☐ zatwierdzona do ujawnieniadata / osoby: ________________________________________________________________
-Data i log ujawnienia
+Data i kanał ujawnienia
 ________________________________________________________________
 ________________________________
 ________________________________
@@ -233,7 +233,7 @@ Uprawnienia
 RBAC, najmniejsze uprawnienia, zatwierdzanie dostępu per Projekt, automatyczne wygaśnięcie i natychmiastowe odebranie.
 ________________
 Transmisja
-TLS 1.2 lub nowszy; bezpieczne linki, zakaz zwykłych niezaszyfrowanych załączników z pełnymi danymi.
+TLS 1.2 lub nowszy; szyfrowane załączniki, zakaz zwykłych niezaszyfrowanych załączników z pełnymi danymi.
 ________________
 Spoczynek
 Szyfrowanie o sile porównywalnej z AES-256 dla urządzeń, baz, magazynów i kopii; kontrolowane klucze.
@@ -242,7 +242,7 @@ Urządzenia
 Szyfrowanie dysku, EDR/antymalware, blokada ekranu, aktualizacje, brak niezarządzanych urządzeń dla pełnych danych.
 ________________
 Dokumenty
-Znaki wodne: użytkownik, ID Projektu, czas; wygasające linki; ograniczenie pobierania, druku i zrzutów.
+Znaki wodne: odbiorca, ID Projektu, czas; szyfrowane załączniki; ograniczenie pobierania, druku i zrzutów.
 ________________
 Logi
 Logowanie logowania, wyświetlenia, pobrania, eksportu, nadania uprawnień, akceptacji i zdarzeń administracyjnych; ochrona przed zmianą.
