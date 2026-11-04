@@ -1,0 +1,19 @@
+# Jednorazowa sonda dostępności RDF z sieci CI — tylko odczyt. Do usunięcia po teście.
+name: RDF availability probe
+on:
+  push:
+    branches: [claude/cool-ride-2lihg4]
+    paths: ['.github/workflows/rdf-probe.yml', 'scripts/probes/rdf-probe.mjs']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/probes/rdf-probe.mjs
