@@ -1,5 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { runDailyBlogTick } from "@/lib/blog-autopilot.server";
+import { runDailyBlogTick, type BlogTickKind } from "@/lib/blog-autopilot.server";
+
+const KINDS: BlogTickKind[] = [
+  "evergreen_guide",
+  "legal_market_monitor",
+  "investor_review",
+  "investor_news",
+  "borrower_news",
+];
+
+/** `?force=1` — poradnik od ręki; `?kind=<rodzaj>` — wybrany rodzaj (oba tylko z prywatnym sekretem). */
+function manualOpts(request: Request) {
+  if (!hasPrivateCronSecret(request)) return {};
+  const url = new URL(request.url);
+  const kind = url.searchParams.get("kind") as BlogTickKind | null;
+  return {
+    force: url.searchParams.get("force") === "1",
+    kind: kind && KINDS.includes(kind) ? kind : undefined,
+  };
+}
 import { requireCronSecret, hasPrivateCronSecret } from "@/lib/cron-auth.server";
 
 export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
@@ -9,9 +28,7 @@ export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
         const denied = requireCronSecret(request);
         if (denied) return denied;
         try {
-          const url = new URL(request.url);
-          const force = url.searchParams.get("force") === "1" && hasPrivateCronSecret(request);
-          const result = await runDailyBlogTick({ force });
+          const result = await runDailyBlogTick(manualOpts(request));
           return new Response(JSON.stringify(result), {
             status: 200,
             headers: { "Content-Type": "application/json" },
@@ -34,8 +51,7 @@ export const Route = createFileRoute("/api/public/hooks/daily-blog-tick")({
             headers: { "Content-Type": "application/json" },
           });
         }
-        const force = url.searchParams.get("force") === "1" && hasPrivateCronSecret(request);
-        const result = await runDailyBlogTick({ force });
+        const result = await runDailyBlogTick(manualOpts(request));
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { "Content-Type": "application/json" },

@@ -1,6 +1,7 @@
 // head() podstron produktów /pozyczka-* — meta, canonical, OG i JSON-LD
 // (FinancialService, LoanOrCredit, FAQPage, BreadcrumbList).
 import { getLoanProduct } from "@/lib/loan-products";
+import { productFaq } from "@/lib/loan-product-guides";
 import { breadcrumbLd, faqPageLd, financialServiceLd, SITE_URL } from "@/lib/seo/company";
 
 /** `head()` dla trasy produktu — meta, canonical, OG i JSON-LD. */
@@ -45,7 +46,9 @@ export function loanProductHead(slug: string) {
       },
       {
         type: "application/ld+json",
-        children: JSON.stringify(faqPageLd(p.faq.map((f) => ({ question: f.q, answer: f.a })))),
+        children: JSON.stringify(
+          faqPageLd(productFaq(p).map((f) => ({ question: f.q, answer: f.a }))),
+        ),
       },
       {
         type: "application/ld+json",

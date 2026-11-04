@@ -354,7 +354,7 @@ function LocationPage() {
       <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem" }}>
         <ComplianceNote style={{ marginTop: "1.5rem" }}>
           Materiał ma charakter informacyjny i nie stanowi oferty w rozumieniu art. 66 Kodeksu
-          cywilnego. Finansowanie wyłącznie na cel związany z działalnością gospodarczą (B2B).
+          cywilnego. Finansowanie na cel związany z działalnością gospodarczą — także dla firm od pierwszego dnia działalności.
           Finance You nie gwarantuje udzielenia finansowania — decyzja należy do inwestorów. Dane
           statystyczne pochodzą z opracowań GUS/TERYT (wersja: {c.dataVersion}) i mają charakter
           poglądowy.
