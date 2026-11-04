@@ -3,8 +3,7 @@
 // Trzy widoki raportu w panelu inwestora mają już w pamięci komplet danych —
 // dokładnie te, które widać na ekranie: Analityka (AnalyticsDetail), analiza
 // własnego wniosku spoza Finance You (KwCheckDetail) i raport Projektu
-// w „Moich zleceniach” (OrderProjectReportDetail; przed rezerwacją serwer
-// oczyszcza go z danych identyfikujących). PDF składamy w przeglądarce z tych
+// w „Moich zleceniach” (OrderProjectReportDetail; komplet danych). PDF składamy w przeglądarce z tych
 // danych — bez nowych zapytań do serwera. Moduł ładowany dynamicznie dopiero
 // po kliknięciu „Pobierz PDF” (pdf-lib i fonty nie trafiają do głównej paczki).
 //
@@ -141,12 +140,10 @@ export interface InvestorReportModel {
   kind: ReportKind;
   title: string;
   subtitle: string | null;
-  /** Numer KW tak, jak podaje źródło — przed rezerwacją zamaskowany. */
+  /** Numer KW tak, jak podaje źródło. */
   kwNumber: string | null;
   /** Numer Projektu z cyklu Zlecenia (np. FY-Z-4-P1) — nie identyfikuje właściciela. */
   projectRef: string | null;
-  /** Wersja przed rezerwacją (Zlecenia) — bez danych identyfikujących. */
-  teaser: boolean;
   /** Ile z czterech kroków analizy jest gotowych. */
   stepsDone: number;
   blocks: ReportBlock[];
@@ -165,11 +162,6 @@ export type InvestorReportSource =
 
 export const GRADE_SECTION_TITLE = "Ocena inwestycyjna A–E";
 export const SELLABILITY_SECTION_TITLE = "Kategoria zbywalności (A–E)";
-
-export const REPORT_TEASER_NOTE =
-  "Wersja przed rezerwacją — dane identyfikujące ukryte. Numer KW jest zamaskowany, a treść " +
-  "księgi, cytaty z niej, nazwiska i adres odsłaniamy po Ujawnieniu (rezerwacji) — razem " +
-  "z danymi kontaktowymi klienta.";
 
 /** Treść zastrzeżenia RiskDisclaimer (panel inwestora) — w PDF-ie raz, na końcu. */
 export const RISK_DISCLAIMER_TEXT =
@@ -663,7 +655,7 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     blocks.push({
       t: "note",
       tone: "info",
-      text: "Mapa niedostępna: brak ustalonego położenia (w wersji przed rezerwacją dokładna lokalizacja jest ukryta).",
+      text: "Mapa niedostępna: nie ustalono położenia nieruchomości.",
     });
   }
 
@@ -1349,7 +1341,7 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
     blocks.push({ t: "bullets", items: co.warnings });
   }
   if (co.owners.length) {
-    // Tylko imię i nazwisko (albo rola przed rezerwacją) — bez PESEL i dat urodzenia.
+    // Tylko imię i nazwisko — bez PESEL i dat urodzenia.
     blocks.push({
       t: "table",
       columns: [
@@ -1567,7 +1559,6 @@ function fromAnalytics(d: AnalyticsDetail): InvestorReportModel {
     subtitle: `${itemTitle(item)} · ${formatPLN(item.loanAmount)}`,
     kwNumber: item.kwNumber,
     projectRef: item.projectRef,
-    teaser: false,
     stepsDone: done,
     blocks: [
       { t: "heading", text: "Podsumowanie" },
@@ -1624,7 +1615,6 @@ function fromKwCheck(d: KwCheckDetail): InvestorReportModel {
     subtitle: `${item.label || "Wniosek spoza Finance You"} · KW ${item.kwNumber}`,
     kwNumber: item.kwNumber,
     projectRef: null,
-    teaser: false,
     stepsDone: done,
     blocks: [
       { t: "heading", text: "Podsumowanie" },
@@ -1651,7 +1641,6 @@ function fromOrderReport(
   const r = d.report;
   const src = orderReportStepSource(r);
   const done = analyticsDoneCount(src);
-  const teaser = !d.disclosed;
   const prop = d.collateral?.property ?? null;
   const projectRef = project?.ref?.trim() || null;
   const subtitle = [
@@ -1671,7 +1660,7 @@ function fromOrderReport(
     ["Źródło", ANALYTICS_SOURCE_LABELS["okazja"]],
     ["Projekt", projectRef],
     ["Wnioskowana kwota", project?.loanAmount != null ? formatPLN(project.loanAmount) : null],
-    ["Numer KW", d.kwNumber ? `${d.kwNumber}${teaser ? " (zamaskowany do rezerwacji)" : ""}` : "—"],
+    ["Numer KW", d.kwNumber ?? "—"],
     kwDocumentRow(d.kwDocument),
     ["Rodzaj nieruchomości", propertyLabel(prop?.type)],
     ["Województwo", prop?.voivodeship],
@@ -1684,7 +1673,6 @@ function fromOrderReport(
     ["Postęp analizy", `${done} z ${ANALYTICS_STEPS.length} kroków`],
   ]);
   const blocks: ReportBlock[] = [{ t: "heading", text: "Podsumowanie" }];
-  if (teaser) blocks.push({ t: "note", tone: "warning", text: REPORT_TEASER_NOTE });
   blocks.push(
     { t: "keyValues", rows },
     stepsTable((k) => analyticsStepStatus(src, k)),
@@ -1703,7 +1691,6 @@ function fromOrderReport(
     subtitle,
     kwNumber: d.kwNumber,
     projectRef,
-    teaser,
     stepsDone: done,
     blocks,
   };
@@ -1776,8 +1763,7 @@ export function reportModelText(model: InvestorReportModel): string {
 
 /**
  * Nazwa pliku: raport Projektu z numerem Projektu (raporty kilku Projektów
- * przed rezerwacją nie mają tej samej nazwy), numer KW tylko wtedy, gdy źródło
- * go nie maskuje.
+ * nie mają tej samej nazwy) i numerem KW, gdy jest znany.
  */
 export function reportPdfFilename(model: InvestorReportModel, date: Date = new Date()): string {
   const prefix: Record<ReportKind, string> = {
@@ -1789,7 +1775,7 @@ export function reportPdfFilename(model: InvestorReportModel, date: Date = new D
     model.kind === "zlecenie" && model.projectRef
       ? model.projectRef.replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
       : "";
-  const kw = !model.teaser && model.kwNumber ? formatKwNumber(model.kwNumber) : null;
+  const kw = model.kwNumber ? formatKwNumber(model.kwNumber) : null;
   const parts = [ref, kw ? kw.replace(/\//g, "-") : ""].filter(Boolean).map((p) => `-${p}`);
   return `FY-${prefix[model.kind]}${parts.join("")}-${warsawDateStamp(date)}.pdf`;
 }
@@ -1891,7 +1877,7 @@ export async function renderInvestorReportPdf(
 ): Promise<Uint8Array> {
   const w = await ReportWriter.create({
     title: model.title,
-    subject: [model.subtitle, model.kwNumber && !model.teaser ? `KW ${model.kwNumber}` : null]
+    subject: [model.subtitle, model.kwNumber ? `KW ${model.kwNumber}` : null]
       .filter(Boolean)
       .join(" · "),
     preparedFor: opts.preparedFor,

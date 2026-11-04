@@ -14,7 +14,11 @@
 export const INVESTOR_OFFERS_PAUSED = true;
 
 export const INVESTOR_OFFERS_PAUSED_MESSAGE =
-  "Pokazywanie ofert inwestorom i rezerwacje są chwilowo wstrzymane.";
+  "Pokazywanie ofert inwestorom zewnętrznym jest chwilowo wstrzymane.";
+
+/** Rezerwacje (Karta Leada, Ujawnienie, wyłączność 24 h) usunięte z systemu. */
+export const RESERVATIONS_REMOVED_MESSAGE =
+  "Rezerwacje zostały usunięte — dane kontaktowe klienta są dostępne w karcie Projektu bez rezerwacji.";
 
 export function assertInvestorOffersOpen(): void {
   if (INVESTOR_OFFERS_PAUSED) throw new Error(INVESTOR_OFFERS_PAUSED_MESSAGE);

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 // Komponent pipeline'u zlecenia — używany w panelu (/inwestor/umowy) i w sklepie (/sklep).
 // JEDEN pipeline inwestora (pakiet FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0;
 // Inwestor płaci wyłącznie abonament):
@@ -50,7 +51,6 @@ import {
   getMyInvestorVerification,
 } from "@/lib/investor-agreements/didit-self.functions";
 import { OrderCycleSection } from "@/components/inwestor/order-cycle";
-import { InvestorTeaserList } from "@/components/access/InvestorTeaserList";
 import { PipelineProgress, PipelineStepCard } from "@/components/inwestor/pipeline-stepper";
 import { SourceOfFundsStep } from "@/components/inwestor/source-of-funds-step";
 import {
@@ -64,7 +64,6 @@ import { useAccessState } from "@/hooks/use-access";
 import { formatGroszPln } from "@/lib/access/core";
 import { ACCESS_PRESENTATION } from "@/lib/investor-plan/plans";
 import type { PipelineStep, PipelineStepKey } from "@/lib/investor-plan/pipeline";
-
 
 const ORDER_STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   zlozone: {
@@ -94,7 +93,12 @@ export interface InvestorOrderPipelineProps {
   hideHeader?: boolean;
 }
 
-export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideHeader = false }: InvestorOrderPipelineProps) {
+export function InvestorOrderPipeline({
+  tpay,
+  payment,
+  returnTo = "panel",
+  hideHeader = false,
+}: InvestorOrderPipelineProps) {
   const qc = useQueryClient();
   // Zlecenie wymaga aktywnego abonamentu (twarda bramka: submitInvestorOrder).
   const access = useAccessState("investor");
@@ -144,11 +148,13 @@ export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideH
 
   return (
     <div className="space-y-5">
-      {hideHeader ? null : <FancyPageHeader
-        eyebrow="Złóż zlecenie"
-        title="Od danych inwestora do Zlecenia"
-        subtitle="Dziesięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, źródło środków, komplet umów i Zlecenie poszukiwania Projektów."
-      />}
+      {hideHeader ? null : (
+        <FancyPageHeader
+          eyebrow="Złóż zlecenie"
+          title="Od danych inwestora do Zlecenia"
+          subtitle="Dziesięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, źródło środków, komplet umów i Zlecenie poszukiwania Projektów."
+        />
+      )}
 
       {tpay && payment ? (
         <TpayReturnStatus paymentId={payment} tpayParam={tpay} onPaid={refresh} />
@@ -222,19 +228,22 @@ export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideH
 
       <OrdersList state={legal} onDone={refresh} />
 
-      {/* Teasery Projektów dopasowanych do PRZYJĘTYCH Zleceń (bez Zlecenia — pusto + CTA). */}
+      {/* Projekty z przyjętych Zleceń — od razu z pełnymi danymi w „Moich zleceniach”
+          (bez teaserów i rezerwacji). Tu: odstąpienie Konsumenta i NDA. */}
       {legal.packActive ? (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Projekty dopasowane do Twoich Zleceń</CardTitle>
           </CardHeader>
-          <CardContent>
-            <InvestorTeaserList />
+          <CardContent className="text-sm text-muted-foreground">
+            Projekty z pełnym raportem i danymi kontaktowymi klienta znajdziesz w{" "}
+            <Link to="/inwestor/zlecenia" className="underline">
+              Moich zleceniach
+            </Link>
+            .
           </CardContent>
         </Card>
       ) : null}
-
-      {/* Cykl Zlecenie–Projekt: teaser → Karta Leada → Ujawnienie → rezerwacja. */}
       {legal.packActive ? <OrderCycleSection /> : null}
 
       <SuccessFeesList plan={plan} />
@@ -321,7 +330,15 @@ function PlanBanner() {
 
 // ── Krok 3: KYC Didit ────────────────────────────────────────────────────────
 
-function KycStep({ pipe, onDone, returnTo = "panel" }: { pipe: any; onDone: () => void; returnTo?: "panel" | "sklep" }) {
+function KycStep({
+  pipe,
+  onDone,
+  returnTo = "panel",
+}: {
+  pipe: any;
+  onDone: () => void;
+  returnTo?: "panel" | "sklep";
+}) {
   const startDidit = useServerFn(startInvestorSelfVerification);
   const fetchDidit = useServerFn(getMyInvestorVerification);
   const variant = pipe.investor?.entity_variant as string | undefined;
@@ -482,7 +499,11 @@ const DOC_STATEMENTS: Record<string, Array<{ key: string; label: string }>> = {
  * declarations and individual server-side agreement records for every document.
  * The existing server verifies KYC, sanction screening, delivery and order.
  */
-function OneClickLegalPack({ documents, steps, onDone }: {
+function OneClickLegalPack({
+  documents,
+  steps,
+  onDone,
+}: {
   documents: any[];
   steps: PipelineStep[];
   onDone: () => void;
@@ -509,8 +530,9 @@ function OneClickLegalPack({ documents, steps, onDone }: {
       for (const code of codes) {
         const doc = active.find((d) => d?.code === code);
         if (!doc || doc.accepted) continue;
-        const statements = Object.fromEntries((DOC_STATEMENTS[code] ?? [])
-          .map((v) => [v.key, true]));
+        const statements = Object.fromEntries(
+          (DOC_STATEMENTS[code] ?? []).map((v) => [v.key, true]),
+        );
         await accept({ data: { code, confirmed: true, statements } });
         succeeded.push(code);
         setCompleted((previous) => [...previous, code]);
@@ -518,7 +540,12 @@ function OneClickLegalPack({ documents, steps, onDone }: {
       toast.success("Pakiet dokumentów został zaakceptowany. Potwierdzenia wysłano na e-mail.");
       onDone();
     } catch (e) {
-      setFailure(errMsg(e) + (succeeded.length ? " Wcześniejsze akceptacje zostały zapisane. Odśwież stan i kontynuuj." : ""));
+      setFailure(
+        errMsg(e) +
+          (succeeded.length
+            ? " Wcześniejsze akceptacje zostały zapisane. Odśwież stan i kontynuuj."
+            : ""),
+      );
       onDone();
     } finally {
       setBusy(false);
@@ -531,29 +558,40 @@ function OneClickLegalPack({ documents, steps, onDone }: {
       <CardHeader>
         <CardTitle className="text-lg">Akceptacja pakietu umów — jedna operacja</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Przejrzyj trzy dokumenty i ich istotne postanowienia. Potwierdź
-          cały pakiet jednym zaznaczeniem. Każdy dokument otrzyma osobny
-          zapis akceptacji (wersja, SHA-256, data i konto).
+          Przejrzyj trzy dokumenty i ich istotne postanowienia. Potwierdź cały pakiet jednym
+          zaznaczeniem. Każdy dokument otrzyma osobny zapis akceptacji (wersja, SHA-256, data i
+          konto).
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
-        {!eligible ? <p className="text-sm text-amber-700">
-          Najpierw dokończ weryfikację, screening, oświadczenie o źródle środków
-          i doręczenie pakietu PDF na e-mail (kroki 1–6).
-        </p> : null}
+        {!eligible ? (
+          <p className="text-sm text-amber-700">
+            Najpierw dokończ weryfikację, screening, oświadczenie o źródle środków i doręczenie
+            pakietu PDF na e-mail (kroki 1–6).
+          </p>
+        ) : null}
         {remaining.map((doc) => (
           <div key={doc.code} className="space-y-3 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
-              <div><strong>{doc.title}</strong><p className="text-xs text-muted-foreground">
-                Wersja {doc.version} · SHA-256 {String(doc.sha256).slice(0, 16)}…
-              </p></div>
-              <Button variant="outline" size="sm" onClick={() => setExpanded((v) => ({ ...v, [doc.code]: !v[doc.code] }))}>
+              <div>
+                <strong>{doc.title}</strong>
+                <p className="text-xs text-muted-foreground">
+                  Wersja {doc.version} · SHA-256 {String(doc.sha256).slice(0, 16)}…
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExpanded((v) => ({ ...v, [doc.code]: !v[doc.code] }))}
+              >
                 {expanded[doc.code] ? "Ukryj treść" : "Przeczytaj"}
               </Button>
             </div>
-            {expanded[doc.code] ? <LegalPackText code={doc.code}/> : null}
+            {expanded[doc.code] ? <LegalPackText code={doc.code} /> : null}
             <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer font-medium text-foreground">Najważniejsze postanowienia</summary>
+              <summary className="cursor-pointer font-medium text-foreground">
+                Najważniejsze postanowienia
+              </summary>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {(DOC_STATEMENTS[doc.code] ?? []).map((statement) => (
                   <li key={statement.key}>{statement.label}</li>
@@ -563,24 +601,36 @@ function OneClickLegalPack({ documents, steps, onDone }: {
           </div>
         ))}
         <label className="flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm leading-relaxed">
-          <Checkbox checked={confirmedPack} disabled={!eligible || busy}
-            onCheckedChange={(value) => setConfirmedPack(value === true)} />
-          <span>Zapoznałem(-am) się z treścią wskazanych wyżej dokumentów:
-            Umowy ramowej, NDA oraz umowy RODO (w podanych wersjach).
-            Akceptuję wszystkie ich warunki, w tym wyszczególnione
-            powyżej postanowienia i oświadczenia.</span>
+          <Checkbox
+            checked={confirmedPack}
+            disabled={!eligible || busy}
+            onCheckedChange={(value) => setConfirmedPack(value === true)}
+          />
+          <span>
+            Zapoznałem(-am) się z treścią wskazanych wyżej dokumentów: Umowy ramowej, NDA oraz umowy
+            RODO (w podanych wersjach). Akceptuję wszystkie ich warunki, w tym wyszczególnione
+            powyżej postanowienia i oświadczenia.
+          </span>
         </label>
-        {completed.length > 0 && <p className="text-sm text-emerald-700">
-          Zapisano akceptacje: {completed.join(", ")}.
-        </p>}
-        {failure && <p role="alert" className="text-sm text-destructive">{failure}</p>}
+        {completed.length > 0 && (
+          <p className="text-sm text-emerald-700">Zapisano akceptacje: {completed.join(", ")}.</p>
+        )}
+        {failure && (
+          <p role="alert" className="text-sm text-destructive">
+            {failure}
+          </p>
+        )}
         <Button disabled={!eligible || !allChecked || busy} onClick={() => void approveAll()}>
-          {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <BadgeCheck className="mr-2 h-4 w-4"/>}
+          {busy ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <BadgeCheck className="mr-2 h-4 w-4" />
+          )}
           Podpisuję i akceptuję pakiet umów
         </Button>
         <p className="text-xs text-muted-foreground">
-          To podpisanie trzech dokumentów elektronicznie w formie dokumentowej,
-          a nie zgoda na marketing. Warunkowy Moduł B powierzenia nie aktywuje się bez Karty Polecenia.
+          To podpisanie trzech dokumentów elektronicznie w formie dokumentowej, a nie zgoda na
+          marketing. Warunkowy Moduł B powierzenia nie aktywuje się bez Karty Polecenia.
         </p>
       </CardContent>
     </Card>
@@ -595,9 +645,11 @@ function LegalPackText({ code }: { code: "umowa_ramowa" | "nda" | "rodo" }) {
   });
   if (isLoading) return <p className="text-xs">Wczytywanie dokumentu…</p>;
   if (isError) return <p className="text-xs text-destructive">Nie udało się pobrać dokumentu.</p>;
-  return <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed">
-    {String((data as { content_text?: string })?.content_text ?? "")}
-  </pre>;
+  return (
+    <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs leading-relaxed">
+      {String((data as { content_text?: string })?.content_text ?? "")}
+    </pre>
+  );
 }
 
 function DocumentStep({

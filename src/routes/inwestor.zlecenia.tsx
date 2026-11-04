@@ -2,8 +2,8 @@
 // Zlecenia utworzone do 3 dni przed jego złożeniem, ze zdjęciami/dokumentami,
 // kwotą, potencjałem lokalizacyjnym i zamaskowaną KW. Raport analityczny
 // na żądanie (gotowy przebieg reużywany) — te same karty kroków i komponenty,
-// co w module „Analityka"; przed rezerwacją bez danych identyfikujących
-// właściciela — a pod nim jeden przycisk: „Pobierz dane kontaktowe i rezerwuj".
+// co w module „Analityka" — od razu z pełnymi danymi i kontaktem do klienta
+// (koncepcja rezerwacji usunięta).
 // Bez żadnego klikania po stronie admina.
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -13,16 +13,12 @@ import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 import {
   AlertTriangle,
   BarChart3,
-  BookOpenCheck,
-  Clock,
   FilePen,
   FileSignature,
   FileText,
   Loader2,
-  Lock,
   MapPin,
   PenLine,
-  Phone,
   Send,
   ShieldCheck,
   Sparkles,
@@ -32,8 +28,6 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoanCalculator, type LoanCalculatorState } from "@/components/loan-calculator";
@@ -66,14 +60,12 @@ import {
   ProjectPhotoThumbs,
 } from "@/components/inwestor/project-photo-gallery";
 import { withdrawInvestorOrder } from "@/lib/investor-agreements/legal-pack.functions";
-import { declineMatch, extendTeaser } from "@/lib/investor-agreements/order-cycle.functions";
-import { TEASER_EXTENSION_HOURS } from "@/lib/investor-agreements/order-cycle-core";
+import { declineMatch } from "@/lib/investor-agreements/order-cycle.functions";
 import {
   dismissOrderProject,
   getMyOrderProjects,
   getOrderProjectReportDetail,
   orderProjectReport,
-  reserveOrderProject,
   submitOrderProjectOffer,
   type OrderProject,
   type OrderProjectReport,
@@ -165,9 +157,8 @@ function MyOrdersPage() {
         <h1 className="text-2xl font-semibold">Moje zlecenia</h1>
         <p className="text-sm text-muted-foreground">
           Do każdego przyjętego Zlecenia pokazujemy Projekty w jego kwocie, utworzone w systemie od
-          3 dni przed złożeniem Zlecenia. Zamów raport analityczny, a potem jednym przyciskiem
-          pobierz dane kontaktowe i zarezerwuj Projekt. Projekt, do którego wygenerujesz umowę,
-          przenosimy do{" "}
+          3 dni przed złożeniem Zlecenia — od razu z danymi kontaktowymi klienta. Zamów raport
+          analityczny i złóż ofertę. Projekt, do którego wygenerujesz umowę, przenosimy do{" "}
           <Link to="/inwestor/moje-umowy" className="underline">
             Moich umów
           </Link>
@@ -176,9 +167,8 @@ function MyOrdersPage() {
         {data.paused && (
           <Alert className="mt-3">
             <AlertDescription>
-              Pokazywanie Projektów i rezerwacje są chwilowo wstrzymane — nowe Projekty nie
-              pojawiają się na liście. Projekty, które już zarezerwowałeś, oraz Twoje umowy
-              pozostają dostępne.
+              Pokazywanie nowych Projektów inwestorom zewnętrznym jest chwilowo wstrzymane.
+              Projekty, które już masz w obiegu, oraz Twoje umowy pozostają dostępne.
             </AlertDescription>
           </Alert>
         )}
@@ -274,20 +264,9 @@ function ProjectCard({
 }) {
   const qc = useQueryClient();
   const reportFn = useServerFn(orderProjectReport);
-  const reserveFn = useServerFn(reserveOrderProject);
   const [report, setReport] = useState<OrderProjectReport>(p.report);
   const [showReport, setShowReport] = useState(p.report.status === "done");
-  const [kartaOk, setKartaOk] = useState(false);
-  const [karaOk, setKaraOk] = useState(false);
   const [showOffer, setShowOffer] = useState(false);
-  const [reserved, setReserved] = useState<{
-    contact: OrderProject["contact"];
-    reservationExpiresAt: string | null;
-  } | null>(
-    p.match && ["rezerwacja", "transakcja"].includes(p.match.status)
-      ? { contact: p.contact, reservationExpiresAt: p.match.reservationExpiresAt }
-      : null,
-  );
   // Nowe dane z serwera (np. dokończona ocena ryzyka) nadpisują lokalny stan.
   if (p.report.finishedAt && p.report.finishedAt !== report.finishedAt) setReport(p.report);
 
@@ -326,31 +305,9 @@ function ProjectCard({
       void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
     },
   });
-  const reserveMut = useMutation({
-    mutationFn: () =>
-      reserveFn({
-        data: {
-          orderId: p.orderId,
-          applicationId: p.applicationId,
-          kartaLeadaConfirmed: true,
-          karaConfirmed: karaOk,
-        },
-      }),
-    onSuccess: (res) => {
-      setReserved({ contact: res.contact, reservationExpiresAt: res.reservationExpiresAt });
-      toast.success(`Projekt zarezerwowany na ${assignmentHours} h — dane kontaktowe odsłonięte.`);
-      // Po Ujawnieniu raport dostaje komplet: numer i treść KW, nazwiska, adres.
-      void qc.invalidateQueries({ queryKey: reportKey(p.orderId, p.applicationId) });
-      onChanged();
-    },
-    onError: (e) => toast.error(errMsg(e)),
-  });
-
   const declineFn = useServerFn(declineMatch);
-  const extendTeaserFn = useServerFn(extendTeaser);
   const dismissFn = useServerFn(dismissOrderProject);
-  // W obiegu (teaser / Karta Leada / rezerwacja) — odrzucenie Dopasowania;
-  // bez obiegu — Projekt znika z listy tego Zlecenia.
+  // Z Dopasowaniem — odrzucenie Dopasowania; bez niego — Projekt znika z listy Zlecenia.
   const inCycle = Boolean(
     p.match && ["teaser", "karta_leada", "rezerwacja"].includes(p.match.status),
   );
@@ -365,15 +322,6 @@ function ProjectCard({
     },
     onError: (e) => toast.error(errMsg(e)),
   });
-  const extendTeaserMut = useMutation({
-    mutationFn: () => extendTeaserFn({ data: { matchId: p.match!.id } }),
-    onSuccess: () => {
-      toast.success(`Czas na decyzję przedłużony o ${TEASER_EXTENSION_HOURS} h`);
-      onChanged();
-    },
-    onError: (e) => toast.error(errMsg(e)),
-  });
-
   const [photoIdx, setPhotoIdx] = useState(0);
   const location = [p.city, p.voivodeship].filter(Boolean).join(", ");
   const typeLabel = p.propertyType ? (propertyTypeLabels[p.propertyType] ?? p.propertyType) : null;
@@ -391,7 +339,7 @@ function ProjectCard({
             </div>
             {p.match ? <MatchBadge status={p.match.status} /> : null}
           </div>
-          {/* Inwestor widzi tylko kwotę pożyczki — reszta parametrów w raporcie/po rezerwacji. */}
+          {/* Na karcie kwota pożyczki — reszta parametrów w raporcie. */}
           <div className="text-sm">
             <Info k="Wnioskowana kwota" v={PLN(p.loanAmount)} strong />
           </div>
@@ -419,36 +367,6 @@ function ProjectCard({
 
       {finished ? null : (
         <div className="space-y-3 border-t p-3 sm:p-4">
-          {/* Teaser: 24 h na decyzję, jednorazowo +12 h; odrzucenie zwalnia Zlecenie. */}
-          {p.match?.status === "teaser" ? (
-            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-              <div className="flex items-start gap-1.5">
-                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>
-                  Projekt czeka na Twoją decyzję
-                  {p.match.teaserExpiresAt
-                    ? ` do ${new Date(p.match.teaserExpiresAt).toLocaleString("pl-PL")}`
-                    : ""}
-                  . Bez decyzji wygaśnie i dobierzemy kolejny.
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`teaser-ext-${p.match.id}`}
-                  checked={p.match.teaserExtended}
-                  disabled={p.match.teaserExtended || extendTeaserMut.isPending}
-                  onCheckedChange={(v) => {
-                    if (v === true) extendTeaserMut.mutate();
-                  }}
-                />
-                <Label htmlFor={`teaser-ext-${p.match.id}`} className="text-xs font-normal">
-                  {p.match.teaserExtended
-                    ? `Przedłużono o ${TEASER_EXTENSION_HOURS} h`
-                    : `Przedłuż o ${TEASER_EXTENSION_HOURS} h (jednorazowo)`}
-                </Label>
-              </div>
-            </div>
-          ) : null}
           {/* Raport analityczny */}
           <div className="flex flex-wrap items-center gap-2">
             {report.status === "done" || report.status === "running" ? (
@@ -528,53 +446,8 @@ function ProjectCard({
             />
           ) : null}
 
-          {/* Pobierz dane kontaktowe i rezerwuj */}
-          {reserved ? (
-            <ContactBox
-              contact={reserved.contact}
-              applicationId={p.applicationId}
-              reservationExpiresAt={reserved.reservationExpiresAt}
-              clientId={p.clientId}
-            />
-          ) : (
-            <div className="space-y-2 rounded-md bg-muted/40 p-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id={`karta-${p.applicationId}`}
-                  checked={kartaOk}
-                  onCheckedChange={(v) => setKartaOk(Boolean(v))}
-                />
-                <Label htmlFor={`karta-${p.applicationId}`} className="text-xs leading-snug">
-                  Przyjmuję Kartę Leada (Zał. 1) dla tego Projektu i rezerwuję go na{" "}
-                  {assignmentHours} h — po Ujawnieniu otrzymuję dane kontaktowe klienta.
-                </Label>
-              </div>
-              {isConsumer ? (
-                <div className="flex items-start gap-2">
-                  <Checkbox
-                    id={`kara-${p.applicationId}`}
-                    checked={karaOk}
-                    onCheckedChange={(v) => setKaraOk(Boolean(v))}
-                  />
-                  <Label htmlFor={`kara-${p.applicationId}`} className="text-xs leading-snug">
-                    Jako Konsument indywidualnie uzgadniam Karę Obejściową (§ 11 Umowy ramowej).
-                  </Label>
-                </div>
-              ) : null}
-              <Button
-                size="sm"
-                disabled={!kartaOk || (isConsumer && !karaOk) || reserveMut.isPending}
-                onClick={() => reserveMut.mutate()}
-              >
-                {reserveMut.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Phone className="mr-2 h-4 w-4" />
-                )}
-                Pobierz dane kontaktowe i rezerwuj
-              </Button>
-            </div>
-          )}
+          {/* Dane kontaktowe klienta — od razu, bez rezerwacji */}
+          <ContactBox contact={p.contact} applicationId={p.applicationId} clientId={p.clientId} />
         </div>
       )}
     </div>
@@ -732,7 +605,7 @@ function MatchBadge({ status }: { status: string }) {
     dopasowane: { label: "Dopasowany", tone: "bg-slate-100 text-slate-700" },
     teaser: { label: "Dopasowany", tone: "bg-slate-100 text-slate-700" },
     karta_leada: { label: "Karta Leada przyjęta", tone: "bg-blue-100 text-blue-800" },
-    rezerwacja: { label: "Zarezerwowany", tone: "bg-emerald-100 text-emerald-800" },
+    rezerwacja: { label: "W obiegu", tone: "bg-emerald-100 text-emerald-800" },
     transakcja: { label: "Transakcja", tone: "bg-emerald-100 text-emerald-800" },
     odrzucone: { label: "Odrzucony", tone: "bg-slate-100 text-slate-600" },
     przekazane: { label: "Przekazany dalej", tone: "bg-slate-100 text-slate-600" },
@@ -788,8 +661,7 @@ function FilesRow({
 // ── Raport analityczny ──────────────────────────────────────────────────────
 // Te same karty kroków i komponenty, co w module „Analityka" (ten sam
 // pipeline: KW → właściciele → analiza KW → ryzyko i wartość). Treść pobierana
-// osobno, dopiero po rozwinięciu raportu; przed rezerwacją serwer wysyła
-// wersję bez danych identyfikujących właściciela.
+// osobno, dopiero po rozwinięciu raportu — zawsze komplet danych.
 
 function ReportPanel({
   project,
@@ -871,17 +743,11 @@ function ReportPanel({
               source={{ kind: "zlecenie", detail: d, project }}
               disabled={done === 0}
             />
-            {d.disclosed ? (
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/inwestor/analityka" search={{ app: applicationId }}>
-                  <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
-                </Link>
-              </Button>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
-                <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
-              </span>
-            )}
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/inwestor/analityka" search={{ app: applicationId }}>
+                <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -925,24 +791,11 @@ function ReportPanel({
             ltvCap={pv?.suggestedLtvCapPercent ?? null}
           />
         </div>
-
-        {!d.disclosed && (
-          <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Przed rezerwacją raport nie zawiera danych pozwalających zidentyfikować właściciela:
-            numer KW jest zamaskowany, a treść księgi, cytaty z niej, nazwiska i adres odsłaniamy po
-            Ujawnieniu — razem z danymi kontaktowymi klienta.
-          </p>
-        )}
       </div>
 
       {/* Krok 1 — KW */}
       <StepCard meta={ANALYTICS_STEPS[0]} status={status("kw")} error={r.steps.kw?.error}>
-        {d.disclosed ? (
-          <KwStep kwNumber={d.kwNumber} doc={d.kwDocument} status={status("kw")} />
-        ) : (
-          <TeaserKwStep status={status("kw")} fetched={r.results.kwFetched} kwMasked={d.kwNumber} />
-        )}
+        <KwStep kwNumber={d.kwNumber} doc={d.kwDocument} status={status("kw")} />
       </StepCard>
 
       {/* Krok 2 — właściciele */}
@@ -998,42 +851,6 @@ function ReportPanel({
       </StepCard>
 
       <RiskDisclaimer />
-    </div>
-  );
-}
-
-/** Krok 1 przed Ujawnieniem: potwierdzenie pobrania KW bez treści działów i pełnego numeru. */
-function TeaserKwStep({
-  status,
-  fetched,
-  kwMasked,
-}: {
-  status: AnalyticsStepStatus;
-  fetched: boolean;
-  kwMasked: string | null;
-}) {
-  if (!fetched) {
-    return (
-      <StepEmpty
-        status={status}
-        text="Treść księgi wieczystej jeszcze nie została pobrana — zrobi to pierwszy krok pipeline'u."
-      />
-    );
-  }
-  return (
-    <div className="space-y-2 text-sm">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <BookOpenCheck className="h-4 w-4 text-emerald-600" />
-        <span>
-          Treść KW <span className="font-mono text-foreground">{kwMasked ?? "—"}</span> pobrana z
-          EKW i przeanalizowana w krokach 2–3.
-        </span>
-      </div>
-      <p className="flex items-start gap-2 rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Pełny numer KW i treść działów I–IV (oznaczenie nieruchomości, własność, prawa i roszczenia,
-        hipoteki) odsłaniamy po rezerwacji Projektu.
-      </p>
     </div>
   );
 }
@@ -1121,25 +938,17 @@ function ValueTile({
 function ContactBox({
   contact,
   applicationId,
-  reservationExpiresAt,
   clientId,
 }: {
   contact: OrderProject["contact"];
   applicationId: string;
-  reservationExpiresAt: string | null;
   clientId: string | null;
 }) {
   const { createContract, prepareContract, pendingKey } = useCreateContract();
   return (
     <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="font-medium text-emerald-900">Projekt zarezerwowany — dane kontaktowe</div>
-        {reservationExpiresAt ? (
-          <span className="inline-flex items-center gap-1 text-xs text-emerald-900">
-            <Clock className="h-3.5 w-3.5" /> rezerwacja do{" "}
-            {new Date(reservationExpiresAt).toLocaleString("pl-PL")}
-          </span>
-        ) : null}
+        <div className="font-medium text-emerald-900">Dane kontaktowe klienta</div>
       </div>
       {contact ? (
         <div className="grid gap-x-4 gap-y-0.5 text-xs sm:grid-cols-3">
