@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { BrandIcon } from "./brand-icon";
+import { CheckIcon } from "./check-icon";
 import { Icon3D, type Icon3DName } from "./icon-3d";
 import { MktButton, MktBadge, Eyebrow } from "./primitives";
 
@@ -448,7 +449,7 @@ export function ComparisonTable({
               style={{ display: "flex", gap: 10, fontSize: "0.88rem", fontWeight: 500 }}
             >
               <span style={{ flexShrink: 0, marginTop: 1 }}>
-                <BrandIcon name="check" size={18} />
+                <CheckIcon size={18} />
               </span>
               <span>{r[1]}</span>
             </li>
@@ -514,7 +515,7 @@ export function PricingCard({
         <ul style={{ padding: 0, listStyle: "none", display: "grid", gap: "0.65rem" }}>
           {features.map((f) => (
             <li key={f} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
-              <BrandIcon name="check" size={18} />
+              <CheckIcon size={18} />
               <span>{f}</span>
             </li>
           ))}

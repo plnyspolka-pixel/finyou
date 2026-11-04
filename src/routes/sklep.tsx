@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, FileText, GraduationCap, LockKeyhole, PenLine, ShieldCheck, ShoppingBag, Trash2, Users } from "lucide-react";
@@ -8,7 +8,6 @@ import { Eyebrow, MktBadge, MktButton } from "@/components/marketing/primitives"
 import { Icon3D } from "@/components/marketing/icon-3d";
 import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
 import { createStoreCheckout, getStoreLegalTexts } from "@/lib/storefront/checkout.functions";
-import { validateKwNumber } from "@/lib/kw";
 import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
 import {
   ACADEMY_COURSE_PRICE_PLN,
@@ -17,8 +16,16 @@ import {
   MANAGEMENT_CART_ID,
   MANAGEMENT_MODULE_DAYS,
   MANAGEMENT_MODULE_PRICE_PLN,
-  academyModuleForLesson,
+  CALCULATOR_CART_ID,
+  CALCULATOR_UNLOCK_DAYS,
+  CALCULATOR_UNLOCK_PRICE_GROSZ,
+  CALCULATOR_UNLOCK_PRICE_LABEL,
+  CALCULATOR_UNLOCK_TITLE,
+  KW_REPORT_PRICE_PLN,
+  academyModuleForCatalogLesson,
 } from "@/lib/storefront/products";
+import { readStoreCart, type StoreCartItem } from "@/lib/storefront/cart-storage";
+import { KwReportOrder } from "@/components/storefront/KwReportForm";
 import { ShopOrderPipeline } from "@/components/storefront/ShopOrderPipeline";
 import { ManagementDemo } from "@/components/storefront/ManagementDemo";
 
@@ -41,7 +48,7 @@ export const Route = createFileRoute("/sklep")({
 
 type Catalog = Awaited<ReturnType<typeof getPublicStoreCatalog>>;
 type Lesson = Catalog["lessons"][number];
-type CartItem = { id: string; type: "lesson" | "document" | "course" | "kw"; title: string; price: number };
+type CartItem = StoreCartItem;
 const GOLD = "#f0c667";
 const PLN = (n: number) => n.toLocaleString("pl-PL") + " zł";
 const lessonDuration = (seconds: number | null) => seconds && seconds > 0 ? `ok. ${Math.max(1, Math.round(seconds / 60))} min` : "Czas nieustalony";
@@ -89,9 +96,6 @@ function Storefront() {
   const [loadError, setLoadError] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartHydrated, setCartHydrated] = useState(false);
-  const [kw, setKw] = useState("");
-  const [kwError, setKwError] = useState("");
-  const [kwReady, setKwReady] = useState(false);
   const [kwLegitimatePurpose, setKwLegitimatePurpose] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   useEffect(() => {
@@ -103,12 +107,8 @@ function Storefront() {
   // Keep the basket only for this browser tab so returning from investor login
   // doesn't silently discard the checkout. KW numbers are not persisted long-term.
   useEffect(() => {
-    try {
-      const previous = JSON.parse(sessionStorage.getItem("fy-store-cart-v1") || "[]");
-      if (Array.isArray(previous)) setCart(previous.filter((x) =>
-        x && typeof x.id === "string" && ["lesson","course","kw"].includes(x.type) &&
-        typeof x.title === "string" && Number.isFinite(x.price)).slice(0,50));
-    } catch { /* no saved cart */ }
+    // Koszyk mogły zasilić podstrony modułów (/dla-inwestora/szkolenie, /analityk-ai) — lib/storefront/cart-storage.ts.
+    setCart(readStoreCart().filter((x) => x.type !== "document"));
     setCartHydrated(true);
   }, []);
   useEffect(() => {
@@ -124,6 +124,7 @@ function Storefront() {
   const remove = (id: string) => setCart((items) => items.filter((item) => item.id !== id));
   const courseInCart = itemIds.has("course:academy");
   const managementInCart = itemIds.has("course:" + MANAGEMENT_CART_ID);
+  const calculatorInCart = itemIds.has("course:" + CALCULATOR_CART_ID);
   // Pełny pakiet zastępuje moduły — nie sprzedajemy obu wariantów naraz.
   const addCourse = () => setCart((items) => [
     ...items.filter((i) => !(i.type === "course" && i.id.startsWith("course:module-")) && i.type !== "lesson"),
@@ -133,7 +134,7 @@ function Storefront() {
   const lessonsByModule = useMemo(() => {
     const map = new Map<number, Lesson[]>();
     for (const l of catalog?.lessons ?? []) {
-      const m = academyModuleForLesson(l.number);
+      const m = academyModuleForCatalogLesson(l);
       if (!m) continue;
       map.set(m.number, [...(map.get(m.number) ?? []), l]);
     }
@@ -169,19 +170,6 @@ function Storefront() {
     }
   }
 
-  function checkKw(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setKwReady(false);
-    const check = validateKwNumber(kw);
-    if (!check.ok) { setKwError(check.message); return; }
-    if (!kwLegitimatePurpose) { setKwError("Potwierdź, że masz uprawniony cel analizy danych księgi."); return; }
-    setKw(check.value);
-    setKwError("");
-    setKwReady(true);
-    add({ id: "kw:" + check.compact, type: "kw" as CartItem["type"],
-      title: "Raport księgi wieczystej " + check.value, price: 99 });
-  }
-
   return <MarketingShell page="sklep">
     <section className="fy-hero fy-store-hero">
       <div aria-hidden className="fy-hero-fx" />
@@ -208,7 +196,7 @@ function Storefront() {
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
       <a href="#akademia">Akademia</a><a href="#siecsprzedazy">Okazje · zlecenie</a>
       <a href="#centrum">Centrum Zarządzania</a><a href="#demo">Demo</a>
-      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a>
+      <a href="#analityk">Analityk KW</a><a href="#mapa-szans">HIT · mapa szans {CALCULATOR_UNLOCK_PRICE_LABEL}</a><a href="#windykator-ai">Windykator AI</a>
       <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
 
@@ -297,30 +285,37 @@ function Storefront() {
           <Eyebrow tone="gold">04 / ANALITYK AI</Eyebrow>
           <h2>Co mówi księga wieczysta?</h2>
           <p>Wpisz numer księgi, aby przygotować zamówienie profesjonalnego raportu analitycznego. Sprawdzimy formalną poprawność numeru, łącznie z cyfrą kontrolną.</p>
-          <div className="fy-store-feature-price">99 zł <small>/ analiza jednej KW</small></div>
+          <div className="fy-store-feature-price">{KW_REPORT_PRICE_PLN} zł <small>/ analiza jednej KW</small></div>
           <img src="/marketing/moduly/analityk-ai-1.webp" alt="Analiza księgi wieczystej Finance You" loading="lazy"/>
         </div>
-        <form className="fy-store-kw-form" onSubmit={checkKw}>
-          <label htmlFor="fy-store-kw">Numer księgi wieczystej</label>
-          <input id="fy-store-kw" autoComplete="off" spellCheck={false} value={kw}
-            onChange={(e) => { setKw(e.target.value.toUpperCase()); setKwError(""); setKwReady(false); }}
-            onBlur={() => { const v = validateKwNumber(kw); if (v.ok) setKw(v.value); }}
-            placeholder="LU1I/00012345/6" aria-invalid={!!kwError} aria-describedby="fy-kw-help fy-kw-error" />
-          <small id="fy-kw-help">Format XXXX/12345678/9. Numer i cyfra kontrolna są sprawdzane według reguł EKW.</small>
-          <label className="fy-store-check"><input type="checkbox" checked={kwLegitimatePurpose} onChange={(e) => setKwLegitimatePurpose(e.target.checked)}/>
-            <span>Potwierdzam, że mam uprawniony cel analizy danych zawartych w tej księdze wieczystej. <a href="/polityka-prywatnosci">Informacja o przetwarzaniu danych</a>.</span>
-          </label>
-          {kwError && <p id="fy-kw-error" className="fy-store-error" role="alert">{kwError}</p>}
-          <button type="submit" className="fy-store-add fy-store-kw-submit">Dodaj raport do koszyka — 99 zł</button>
-          {kwReady && <div className="fy-store-kw-ready" role="status"><ShieldCheck size={20}/><div>
-            Numer <strong>{kw}</strong> jest poprawny formalnie. Raport został dodany do koszyka. Pobranie i analiza rozpoczną się dopiero po płatności.
-            <p>Po potwierdzeniu płatności pobierz raport na stronie „Moje zakupy”.</p>
-          </div></div>}
-          <p className="fy-store-fineprint"><LockKeyhole size={15}/> Bez potwierdzonej płatności nie pobieramy księgi ani nie generujemy płatnego raportu.</p>
-        </form>
+        <KwReportOrder mode="inline" onAdd={add} purpose={kwLegitimatePurpose} onPurpose={setKwLegitimatePurpose} />
       </div>
     </Section>
 
+
+    <Section tint>
+      <div id="mapa-szans" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
+        <div>
+          <Icon3D name="kalkulator" size={64}/>
+          <Eyebrow tone="gold">HIT · {CALCULATOR_UNLOCK_PRICE_LABEL}</Eyebrow>
+          <h2>{CALCULATOR_UNLOCK_TITLE}.</h2>
+          <p>Pełny kalkulator compliance z panelu inwestora na {CALCULATOR_UNLOCK_DAYS} dni: harmonogram spłat, zysk i rata, próg odsetek maksymalnych, MPKK, krotność spłaty i próg AML — każde ostrzeżenie zanim podpiszesz umowę. Harmonogram wyślesz klientowi albo do kreatora umowy jednym kliknięciem.</p>
+          <ul className="fy-store-centrum-list">
+            <li><ShieldCheck size={18}/> Szanse: zysk, ROI i rata dla Twoich parametrów</li>
+            <li><ShieldCheck size={18}/> Zagrożenia: odsetki maksymalne, MPKK, krotność, AML</li>
+            <li><FileText size={18}/> PDF propozycji finansowej dla klienta</li>
+          </ul>
+          <div className="fy-store-feature-price">{CALCULATOR_UNLOCK_PRICE_LABEL} <small>/ {CALCULATOR_UNLOCK_DAYS} dni · bez automatycznego odnawiania</small></div>
+          <div className="fy-store-actions">
+            <button type="button" className="fy-store-add" disabled={calculatorInCart || managementInCart}
+              onClick={() => add({ id: "course:" + CALCULATOR_CART_ID, type: "course", title: `${CALCULATOR_UNLOCK_TITLE} — ${CALCULATOR_UNLOCK_DAYS} dni`, price: CALCULATOR_UNLOCK_PRICE_GROSZ / 100 })}>
+              {managementInCart ? "✓ W Centrum Zarządzania" : calculatorInCart ? "✓ W koszyku" : `+ Dodaj za ${CALCULATOR_UNLOCK_PRICE_LABEL}`}</button>
+          </div>
+          <small>Kalkulator działa w panelu inwestora — do zakupu potrzebne jest konto inwestora. Centrum Zarządzania i abonament inwestora obejmują go bez dopłat.</small>
+        </div>
+        <img src="/marketing/moduly/aml-compliance-3.webp" alt="Pełna mapa szans i zagrożeń — kalkulator compliance Finance You" loading="lazy"/>
+      </div>
+    </Section>
 
     <Section>
       <div id="windykator-ai" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
@@ -348,7 +343,7 @@ function Storefront() {
       <div id="koszyk" className="fy-store-cart" style={panelStyle}>
         <p><MktButton variant="outline" size="sm" href="/sklep/moje-zakupy">Moje zakupy i pobrane raporty</MktButton></p>
         <div className="fy-store-cart-title"><ShoppingBag size={28}/><div><Eyebrow tone="gold">TWOJE WYBRANE PRODUKTY</Eyebrow><h2>Koszyk <span>({cart.length})</span></h2></div></div>
-        {cart.length === 0 ? <p style={desc}>Wybierz moduły Akademii, Centrum Zarządzania lub raport KW, klikając „Dodaj”.</p> :
+        {cart.length === 0 ? <p style={desc}>Wybierz moduły Akademii, Centrum Zarządzania, mapę szans albo raport KW, klikając „Dodaj”.</p> :
           <><ul>{cart.map((i) => <li key={i.id}><span>{i.title}</span><strong>{PLN(i.price)}</strong>
             <button aria-label={"Usuń " + i.title} onClick={() => remove(i.id)}><Trash2 size={18}/></button></li>)}</ul>
             <div className="fy-store-cart-total"><span>Łącznie</span><strong>{PLN(total)}</strong></div>
@@ -427,8 +422,6 @@ function Storefront() {
       .fy-store-item-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;padding-top:.75rem;border-top:1px solid rgba(204,219,250,.14);}
       .fy-store-item-footer strong{font-size:1.15rem;color:${GOLD};}
       .fy-store-free{color:#b8f4d6;background:rgba(29,152,106,.2);border:1px solid rgba(86,235,160,.24);font-size:.69rem;font-weight:900;letter-spacing:.06em;border-radius:.4rem;padding:.4rem .55rem;}
-      .fy-store-add{background:linear-gradient(105deg,#d8a343,#fff0bd,#d4a046);color:#141b2e;border:0;border-radius:.65rem;font-weight:850;cursor:pointer;padding:.7rem .85rem;min-height:40px;font-size:.78rem;}
-      .fy-store-add:disabled{opacity:.68;cursor:default;}
       .fy-store-free-contract{padding:1.25rem;display:grid;grid-template-columns:5rem minmax(0,1fr) auto;align-items:center;gap:1.25rem;color:#fff;margin-bottom:1.8rem;}
       .fy-store-free-contract h3{font-size:1.38rem;font-weight:850;margin:1rem 0 .5rem;}
       .fy-store-free-contract p,.fy-store-free-contract small{color:#c5d0e7;line-height:1.6;display:block;}
@@ -446,19 +439,6 @@ function Storefront() {
       .fy-store-feature-intro>img{border-radius:1rem;max-height:15rem;margin-top:1.5rem;max-width:100%;object-fit:cover;}
       .fy-store-feature-price{font-size:2.3rem;font-weight:900;color:${GOLD};margin-top:1rem;}
       .fy-store-feature-price small{font-size:.88rem;color:#bac8e8;font-weight:550;}
-      .fy-store-kw-form{align-self:center;display:grid;gap:.8rem;background:rgba(255,255,255,.045);border:1px solid rgba(240,198,103,.21);border-radius:1rem;padding:1.4rem;}
-      .fy-store-kw-form>label:first-child{font-weight:800;}
-      .fy-store-kw-form input:not([type=checkbox]){width:100%;font-size:1.05rem;letter-spacing:.07em;font-weight:700;outline:0;border:1px solid rgba(182,202,251,.36);background:#09142f;color:white;border-radius:.6rem;padding:.9rem;}
-      .fy-store-kw-form input:focus{border-color:${GOLD};}
-      .fy-store-kw-form small{font-size:.75rem;color:#b8c7e5;line-height:1.5;}
-      .fy-store-check{display:flex;align-items:flex-start;gap:.55rem;font-size:.75rem;line-height:1.5;color:#d0dcf3;font-weight:450;}
-      .fy-store-check input{margin-top:.22rem;accent-color:#e9ba58;}
-      .fy-store-check a,.fy-store-privacy a{color:${GOLD};text-decoration:underline;}
-      .fy-store-error{color:#ffb8b5;font-size:.85rem;}
-      .fy-store-kw-submit{font-size:.94rem;min-height:3.1rem;}
-      .fy-store-kw-ready,.fy-store-pipeline{display:flex;align-items:flex-start;gap:.6rem;border:1px solid rgba(113,226,165,.3);padding:.85rem;border-radius:.7rem;color:#d3f8e0;font-size:.8rem;line-height:1.5;}
-      .fy-store-kw-ready p{margin-top:.6rem;color:#c5d0e7;}
-      .fy-store-fineprint{display:flex;align-items:flex-start;gap:.45rem;color:#afbddb;font-size:.74rem;line-height:1.6;margin-top:.7rem;}
       .fy-store-plain-feature{align-items:center;}
       .fy-store-plain-feature>img{width:100%;border-radius:.9rem;max-height:21rem;object-fit:cover;}
       .fy-store-plain-feature p{color:#cbd5ec;margin:1rem 0;}

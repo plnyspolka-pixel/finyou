@@ -65,7 +65,7 @@ describe("dostęp inwestora — bez opłat jednostkowych", () => {
       "Kalkulator compliance",
       "Kancelaria AI",
       "Moduł AML/compliance",
-      "Windykator AI",
+      "Windykacja",
     ]);
     for (const b of p.bullets) expect(b.cecha && b.zaleta && b.korzysc).toBeTruthy();
     expect(text).not.toMatch(/Automatyczne wypełnienie i podpisanie/);

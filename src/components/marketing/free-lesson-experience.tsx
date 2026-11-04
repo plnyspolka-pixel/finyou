@@ -12,6 +12,7 @@ import {
 } from "@/lib/investor-plan/plans";
 import { MktButton, Eyebrow } from "./primitives";
 import { Icon3D } from "./icon-3d";
+import { CheckIcon } from "./check-icon";
 import { focusFieldStyle } from "./focus-shell";
 
 export function FreeLessonExperience({
@@ -121,7 +122,10 @@ export function FreeLessonExperience({
         <p className="mt-5 text-muted-foreground">{FREE_LESSON_COPY.subtitle}</p>
         <ul className="fy-sales-checks">
           {FREE_LESSON_COPY.benefits.map((b) => (
-            <li key={b}>✓ {b}</li>
+            <li key={b}>
+              <CheckIcon size={20} />
+              <span>{b}</span>
+            </li>
           ))}
         </ul>
       </div>

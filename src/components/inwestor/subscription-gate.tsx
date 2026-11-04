@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useAccessState } from "@/hooks/use-access";
 import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
 import { getMyManagementModuleState } from "@/lib/storefront/management.functions";
-import { isManagementModulePath } from "@/lib/storefront/products";
+import { CALCULATOR_UNLOCK_PRICE_LABEL, isCalculatorPath, isManagementModulePath } from "@/lib/storefront/products";
 import {
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
@@ -113,14 +113,29 @@ function OffersGate({ children }: { children: ReactNode }) {
 }
 
 /** Centrum Zarządzania (moduł sklepu 500 zł / 30 dni) otwiera dokumenty, e-podpis, AML i kalkulator. */
-function ManagementModuleGate({ children }: { children: ReactNode }) {
+function ManagementModuleGate({ children, pathname }: { children: ReactNode; pathname: string }) {
   const fetchState = useServerFn(getMyManagementModuleState);
   const q = useQuery({ queryKey: ["management-module"], queryFn: () => fetchState(), staleTime: 60_000 });
   if (q.isLoading) return null;
   if (q.data?.active) return <>{children}</>;
+  // HIT 9,99 zł: sam kalkulator compliance (30 dni) — bez reszty Centrum Zarządzania.
+  if (q.data?.calculatorActive && isCalculatorPath(pathname)) return <>{children}</>;
   return (
     <div className="mx-auto max-w-2xl space-y-3 py-6">
       <SubscriptionRequiredCard />
+      {isCalculatorPath(pathname) && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
+            <span className="text-muted-foreground">
+              Chcesz tylko policzyć pożyczkę? Pełna mapa szans i zagrożeń — kalkulator compliance
+              na 30 dni — kosztuje {CALCULATOR_UNLOCK_PRICE_LABEL}.
+            </span>
+            <Button asChild variant="outline">
+              <a href="/sklep#mapa-szans">Kup za {CALCULATOR_UNLOCK_PRICE_LABEL}</a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
           <span className="text-muted-foreground">
@@ -141,7 +156,7 @@ export function InvestorSubscriptionGate({ children }: { children: ReactNode }) 
   const { loading, hasFullAccess, state } = useAccessState("investor");
   if (isFreeInvestorPath(pathname) || loading) return <>{children}</>;
   if (!hasFullAccess && isManagementModulePath(pathname)) {
-    return <ManagementModuleGate>{children}</ManagementModuleGate>;
+    return <ManagementModuleGate pathname={pathname}>{children}</ManagementModuleGate>;
   }
   if (!hasFullAccess) {
     return (

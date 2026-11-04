@@ -15,20 +15,38 @@ import type { Icon3DName } from "./icon-3d";
  * modułu zaktualizuj też ten opis:
  *  - Szkolenie        → /inwestor/szkolenia (tabela training_videos); program
  *                       7 modułów = AKADEMIA w routes/dla-inwestora.tsx
- *  - Sieć sprzedaży   → Zlecenia i Projekty (lib/order-cycle-*, lead-source.ts, affiliate)
+ *  - Sieć sprzedaży   → Zlecenia i Projekty (lib/order-cycle-*, lead-source.ts); Zlecenie
+ *                       składa się w pipeline'ie sklepu (ORDER_PIPELINE)
  *  - Analityk AI      → /inwestor/analityka (lib/analysis-pipeline, kw-analysis,
  *                       risk-assessment, property-analysis)
  *  - Kancelaria AI    → /inwestor/dokumenty, /inwestor/podpisy (document-generator,
  *                       contract-engine, esign); 30 wzorów = tabela document_templates
  *  - AML/compliance   → /inwestor/aml (lib/aml, crbr.server.ts)
- *  - Windykator AI    → /inwestor/windykacja (lib/windykacja-*, debt-collection-math)
- * Kolejność tablicy (menu, karty na landingu, „Pozostałe moduły”): Szkolenie
- * jako produkt główny, potem narzędzia w cyklu pożyczki, a sieć sprzedaży na
- * końcu jako BONUS (`bonus: true` — złota plakietka na karcie).
+ *  - Windykacja       → /inwestor/windykacja (lib/windykacja-*, debt-collection-math)
+ * Kolejność tablicy (menu, karty na landingu, przyciski w hero, „Pozostałe
+ * elementy abonamentu”) — decyzja właściciela 04.11.2026: Ogólnopolska sieć
+ * sprzedaży pierwsza, Szkolenie i indywidualny mentoring ZAWSZE drugie, potem
+ * narzędzia w cyklu pożyczki (Analityk → Kancelaria → AML → Windykacja).
+ * Bez plakietki BONUS. Sieć sprzedaży opisujemy jako usługę pośrednictwa
+ * świadczoną przez Finance You — nigdy jako platformę, na której inwestor
+ * coś „rezerwuje” albo łączy się z pośrednikiem (decyzja właściciela 04.11.2026).
+ * Moduł windykacji nazywamy „Windykacja” (nie „Windykator AI” — to osobny
+ * produkt sklepu dla wierzycieli spoza abonamentu, routes/windykator-ai.tsx).
  * Nie podawaj tu cen abonamentu (są w plans.ts) ani obietnic, których kod nie
  * realizuje (np. automatycznych wysyłek windykacyjnych bez kliknięcia inwestora,
  * „15 minut przy każdym Projekcie” — zawsze „ok. 15 minut”).
  */
+
+/** Drugi, mniejszy odnośnik pod kartą/przyciskiem modułu — konkretna rzecz
+ *  do zrobienia od razu (lead magnet, formularz, produkt sklepu). */
+export type ModuleQuickLink = {
+  label: string;
+  href: string;
+  /** Plik do pobrania (atrybut download) zamiast nawigacji. */
+  download?: boolean;
+  /** Wyróżnienie „HIT” (płatny produkt wejściowy). */
+  hit?: boolean;
+};
 
 export type FabRow = {
   /** Krótka nazwa funkcji — nagłówek karty. */
@@ -46,7 +64,7 @@ export type InvestorModule = {
   slug: string;
   /** Pełna nazwa (nagłówki, breadcrumb, karty). */
   name: string;
-  /** Nazwa w nagłówku H1: część biała + część złota (jak na grafice). */
+  /** Nazwa w nagłówku H1: część biała + część złota (jak na grafice); złota może być pusta. */
   nameLead: string;
   nameAccent: string;
   menuLabel: string;
@@ -58,8 +76,14 @@ export type InvestorModule = {
    * Prompty do grafik: docs/marketing/prompty-grafik-modulow.md.
    */
   slides?: string[];
-  /** Dodatek do abonamentu — karta i podstrona z plakietką „BONUS”. */
-  bonus?: boolean;
+  /** Pieczątka nakładana na prawy górny róg każdej grafiki modułu (karty, hero). */
+  stamp?: { src: string; alt: string };
+  /** Odnośnik „zrób to teraz” pod kartą modułu i pod przyciskiem w hero. */
+  quickLink?: ModuleQuickLink;
+  /** Główne wezwanie na podstronie modułu (domyślnie „Zostań partnerem” → cennik). */
+  primaryCta?: { label: string; href: string };
+  /** Dodatkowe zdanie pod opisem na karcie modułu (landing, „Pozostałe elementy”). */
+  cardNote?: string;
   imageAlt: string;
   metaTitle: string;
   metaDescription: string;
@@ -68,7 +92,8 @@ export type InvestorModule = {
   /** Nagłówek H2 sekcji „Co zyskujesz”. */
   featuresTitle: string;
   fab: FabRow[];
-  steps: { t: string; d: string }[];
+  /** Sekcja „Jak to działa — cztery kroki” (brak = sekcji nie ma, zostaje sama nota). */
+  steps?: { t: string; d: string }[];
   note: string;
   /** Sekcja „Skala A–E” (klasy z lib/risk-assessment/grade-bands.ts). */
   gradeScale?: {
@@ -79,7 +104,81 @@ export type InvestorModule = {
   };
 };
 
+/** Pipeline Zlecenia w sklepie: abonament → dane → KYC → umowy → formularz Zlecenia. */
+export const ORDER_PIPELINE = "/sklep#siecsprzedazy";
+
 export const INVESTOR_MODULES: InvestorModule[] = [
+  {
+    slug: "siec-sprzedazy",
+    name: "Ogólnopolska sieć sprzedaży",
+    nameLead: "Ogólnopolska",
+    nameAccent: "sieć sprzedaży",
+    menuLabel: "Ogólnopolska sieć sprzedaży",
+    tagline: "Projekty z całej Polski dopasowane do Twojej kwoty",
+    image: "/marketing/moduly/siec-sprzedazy-1.webp",
+    // Slajd 3 (24 h rezerwacji) usunięty — nie ma rezerwacji Projektów (decyzja właściciela 04.11.2026).
+    slides: ["/marketing/moduly/siec-sprzedazy-2.webp"],
+    // Zlecenie składa się w pipeline'ie sklepu (abonament → dane → KYC → umowy → Zlecenie).
+    quickLink: { label: "Złóż zlecenie poszukiwania okazji", href: ORDER_PIPELINE },
+    primaryCta: { label: "Złóż zlecenie poszukiwania okazji", href: ORDER_PIPELINE },
+    imageAlt: "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",
+    metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
+    metaDescription:
+      "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty przedsiębiorców z całej Polski dopasowane do kwoty z Twojego Zlecenia.",
+    lead: "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty podajesz w Zleceniu maksymalną kwotę, a my przedstawiamy Ci Projekty przedsiębiorców z całej Polski, które się w niej mieszczą.",
+    highlights: [
+      "Wnioski z całej Polski i z wielu kanałów",
+      "Profesjonalna obsługa na każdym etapie Projektu",
+      "Najnowsze okazje inwestycyjne trafiają wprost do Ciebie — bez szukania klienta",
+    ],
+    featuresTitle: "Nie szukasz klientów — Projekty trafiają do Ciebie",
+    fab: [
+      {
+        title: "Klienci zgłaszają się sami",
+        icon: "growth",
+        cecha:
+          "Przedsiębiorcy z całej Polski zgłaszają się do nas przez reklamy, czat, telefon do asystenta AI i formularze.",
+        zaleta:
+          "Wszystkie wnioski trafiają do jednej puli, bez podziału na województwa, a koszt reklamy i pozyskania klienta ponosi Finance You.",
+        korzysc: "Nie szukasz klientów — najnowsze okazje trafiają wprost do Ciebie.",
+      },
+      {
+        title: "Jedna kwota zamiast ogłoszeń",
+        icon: "access",
+        cecha: "W Zleceniu podajesz tylko jeden parametr: maksymalną kwotę finansowania.",
+        zaleta:
+          "System sam dopasowuje nowe wnioski, które się w niej mieszczą, i przedstawia je jako Projekty.",
+        korzysc: "Nie tracisz godzin na przeglądanie ogłoszeń.",
+      },
+      {
+        title: "Najpierw raport, potem kontakt",
+        icon: "knowledge",
+        cecha:
+          "Zanim zdecydujesz, widzisz zapowiedź Projektu i raport analityczny, bez danych osobowych klienta i z zamaskowanym numerem księgi wieczystej.",
+        zaleta: "Zabezpieczenie oceniasz, zanim poświęcisz czas na rozmowę.",
+        korzysc: "Angażujesz się tylko w Projekty, które naprawdę Ci odpowiadają.",
+      },
+      {
+        title: "Od Projektu do umowy w jednym panelu",
+        icon: "dossier",
+        cecha:
+          "Propozycję finansową wygodnie przygotowujesz w kalkulatorze compliance i wysyłasz ją do klienta prosto z karty Projektu.",
+        zaleta:
+          "Na jej podstawie od razu generujesz komplet dokumentów niezbędnych do zawarcia umowy pożyczki — a dzięki modułowi e-podpis możesz je od razu podpisać.",
+        korzysc: "Nie przepisujesz danych między narzędziami.",
+      },
+      {
+        title: "Pozyskanie klienta na nasz koszt",
+        icon: "loan",
+        cecha: "Płacisz stały abonament, bez prowizji od Twojego zysku.",
+        zaleta:
+          "Prowizję Finance You płaci klient z wypłacanej kwoty pożyczki, a koszt pozyskania klienta ponosi Finance You.",
+        korzysc: "Odsetki i Twoja prowizja w całości zostają u Ciebie.",
+      },
+    ],
+    // Bez sekcji „Jak to działa” — kroki opisywały rezerwację Projektu (decyzja właściciela 04.11.2026).
+    note: "Finance You świadczy usługę pośrednictwa finansowego na podstawie ramowej umowy pośrednictwa i nie jest stroną pożyczki. Nie gwarantujemy przedstawienia Projektu ani zawarcia transakcji — Projekty przedstawiamy inwestorowi z przyjętym Zleceniem, po zawarciu bezpłatnych Umów o dostęp do Klientów. Działasz we własnym imieniu, a nie w imieniu Finance You, a pośrednicy nie mogą gwarantować finansowania. Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału.",
+  },
   {
     slug: "szkolenie",
     name: "Szkolenie i indywidualny mentoring",
@@ -89,6 +188,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "7 modułów: od strategii i prawa po analizę, umowę i windykację",
     image: "/marketing/moduly/szkolenie-1.webp",
     slides: ["/marketing/moduly/szkolenie-2.webp", "/marketing/moduly/szkolenie-3.webp"],
+    quickLink: { label: "Obejrzyj darmową lekcję", href: "/pobierz/darmowa-lekcja" },
     imageAlt:
       "Szkolenie inwestora — inwestor przy biurku ogląda lekcję wideo, obok program siedmiu modułów",
     metaTitle: "Szkolenie i indywidualny mentoring inwestora — pożyczki pod hipotekę | Finance You",
@@ -181,6 +281,11 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Ocena ryzyka A–E i wycena w ok. 15 minut",
     image: "/marketing/moduly/analityk-ai-1.webp",
     slides: ["/marketing/moduly/analityk-ai-2.webp", "/marketing/moduly/analityk-ai-3.webp"],
+    quickLink: {
+      label: "Pobierz przykładowy raport nieruchomości",
+      href: "/marketing/przykladowy-raport-nieruchomosci.pdf",
+      download: true,
+    },
     imageAlt: "Analityk — ocena ryzyka A–E i wycena nieruchomości na tablecie inwestora",
     metaTitle: "Analityk AI — analiza zabezpieczenia i ryzyka dla inwestora | Finance You",
     metaDescription:
@@ -286,6 +391,8 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Umowa pożyczki i 30 wzorów — od aneksu po wniosek do komornika",
     image: "/marketing/moduly/kancelaria-ai-1.webp",
     slides: ["/marketing/moduly/kancelaria-ai-2.webp", "/marketing/moduly/kancelaria-ai-3.webp"],
+    stamp: { src: "/marketing/pieczatka-epodpis-gratis.webp", alt: "E-podpis gratis" },
+    quickLink: { label: "Pobierz darmową umowę pożyczki", href: "/pobierz/wzor-umowy-pozyczki" },
     imageAlt: "Kancelaria — umowa pożyczki i wzory dokumentów na biurku z wagą Temidy",
     metaTitle: "Kancelaria AI — 30 wzorów dokumentów i umowa pożyczki dla inwestora | Finance You",
     metaDescription:
@@ -365,6 +472,11 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     tagline: "Obowiązki AML w jednym miejscu — od weryfikacji klienta po GIIF",
     image: "/marketing/moduly/aml-compliance-1.webp",
     slides: ["/marketing/moduly/aml-compliance-2.webp", "/marketing/moduly/aml-compliance-3.webp"],
+    quickLink: {
+      label: "Pełna mapa szans i zagrożeń — analiza finansowa pożyczki za 9,99 zł",
+      href: "/sklep#mapa-szans",
+      hit: true,
+    },
     imageAlt: "Moduł AML — weryfikacja klienta: KYC, listy sankcyjne i PEP",
     metaTitle: "Moduł AML/compliance — GIIF, sankcje i rejestr ponadprogowy | Finance You",
     metaDescription:
@@ -452,19 +564,22 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     note: "Moduł AML/compliance to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa ani porada prawna. Zgłoszenia do GIIF wysyłasz samodzielnie w SI GIIF, jako instytucja obowiązana, własnym podpisem kwalifikowanym — Finance You ich nie podpisuje i nie przechowuje Twojego podpisu. Wzór procedury trzeba dostosować do własnej oceny ryzyka i przyjąć.",
   },
   {
-    slug: "windykator-ai",
-    name: "Windykator AI",
-    nameLead: "Windykator",
-    nameAccent: "AI",
-    menuLabel: "Windykator AI",
+    slug: "windykacja",
+    name: "Windykacja",
+    nameLead: "Windykacja",
+    nameAccent: "",
+    menuLabel: "Windykacja",
     tagline: "Od pierwszego upomnienia aż na biurko komornika — jednym kliknięciem",
+    cardNote:
+      "Skuteczna windykacja zaczyna się na długo przed udzieleniem pożyczki. Dlatego usługi i wsparcie windykacyjne świadczymy wyłącznie dla naszych partnerów — od samego początku.",
     image: "/marketing/moduly/windykator-ai-1.webp",
     slides: ["/marketing/moduly/windykator-ai-2.webp", "/marketing/moduly/windykator-ai-3.webp"],
-    imageAlt: "Windykator — etapy windykacji od upomnienia po egzekucję",
-    metaTitle: "Windykator AI — windykacja pożyczek jednym kliknięciem dla inwestora | Finance You",
+    quickLink: { label: "Zobacz zamknięte sprawy z naszego portfela", href: "/historie" },
+    imageAlt: "Windykacja — etapy windykacji od upomnienia po egzekucję",
+    metaTitle: "Windykacja pożyczek pod hipotekę — moduł dla inwestora | Finance You",
     metaDescription:
-      "Wszystkie procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Poznaj Windykatora AI.",
-    lead: "Windykator AI podpowiada następny krok, liczy dług z odsetkami co do dnia i przygotowuje pisma, SMS-y i e-maile w Twoim imieniu, z danymi z Twojego profilu. Każdy krok zatwierdzasz Ty.",
+      "Procedury windykacyjne jednym kliknięciem: pisma w Twoim imieniu, SMS, e-mail, telefon AI i sprawa aż na biurko komornika. Wsparcie windykacyjne tylko dla partnerów.",
+    lead: "Moduł windykacji podpowiada następny krok, liczy dług z odsetkami co do dnia i przygotowuje pisma, SMS-y i e-maile w Twoim imieniu, z danymi z Twojego profilu. Każdy krok zatwierdzasz Ty.",
     highlights: [
       "Ścieżka dobrana do dni opóźnienia",
       "Telefon do dłużnika prowadzi agent AI",
@@ -476,7 +591,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         title: "Wiesz, co zrobić dziś",
         icon: "automation",
         cecha:
-          "Windykator proponuje ścieżkę — miękką, standardową, twardą albo karną — według liczby dni opóźnienia i opisuje następny krok prostym językiem.",
+          "System proponuje ścieżkę — miękką, standardową, twardą albo karną — według liczby dni opóźnienia i opisuje następny krok prostym językiem.",
         zaleta:
           "Upomnienie, wezwanie do zapłaty, wypowiedzenie umowy, wniosek o klauzulę wykonalności czy wniosek do komornika uruchamiasz jednym kliknięciem z karty sprawy, a każda czynność trafia do akt.",
         korzysc: "Działasz pewnie, nawet jeśli to Twoja pierwsza windykacja.",
@@ -545,97 +660,14 @@ export const INVESTOR_MODULES: InvestorModule[] = [
         d: "Z kompletem pism, dowodów doręczeń i raportem dowodowym.",
       },
     ],
-    note: "Windykator AI to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa. Każdą czynność zatwierdzasz Ty — system liczy, podpowiada i przygotowuje dokumenty. Odzyskanie należności zależy od sytuacji dłużnika i zabezpieczenia, a w sporze sądowym może być potrzebny prawnik.",
-  },
-  {
-    slug: "siec-sprzedazy",
-    bonus: true,
-    name: "Ogólnopolska sieć sprzedaży",
-    nameLead: "Ogólnopolska",
-    nameAccent: "sieć sprzedaży",
-    menuLabel: "BONUS: ogólnopolska sieć sprzedaży",
-    tagline: "Projekty z całej Polski dopasowane do Twojej kwoty",
-    image: "/marketing/moduly/siec-sprzedazy-1.webp",
-    slides: ["/marketing/moduly/siec-sprzedazy-2.webp", "/marketing/moduly/siec-sprzedazy-3.webp"],
-    imageAlt: "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",
-    metaTitle: "Ogólnopolska sieć sprzedaży — pośrednictwo finansowe | Finance You",
-    metaDescription:
-      "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego. Projekty z całej Polski dopasowane do Twojego Zlecenia — bez opłat za Projekt.",
-    lead: "Na zlecenie naszych klientów świadczymy usługi pośrednictwa finansowego, dostarczając rozwiązań dopasowanych do potrzeb i możliwości. Ty podajesz w Zleceniu maksymalną kwotę, a my przedstawiamy Ci Projekty przedsiębiorców z całej Polski, które się w niej mieszczą.",
-    highlights: [
-      "Wnioski z całej Polski i z wielu kanałów",
-      "Rezerwacja Projektu na 24 h (+12 h)",
-      "Bez opłat za Projekt i za pozyskanie klienta",
-    ],
-    featuresTitle: "Nie szukasz klientów — Projekty trafiają do Ciebie",
-    fab: [
-      {
-        title: "Klienci zgłaszają się sami",
-        icon: "growth",
-        cecha:
-          "Przedsiębiorcy z całej Polski zgłaszają się do nas przez reklamy, czat, telefon do asystenta AI i formularze, a pośrednicy wnoszą wnioski swoich klientów.",
-        zaleta:
-          "Wszystkie wnioski trafiają do jednej puli, bez podziału na województwa, a koszt reklamy i wynagrodzenie pośredników pokrywa Finance You.",
-        korzysc: "Nie szukasz klientów i nie płacisz za ich pozyskanie.",
-      },
-      {
-        title: "Jedna kwota zamiast ogłoszeń",
-        icon: "access",
-        cecha: "W Zleceniu podajesz tylko jeden parametr: maksymalną kwotę finansowania.",
-        zaleta:
-          "System sam dopasowuje nowe wnioski, które się w niej mieszczą, i przedstawia je jako Projekty.",
-        korzysc: "Nie tracisz godzin na przeglądanie ogłoszeń.",
-      },
-      {
-        title: "Najpierw raport, potem kontakt",
-        icon: "knowledge",
-        cecha:
-          "Przed rezerwacją widzisz zapowiedź Projektu i raport analityczny, bez danych osobowych klienta i z zamaskowanym numerem księgi wieczystej.",
-        zaleta: "Zabezpieczenie oceniasz, zanim poświęcisz czas na rozmowę.",
-        korzysc: "Angażujesz się tylko w Projekty, które naprawdę Ci odpowiadają.",
-      },
-      {
-        title: "24 godziny na spokojną decyzję",
-        icon: "procedures",
-        cecha:
-          "Gdy Projekt Ci odpowiada, akceptujesz Kartę Leada i jednym przyciskiem pobierasz dane kontaktowe klienta oraz rezerwujesz Projekt na 24 godziny.",
-        zaleta:
-          "Rezerwację możesz raz przedłużyć o 12 godzin, a w tym czasie Projekt nie trafia do innych inwestorów.",
-        korzysc: "Rozmawiasz z klientem bezpośrednio i analizujesz bez wyścigu z konkurencją.",
-      },
-      {
-        title: "Od Projektu do umowy w jednym panelu",
-        icon: "dossier",
-        cecha:
-          "Ofertę składasz prosto z karty Projektu w kalkulatorze compliance, a klient albo pośrednik dostaje powiadomienie.",
-        zaleta:
-          "Po rezerwacji jednym kliknięciem przechodzisz do kreatora umowy z danymi Projektu.",
-        korzysc: "Nie przepisujesz danych między narzędziami.",
-      },
-      {
-        title: "Pozyskanie klienta na nasz koszt",
-        icon: "loan",
-        cecha: "Płacisz stały abonament, bez opłaty za Projekt i bez opłaty sukcesu.",
-        zaleta:
-          "Prowizję Finance You płaci klient z wypłacanej kwoty pożyczki, a koszt pozyskania klienta ponosi Finance You.",
-        korzysc: "Odsetki i Twoja prowizja w całości zostają u Ciebie.",
-      },
-    ],
-    steps: [
-      {
-        t: "Zostajesz partnerem",
-        d: "Abonament, zdalna weryfikacja tożsamości i bezpłatne umowy z Finance You.",
-      },
-      { t: "Składasz Zlecenie", d: "Podajesz tylko maksymalną kwotę finansowania." },
-      { t: "Dostajesz Projekty", d: "Wnioski z całej Polski, które mieszczą się w Twojej kwocie." },
-      {
-        t: "Rezerwujesz i rozmawiasz",
-        d: "Akceptujesz Kartę Leada, rezerwujesz Projekt i rozmawiasz z klientem bezpośrednio.",
-      },
-    ],
-    note: "Finance You świadczy usługę pośrednictwa finansowego na podstawie ramowej umowy pośrednictwa i nie jest stroną pożyczki. Nie gwarantujemy przedstawienia Projektu ani zawarcia transakcji — Projekty przedstawiamy inwestorowi z przyjętym Zleceniem, po zawarciu bezpłatnych Umów o dostęp do Klientów. Działasz we własnym imieniu, a nie w imieniu Finance You, a pośrednicy nie mogą gwarantować finansowania. Inwestowanie wiąże się z ryzykiem utraty części lub całości kapitału.",
+    note: "Moduł windykacji to narzędzie szkoleniowe w ramach Abonamentu inwestora, a nie odrębna usługa. Każdą czynność zatwierdzasz Ty — system liczy, podpowiada i przygotowuje dokumenty. Odzyskanie należności zależy od sytuacji dłużnika i zabezpieczenia, a w sporze sądowym może być potrzebny prawnik.",
   },
 ];
+
+/** Stare slugi podstron (linki w mailingu, indeks Google) → aktualne; trasa robi 301. */
+export const LEGACY_MODULE_SLUGS: Record<string, string> = {
+  "windykator-ai": "windykacja",
+};
 
 export const investorModulePath = (slug: string) => `/dla-inwestora/${slug}`;
 

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import { Section, SectionHead, FAQ } from "@/components/marketing/sections";
 import { MktButton, Eyebrow } from "@/components/marketing/primitives";
-import { BrandIcon } from "@/components/marketing/brand-icon";
+import { CheckIcon } from "@/components/marketing/check-icon";
 import { InvestorPricing } from "@/components/marketing/investor-pricing";
 import { LoanCalculator } from "@/components/loan-calculator";
 import { PortfolioStories } from "@/components/marketing/portfolio-stories";
@@ -10,12 +10,12 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
 } from "@/lib/investor-plan/plans";
-import { RoadCards } from "@/components/marketing/road-cards";
+import { RoadCards, QuickLink } from "@/components/marketing/road-cards";
 import { DoubleGuarantee } from "@/components/marketing/double-guarantee";
+import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
-const LESSON = "/pobierz/darmowa-lekcja";
 // Film w hero: „Kompleksowa prezentacja” (dawniej Wistia, od 2.10.2026 w naszym
 // Storage) — ten sam, który był w hero /dla-inwestora. Plakat z 1. sekundy, bo
 // film zaczyna się ciemnym kadrem.
@@ -73,7 +73,7 @@ const FAQS = [
   },
   {
     q: "Co, jeśli firma nie płaci?",
-    a: "Windykator AI prowadzi Cię przez wezwania, negocjacje i egzekucję. Ty zatwierdzasz działania. Zobacz zamknięte sprawy z naszego portfela.",
+    a: "Moduł windykacji prowadzi Cię przez wezwania, negocjacje i egzekucję. Ty zatwierdzasz działania. Zobacz zamknięte sprawy z naszego portfela.",
   },
   {
     q: "Czy potrzebuję doświadczenia?",
@@ -110,19 +110,41 @@ function InvestorHome() {
                 "Bez kupowania, budowania, sprzedawania, remontowania, bez najemców, bez wysiłku, bez stresu i bez czekania na efekty!",
               ].map((t) => (
                 <li key={t}>
-                  <BrandIcon name="check" size={20} />
+                  <CheckIcon size={20} />
                   <span>{t}</span>
                 </li>
               ))}
             </ul>
-            <div className="fy-sales-actions">
-              <MktButton variant="gold" size="lg" href={LESSON}>
-                Obejrzyj darmową lekcję — ok.{"\u00a0"}35 minut
-              </MktButton>
-              <MktButton variant="outline" size="lg" href="#cennik">
-                Zobacz program i cenę
-              </MktButton>
-            </div>
+            {/* Przyciski modułów (kolejność z investor-modules.ts) — pod każdym konkretna
+                rzecz do zrobienia od razu: darmowa lekcja, przykładowy raport, wzór umowy,
+                zlecenie, HIT 9,99 zł (decyzja właściciela 04.11.2026). */}
+            <ul className="fy-hero-modules" aria-label="Elementy abonamentu inwestora">
+              {INVESTOR_MODULES.map((m, i) => (
+                <li key={m.slug}>
+                  <MktButton
+                    variant={i === 0 ? "gold" : "outline"}
+                    size="sm"
+                    href={investorModulePath(m.slug)}
+                    style={
+                      i === 0
+                        ? undefined
+                        : {
+                            background: "rgba(255,255,255,.06)",
+                            borderColor: "rgba(255,255,255,.28)",
+                            color: "#fff",
+                          }
+                    }
+                  >
+                    {m.name}
+                  </MktButton>
+                  {m.quickLink && <QuickLink link={m.quickLink} />}
+                </li>
+              ))}
+            </ul>
+            <p className="fy-hero-pricing-line">
+              {SUBSCRIPTION_PRICE_SENTENCE}, w ratach od ok. 583 zł/mies. —{" "}
+              <a href="#cennik">zobacz program i cenę →</a>
+            </p>
           </div>
           {/* Film „Kompleksowa prezentacja” — ten sam, który był w hero /dla-inwestora. */}
           <div className="fy-sales-hero-video">
