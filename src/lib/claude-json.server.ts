@@ -110,3 +110,71 @@ async function claudeJsonRaw<T>(args: {
     throw new Error(`${args.label} (Claude): niepoprawny JSON: ${text.slice(0, 200)}`);
   }
 }
+
+/**
+ * Zapasowy czat JSON bez schematu — gdy Lovable AI gateway odmawia (brak
+ * kredytów 402, limit 429, awaria 5xx). 04.11.2026 wyczerpane kredyty
+ * Lovable zatrzymały produkcję rolek na wiele godzin; z tym zapasem scenariusz
+ * powstaje na Claude, a dziennik `external_api_logs` pokazuje przełączenie.
+ */
+export async function claudeChatJsonLoose(
+  system: string,
+  user: string,
+  label = "studio_ai_fallback",
+): Promise<Record<string, unknown>> {
+  const key = (process.env.ANTHROPIC_API_KEY ?? "").trim();
+  if (!key) throw new Error("ANTHROPIC_API_KEY nie jest ustawiony.");
+  const t0 = Date.now();
+  try {
+    const res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: STUDIO_CLAUDE_MODEL,
+        max_tokens: 8000,
+        system: `${system}\n\nOdpowiedz WYŁĄCZNIE jednym obiektem JSON, bez komentarzy i bez bloków kodu.`,
+        messages: [{ role: "user", content: user }],
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`${label} (Claude) HTTP ${res.status}: ${(await res.text()).slice(0, 400)}`);
+    }
+    const body = (await res.json()) as AnthropicResponse;
+    const text = body.content.find((b) => b.type === "text")?.text ?? "";
+    const parsed = parseLooseJsonObject(text);
+    if (!parsed) throw new Error(`${label} (Claude): niepoprawny JSON: ${text.slice(0, 200)}`);
+    await logClaudeCall({ label, success: true, ms: Date.now() - t0 });
+    return parsed;
+  } catch (e) {
+    await logClaudeCall({
+      label,
+      success: false,
+      error: e instanceof Error ? e.message : String(e),
+      ms: Date.now() - t0,
+    });
+    throw e;
+  }
+}
+
+/** Obiekt JSON z odpowiedzi modelu (dopuszcza otoczkę ```json … ``` i tekst wokół). */
+export function parseLooseJsonObject(text: string): Record<string, unknown> | null {
+  const tryParse = (s: string): Record<string, unknown> | null => {
+    try {
+      const v = JSON.parse(s);
+      return v && typeof v === "object" && !Array.isArray(v)
+        ? (v as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  };
+  const direct = tryParse(text.trim());
+  if (direct) return direct;
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  return start >= 0 && end > start ? tryParse(text.slice(start, end + 1)) : null;
+}

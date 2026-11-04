@@ -222,3 +222,61 @@ export function publishTitleWithKeyword(title: string, keyword: string | null, m
   const sep = /[.!?…:]$/.test(head) ? "" : ".";
   return `${head}${sep}${suffix}`;
 }
+
+// ── Alarm „produkcja rolek stoi” ────────────────────────────────────────────
+// 01–04.11.2026 produkcja stała 3 dni (kredyty HeyGen 4.53 < 5), a potem
+// kolejne godziny (kredyty Lovable AI 402) — widać to było tylko w dzienniku.
+// Blokada zasobów (kredyty, limit dostawcy) idzie teraz mailem do właściciela,
+// najwyżej raz na PRODUCTION_ALERT_COOLDOWN_H dla danego powodu.
+
+export type ProductionBlockKind = "heygen_credits" | "heygen_credits_low" | "ai_credits";
+
+export const PRODUCTION_ALERT_COOLDOWN_H = 12;
+/** Ostrzeżenie zawczasu: kredyty HeyGen poniżej tylu × próg blokady. */
+export const HEYGEN_LOW_CREDITS_FACTOR = 3;
+
+/** Rozpoznaje blokadę wymagającą działania właściciela (doładowanie), nie chwilowy błąd. */
+export function classifyProductionBlock(message: string): ProductionBlockKind | null {
+  const m = message.toLowerCase();
+  if (/kredytów heygen/.test(m)) return "heygen_credits";
+  if (/\b402\b|payment_required|not enough credits|insufficient[_ ]credit|credit balance/.test(m))
+    return "ai_credits";
+  return null;
+}
+
+const BLOCK_ADVICE: Record<ProductionBlockKind, { subject: string; advice: string }> = {
+  heygen_credits: {
+    subject: "Autopilot — produkcja rolek ZATRZYMANA (kredyty HeyGen)",
+    advice:
+      "Doładuj kredyty w HeyGen (app.heygen.com → Billing). Produkcja ruszy sama w najbliższym ticku po doładowaniu.",
+  },
+  heygen_credits_low: {
+    subject: "Autopilot — kończą się kredyty HeyGen",
+    advice:
+      "Kredyty HeyGen są blisko progu, przy którym autopilot przestaje produkować rolki. Doładuj je zawczasu (app.heygen.com → Billing).",
+  },
+  ai_credits: {
+    subject: "Autopilot — produkcja rolek ZATRZYMANA (kredyty AI)",
+    advice:
+      "Dostawca AI odmówił z powodu braku kredytów. Doładuj kredyty Lovable AI (Settings → Plans & credits) i/lub sprawdź saldo konta Anthropic (console.anthropic.com → Billing) — Studio przełącza się na Claude, gdy Lovable odmawia, więc rolki stoją dopiero, gdy brakuje obu.",
+  },
+};
+
+export function buildProductionBlockedEmail(
+  kind: ProductionBlockKind,
+  detail: string,
+  panelUrl: string,
+): { subject: string; text: string } {
+  const a = BLOCK_ADVICE[kind];
+  return {
+    subject: a.subject,
+    text: [
+      a.advice,
+      "",
+      `Szczegóły: ${detail.slice(0, 600)}`,
+      "",
+      `Kolejny alarm z tego powodu najwcześniej za ${PRODUCTION_ALERT_COOLDOWN_H} h.`,
+      `Panel autopilota: ${panelUrl}`,
+    ].join("\n"),
+  };
+}

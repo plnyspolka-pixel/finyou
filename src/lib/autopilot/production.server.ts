@@ -12,21 +12,32 @@ import { resolveKeywordTarget, type KeywordTarget } from "@/lib/lead-magnets/cat
 import { llmGateDeps, runComplianceGate } from "./compliance-gate.server";
 import { COMPLIANCE_RULES_VERSION, checkHardRules } from "./compliance-rules";
 import {
+  HEYGEN_LOW_CREDITS_FACTOR,
   MAX_PRODUCED_PER_TRACK_PER_DAY,
+  PRODUCTION_ALERT_COOLDOWN_H,
   PRODUCTION_COST_PLN,
   PRODUCTION_PROMPT_TAG,
   SCHEDULED_HORIZON_DAYS,
+  buildProductionBlockedEmail,
   buildReelBrief,
+  classifyProductionBlock,
   decideProduction,
   pipelineStock,
   pickSeries,
   pickTopic,
   publishTitleWithKeyword,
+  type ProductionBlockKind,
   type TrackPipeline,
 } from "./production";
 import { evaluateGuards } from "./safety";
 import { MAX_WARNING_SENTENCES_PER_REEL, countWarnings } from "./script-warnings";
-import { loadAutopilotConfig, loadUsage, logAutopilot, warsawDayStartIso } from "./state.server";
+import {
+  emailOwner,
+  loadAutopilotConfig,
+  loadUsage,
+  logAutopilot,
+  warsawDayStartIso,
+} from "./state.server";
 import { TRACKS, TRACK_TO_AUDIENCE, type Track } from "./types";
 
 const db = supabaseAdmin as unknown as { from: (t: string) => any };
@@ -205,6 +216,35 @@ async function heygenCredits(fallback: number | null): Promise<number | null> {
   }
 }
 
+/**
+ * Mail do właściciela, gdy produkcja stoi z braku zasobów (kredyty HeyGen /
+ * AI) — najwyżej raz na PRODUCTION_ALERT_COOLDOWN_H dla danego powodu.
+ * Nigdy nie rzuca: alarm nie może zepsuć ticka.
+ */
+async function alertProductionBlocked(kind: ProductionBlockKind, detail: string): Promise<void> {
+  try {
+    const since = new Date(Date.now() - PRODUCTION_ALERT_COOLDOWN_H * 3_600_000).toISOString();
+    const { count } = await db
+      .from("ai_growth_action_log")
+      .select("id", { count: "exact", head: true })
+      .eq("action", "reel_production_blocked_alert")
+      .eq("payload->>kind", kind)
+      .gte("created_at", since);
+    if ((count ?? 0) > 0) return;
+    const { AUTOPILOT_PANEL_URL } = await import("./owner-email");
+    const mail = buildProductionBlockedEmail(kind, detail, AUTOPILOT_PANEL_URL);
+    const res = await emailOwner(mail, "alarm");
+    await logAutopilot({
+      action: "reel_production_blocked_alert",
+      status: "warning",
+      summary: `${mail.subject} — mail ${res.sent ? "wysłany" : `nie wysłany (${res.reason ?? "?"})`}`,
+      payload: { kind, detail: detail.slice(0, 500), sent: res.sent },
+    });
+  } catch {
+    /* alarm to dodatek — tick idzie dalej */
+  }
+}
+
 export async function produceReels(
   opts: { now?: Date; tracks?: Track[]; force?: boolean; actor?: string | null } = {},
 ): Promise<{ results: ProductionResult[]; skipped: string | null }> {
@@ -231,8 +271,20 @@ export async function produceReels(
         payload: { reasons: guard.reasons, credits, aiSpentTodayPln: usage.aiSpentTodayPln },
         actor: opts.actor ?? null,
       }).catch(() => null);
+      const block = classifyProductionBlock(skipped);
+      if (block) await alertProductionBlocked(block, skipped);
     }
     return { results: [], skipped };
+  }
+  // Ostrzeżenie zawczasu, zanim strażnik zatrzyma produkcję.
+  if (
+    credits != null &&
+    credits < cfg.limits.heygenMinRemainingCredits * HEYGEN_LOW_CREDITS_FACTOR
+  ) {
+    await alertProductionBlocked(
+      "heygen_credits_low",
+      `Pozostało ${credits} kredytów HeyGen; produkcja staje poniżej ${cfg.limits.heygenMinRemainingCredits}.`,
+    );
   }
 
   const dayStart = warsawDayStartIso(now);
@@ -457,6 +509,8 @@ export async function produceReels(
         actor: opts.actor ?? null,
       }).catch(() => null);
       results.push({ track, action: "error", reason: msg, series: series.slug, keyword, pipeline });
+      const block = classifyProductionBlock(msg);
+      if (block) await alertProductionBlocked(block, `Produkcja (${track}): ${msg}`);
     }
   }
   return { results, skipped: null };
