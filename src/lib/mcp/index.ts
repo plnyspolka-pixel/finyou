@@ -75,6 +75,8 @@ const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unse
 
 export default defineMcp({
   name: "finance-you-mcp",
+  // Bez wysyłki metryk użycia do api.lovable.dev (pakiet @lovable.dev/mcp-js to tylko biblioteka).
+  metrics: false,
   title: "Finance You",
   version: "0.9.0",
   instructions:
