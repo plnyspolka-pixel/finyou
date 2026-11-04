@@ -6,7 +6,9 @@ import {
   PRODUCTION_PROMPT_TAG,
   REEL_BUFFER_PER_TRACK,
   SCHEDULED_HORIZON_DAYS,
+  buildProductionBlockedEmail,
   buildReelBrief,
+  classifyProductionBlock,
   decideProduction,
   keywordOfReel,
   magnetOfReel,
@@ -210,5 +212,31 @@ describe("produkcja — hasło i tytuł rolki", () => {
     expect(publishTitleWithKeyword("Zobacz alternatywne rozwiązania", "ODMOWA")).toBe(
       "Zobacz alternatywne rozwiązania. Napisz ODMOWA",
     );
+  });
+});
+
+describe("classifyProductionBlock", () => {
+  it("rozpoznaje brak kredytów HeyGen ze strażnika", () => {
+    expect(classifyProductionBlock("Za mało kredytów HeyGen (4.53).")).toBe("heygen_credits");
+  });
+  it("rozpoznaje brak kredytów AI (Lovable 402, Anthropic)", () => {
+    expect(
+      classifyProductionBlock(
+        'AI 402: {"status":402,"type":"payment_required","title":"Not enough credits"}',
+      ),
+    ).toBe("ai_credits");
+    expect(
+      classifyProductionBlock("HTTP 400: Your credit balance is too low to access the API"),
+    ).toBe("ai_credits");
+  });
+  it("nie alarmuje przy zwykłych błędach", () => {
+    expect(classifyProductionBlock("AI 500: upstream timeout")).toBeNull();
+    expect(classifyProductionBlock("Budżet AI na dziś wyczerpany.")).toBeNull();
+  });
+  it("mail mówi, co zrobić", () => {
+    const m = buildProductionBlockedEmail("ai_credits", "AI 402", "https://x");
+    expect(m.subject).toMatch(/ZATRZYMANA/);
+    expect(m.text).toMatch(/Lovable/);
+    expect(m.text).toMatch(/https:\/\/x/);
   });
 });

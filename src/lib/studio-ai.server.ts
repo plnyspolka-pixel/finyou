@@ -26,22 +26,63 @@ function lovableKey(): string {
   return k;
 }
 
-async function chatJson(system: string, user: string): Promise<Record<string, unknown>> {
-  const res = await fetch(GATEWAY, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey()}` },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      response_format: { type: "json_object" },
-    }),
-  });
-  if (!res.ok) throw new Error(`AI ${res.status}: ${await res.text()}`);
+/**
+ * Odmowa gatewaya, przy której warto spróbować zapasowego dostawcy: brak
+ * kredytów (402), limit (429), awaria (5xx) albo brak połączenia (status 0).
+ * Błąd 400 (zły prompt) zapasowy model by powtórzył — wtedy nie przełączamy.
+ */
+export function isGatewayOutage(status: number): boolean {
+  return status === 0 || status === 402 || status === 429 || status >= 500;
+}
+
+class GatewayError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+async function lovableChatJson(system: string, user: string): Promise<Record<string, unknown>> {
+  let res: Response;
+  try {
+    res = await fetch(GATEWAY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey()}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+  } catch (e) {
+    throw new GatewayError(0, `AI sieć: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (!res.ok) throw new GatewayError(res.status, `AI ${res.status}: ${await res.text()}`);
   const body = (await res.json()) as { choices: { message: { content: string } }[] };
   return JSON.parse(body.choices?.[0]?.message?.content ?? "{}");
+}
+
+// Lovable AI gateway, a przy jego odmowie (kredyty / limit / awaria) Claude —
+// wyczerpane kredyty jednego dostawcy nie mogą zatrzymać produkcji rolek.
+async function chatJson(system: string, user: string): Promise<Record<string, unknown>> {
+  try {
+    return await lovableChatJson(system, user);
+  } catch (e) {
+    const status = e instanceof GatewayError ? e.status : -1;
+    const { claudeChatJsonLoose, isClaudeConfigured } = await import("./claude-json.server");
+    if (!isGatewayOutage(status) || !isClaudeConfigured()) throw e;
+    try {
+      return await claudeChatJsonLoose(system, user, "studio_ai_fallback");
+    } catch (fallbackErr) {
+      const fb = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      throw new Error(`${(e as Error).message} | zapas Claude: ${fb}`);
+    }
+  }
 }
 
 const BRAND_CONTEXT =
