@@ -118,7 +118,7 @@ if run 5; then
   log "5b. Sekrety Workera"
   CRON_SECRET=$(keep cron_secret)
   jq -cn --arg sr "$SERVICE_ROLE" --arg an "$ANON" --arg p "$PROXY_SHARED_SECRET" --arg h "$SEND_EMAIL_HOOK_SECRET" --arg c "$CRON_SECRET" \
-    '{SUPABASE_SERVICE_ROLE_KEY:$sr, SUPABASE_PUBLISHABLE_KEY:$an, SUPABASE_ANON_KEY:$an, PROXY_SHARED_SECRET:$p, SEND_EMAIL_HOOK_SECRET:$h, CRON_SECRET:$c}' \
+    '{SUPABASE_SERVICE_ROLE_KEY:$sr, SUPABASE_PUBLISHABLE_KEY:$an, PROXY_SHARED_SECRET:$p, SEND_EMAIL_HOOK_SECRET:$h, CRON_SECRET:$c}' \
     > "$STATE/worker-secrets.json"; chmod 600 "$STATE/worker-secrets.json"
   wrangler secret bulk "$STATE/worker-secrets.json"
   echo "Pozostałe sekrety aplikacji: osobny plik JSON wg docs/migracja/sekrety-aplikacji.md → npx wrangler secret bulk <plik>"
