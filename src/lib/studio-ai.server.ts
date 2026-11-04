@@ -67,21 +67,37 @@ async function lovableChatJson(system: string, user: string): Promise<Record<str
   return JSON.parse(body.choices?.[0]?.message?.content ?? "{}");
 }
 
-// Lovable AI gateway, a przy jego odmowie (kredyty / limit / awaria) Claude —
-// wyczerpane kredyty jednego dostawcy nie mogą zatrzymać produkcji rolek.
+// Lovable AI gateway, a przy jego odmowie (kredyty / limit / awaria) kolejno
+// Claude i OpenAI — wyczerpane kredyty jednego dostawcy nie mogą zatrzymać
+// produkcji rolek. Zapas bez klucza (ANTHROPIC_API_KEY / OPENAI_API_KEY) jest pomijany.
 async function chatJson(system: string, user: string): Promise<Record<string, unknown>> {
   try {
     return await lovableChatJson(system, user);
   } catch (e) {
     const status = e instanceof GatewayError ? e.status : -1;
+    if (!isGatewayOutage(status)) throw e;
     const { claudeChatJsonLoose, isClaudeConfigured } = await import("./claude-json.server");
-    if (!isGatewayOutage(status) || !isClaudeConfigured()) throw e;
-    try {
-      return await claudeChatJsonLoose(system, user, "studio_ai_fallback");
-    } catch (fallbackErr) {
-      const fb = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-      throw new Error(`${(e as Error).message} | zapas Claude: ${fb}`);
+    const { openAiChatJson, isOpenAiConfigured } = await import("./openai-json.server");
+    const fallbacks: Array<{ name: string; run: () => Promise<Record<string, unknown>> }> = [];
+    if (isClaudeConfigured())
+      fallbacks.push({
+        name: "Claude",
+        run: () => claudeChatJsonLoose(system, user, "studio_ai_fallback"),
+      });
+    if (isOpenAiConfigured())
+      fallbacks.push({ name: "OpenAI", run: () => openAiChatJson(system, user) });
+    if (!fallbacks.length) throw e;
+    const errors = [(e as Error).message];
+    for (const fb of fallbacks) {
+      try {
+        return await fb.run();
+      } catch (fallbackErr) {
+        errors.push(
+          `zapas ${fb.name}: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`,
+        );
+      }
     }
+    throw new Error(errors.join(" | "));
   }
 }
 
