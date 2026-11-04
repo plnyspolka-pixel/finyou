@@ -40,6 +40,8 @@ const CheckoutSchema = z.object({
   ...TubapayCheckoutFields,
   /** Kod rabatowy — zniżkę odczytujemy z treści kodu (discount-code.ts). */
   discountCode: z.string().trim().max(40).optional().nullable(),
+  /** Powrót z Tpay: domyślnie panel; „sklep" — pipeline osadzony w /sklep. */
+  returnTo: z.enum(["panel", "sklep"]).optional().default("panel"),
 });
 
 export type CreateAccessCheckoutInput = z.infer<typeof CheckoutSchema>;
@@ -259,7 +261,9 @@ export const createAccessCheckout = createServerFn({ method: "POST" })
 
       // 4) Rekord płatności + transakcja w Tpay.
       const panel =
-        product.kind === "unlock"
+        audience === "investor" && data.returnTo === "sklep"
+          ? "/sklep"
+          : product.kind === "unlock"
           ? "/inwestor/umowy"
           : audience === "investor"
             ? "/inwestor/abonament"

@@ -10,7 +10,7 @@
 //  4) potwierdzenie: UPO z SI*GIIF albo dowód nadania / ZPO.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
+import { requireInvestorManagement } from "@/lib/investor-plan/pro-middleware";
 import type { GiifReportPayload } from "@/lib/aml/aml-types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AML: dostęp do relacji/JSON dynamicznych
@@ -26,7 +26,7 @@ function customerName(c: any): string {
 
 // ── 1. Przygotowanie zgłoszenia (bez podpisu) ────────────────────────
 export const prepareGiifReport = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) =>
     z
       .object({
@@ -206,7 +206,7 @@ export const prepareGiifReport = createServerFn({ method: "POST" })
 
 // ── 2. Generowanie XML + PDF, wersja i hash ──────────────────────────
 export const generateGiifDocuments = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -330,7 +330,7 @@ export const generateGiifDocuments = createServerFn({ method: "POST" })
 
 /** Linki do pobrania: XML, PDF i potwierdzenie (UPO / dowód nadania). */
 export const getGiifReportDownloads = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) => z.object({ reportId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const db = loose(context.supabase);
@@ -358,7 +358,7 @@ export const getGiifReportDownloads = createServerFn({ method: "POST" })
   });
 
 export const listGiifReports = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .handler(async ({ context }) => {
     const { data, error } = await loose(context.supabase)
       .from("aml_reports")
@@ -423,7 +423,7 @@ const ConfirmationFile = z.object({
  * trafiają do archiwum zgłoszenia.
  */
 export const buildGiifPaperNotice = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) =>
     z
       .object({
@@ -486,7 +486,7 @@ export const buildGiifPaperNotice = createServerFn({ method: "POST" })
  * opcjonalnie skan dowodu nadania).
  */
 export const recordGiifSubmission = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) =>
     z
       .object({
@@ -562,7 +562,7 @@ export const recordGiifSubmission = createServerFn({ method: "POST" })
 
 /** Dołączenie potwierdzenia po fakcie: UPO z SI*GIIF albo dowód nadania / ZPO. */
 export const uploadGiifConfirmation = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) =>
     z.object({ reportId: z.string().uuid(), confirmation: ConfirmationFile }).parse(data),
   )

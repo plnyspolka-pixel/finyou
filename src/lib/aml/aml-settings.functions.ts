@@ -5,7 +5,7 @@
 // ponownego wpisywania danych). Braki w profilu to ostrzeżenie, nie blokada.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireInvestorPro } from "@/lib/investor-plan/pro-middleware";
+import { requireInvestorManagement } from "@/lib/investor-plan/pro-middleware";
 import {
   readinessFromStatus,
   statusFromReadiness,
@@ -128,7 +128,7 @@ function toView(row: any): AmlSettingsView {
  * z danych profilu inwestora — inwestor niczego nie wpisuje ponownie.
  */
 export const getAmlSettings = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .handler(async ({ context }): Promise<AmlSettingsView> => {
     const db = loose(context.supabase);
     const { data: existing } = await db
@@ -194,7 +194,7 @@ const UpdateSettingsInput = z.object({
 });
 
 export const updateAmlSettings = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) => UpdateSettingsInput.parse(data))
   .handler(async ({ data, context }): Promise<AmlSettingsView> => {
     const db = loose(context.supabase);
@@ -225,7 +225,7 @@ export const updateAmlSettings = createServerFn({ method: "POST" })
 
 /** Inwestor oznacza kroki przygotowania do wysyłki w SI*GIIF. */
 export const setAmlGiifReadiness = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .inputValidator((data) =>
     z.object({ hasQualifiedSignature: z.boolean(), registeredInSiGiif: z.boolean() }).parse(data),
   )
@@ -271,7 +271,7 @@ export interface AmlOverview {
 
 /** Liczniki na ekran Przegląd. */
 export const getAmlOverview = createServerFn({ method: "POST" })
-  .middleware([requireInvestorPro])
+  .middleware([requireInvestorManagement])
   .handler(async ({ context }): Promise<AmlOverview> => {
     const db = loose(context.supabase);
     const uid = context.userId;

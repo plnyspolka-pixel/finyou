@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAccessState } from "@/hooks/use-access";
 import { getInvestorPipelineState } from "@/lib/investor-agreements/pipeline.functions";
+import { getMyManagementModuleState } from "@/lib/storefront/management.functions";
+import { isManagementModulePath } from "@/lib/storefront/products";
 import {
   SUBSCRIPTION_PAYMENT_SENTENCE,
   SUBSCRIPTION_PRICE_SENTENCE,
@@ -110,10 +112,37 @@ function OffersGate({ children }: { children: ReactNode }) {
   );
 }
 
+/** Centrum Zarządzania (moduł sklepu 500 zł / 30 dni) otwiera dokumenty, e-podpis, AML i kalkulator. */
+function ManagementModuleGate({ children }: { children: ReactNode }) {
+  const fetchState = useServerFn(getMyManagementModuleState);
+  const q = useQuery({ queryKey: ["management-module"], queryFn: () => fetchState(), staleTime: 60_000 });
+  if (q.isLoading) return null;
+  if (q.data?.active) return <>{children}</>;
+  return (
+    <div className="mx-auto max-w-2xl space-y-3 py-6">
+      <SubscriptionRequiredCard />
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
+          <span className="text-muted-foreground">
+            Potrzebujesz tylko dokumentów, CRM, e-podpisu i compliance? Moduł Centrum Zarządzania
+            kosztuje 500 zł za 30 dni.
+          </span>
+          <Button asChild variant="outline">
+            <a href="/sklep#centrum">Kup Centrum Zarządzania</a>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function InvestorSubscriptionGate({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { loading, hasFullAccess, state } = useAccessState("investor");
   if (isFreeInvestorPath(pathname) || loading) return <>{children}</>;
+  if (!hasFullAccess && isManagementModulePath(pathname)) {
+    return <ManagementModuleGate>{children}</ManagementModuleGate>;
+  }
   if (!hasFullAccess) {
     return (
       <div className="mx-auto max-w-2xl py-6">
