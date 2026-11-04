@@ -1264,36 +1264,76 @@ export async function maybeAutoPublishJob(job: JobRow): Promise<boolean> {
 /** Po tylu minutach w przygotowaniu (scenariusz → głos → zlecenie HeyGen) zadanie uznajemy za przerwane. */
 export const STUDIO_STALLED_PRE_RENDER_MIN = 30;
 
+/** Znacznik w `last_error`: zadanie raz już wróciło do kolejki po ucięciu. */
+export const STALL_RETRY_NOTE =
+  "[Studio] Przygotowanie ucięte w trakcie przebiegu — zadanie wróciło do kolejki (1/1).";
+
+/** Ucięte przygotowanie: pierwszy raz wraca do kolejki, drugi raz → failed. */
+export function stalledJobAction(lastError: string | null | undefined): "requeue" | "fail" {
+  return (lastError ?? "").includes(STALL_RETRY_NOTE) ? "fail" : "requeue";
+}
+
 /**
  * Zadania przerwane przed zleceniem renderu (przebieg ucięty w trakcie
  * `generating_script` / `generating_audio` / `uploading`) wisiały w tym
  * stanie na zawsze (25.10.2026: rolka 2 dni w „uploading” blokowała zapas
- * autopilota). Przechodzą w `failed` z jasnym powodem: nie ponawiamy ich
- * sami, bo render w HeyGen mógł już zostać zlecony i zapłacony — `retry_studio_job`
- * zrobi to świadomie, a autopilot uzupełni zapas nową rolką.
+ * autopilota), a potem przechodziły od razu w `failed` — 28.10, 30.10 i
+ * 04.11.2026 przepadły tak gotowe scenariusze. Teraz ucięte zadanie RAZ
+ * wraca do kolejki: scenariusz i twarze są zapisane przy jobie, więc
+ * ponowienie nie płaci drugi raz za AI. HeyGen nie dostał zlecenia
+ * (`heygen_video_id` pusty — zapis id idzie zaraz po odpowiedzi HeyGena).
+ * Drugie ucięcie → `failed` z jasnym powodem.
  */
 export async function failStalledStudioJobs(now: Date = new Date()): Promise<number> {
   const cutoff = new Date(now.getTime() - STUDIO_STALLED_PRE_RENDER_MIN * 60_000).toISOString();
-  const { data, error } = await supabaseAdmin
+  const { data: stalled, error } = await supabaseAdmin
     .from("studio_video_jobs")
-    .update({
-      status: "failed",
-      last_error:
-        `Przygotowanie przerwane – zadanie wisiało ponad ${STUDIO_STALLED_PRE_RENDER_MIN} min przed ` +
-        "zleceniem renderu (przebieg ucięty w trakcie). Ponów (retry_studio_job), jeśli rolka jest potrzebna.",
-    })
+    .select("id, last_error")
     .in("status", ["generating_script", "generating_audio", "uploading"])
     .is("heygen_video_id", null)
     .lt("updated_at", cutoff)
-    .select("id");
+    .limit(20);
   if (error) {
     console.warn(`[Studio] failStalledStudioJobs: ${error.message}`);
     return 0;
   }
-  return data?.length ?? 0;
+  let handled = 0;
+  for (const row of (stalled ?? []) as { id: string; last_error: string | null }[]) {
+    const action = stalledJobAction(row.last_error);
+    const patch =
+      action === "requeue"
+        ? { status: "queued", last_error: STALL_RETRY_NOTE }
+        : {
+            status: "failed",
+            last_error:
+              `Przygotowanie przerwane dwa razy – zadanie wisiało ponad ${STUDIO_STALLED_PRE_RENDER_MIN} min przed ` +
+              "zleceniem renderu (przebieg ucięty w trakcie). Ponów (retry_studio_job), jeśli rolka jest potrzebna.",
+          };
+    // Warunki jak przy wyborze — równoległy przebieg nie nadpisze joba, który właśnie ruszył.
+    const { data: updated } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .update(patch)
+      .eq("id", row.id)
+      .in("status", ["generating_script", "generating_audio", "uploading"])
+      .is("heygen_video_id", null)
+      .lt("updated_at", cutoff)
+      .select("id");
+    if (updated?.length) handled++;
+  }
+  return handled;
 }
 
-export async function runStudioVideoTick(): Promise<{
+/**
+ * Ile czasu przebiegu (od startu ticka) może już minąć, by jeszcze zacząć
+ * przygotowanie rolki (lektor, przebitki, wysyłka do HeyGen — zwykle 1–3 min).
+ * Później job czeka w kolejce na następny przebieg, zamiast zostać ucięty
+ * przez limit czasu żądania crona.
+ */
+export const STUDIO_PREP_START_BUDGET_MS = 90_000;
+/** Jedna rolka na przebieg — dwie pod rząd nie mieszczą się w limicie żądania. */
+export const STUDIO_JOBS_PER_TICK = 1;
+
+export async function runStudioVideoTick(opts: { startedAt?: number } = {}): Promise<{
   processed: number;
   failed: number;
   remaining: number;
@@ -1301,11 +1341,26 @@ export async function runStudioVideoTick(): Promise<{
   deferred: string | null;
   completed: number;
   autoPublished: number;
-  /** Zadania przerwane przed zleceniem renderu → failed. */
+  /** Zadania przerwane przed zleceniem renderu → z powrotem w kolejce albo failed. */
   stalled: number;
 }> {
   const stalled = await failStalledStudioJobs();
-  const queue = await processStudioVideoQueue(2);
+  const elapsed = opts.startedAt != null ? Date.now() - opts.startedAt : 0;
+  let queue: Awaited<ReturnType<typeof processStudioVideoQueue>>;
+  if (elapsed > STUDIO_PREP_START_BUDGET_MS) {
+    const { count } = await supabaseAdmin
+      .from("studio_video_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued");
+    queue = {
+      processed: 0,
+      failed: 0,
+      remaining: count ?? 0,
+      deferred: `przebieg trwa już ${Math.round(elapsed / 1000)} s — przygotowanie w następnym ticku`,
+    };
+  } else {
+    queue = await processStudioVideoQueue(STUDIO_JOBS_PER_TICK);
+  }
   const poll = await pollStudioRenderingJobs();
   return { ...queue, ...poll, stalled };
 }
