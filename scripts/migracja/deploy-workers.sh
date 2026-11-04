@@ -25,7 +25,7 @@ WORKER_URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' "$STATE/deploy.log" | 
 echo "== 3. Sekrety Workera"
 HOOK="v1,whsec_$(printf '%s' "$(keep send_email_hook_secret)" | base64 -w0)"
 jq -cn --arg sr "$SR" --arg an "$AN" --arg p "$(keep proxy_shared_secret)" --arg h "$HOOK" --arg c "$(keep cron_secret)" \
-  '{SUPABASE_SERVICE_ROLE_KEY:$sr, SUPABASE_PUBLISHABLE_KEY:$an, SUPABASE_ANON_KEY:$an, PROXY_SHARED_SECRET:$p, SEND_EMAIL_HOOK_SECRET:$h, CRON_SECRET:$c}' \
+  '{SUPABASE_SERVICE_ROLE_KEY:$sr, SUPABASE_PUBLISHABLE_KEY:$an, PROXY_SHARED_SECRET:$p, SEND_EMAIL_HOOK_SECRET:$h, CRON_SECRET:$c}' \
   > "$STATE/worker-secrets.json"; chmod 600 "$STATE/worker-secrets.json"
 npx --yes wrangler@4 secret bulk "$STATE/worker-secrets.json"
 
