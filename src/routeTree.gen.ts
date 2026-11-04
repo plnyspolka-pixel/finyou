@@ -140,6 +140,7 @@ import { Route as InwestorPlatnosciRouteImport } from './routes/inwestor.platnos
 import { Route as InwestorPodpisyRouteImport } from './routes/inwestor.podpisy'
 import { Route as InwestorProfilRouteImport } from './routes/inwestor.profil'
 import { Route as InwestorProjektyRouteImport } from './routes/inwestor.projekty'
+import { Route as InwestorSklepRouteImport } from './routes/inwestor.sklep'
 import { Route as InwestorSzkoleniaRouteImport } from './routes/inwestor.szkolenia'
 import { Route as InwestorUmowyRouteImport } from './routes/inwestor.umowy'
 import { Route as InwestorWiadomosciRouteImport } from './routes/inwestor.wiadomosci'
@@ -999,6 +1000,11 @@ const InwestorProfilRoute = InwestorProfilRouteImport.update({
 const InwestorProjektyRoute = InwestorProjektyRouteImport.update({
   id: '/projekty',
   path: '/projekty',
+  getParentRoute: () => InwestorRoute,
+} as any)
+const InwestorSklepRoute = InwestorSklepRouteImport.update({
+  id: '/sklep',
+  path: '/sklep',
   getParentRoute: () => InwestorRoute,
 } as any)
 const InwestorSzkoleniaRoute = InwestorSzkoleniaRouteImport.update({
@@ -2193,6 +2199,7 @@ export interface FileRoutesByFullPath {
   '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
+  '/inwestor/sklep': typeof InwestorSklepRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -2514,6 +2521,7 @@ export interface FileRoutesByTo {
   '/inwestor/platnosci': typeof InwestorPlatnosciRoute
   '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
+  '/inwestor/sklep': typeof InwestorSklepRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -2841,6 +2849,7 @@ export interface FileRoutesById {
   '/inwestor/podpisy': typeof InwestorPodpisyRoute
   '/inwestor/profil': typeof InwestorProfilRoute
   '/inwestor/projekty': typeof InwestorProjektyRouteWithChildren
+  '/inwestor/sklep': typeof InwestorSklepRoute
   '/inwestor/szkolenia': typeof InwestorSzkoleniaRoute
   '/inwestor/umowy': typeof InwestorUmowyRoute
   '/inwestor/wiadomosci': typeof InwestorWiadomosciRoute
@@ -3172,6 +3181,7 @@ export interface FileRouteTypes {
     | '/inwestor/podpisy'
     | '/inwestor/profil'
     | '/inwestor/projekty'
+    | '/inwestor/sklep'
     | '/inwestor/szkolenia'
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
@@ -3493,6 +3503,7 @@ export interface FileRouteTypes {
     | '/inwestor/platnosci'
     | '/inwestor/podpisy'
     | '/inwestor/profil'
+    | '/inwestor/sklep'
     | '/inwestor/szkolenia'
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
@@ -3819,6 +3830,7 @@ export interface FileRouteTypes {
     | '/inwestor/podpisy'
     | '/inwestor/profil'
     | '/inwestor/projekty'
+    | '/inwestor/sklep'
     | '/inwestor/szkolenia'
     | '/inwestor/umowy'
     | '/inwestor/wiadomosci'
@@ -5095,6 +5107,13 @@ declare module '@tanstack/react-router' {
       path: '/projekty'
       fullPath: '/inwestor/projekty'
       preLoaderRoute: typeof InwestorProjektyRouteImport
+      parentRoute: typeof InwestorRoute
+    }
+    '/inwestor/sklep': {
+      id: '/inwestor/sklep'
+      path: '/sklep'
+      fullPath: '/inwestor/sklep'
+      preLoaderRoute: typeof InwestorSklepRouteImport
       parentRoute: typeof InwestorRoute
     }
     '/inwestor/szkolenia': {
@@ -6761,6 +6780,7 @@ interface InwestorRouteChildren {
   InwestorPodpisyRoute: typeof InwestorPodpisyRoute
   InwestorProfilRoute: typeof InwestorProfilRoute
   InwestorProjektyRoute: typeof InwestorProjektyRouteWithChildren
+  InwestorSklepRoute: typeof InwestorSklepRoute
   InwestorSzkoleniaRoute: typeof InwestorSzkoleniaRoute
   InwestorUmowyRoute: typeof InwestorUmowyRoute
   InwestorWiadomosciRoute: typeof InwestorWiadomosciRoute
@@ -6787,6 +6807,7 @@ const InwestorRouteChildren: InwestorRouteChildren = {
   InwestorPodpisyRoute: InwestorPodpisyRoute,
   InwestorProfilRoute: InwestorProfilRoute,
   InwestorProjektyRoute: InwestorProjektyRouteWithChildren,
+  InwestorSklepRoute: InwestorSklepRoute,
   InwestorSzkoleniaRoute: InwestorSzkoleniaRoute,
   InwestorUmowyRoute: InwestorUmowyRoute,
   InwestorWiadomosciRoute: InwestorWiadomosciRoute,

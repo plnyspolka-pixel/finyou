@@ -14,7 +14,6 @@ import { MktButton } from "./primitives";
 import { TRUSTPILOT_PROFILE_URL } from "@/lib/trustpilot";
 import { ACTIVE_SOCIAL_LINKS, type SocialKey } from "./social-links";
 import { LOAN_PRODUCTS } from "@/lib/loan-products";
-import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 
 /**
  * Finance You — marketing chrome (header, footer, sticky CTA) + shell wrapper.
@@ -27,7 +26,7 @@ export type MarketingPage =
   | "klient"
   | "inwestor"
   | "inwestorModul"
-  | "sklep"
+  | "windykator"
   | "posrednik"
   | "blog"
   | "kalkulator";
@@ -69,14 +68,11 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   klient: "/dla-klienta",
   inwestor: "/",
   inwestorModul: "/",
-  sklep: "/sklep",
+  windykator: "/windykator-ai",
   posrednik: "/dla-posrednika",
   blog: "/blog",
   kalkulator: "/kalkulator-ltv",
 };
-
-/** Pozycja nawigacji podświetlana na danej stronie — podstrony modułów należą do „Inwestor". */
-const NAV_KEY: Partial<Record<MarketingPage, string>> = { inwestorModul: "inwestor" };
 
 const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   home: { label: "Wybierz ścieżkę", href: "#sciezki" },
@@ -86,24 +82,12 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
   inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
-  sklep: { label: "Złóż zlecenie", href: "/inwestor/umowy" },
+  // Windykator AI (Pakiet Startowy dla wierzycieli) — osobny produkt; nagłówek jak na landingu.
+  windykator: { label: "Zostań partnerem", href: "/#cennik" },
   posrednik: { label: "Załóż konto pośrednika", href: "/posrednicy/rejestracja" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
 };
-
-/** Kotwice podstron inwestora na /dla-inwestora — sub-menu pod pozycją "Inwestor".
- *  `hidden` zdejmuje wpis z menu, gdy sekcja jest schowana na landingu
- *  (flagi SHOW w routes/dla-inwestora.tsx) — wpis zostaje, żeby dało się go przywrócić. */
-const INVESTOR_ANCHORS: { label: string; hash: string; hidden?: boolean }[] = [
-  { label: "Szkolenie — program", hash: "#akademia", hidden: true },
-  { label: "7 warstw ochrony inwestycji", hash: "#ochrona", hidden: true },
-  { label: "Windykacja AI", hash: "#windykacja-ai", hidden: true },
-  { label: "Co zyskujesz", hash: "#korzysci", hidden: true },
-  { label: "Cennik", hash: "#cennik" },
-  // Darmowe materiały są w stopce (osobna kolumna), nie w menu.
-  { label: "Darmowe materiały", hash: "#materialy", hidden: true },
-];
 
 /** Rozwijane menu „Klient” — podstrony produktów z lib/loan-products. */
 const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string }[] }[] = [
@@ -126,23 +110,6 @@ const CLIENT_MENU_GROUPS: { label: string; links: { label: string; href: string 
   },
 ];
 
-type InvestorMenuLink = { label: string; href: string; sep?: boolean };
-
-/** Sub-menu "Inwestor": najpierw podstrony modułów (/dla-inwestora/<moduł>),
- *  potem kotwice landingu — na samym landingu same hashe, gdzie indziej pełna ścieżka. */
-function investorMenuLinks(page: MarketingPage): InvestorMenuLink[] {
-  const modules = INVESTOR_MODULES.map((m) => ({
-    label: m.menuLabel,
-    href: investorModulePath(m.slug),
-  }));
-  const anchors = INVESTOR_ANCHORS.filter((a) => !a.hidden).map((a, i) => ({
-    label: a.label,
-    href: page === "inwestor" ? a.hash : PAGE_PATH.inwestor + a.hash,
-    sep: i === 0,
-  }));
-  return [...modules, ...anchors];
-}
-
 export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   const client = page === "klient" || page === "kalkulator";
   const [open, setOpen] = useState(false);
@@ -151,7 +118,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   // (strona główna), Klient, Pośrednik — potem Cennik, O nas, Blog, FAQ.
   const nav = [
     { label: "Inwestor", href: "/" },
-    { label: "Sklep", href: "/sklep" },
     { label: "Klient", href: "/dla-klienta" },
     { label: "Pośrednik", href: "/dla-posrednika" },
     { label: "Cennik", href: "/#cennik" },
@@ -202,12 +168,8 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               ))}
               <a href="/logowanie">Zaloguj</a>
             </nav>
-            <MktButton
-              size="sm"
-              variant="gold"
-              href={page === "sklep" ? "/inwestor/umowy" : "/#cennik"}
-            >
-              {page === "sklep" ? "Złóż zlecenie" : "Zostań partnerem"}
+            <MktButton size="sm" variant="gold" href="/#cennik">
+              Zostań partnerem
             </MktButton>
             <Button
               className="fy-sales-menu-toggle"
@@ -291,7 +253,7 @@ export function SiteFooter() {
       h: "Ścieżki",
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
-        { t: "Sklep — produkty inwestora", href: "/sklep" },
+        { t: "Windykator AI — Pakiet Startowy", href: "/windykator-ai" },
         { t: "Jesteś inwestorem? →", href: PAGE_PATH.inwestor },
         { t: "Pośrednik", href: PAGE_PATH.posrednik },
         { t: "Program partnerski", href: "/program-partnerski" },

@@ -20,6 +20,7 @@ import {
   PenLine,
   FileSignature,
   CalendarClock,
+  ShoppingBag,
 } from "lucide-react";
 import type { NavGroup, NavItem } from "@/components/layout/panel-shell";
 
@@ -62,6 +63,9 @@ const MAIN_ITEMS: NavItem[] = [
   // 4 h indywidualnych konsultacji w okresie abonamentu (Regulamin 1.1, § 3 ust. 3).
   { to: "/inwestor/konsultacja", label: "Indywidualna konsultacja", icon: CalendarClock },
   { to: "/inwestor/kalkulator", label: "Kalkulator compliance", icon: Calculator },
+  // Sklep panelu (bez abonamentu): pojedyncze lekcje, kalkulator compliance
+  // (HIT 9,99 zł), raport KW i „Moje zakupy" — jedyny sklep (publiczny /sklep → 301).
+  { to: "/inwestor/sklep", label: "Sklep", icon: ShoppingBag },
   // Cennik abonamentu, stan dostępu oraz historia płatności i faktur.
   { to: "/inwestor/abonament", label: "Dostęp i płatności", icon: CreditCard },
   { to: "/inwestor/profil", label: "Profil", icon: User },

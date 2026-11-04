@@ -37,11 +37,9 @@ interface Props {
    *  webhook Tpay po wpłacie, z danych tego formularza. */
   guestPeriod?: BillingPeriod;
   initialDiscountCode?: string;
-  /** Powrót z Tpay po zakupie zalogowanego inwestora (domyślnie panel). */
-  returnTo?: "panel" | "sklep";
 }
 
-export function TpayAccessCheckoutForm({ product, matchId, guestPeriod, initialDiscountCode, returnTo = "panel" }: Props) {
+export function TpayAccessCheckoutForm({ product, matchId, guestPeriod, initialDiscountCode }: Props) {
   const checkoutFn = useServerFn(createAccessCheckout);
   const guestCheckoutFn = useServerFn(createGuestInvestorCheckout);
   const gusFn = useServerFn(gusCompanyLookup);
@@ -234,7 +232,7 @@ export function TpayAccessCheckoutForm({ product, matchId, guestPeriod, initialD
       };
       const res: { error?: string; paymentUrl?: string } = guestPeriod
         ? await guestCheckoutFn({ data: { ...buyer, period: guestPeriod } })
-        : await checkoutFn({ data: { ...buyer, productCode: product.code, matchId, returnTo } });
+        : await checkoutFn({ data: { ...buyer, productCode: product.code, matchId } });
       if (res.error) {
         toast.error(res.error);
         return;

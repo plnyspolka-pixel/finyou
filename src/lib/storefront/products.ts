@@ -1,34 +1,41 @@
-// Produkty sklepu inwestora (/sklep) — jedno źródło prawdy dla strony,
-// koszyka, wyceny po stronie serwera i sprawdzania uprawnień.
+// Produkty sklepu panelu inwestora (/inwestor/sklep) — jedno źródło prawdy
+// dla strony, koszyka, wyceny po stronie serwera i sprawdzania uprawnień.
 //
-// Decyzja właściciela (04.11.2026):
-//  • Akademia Inwestora sprzedawana MODUŁAMI (wątki z grafik
-//    public/marketing/akademia/modul-N.png), każdy moduł 500 zł. Lekcja 1
-//    pozostaje bezpłatna; pakiet „cała Akademia" zostaje.
-//  • Dokumenty + CRM + podpis elektroniczny + compliance = jeden moduł
-//    „Centrum Zarządzania", 500 zł za 30 dni (płatność jednorazowa za okres,
-//    bez automatycznego odnawiania — tak jak abonament inwestora).
+// Decyzja właściciela 04.11.2026 (wieczór): publicznego sklepu /sklep nie ma
+// (301 → /inwestor/sklep). Sklep panelu sprzedaje WYŁĄCZNIE:
+//  • pojedyncze lekcje Akademii (149 zł; lekcja 1 bezpłatna) — item_kind
+//    "lesson", item_id = uuid training_videos,
+//  • „Pełna mapa szans i zagrożeń — analiza finansowa pożyczki" (HIT, 9,99 zł):
+//    pełny kalkulator compliance w panelu (/inwestor/kalkulator) na 30 dni;
+//    item_kind "course", item_id "kalkulator:<unikalny sufiks>" — każda tura to
+//    osobne uprawnienie, okres liczymy z paid_at opłaconych zamówień,
+//  • raport analityczny jednej księgi wieczystej (99 zł) — item_kind "kw".
 //
-// Bez zmian w schemacie bazy: oba produkty są zapisywane jako item_kind
-// "course" (dozwolony przez CHECK store_entitlements i fulfill_store_order):
-//  • moduł Akademii: item_id "module-<n>",
-//  • Centrum Zarządzania: item_id "centrum:<unikalny sufiks>" — każda opłacona
-//    30-dniowa tura to osobne uprawnienie, okres liczymy z paid_at zamówień.
+// WYCOFANE ze sprzedaży (priceItems je odrzuca), ale opłacone wcześniej
+// uprawnienia nadal działają (assertEntitled, managementModuleActive):
+//  • moduły Akademii (item_id "module-<n>") i pakiet „cała Akademia" ("academy")
+//    — ACADEMY_MODULES zostaje jako grupowanie lekcji w katalogu,
+//  • Centrum Zarządzania (item_id "centrum:<sufiks>", tury po 30 dni).
 
-//  • „Pełna mapa szans i zagrożeń — analiza finansowa pożyczki" (HIT, 9,99 zł,
-//    decyzja właściciela 04.11.2026): produkt wejściowy, który odblokowuje
-//    pełny kalkulator compliance w panelu (/inwestor/kalkulator) na 30 dni.
-//    Zapis jak Centrum Zarządzania: item_kind "course", item_id
-//    "kalkulator:<unikalny sufiks>", okres liczony z paid_at.
-
-export const ACADEMY_MODULE_PRICE_PLN = 500;
-export const ACADEMY_COURSE_PRICE_PLN = 1990;
 /** Pojedyncza lekcja Akademii (lekcja 1 bezpłatna). */
 export const ACADEMY_LESSON_PRICE_PLN = 149;
-export const MANAGEMENT_MODULE_PRICE_PLN = 500;
+/** Długość jednej opłaconej tury Centrum Zarządzania (produkt wycofany; okresy liczone dla dawnych zakupów). */
 export const MANAGEMENT_MODULE_DAYS = 30;
-/** Raport analityczny jednej księgi wieczystej (/sklep#analityk, /dla-inwestora/analityk-ai). */
+/** Raport analityczny jednej księgi wieczystej (/inwestor/sklep#raport-kw, /dla-inwestora/analityk-ai#raport-kw). */
 export const KW_REPORT_PRICE_PLN = 99;
+
+/** Tytuł lekcji bez numeru porządkowego („7. Interpretacja…” → „Interpretacja…”). */
+export const cleanLessonTitle = (t: string) => t.replace(/^\s*\d{1,2}\s*[.)]\s*/, "");
+
+/** „ok. 35 min” / „1 h 10 min”; null, gdy nagranie nie ma czasu w bazie (training_videos.duration_seconds). */
+export function formatLessonDuration(seconds: number | null | undefined): string | null {
+  if (!seconds || seconds <= 0) return null;
+  const min = Math.max(1, Math.round(seconds / 60));
+  if (min < 60) return `ok. ${min} min`;
+  const h = Math.floor(min / 60);
+  const rest = min % 60;
+  return rest ? `${h} h ${rest} min` : `${h} h`;
+}
 
 /** HIT: pełna mapa szans i zagrożeń — kalkulator compliance na 30 dni. */
 export const CALCULATOR_UNLOCK_PRICE_GROSZ = 999;
@@ -45,9 +52,7 @@ export function isCalculatorPath(pathname: string): boolean {
   return p === CALCULATOR_PATH || p.startsWith(`${CALCULATOR_PATH}/`);
 }
 
-/** Identyfikator koszyka (klient) dla Centrum Zarządzania. */
-export const MANAGEMENT_CART_ID = "centrum-30d";
-/** Prefiks item_id uprawnienia Centrum Zarządzania w store_entitlements. */
+/** Prefiks item_id uprawnienia Centrum Zarządzania w store_entitlements (produkt wycofany). */
 export const MANAGEMENT_ITEM_PREFIX = "centrum:";
 
 export interface AcademyModule {
@@ -130,7 +135,7 @@ export function academyModuleForLesson(lessonNumber: number): AcademyModule | nu
   return ACADEMY_MODULES.find((m) => lessonNumber >= m.from && (m.to === null || lessonNumber <= m.to)) ?? null;
 }
 
-/** Ścieżki panelu inwestora otwierane przez Centrum Zarządzania (bez abonamentu). */
+/** Ścieżki panelu inwestora otwierane przez aktywny (dawniej opłacony) okres Centrum Zarządzania. */
 export const MANAGEMENT_MODULE_PATHS = [
   "/inwestor/kreator-dokumentow",
   "/inwestor/podpisy",

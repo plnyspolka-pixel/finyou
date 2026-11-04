@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Stan modułów sklepu dla UI (bramka panelu, sklep): Centrum Zarządzania i
- *  HIT „mapa szans” (kalkulator). Twarde sprawdzenie: requireInvestorManagement. */
+/** Stan produktów sklepu dla UI (bramka panelu, /inwestor/sklep): dawne Centrum
+ *  Zarządzania i HIT „mapa szans” (kalkulator). Twarde sprawdzenie: requireInvestorManagement. */
 export const getMyManagementModuleState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

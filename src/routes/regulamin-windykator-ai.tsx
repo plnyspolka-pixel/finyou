@@ -7,7 +7,7 @@ export const Route=createFileRoute("/regulamin-windykator-ai")({
   component:Terms,
 });
 function Terms(){
-  return <MarketingShell page="sklep">
+  return <MarketingShell page="windykator">
     <main className="mx-auto max-w-4xl px-5 py-14 text-slate-900">
       <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">
         Wersja robocza z 2 listopada 2026 r. Dokument wymaga zatwierdzenia prawnego przed włączeniem płatności.

@@ -102,7 +102,7 @@ function InvestorModulePage() {
         <Section id="program" tint>
           <SectionHead
             title="Szkolenie, po którym sam ocenisz zabezpieczenie, umowę i ryzyko"
-            sub="Wszystkie lekcje w siedmiu modułach. Lekcję 1 obejrzysz za darmo, pojedynczą lekcję albo cały moduł kupisz od ręki — a w abonamencie partnera masz całość."
+            sub="Wszystkie lekcje w siedmiu modułach. Lekcję 1 obejrzysz za darmo, pojedyncze lekcje kupisz od ręki w sklepie panelu inwestora — a w abonamencie partnera masz całość."
           />
           <TrainingCatalog />
         </Section>
@@ -134,7 +134,7 @@ function InvestorModulePage() {
             sub="Wpisz numer księgi wieczystej dowolnej nieruchomości — po opłaceniu pobieramy księgę i generujemy raport analityczny w PDF."
           />
           <div style={{ marginTop: "2rem", maxWidth: "44rem", marginInline: "auto" }}>
-            <KwReportOrder mode="redirect" />
+            <KwReportOrder />
           </div>
         </Section>
       )}

@@ -869,7 +869,7 @@
 .fy-article--light tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 60%, transparent); }
 .fy-article--light h2 { border-top: none; padding-top: 0; }
 
-/* ── Sklep: elementy współdzielone z podstronami modułów (formularz KW, przyciski koszyka) — przeniesione z routes/sklep.tsx 04.11.2026 ── */
+/* ── Formularz raportu KW i przyciski koszyka na podstronach modułów (/dla-inwestora/analityk-ai, szkolenie); koszyk realizuje sklep panelu /inwestor/sklep (04.11.2026) ── */
 .fy-store-add{background:linear-gradient(105deg,#d8a343,#fff0bd,#d4a046);color:#141b2e;border:0;border-radius:.65rem;font-weight:850;cursor:pointer;padding:.7rem .85rem;min-height:40px;font-size:.78rem;}
 .fy-store-add:disabled{opacity:.68;cursor:default;}
 .fy-store-kw-form{align-self:center;display:grid;gap:.8rem;background:rgba(255,255,255,.045);border:1px solid rgba(240,198,103,.21);border-radius:1rem;padding:1.4rem;}

@@ -1,5 +1,5 @@
 // Uzupełnia `training_videos.duration_seconds` (czas lekcji pokazywany na
-// /dla-inwestora/szkolenie i w /sklep) na podstawie plików w Storage
+// /dla-inwestora/szkolenie i w /inwestor/sklep) na podstawie plików w Storage
 // (bucket training-videos) — ffprobe czyta tylko nagłówek MP4 z podpisanego URL.
 //
 //   SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… bun scripts/backfill-lesson-durations.ts [--dry]

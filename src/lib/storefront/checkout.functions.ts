@@ -5,22 +5,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validateKwNumber, compactKwNumber } from "@/lib/kw";
 import { getStoreLegal, storeLegalSha, type StoreLegalCode } from "./legal";
 import {
-  ACADEMY_COURSE_PRICE_PLN,
   ACADEMY_LESSON_PRICE_PLN,
-  ACADEMY_MODULE_PRICE_PLN,
   CALCULATOR_CART_ID,
   CALCULATOR_ITEM_PREFIX,
   CALCULATOR_UNLOCK_DAYS,
   CALCULATOR_UNLOCK_PRICE_GROSZ,
   CALCULATOR_UNLOCK_TITLE,
   KW_REPORT_PRICE_PLN,
-  MANAGEMENT_CART_ID,
-  MANAGEMENT_ITEM_PREFIX,
-  MANAGEMENT_MODULE_DAYS,
-  MANAGEMENT_MODULE_PRICE_PLN,
-  academyModuleById,
   academyModuleForCatalogLesson,
 } from "./products";
+
+// Sklep panelu inwestora (/inwestor/sklep). W sprzedaży WYŁĄCZNIE: pojedyncze
+// lekcje, kalkulator compliance (HIT) i raport KW — decyzja właściciela
+// 04.11.2026. Moduły Akademii, pakiet całej Akademii i Centrum Zarządzania
+// odrzucamy w priceItems; wcześniej opłacone uprawnienia honoruje assertEntitled.
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin as any;
 const UUID = z.string().uuid();
@@ -41,29 +39,18 @@ async function priceItems(raw: z.infer<typeof cartSchema>): Promise<Item[]> {
     let title = "";
     let price = 0;
     if (i.kind === "course") {
-      const mod = academyModuleById(id);
-      if (id === "academy") {
-        price = ACADEMY_COURSE_PRICE_PLN * 100;
-        title = "Pełna Akademia Inwestora";
-      } else if (mod) {
-        price = ACADEMY_MODULE_PRICE_PLN * 100;
-        title = `Akademia Inwestora — Moduł ${mod.number}: ${mod.title}`;
-      } else if (id === MANAGEMENT_CART_ID) {
-        // Każda tura 30 dni to osobne uprawnienie (unikalny item_id) — okres
-        // liczy managementActiveUntil z paid_at opłaconych zamówień.
-        if (items.some((x) => x.id.startsWith(MANAGEMENT_ITEM_PREFIX))) continue;
-        id = MANAGEMENT_ITEM_PREFIX + crypto.randomUUID();
-        price = MANAGEMENT_MODULE_PRICE_PLN * 100;
-        title = `Centrum Zarządzania (dokumenty, CRM, e-podpis, compliance) — ${MANAGEMENT_MODULE_DAYS} dni`;
-      } else if (id === CALCULATOR_CART_ID) {
-        // HIT 9,99 zł: pełny kalkulator compliance na 30 dni — osobne uprawnienie na turę.
-        if (items.some((x) => x.id.startsWith(CALCULATOR_ITEM_PREFIX))) continue;
-        id = CALCULATOR_ITEM_PREFIX + crypto.randomUUID();
-        price = CALCULATOR_UNLOCK_PRICE_GROSZ;
-        title = `${CALCULATOR_UNLOCK_TITLE} — kalkulator compliance, ${CALCULATOR_UNLOCK_DAYS} dni`;
-      } else {
-        throw new Error("Nieznany pakiet.");
+      // Jedyny produkt „course” w sprzedaży: HIT 9,99 zł — pełny kalkulator
+      // compliance na 30 dni, osobne uprawnienie na każdą turę (okres liczy
+      // calculatorUnlockActiveUntilFor z paid_at opłaconych zamówień).
+      if (id !== CALCULATOR_CART_ID) {
+        throw new Error(
+          "Ten produkt nie jest już sprzedawany. W sklepie panelu kupisz pojedyncze lekcje, kalkulator compliance i raport KW.",
+        );
       }
+      if (items.some((x) => x.id.startsWith(CALCULATOR_ITEM_PREFIX))) continue;
+      id = CALCULATOR_ITEM_PREFIX + crypto.randomUUID();
+      price = CALCULATOR_UNLOCK_PRICE_GROSZ;
+      title = `${CALCULATOR_UNLOCK_TITLE} — kalkulator compliance, ${CALCULATOR_UNLOCK_DAYS} dni`;
     } else if (i.kind === "kw") {
       const kw = validateKwNumber(id);
       if (!kw.ok) throw new Error(kw.message);
@@ -89,13 +76,6 @@ async function priceItems(raw: z.infer<typeof cartSchema>): Promise<Item[]> {
     if (keys.has(key)) continue;
     keys.add(key);
     items.push({ kind: i.kind, id, title, amount_grosz: price });
-  }
-  const hasAcademy = items.some((i) => i.kind === "course" && i.id === "academy");
-  if (hasAcademy && items.some((i) => i.kind === "course" && academyModuleById(i.id))) {
-    throw new Error("Wybierz pakiet Akademii albo pojedyncze moduły, nie oba warianty.");
-  }
-  if (hasAcademy && items.some((i) => i.kind === "lesson")) {
-    throw new Error("Wybierz pakiet Akademii albo pojedyncze lekcje, nie oba warianty.");
   }
   if (!items.length) throw new Error("Koszyk jest pusty.");
   return items;
@@ -155,11 +135,11 @@ export const createStoreCheckout = createServerFn({ method: "POST" })
       throw new Error("Do zakupu wymagany jest zweryfikowany adres e-mail konta.");
     }
     const items = await priceItems(data.cart);
-    if (items.some((i) => i.id.startsWith(MANAGEMENT_ITEM_PREFIX) || i.id.startsWith(CALCULATOR_ITEM_PREFIX))) {
+    if (items.some((i) => i.id.startsWith(CALCULATOR_ITEM_PREFIX))) {
       const { getUserRoles, isInternalStaff } = await import("@/lib/access/guards.server");
       const roles = await getUserRoles(context.userId);
       if (!roles.includes("inwestor") && !(await isInternalStaff(context.userId))) {
-        throw new Error("Centrum Zarządzania i kalkulator compliance działają w panelu inwestora — zaloguj się na konto inwestora albo załóż je przed zakupem.");
+        throw new Error("Kalkulator compliance działa w panelu inwestora — zaloguj się na konto inwestora albo załóż je przed zakupem.");
       }
     }
     const needsDpa = items.some(i => i.kind === "document");
@@ -200,8 +180,8 @@ export const createStoreCheckout = createServerFn({ method: "POST" })
         description: "Finance You — produkty cyfrowe",
         email, name: data.buyerName, crc: "STORE:" + order.id,
         notifyUrl: base + "/api/public/payments/tpay-webhook",
-        successUrl: base + "/sklep/moje-zakupy?tpay=success",
-        errorUrl: base + "/sklep/moje-zakupy?tpay=error",
+        successUrl: base + "/inwestor/sklep?tab=zakupy&tpay=success",
+        errorUrl: base + "/inwestor/sklep?tab=zakupy&tpay=error",
       });
       const { error: updateErr } = await admin.from("store_orders")
         .update({ provider_transaction_id: tx.transactionId, status: "pending" })

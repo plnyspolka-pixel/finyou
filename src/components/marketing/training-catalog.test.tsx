@@ -108,18 +108,31 @@ describe("program szkolenia — katalog lekcji", () => {
     expect(screen.getByText("Miękka windykacja")).toBeTruthy();
   });
 
-  it("dodaje lekcję i moduł do koszyka sklepu (sessionStorage)", async () => {
+  it("dodaje pojedynczą lekcję do koszyka sklepu panelu (sessionStorage); modułów nie sprzedaje", async () => {
     render(<TrainingCatalog />);
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /Dodaj do koszyka lekcję: Zarabianie/ }));
     expect(readStoreCart()).toEqual([
       { id: "lesson:l2", type: "lesson", title: "Lekcja: Zarabianie na pożyczkach", price: 149 },
     ]);
-    fireEvent.click(screen.getByRole("button", { name: /Dodaj do koszyka cały moduł 2/ }));
+    expect(screen.queryByRole("button", { name: /cały moduł/i })).toBeNull();
     const cart = JSON.parse(sessionStorage.getItem(STORE_CART_KEY)!);
-    expect(cart.map((i: { id: string }) => i.id)).toEqual(["lesson:l2", "course:module-2"]);
+    expect(cart.map((i: { id: string }) => i.id)).toEqual(["lesson:l2"]);
     expect(screen.getByRole("link", { name: /Przejdź do koszyka/ }).getAttribute("href")).toBe(
-      "/sklep#koszyk",
+      "/inwestor/sklep#koszyk",
     );
+  });
+
+  it("stare pozycje koszyka (moduł Akademii, Centrum Zarządzania) znikają przy odczycie", () => {
+    sessionStorage.setItem(
+      STORE_CART_KEY,
+      JSON.stringify([
+        { id: "course:module-2", type: "course", title: "Moduł 2", price: 500 },
+        { id: "course:centrum-30d", type: "course", title: "Centrum", price: 500 },
+        { id: "course:mapa-szans-30d", type: "course", title: "Kalkulator", price: 9.99 },
+        { id: "kw:KR1P000000000", type: "kw", title: "KW", price: 99 },
+      ]),
+    );
+    expect(readStoreCart().map((i) => i.id)).toEqual(["course:mapa-szans-30d", "kw:KR1P000000000"]);
   });
 });

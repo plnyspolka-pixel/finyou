@@ -1,4 +1,6 @@
-// Komponent pipeline'u zlecenia — używany w panelu (/inwestor/umowy) i w sklepie (/sklep).
+// Komponent pipeline'u zlecenia — strona panelu /inwestor/umowy. To JEDYNE miejsce
+// składania Zlecenia (decyzja właściciela 04.11.2026: bez osadzania w sklepie / na landingu;
+// marketing linkuje tu przez ORDER_PIPELINE z components/marketing/investor-modules.ts).
 // JEDEN pipeline inwestora (pakiet FY-LEGAL-1.0: umowa ramowa, NDA, RODO — wersja 1.0;
 // Inwestor płaci wyłącznie abonament):
 //   1. Dane pożyczkodawcy (osoba fizyczna / JDG / spółka, wyszukiwarka GUS/KRS)
@@ -88,13 +90,9 @@ function errMsg(e: unknown): string {
 export interface InvestorOrderPipelineProps {
   tpay?: string;
   payment?: string;
-  /** Gdzie wraca inwestor z Didit: panel albo sklep (pipeline osadzony w /sklep). */
-  returnTo?: "panel" | "sklep";
-  /** Bez nagłówka strony panelu (osadzenie w sklepie ma własny nagłówek). */
-  hideHeader?: boolean;
 }
 
-export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideHeader = false }: InvestorOrderPipelineProps) {
+export function InvestorOrderPipeline({ tpay, payment }: InvestorOrderPipelineProps) {
   const qc = useQueryClient();
   // Zlecenie wymaga aktywnego abonamentu (twarda bramka: submitInvestorOrder).
   const access = useAccessState("investor");
@@ -144,11 +142,11 @@ export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideH
 
   return (
     <div className="space-y-5">
-      {hideHeader ? null : <FancyPageHeader
+      <FancyPageHeader
         eyebrow="Złóż zlecenie"
         title="Od danych inwestora do Zlecenia"
         subtitle="Dziesięć kroków w jednym miejscu: dane stron, rachunek do spłaty, KYC, screening sankcyjny, źródło środków, komplet umów i Zlecenie poszukiwania Projektów."
-      />}
+      />
 
       {tpay && payment ? (
         <TpayReturnStatus paymentId={payment} tpayParam={tpay} onPaid={refresh} />
@@ -177,7 +175,7 @@ export function InvestorOrderPipeline({ tpay, payment, returnTo = "panel", hideH
       </PipelineStepCard>
 
       <PipelineStepCard step={step("kyc")}>
-        <KycStep pipe={pipe} onDone={refresh} returnTo={returnTo} />
+        <KycStep pipe={pipe} onDone={refresh} />
       </PipelineStepCard>
 
       <PipelineStepCard step={step("screening")}>
@@ -321,7 +319,7 @@ function PlanBanner() {
 
 // ── Krok 3: KYC Didit ────────────────────────────────────────────────────────
 
-function KycStep({ pipe, onDone, returnTo = "panel" }: { pipe: any; onDone: () => void; returnTo?: "panel" | "sklep" }) {
+function KycStep({ pipe, onDone }: { pipe: any; onDone: () => void }) {
   const startDidit = useServerFn(startInvestorSelfVerification);
   const fetchDidit = useServerFn(getMyInvestorVerification);
   const variant = pipe.investor?.entity_variant as string | undefined;
@@ -332,7 +330,6 @@ function KycStep({ pipe, onDone, returnTo = "panel" }: { pipe: any; onDone: () =
         data: {
           entityType: variant === "osoba_prawna" ? "firma" : "osoba",
           callbackBase: typeof window !== "undefined" ? window.location.origin : undefined,
-          returnTo,
         },
       }),
     onSuccess: (res: any) => {
