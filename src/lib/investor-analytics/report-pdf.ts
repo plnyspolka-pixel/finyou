@@ -166,11 +166,6 @@ export type InvestorReportSource =
 export const GRADE_SECTION_TITLE = "Ocena inwestycyjna A–E";
 export const SELLABILITY_SECTION_TITLE = "Kategoria zbywalności (A–E)";
 
-export const REPORT_TEASER_NOTE =
-  "Wersja przed rezerwacją — dane identyfikujące ukryte. Numer KW jest zamaskowany, a treść " +
-  "księgi, cytaty z niej, nazwiska i adres odsłaniamy po Ujawnieniu (rezerwacji) — razem " +
-  "z danymi kontaktowymi klienta.";
-
 /** Treść zastrzeżenia RiskDisclaimer (panel inwestora) — w PDF-ie raz, na końcu. */
 export const RISK_DISCLAIMER_TEXT =
   "Materiał informacyjny — nie stanowi rekomendacji ani porady. Prezentowane wyceny, oceny, " +
@@ -1651,7 +1646,6 @@ function fromOrderReport(
   const r = d.report;
   const src = orderReportStepSource(r);
   const done = analyticsDoneCount(src);
-  const teaser = !d.disclosed;
   const prop = d.collateral?.property ?? null;
   const projectRef = project?.ref?.trim() || null;
   const subtitle = [
@@ -1671,7 +1665,7 @@ function fromOrderReport(
     ["Źródło", ANALYTICS_SOURCE_LABELS["okazja"]],
     ["Projekt", projectRef],
     ["Wnioskowana kwota", project?.loanAmount != null ? formatPLN(project.loanAmount) : null],
-    ["Numer KW", d.kwNumber ? `${d.kwNumber}${teaser ? " (zamaskowany do rezerwacji)" : ""}` : "—"],
+    ["Numer KW", d.kwNumber ?? "—"],
     kwDocumentRow(d.kwDocument),
     ["Rodzaj nieruchomości", propertyLabel(prop?.type)],
     ["Województwo", prop?.voivodeship],
@@ -1684,7 +1678,6 @@ function fromOrderReport(
     ["Postęp analizy", `${done} z ${ANALYTICS_STEPS.length} kroków`],
   ]);
   const blocks: ReportBlock[] = [{ t: "heading", text: "Podsumowanie" }];
-  if (teaser) blocks.push({ t: "note", tone: "warning", text: REPORT_TEASER_NOTE });
   blocks.push(
     { t: "keyValues", rows },
     stepsTable((k) => analyticsStepStatus(src, k)),
@@ -1703,7 +1696,7 @@ function fromOrderReport(
     subtitle,
     kwNumber: d.kwNumber,
     projectRef,
-    teaser,
+    teaser: false,
     stepsDone: done,
     blocks,
   };

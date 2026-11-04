@@ -26,11 +26,6 @@ import type {
 import { compactKwNumber, formatKwNumber } from "@/lib/kw";
 import { INTERACTIVE_KW_POLL_MS } from "@/lib/analysis-pipeline/step-timing";
 import {
-  sanitizeCoOwnersForTeaser,
-  sanitizeCollateralForTeaser,
-  sanitizeKwAnalysisForTeaser,
-} from "./order-report-teaser";
-import {
   ACTIVE_MATCH_STATUSES,
   TEASER_VISIBLE_MATCH_STATUSES,
   amountMatchesOrder,
@@ -75,15 +70,14 @@ export interface OrderProjectReport {
 
 /**
  * Pełny raport analityczny Projektu — te same dane i komponenty, co w module
- * „Analityka". Przed Ujawnieniem (rezerwacją) bez danych identyfikujących.
+ * „Analityka". Zawsze komplet (w systemie nie ma już rezerwacji, więc nic nie
+ * jest maskowane): pełny numer KW, treść działów, właściciele, adres.
  */
 export interface OrderProjectReportDetail {
   report: OrderProjectReport;
-  /** true = po Ujawnieniu (rezerwacja / transakcja): komplet danych. */
-  disclosed: boolean;
-  /** Numer KW: pełny po Ujawnieniu, wcześniej zamaskowany. */
+  /** Numer KW w pełnym zapisie. */
   kwNumber: string | null;
-  /** Treść księgi (działy I–IV) — wyłącznie po Ujawnieniu. */
+  /** Treść księgi (działy I–IV). */
   kwDocument: AnalyticsKwDocument | null;
   coowners: AnalyticsCoOwners | null;
   kwAnalysis: { result: KwAnalysisResult; createdAt: string } | null;
@@ -782,10 +776,8 @@ export async function assertOrderReportAccess(
 
 /**
  * Pełny raport analityczny Projektu — treść czterech kroków pipeline'u w tych
- * samych kształtach, co w module „Analityka" (te same komponenty). Przed
- * Ujawnieniem serwer usuwa dane identyfikujące (order-report-teaser): numer KW
- * zamaskowany, bez treści księgi i cytatów z niej, nazwiska i adres zastąpione
- * rolą. Po rezerwacji / transakcji — komplet.
+ * samych kształtach, co w module „Analityka" (te same komponenty). Bez
+ * maskowania — w systemie nie ma już rezerwacji/Ujawnienia.
  */
 export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -796,8 +788,7 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
-    const { app, match, contact } = await eligibleApp(supabaseAdmin, order, data.applicationId);
-    const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
+    const { app } = await eligibleApp(supabaseAdmin, order, data.applicationId);
     const kwRaw = String(propertyOf(app)?.land_register_number ?? "").trim();
     const compact = compactKwNumber(kwRaw);
 
@@ -811,7 +802,7 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
     const [report, kwDocument, { data: kwa }, { data: co }, { data: risk }, { data: coll }] =
       await Promise.all([
         loadProjectReport(supabaseAdmin, app),
-        disclosed ? loadKwDocumentView(loose(supabaseAdmin), compact) : Promise.resolve(null),
+        loadKwDocumentView(loose(supabaseAdmin), compact),
         loose(supabaseAdmin)
           .from("kw_land_register_analyses")
           .select("result_json, created_at")
@@ -853,43 +844,14 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
       : null;
     const collateral = (coll?.result_json as PropertyAnalysisResult | undefined) ?? null;
 
-    if (disclosed) {
-      return {
-        report,
-        disclosed,
-        kwNumber: formatKwNumber(kwRaw) ?? (kwRaw || null),
-        kwDocument,
-        coowners,
-        kwAnalysis,
-        valuation,
-        collateral,
-      };
-    }
-
-    // Przed Ujawnieniem: nazwiska z działu II i dane klienta do zamaskowania.
-    const { maskKwRaw } = await import("@/lib/location-scoring/masking");
-    const names = [...(coowners?.owners.map((o) => o.fullName ?? "") ?? []), contact?.name ?? ""]
-      .map((n) => n.trim())
-      .filter((n) => n.length > 0);
-    const maskedKw = kwRaw ? maskKwRaw(kwRaw) : null;
     return {
       report,
-      disclosed,
-      kwNumber: maskedKw,
-      kwDocument: null,
-      coowners: coowners ? sanitizeCoOwnersForTeaser(coowners, names) : null,
-      kwAnalysis: kwAnalysis
-        ? {
-            result: sanitizeKwAnalysisForTeaser(
-              kwAnalysis.result,
-              maskedKw ?? "(zamaskowany numer KW)",
-              names,
-            ),
-            createdAt: kwAnalysis.createdAt,
-          }
-        : null,
+      kwNumber: formatKwNumber(kwRaw) ?? (kwRaw || null),
+      kwDocument,
+      coowners,
+      kwAnalysis,
       valuation,
-      collateral: collateral ? sanitizeCollateralForTeaser(collateral, names) : null,
+      collateral,
     };
   });
 

@@ -13,13 +13,11 @@ import { useIsFinanceYouInvestor } from "@/hooks/use-finance-you-investor";
 import {
   AlertTriangle,
   BarChart3,
-  BookOpenCheck,
   Clock,
   FilePen,
   FileSignature,
   FileText,
   Loader2,
-  Lock,
   MapPin,
   PenLine,
   Phone,
@@ -788,8 +786,7 @@ function FilesRow({
 // ── Raport analityczny ──────────────────────────────────────────────────────
 // Te same karty kroków i komponenty, co w module „Analityka" (ten sam
 // pipeline: KW → właściciele → analiza KW → ryzyko i wartość). Treść pobierana
-// osobno, dopiero po rozwinięciu raportu; przed rezerwacją serwer wysyła
-// wersję bez danych identyfikujących właściciela.
+// osobno, dopiero po rozwinięciu raportu; zawsze w pełnej wersji.
 
 function ReportPanel({
   project,
@@ -871,17 +868,11 @@ function ReportPanel({
               source={{ kind: "zlecenie", detail: d, project }}
               disabled={done === 0}
             />
-            {d.disclosed ? (
-              <Button size="sm" variant="outline" asChild>
-                <Link to="/inwestor/analityka" search={{ app: applicationId }}>
-                  <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
-                </Link>
-              </Button>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-[0.68rem] font-semibold text-muted-foreground">
-                <Lock className="h-3 w-3" /> dane właściciela po rezerwacji
-              </span>
-            )}
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/inwestor/analityka" search={{ app: applicationId }}>
+                <BarChart3 className="mr-2 h-4 w-4" /> Otwórz w Analityce
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -925,24 +916,11 @@ function ReportPanel({
             ltvCap={pv?.suggestedLtvCapPercent ?? null}
           />
         </div>
-
-        {!d.disclosed && (
-          <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Przed rezerwacją raport nie zawiera danych pozwalających zidentyfikować właściciela:
-            numer KW jest zamaskowany, a treść księgi, cytaty z niej, nazwiska i adres odsłaniamy po
-            Ujawnieniu — razem z danymi kontaktowymi klienta.
-          </p>
-        )}
       </div>
 
       {/* Krok 1 — KW */}
       <StepCard meta={ANALYTICS_STEPS[0]} status={status("kw")} error={r.steps.kw?.error}>
-        {d.disclosed ? (
-          <KwStep kwNumber={d.kwNumber} doc={d.kwDocument} status={status("kw")} />
-        ) : (
-          <TeaserKwStep status={status("kw")} fetched={r.results.kwFetched} kwMasked={d.kwNumber} />
-        )}
+        <KwStep kwNumber={d.kwNumber} doc={d.kwDocument} status={status("kw")} />
       </StepCard>
 
       {/* Krok 2 — właściciele */}
@@ -998,42 +976,6 @@ function ReportPanel({
       </StepCard>
 
       <RiskDisclaimer />
-    </div>
-  );
-}
-
-/** Krok 1 przed Ujawnieniem: potwierdzenie pobrania KW bez treści działów i pełnego numeru. */
-function TeaserKwStep({
-  status,
-  fetched,
-  kwMasked,
-}: {
-  status: AnalyticsStepStatus;
-  fetched: boolean;
-  kwMasked: string | null;
-}) {
-  if (!fetched) {
-    return (
-      <StepEmpty
-        status={status}
-        text="Treść księgi wieczystej jeszcze nie została pobrana — zrobi to pierwszy krok pipeline'u."
-      />
-    );
-  }
-  return (
-    <div className="space-y-2 text-sm">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <BookOpenCheck className="h-4 w-4 text-emerald-600" />
-        <span>
-          Treść KW <span className="font-mono text-foreground">{kwMasked ?? "—"}</span> pobrana z
-          EKW i przeanalizowana w krokach 2–3.
-        </span>
-      </div>
-      <p className="flex items-start gap-2 rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-        Pełny numer KW i treść działów I–IV (oznaczenie nieruchomości, własność, prawa i roszczenia,
-        hipoteki) odsłaniamy po rezerwacji Projektu.
-      </p>
     </div>
   );
 }

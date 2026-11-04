@@ -16,16 +16,10 @@ import {
   type InvestorValuationSummary,
 } from "@/lib/risk-assessment/risk-assessment.functions";
 import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-projects.functions";
-import {
-  sanitizeCoOwnersForTeaser,
-  sanitizeCollateralForTeaser,
-  sanitizeKwAnalysisForTeaser,
-} from "@/lib/investor-agreements/order-report-teaser";
 import { charsOutsideFont } from "@/lib/pdf/report-writer";
 import type { AnalyticsCoOwners, AnalyticsDetail, KwCheckDetail } from "./types";
 import {
   GRADE_SECTION_TITLE,
-  REPORT_TEASER_NOTE,
   RISK_DISCLAIMER_TEXT,
   SELLABILITY_SECTION_TITLE,
   VALUATION_NOT_APPRAISAL,
@@ -494,9 +488,8 @@ function kwCheckDetail(): KwCheckDetail {
   };
 }
 
-/** Raport Projektu przed rezerwacją — oczyszczony tak, jak robi to serwer. */
-function teaserOrderDetail(): OrderProjectReportDetail {
-  const names = ["Grażyna Żukowska", "Jan Żukowski"];
+/** Raport Projektu — zawsze w pełnej wersji (bez rezerwacji nic nie jest maskowane). */
+function orderDetail(): OrderProjectReportDetail {
   return {
     report: {
       status: "done",
@@ -518,16 +511,12 @@ function teaserOrderDetail(): OrderProjectReportDetail {
         collateral: true,
       },
     },
-    disclosed: false,
-    kwNumber: "SL1S/00****44/8",
+    kwNumber: "SL1S/00012344/8",
     kwDocument: null,
-    coowners: sanitizeCoOwnersForTeaser(coowners(), names),
-    kwAnalysis: {
-      result: sanitizeKwAnalysisForTeaser(kwResult(), "SL1S/00****44/8", names),
-      createdAt: "2026-10-01T10:03:00Z",
-    },
+    coowners: coowners(),
+    kwAnalysis: { result: kwResult(), createdAt: "2026-10-01T10:03:00Z" },
     valuation: valuation(),
-    collateral: sanitizeCollateralForTeaser(collateral(), names),
+    collateral: collateral(),
   };
 }
 
@@ -536,10 +525,7 @@ const PROJECT = { ref: "FY-Z-4-P1", loanAmount: 90000 };
 const SOURCES: Array<[string, InvestorReportSource]> = [
   ["Analityka", { kind: "analityka", detail: analyticsDetail() }],
   ["analiza własnego wniosku", { kind: "kw_check", detail: kwCheckDetail() }],
-  [
-    "raport Projektu przed rezerwacją",
-    { kind: "zlecenie", detail: teaserOrderDetail(), project: PROJECT },
-  ],
+  ["raport Projektu", { kind: "zlecenie", detail: orderDetail(), project: PROJECT }],
 ];
 
 /** Analityka tuż po kroku 1: księga pobrana, reszta jeszcze bez wyników. */
@@ -687,28 +673,15 @@ describe("model raportu PDF", () => {
     expect(await charsOutsideFont(text)).toEqual([]);
   });
 
-  it("wersja przed rezerwacją: notka, zamaskowany numer KW, nazwa pliku bez KW", () => {
+  it("raport Projektu: pełny numer KW, bez notki o rezerwacji, numer Projektu i KW w nazwie pliku", () => {
     const model = buildInvestorReportModel(SOURCES[2][1]);
-    expect(model.teaser).toBe(true);
+    expect(model.teaser).toBe(false);
     const text = reportModelText(model);
-    expect(text).toContain(REPORT_TEASER_NOTE);
-    expect(REPORT_TEASER_NOTE).toMatch(/^Wersja przed rezerwacją — dane identyfikujące ukryte/);
-    expect(text).toContain("SL1S/00****44/8");
-    expect(text).not.toContain("SL1S/00012344/8");
-    expect(text).not.toMatch(/Żukowsk|Grażyn|Kwiatowa/);
+    expect(text).toContain("SL1S/00012344/8");
+    expect(text).not.toMatch(/rezerwac|zamaskowan/i);
     // Numer Projektu i kwota z karty — raporty kilku Projektów da się rozróżnić.
     expect(model.subtitle).toContain("Projekt FY-Z-4-P1");
     expect(text).toContain("Wnioskowana kwota");
-    expect(reportPdfFilename(model, DATE)).toBe("FY-raport-projektu-FY-Z-4-P1-2026-10-10.pdf");
-  });
-
-  it("raport Projektu po rezerwacji: numer Projektu i KW w nazwie pliku", () => {
-    const model = buildInvestorReportModel({
-      kind: "zlecenie",
-      detail: { ...teaserOrderDetail(), disclosed: true, kwNumber: "SL1S/00012344/8" },
-      project: PROJECT,
-    });
-    expect(model.teaser).toBe(false);
     expect(reportPdfFilename(model, DATE)).toBe(
       "FY-raport-projektu-FY-Z-4-P1-SL1S-00012344-8-2026-10-10.pdf",
     );
@@ -866,14 +839,13 @@ describe("lokalizacja i mapa w raporcie", () => {
     expect(reportModelText(model)).toContain("Lokalizacja i nieruchomość");
   });
 
-  it("wersja przed rezerwacją nie ma mapy ani współrzędnych", () => {
+  it("raport Projektu ma mapy lokalizacji (nic nie jest maskowane)", () => {
     const model = buildInvestorReportModel({
       kind: "zlecenie",
-      detail: teaserOrderDetail(),
+      detail: orderDetail(),
       project: PROJECT,
     });
-    expect(model.blocks.some((b) => b.t === "map")).toBe(false);
-    expect(reportModelText(model)).not.toMatch(/54\.46/);
+    expect(model.blocks.some((b) => b.t === "map")).toBe(true);
   });
 
   it("mapa trafia do PDF-u przez renderer", async () => {
