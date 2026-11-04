@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  BLOG_MERGED,
+  BLOG_NOINDEX,
   isIndexable,
   isNoDataTitle,
   isNoindex,
@@ -53,5 +55,23 @@ describe("wpisy o braku danych", () => {
     expect(isNoDataTitle("Dzień bez danych rynkowych: jak dziś myśleć o pożyczkach")).toBe(true);
     expect(isNoDataTitle("Brak danych z rynku – co oznacza dla inwestora")).toBe(true);
     expect(isNoDataTitle("Stopy NBP bez zmian – co to oznacza dla inwestora")).toBe(false);
+  });
+});
+
+describe("mapa scaleń bloga", () => {
+  it("nie tworzy łańcuchów ani pętli przekierowań", () => {
+    for (const [from, to] of Object.entries(BLOG_MERGED)) {
+      expect(from).not.toBe(to);
+      expect(BLOG_MERGED[to]).toBeUndefined();
+      expect(BLOG_NOINDEX.has(to)).toBe(false);
+    }
+  });
+
+  it("slug ze stałej mapy wygrywa nad pustym raw_ai_output", () => {
+    const [from, to] = Object.entries(BLOG_MERGED)[0];
+    expect(mergedInto(null, from)).toBe(to);
+    expect(isIndexable(null, from)).toBe(false);
+    expect(isIndexable(null, to)).toBe(true);
+    expect(isNoindex(null, [...BLOG_NOINDEX][0])).toBe(true);
   });
 });

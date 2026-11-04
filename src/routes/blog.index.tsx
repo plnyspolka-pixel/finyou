@@ -41,7 +41,7 @@ export const Route = createFileRoute("/blog/")({
     const articles = (
       (data ?? []) as (ArticleRow & { merged_into?: string | null; noindex?: unknown })[]
     )
-      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }, r.slug))
       .map(({ merged_into: _m, noindex: _n, ...r }) => r as ArticleRow);
     return { articles };
   },

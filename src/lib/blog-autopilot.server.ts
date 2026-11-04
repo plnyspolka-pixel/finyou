@@ -277,7 +277,7 @@ async function pickInternalLinks(): Promise<RelatedArticle[]> {
     .limit(120);
   // Linkujemy tylko do artykułów, które mają być w Google.
   const list = ((data ?? []) as any[])
-    .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+    .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }, r.slug))
     .map((r) => ({
       slug: r.slug,
       title: r.title,

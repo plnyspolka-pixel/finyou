@@ -202,7 +202,11 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               ))}
               <a href="/logowanie">Zaloguj</a>
             </nav>
-            <MktButton size="sm" variant="gold" href={page === "sklep" ? "/inwestor/umowy" : "/#cennik"}>
+            <MktButton
+              size="sm"
+              variant="gold"
+              href={page === "sklep" ? "/inwestor/umowy" : "/#cennik"}
+            >
               {page === "sklep" ? "Złóż zlecenie" : "Zostań partnerem"}
             </MktButton>
             <Button
@@ -295,7 +299,14 @@ export function SiteFooter() {
     },
     {
       h: "Pożyczki",
-      links: LOAN_PRODUCTS.map((p) => ({ t: p.menuLabel, href: `/${p.slug}` })),
+      links: [
+        ...LOAN_PRODUCTS.map((p) => ({ t: p.menuLabel, href: `/${p.slug}` })),
+        // Huby i narzędzia — bez linku z każdej strony Google ich nie odkrywał
+        // („Adres URL jest Google nieznany” w Search Console).
+        { t: "Pożyczki w Twoim mieście", href: "/pozyczki" },
+        { t: "Kalkulator LTV", href: "/kalkulator-ltv" },
+        { t: "Raport lokalizacji", href: "/raport-lokalizacje" },
+      ],
     },
     {
       h: "Finance You",

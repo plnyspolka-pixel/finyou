@@ -66,7 +66,8 @@ export const Route = createFileRoute("/sitemap.xml")({
             let newest: string | undefined;
             for (const row of data ?? []) {
               // Scalone duplikaty (301) i wpisy noindex nie należą do sitemapy.
-              if (!isIndexable({ merged_into: row.merged_into, noindex: row.noindex })) continue;
+              if (!isIndexable({ merged_into: row.merged_into, noindex: row.noindex }, row.slug))
+                continue;
               const pub = (row.published_at ?? "").slice(0, 10);
               if (pub && (!newest || pub > newest)) newest = pub;
               const lastmod = (row.updated_at ?? row.published_at ?? "").slice(0, 10) || undefined;

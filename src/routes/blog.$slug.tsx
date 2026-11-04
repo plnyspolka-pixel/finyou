@@ -144,7 +144,7 @@ export const Route = createFileRoute("/blog/$slug")({
 
     // Duplikat scalony z innym artykułem → stałe przekierowanie, żeby sygnały
     // (linki, historia w Google) przeszły na artykuł docelowy.
-    const target = mergedInto((data as any).raw_ai_output);
+    const target = mergedInto((data as any).raw_ai_output, params.slug);
     if (target && target !== params.slug) {
       throw redirect({ to: "/blog/$slug", params: { slug: target }, statusCode: 301 });
     }
@@ -163,7 +163,7 @@ export const Route = createFileRoute("/blog/$slug")({
     const pool = (
       (relRaw ?? []) as (RelatedRow & { merged_into?: string | null; noindex?: unknown })[]
     )
-      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }, r.slug))
       .map(({ merged_into: _m, noindex: _n, ...r }) => r as RelatedRow);
     const linked: string[] = Array.isArray((data as any).internal_link_slugs)
       ? (data as any).internal_link_slugs
@@ -197,7 +197,7 @@ export const Route = createFileRoute("/blog/$slug")({
         { name: "author", content: "Finance You" },
         {
           name: "robots",
-          content: isNoindex(a.raw_ai_output)
+          content: isNoindex(a.raw_ai_output, params.slug)
             ? "noindex, follow"
             : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
         },
