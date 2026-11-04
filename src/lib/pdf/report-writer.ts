@@ -275,7 +275,8 @@ export class ReportWriter {
   /** Nagłówek sekcji — wersaliki z linią; nie zostaje sam na dole strony. */
   heading(text: string): void {
     this.space(12);
-    this.ensure(18 + 3 * 11.5);
+    // Trzymany z treścią: nagłówek + początek sekcji (np. wykres ~ 6 wierszy).
+    this.ensure(18 + 110);
     this.paragraph(text.toUpperCase(), { size: 10, bold: true, color: NAVY, after: 2 });
     this.page.drawLine({
       start: { x: MARGIN.left, y: this.y },
@@ -289,7 +290,7 @@ export class ReportWriter {
   /** Podtytuł w sekcji — pogrubiony, trzymany z następnymi wierszami. */
   subheading(text: string): void {
     this.space(5);
-    this.ensure(13 + 2 * 11.5);
+    this.ensure(13 + 60);
     this.paragraph(text, { size: 9.5, bold: true, color: INK, after: 2 });
   }
 
@@ -1059,6 +1060,294 @@ export class ReportWriter {
       });
     });
     this.y = top - h - 8;
+  }
+
+  // ── Wykresy (dataviz: jedna oś na wykres, cienkie znaczniki, etykiety
+  // wartości w kolorze tekstu, znaczenie nigdy samym kolorem) ────────────────
+
+  /** Legenda w jednym wierszu: kwadrat/kreska/kropka + opis. */
+  private chartLegend(
+    items: Array<{ label: string; color: RGB; shape: "box" | "tick" | "dot" }>,
+  ): void {
+    const size = 7.2;
+    let x = MARGIN.left;
+    const y = this.y - size - 1;
+    for (const it of items) {
+      if (it.shape === "box")
+        this.page.drawRectangle({ x, y: y - 0.5, width: 7, height: 7, color: it.color });
+      else if (it.shape === "dot")
+        this.page.drawCircle({ x: x + 3.5, y: y + 3, size: 3.2, color: it.color });
+      else
+        this.page.drawRectangle({ x: x + 3, y: y - 1.5, width: 1.6, height: 10, color: it.color });
+      const t = this.clean(it.label);
+      this.page.drawText(t, { x: x + 11, y, size, font: this.regular, color: GRAY });
+      x += 11 + this.regular.widthOfTextAtSize(t, size) + 14;
+    }
+    this.y -= size + 8;
+  }
+
+  /**
+   * Słupki z markerem odniesienia (np. powiat vs Polska, wartość vs kwota
+   * pożyczki). Każdy wiersz ma własną skalę 0–max (jedna oś na wiersz).
+   */
+  compareBars(
+    rows: Array<{
+      label: string;
+      value: number;
+      ref?: number | null;
+      max: number;
+      valueLabel: string;
+    }>,
+    opts: { barName: string; refName?: string; color?: string } = { barName: "" },
+  ): void {
+    if (!rows.length) return;
+    const size = 8.2;
+    const labelW = 150;
+    const valueW = 92;
+    const rowH = 17;
+    const barH = 6;
+    const color = opts.color ? hexColor(opts.color) : NAVY;
+    this.space(2);
+    this.ensure(rows.length * rowH + 22);
+    this.chartLegend([
+      { label: opts.barName, color, shape: "box" },
+      ...(opts.refName ? [{ label: opts.refName, color: INK, shape: "tick" as const }] : []),
+    ]);
+    const trackX = MARGIN.left + labelW;
+    const trackW = CONTENT_W - labelW - valueW;
+    for (const r of rows) {
+      const top = this.y;
+      const label = truncate(this.clean(r.label), this.bold, size, labelW - 8);
+      this.page.drawText(label, {
+        x: MARGIN.left,
+        y: top - 11,
+        size,
+        font: this.bold,
+        color: GRAY,
+      });
+      const by = top - 11 - 0.5;
+      this.page.drawRectangle({ x: trackX, y: by, width: trackW, height: barH, color: TRACK });
+      const ratio = Math.max(0, Math.min(1, r.max > 0 ? r.value / r.max : 0));
+      if (ratio > 0)
+        this.page.drawRectangle({ x: trackX, y: by, width: trackW * ratio, height: barH, color });
+      if (r.ref != null && r.max > 0) {
+        const rx = trackX + trackW * Math.max(0, Math.min(1, r.ref / r.max));
+        this.page.drawRectangle({
+          x: rx - 0.8,
+          y: by - 3,
+          width: 1.6,
+          height: barH + 6,
+          color: INK,
+        });
+      }
+      const v = truncate(this.clean(r.valueLabel), this.regular, 7.8, valueW - 6);
+      this.page.drawText(v, {
+        x: A4.w - MARGIN.right - this.regular.widthOfTextAtSize(v, 7.8),
+        y: top - 11,
+        size: 7.8,
+        font: this.regular,
+        color: INK,
+      });
+      this.y -= rowH;
+    }
+    this.y -= 4;
+  }
+
+  /** Słupki rozbieżne wokół zera (np. zmiana ludności, saldo migracji). */
+  divergingBars(
+    rows: Array<{ label: string; value: number; valueLabel: string; maxAbs?: number }>,
+    opts: { maxAbs?: number; positiveName: string; negativeName: string },
+  ): void {
+    if (!rows.length) return;
+    const POS = hexColor("#2a78d6");
+    const NEG = hexColor("#e34948");
+    const size = 8.2;
+    const labelW = 150;
+    const valueW = 92;
+    const rowH = 17;
+    const barH = 6;
+    const maxAbs = opts.maxAbs ?? Math.max(...rows.map((r) => Math.abs(r.value)), 1);
+    this.space(2);
+    this.ensure(rows.length * rowH + 22);
+    this.chartLegend([
+      { label: opts.positiveName, color: POS, shape: "box" },
+      { label: opts.negativeName, color: NEG, shape: "box" },
+    ]);
+    const trackX = MARGIN.left + labelW;
+    const trackW = CONTENT_W - labelW - valueW;
+    const mid = trackX + trackW / 2;
+    for (const r of rows) {
+      const top = this.y;
+      const label = truncate(this.clean(r.label), this.bold, size, labelW - 8);
+      this.page.drawText(label, {
+        x: MARGIN.left,
+        y: top - 11,
+        size,
+        font: this.bold,
+        color: GRAY,
+      });
+      const by = top - 11 - 0.5;
+      this.page.drawRectangle({ x: trackX, y: by, width: trackW, height: barH, color: TRACK });
+      // Wiersz może mieć własną skalę (różne jednostki: %, ‰) — wtedy to małe
+      // wielokrotności z jedną osią na wiersz, nie wspólna oś.
+      const w = (trackW / 2) * Math.min(1, Math.abs(r.value) / (r.maxAbs ?? maxAbs));
+      if (w > 0)
+        this.page.drawRectangle({
+          x: r.value >= 0 ? mid : mid - w,
+          y: by,
+          width: w,
+          height: barH,
+          color: r.value >= 0 ? POS : NEG,
+        });
+      this.page.drawRectangle({ x: mid - 0.5, y: by - 3, width: 1, height: barH + 6, color: GRAY });
+      const v = this.clean(r.valueLabel);
+      this.page.drawText(v, {
+        x: A4.w - MARGIN.right - this.regular.widthOfTextAtSize(v, 7.8),
+        y: top - 11,
+        size: 7.8,
+        font: this.regular,
+        color: INK,
+      });
+      this.y -= rowH;
+    }
+    this.y -= 4;
+  }
+
+  /**
+   * Wykres odległości: oś 0–maxM, kropka w odległości obiektu, kreska progu
+   * „blisko”; kropka bliżej niż próg w kolorze statusu + słowo „blisko”.
+   */
+  distanceStrip(
+    rows: Array<{ label: string; distanceM: number; thresholdM: number; alert: boolean }>,
+    opts: { maxM: number },
+  ): void {
+    if (!rows.length) return;
+    const ALERT = hexColor("#ec835a");
+    const size = 8;
+    const labelW = 170;
+    const valueW = 70;
+    const rowH = 15;
+    this.space(2);
+    this.ensure(rows.length * rowH + 40);
+    this.chartLegend([
+      { label: "obiekt", color: NAVY, shape: "dot" },
+      { label: "bliżej niż próg uciążliwości", color: ALERT, shape: "dot" },
+      { label: "próg", color: GRAY, shape: "tick" },
+    ]);
+    const trackX = MARGIN.left + labelW;
+    const trackW = CONTENT_W - labelW - valueW;
+    const fmt = (m: number) =>
+      m >= 1000 ? `${(m / 1000).toFixed(1).replace(".", ",")} km` : `${Math.round(m)} m`;
+    for (const r of rows) {
+      const top = this.y;
+      const label = truncate(this.clean(r.label), this.bold, size, labelW - 8);
+      this.page.drawText(label, {
+        x: MARGIN.left,
+        y: top - 10,
+        size,
+        font: this.bold,
+        color: GRAY,
+      });
+      const cy = top - 7.5;
+      this.page.drawLine({
+        start: { x: trackX, y: cy },
+        end: { x: trackX + trackW, y: cy },
+        thickness: 0.6,
+        color: LIGHT,
+      });
+      const tx = trackX + trackW * Math.min(1, r.thresholdM / opts.maxM);
+      this.page.drawRectangle({ x: tx - 0.5, y: cy - 4, width: 1, height: 8, color: GRAY });
+      const dx = trackX + trackW * Math.min(1, r.distanceM / opts.maxM);
+      this.page.drawCircle({
+        x: dx,
+        y: cy,
+        size: 3.4,
+        color: r.alert ? ALERT : NAVY,
+        borderColor: rgb(1, 1, 1),
+        borderWidth: 0.8,
+      });
+      const v = this.clean(`${fmt(r.distanceM)}${r.alert ? " · blisko" : ""}`);
+      this.page.drawText(v, {
+        x: A4.w - MARGIN.right - (r.alert ? this.bold : this.regular).widthOfTextAtSize(v, 7.8),
+        y: top - 10,
+        size: 7.8,
+        font: r.alert ? this.bold : this.regular,
+        color: INK,
+      });
+      this.y -= rowH;
+    }
+    // Oś: podziałki co 500 m.
+    const ay = this.y - 2;
+    for (let m = 0; m <= opts.maxM; m += 500) {
+      const x = trackX + trackW * (m / opts.maxM);
+      this.page.drawLine({
+        start: { x, y: ay + 3 },
+        end: { x, y: ay },
+        thickness: 0.5,
+        color: GRAY,
+      });
+      const t = fmt(m);
+      this.page.drawText(t, {
+        x: x - this.regular.widthOfTextAtSize(t, 6.6) / 2,
+        y: ay - 8,
+        size: 6.6,
+        font: this.regular,
+        color: GRAY,
+      });
+    }
+    this.y -= 18;
+  }
+
+  /** Poziome słupki jednej miary (jeden odcień) z etykietą wartości po prawej. */
+  barList(
+    rows: Array<{ label: string; value: number; valueLabel: string }>,
+    opts: { max?: number; color?: string } = {},
+  ): void {
+    if (!rows.length) return;
+    const size = 8.2;
+    const labelW = 150;
+    const valueW = 110;
+    const rowH = 14;
+    const barH = 6;
+    const max = opts.max ?? Math.max(...rows.map((r) => r.value), 1);
+    const color = opts.color ? hexColor(opts.color) : NAVY;
+    this.space(2);
+    this.ensure(Math.min(rows.length, 4) * rowH + 6);
+    const trackX = MARGIN.left + labelW;
+    const trackW = CONTENT_W - labelW - valueW;
+    for (const r of rows) {
+      this.ensure(rowH + 2);
+      const top = this.y;
+      const label = truncate(this.clean(r.label), this.bold, size, labelW - 8);
+      this.page.drawText(label, {
+        x: MARGIN.left,
+        y: top - 10,
+        size,
+        font: this.bold,
+        color: GRAY,
+      });
+      const ratio = Math.max(0, Math.min(1, r.value / max));
+      const by = top - 10;
+      this.page.drawRectangle({ x: trackX, y: by, width: trackW, height: barH, color: TRACK });
+      if (ratio > 0)
+        this.page.drawRectangle({
+          x: trackX,
+          y: by,
+          width: Math.max(2, trackW * ratio),
+          height: barH,
+          color,
+        });
+      const v = truncate(this.clean(r.valueLabel), this.regular, 7.8, valueW - 6);
+      this.page.drawText(v, {
+        x: A4.w - MARGIN.right - this.regular.widthOfTextAtSize(v, 7.8),
+        y: top - 10,
+        size: 7.8,
+        font: this.regular,
+        color: INK,
+      });
+      this.y -= rowH;
+    }
+    this.y -= 4;
   }
 
   /** Pasek górny i stopka na każdej stronie, metadane, zapis. */

@@ -44,6 +44,7 @@ import { InvestmentScoreGauge, ComponentScoresChart, ValuationLadderChart } from
 import { RiskDisclaimer } from "./risk-disclaimer";
 import { DATA_SOURCE_CATALOG, CATEGORY_LABELS } from "@/lib/risk-assessment/data-sources";
 import { PropertyLocationMap } from "@/components/property-analysis/property-location-map";
+import { CompareBars } from "@/components/property-analysis/surroundings-charts";
 import type { SourceStatus, DataSourceUsage } from "@/lib/property-analysis/types";
 
 function fmtPln(v: number | null | undefined): string {
@@ -143,8 +144,8 @@ export function RiskAssessmentSection({ applicationId }: { applicationId: string
           </h3>
           <p className="text-xs text-muted-foreground">
             Pipeline: KW (bramka — wymagane poprawne pobranie z KW Engine) → właściciel (PESEL/KRS)
-            → KRZ/MSiG pożyczkobiorcy i właścicieli → dane z portali (deweloperuch, otodom, morizon, gratka, adresowo, olx)
-            → wycena rynkowa (GUS pomocniczo — grunty rolne).
+            → KRZ/MSiG pożyczkobiorcy i właścicieli → dane z portali (deweloperuch, otodom, morizon,
+            gratka, adresowo, olx) → wycena rynkowa (GUS pomocniczo — grunty rolne).
           </p>
         </div>
         <Button onClick={run} disabled={running} size="sm">
@@ -633,6 +634,7 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
                   dożycia ≈ {result.owner.lifeExpectancy.projectedAgeAtDeath}
                 </span>
               </div>
+              <LongevityCompare owner={result.owner} />
               {result.owner.lifeExpectancy.regional && (
                 <div className="text-xs text-muted-foreground">
                   {result.owner.lifeExpectancy.regional.available
@@ -836,7 +838,9 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
                     {s.role === "client" ? " (pożyczkobiorca)" : ""}
                   </span>
                   {" — "}
-                  {s.courtStatus === "checked" ? "sprawdzono (API KRZ/MSiG)" : "sprawdzono częściowo"}
+                  {s.courtStatus === "checked"
+                    ? "sprawdzono (API KRZ/MSiG)"
+                    : "sprawdzono częściowo"}
                   {": "}
                   {s.courtNote}
                 </div>
@@ -996,5 +1000,37 @@ function DataSourceCatalog() {
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+/** Dalsze trwanie życia właścicieli: e(x) z korektą regionu vs tablica krajowa (bez dat urodzenia). */
+function LongevityCompare({ owner }: { owner: InvestmentRiskAssessment["owner"] }) {
+  const people = owner.kwOwnerProfiles.length
+    ? owner.kwOwnerProfiles.map((p, i) => ({
+        label: p.isApplicant ? "Wnioskodawca" : `Współwłaściciel ${i + 1}`,
+        le: p.lifeExpectancy,
+      }))
+    : [{ label: "Wnioskodawca", le: owner.lifeExpectancy }];
+  const rows = people
+    .filter((x) => x.le.available && x.le.remainingYears != null)
+    .map((x) => ({
+      label: x.label,
+      value: x.le.remainingYears as number,
+      ref: x.le.nationalRemainingYears ?? null,
+      max: 0,
+      valueLabel: `${String(x.le.remainingYears).replace(".", ",")} lat${
+        x.le.nationalRemainingYears != null
+          ? ` (PL ${String(x.le.nationalRemainingYears).replace(".", ",")})`
+          : ""
+      }`,
+    }));
+  if (!rows.length) return null;
+  const max = Math.max(...rows.map((r) => Math.max(r.value, r.ref ?? 0))) * 1.15;
+  return (
+    <CompareBars
+      rows={rows.map((r) => ({ ...r, max }))}
+      barName="dalsze trwanie życia — region nieruchomości"
+      refName="tablica krajowa"
+    />
   );
 }

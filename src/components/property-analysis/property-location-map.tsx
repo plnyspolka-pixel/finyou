@@ -2,7 +2,8 @@
 // dodatkowych bibliotek) + działka ewidencyjna z ULDK i najbliższa infrastruktura.
 import { MapPinned } from "lucide-react";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
-import { NUISANCE_LABEL } from "@/lib/property-analysis/surroundings";
+import { locationTiles } from "@/lib/property-analysis/location-summary";
+import { BarList, LocationTiles, NuisanceDistanceChart, PowiatPanel } from "./surroundings-charts";
 import {
   EEA_CDDA_LAYERS,
   EEA_CDDA_WMS,
@@ -14,6 +15,11 @@ import {
   KIMPZP_WMS,
   wmsGetMapUrl,
 } from "@/lib/pdf/static-map";
+
+/** Obraz WMS, który się nie wczytał, znika — zostaje podpis pod mapą. */
+const hideBrokenImage = (e: { currentTarget: HTMLElement }) => {
+  e.currentTarget.style.visibility = "hidden";
+};
 
 const ORTO_WMS = "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/HighResolution";
 
@@ -45,6 +51,7 @@ function LayeredWms({
           alt={title}
           className="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
+          onError={hideBrokenImage}
         />
         {overlay && (
           <img
@@ -52,6 +59,7 @@ function LayeredWms({
             alt=""
             className="absolute inset-0 h-full w-full object-cover opacity-75"
             loading="lazy"
+            onError={hideBrokenImage}
           />
         )}
         <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-600 shadow" />
@@ -101,6 +109,7 @@ export function PropertyLocationMap({ result }: { result: PropertyAnalysisResult
       <h4 className="flex items-center gap-2 font-semibold">
         <MapPinned className="h-4 w-4" /> Lokalizacja nieruchomości
       </h4>
+      {result && <LocationTiles tiles={locationTiles(result)} />}
       {lat != null && lng != null ? (
         <>
           <div className="grid gap-3 md:grid-cols-2">
@@ -225,17 +234,29 @@ export function PropertyLocationMap({ result }: { result: PropertyAnalysisResult
 
       {result?.surroundings && <SurroundingsPanel result={result} />}
 
-      {nearestRows.length > 0 && (
+      {(nearestRows.length > 0 || result?.locationScore?.poiCountsAll) && (
         <div className="text-sm">
-          <div className="font-medium">Najbliższa infrastruktura (OpenStreetMap)</div>
-          <ul className="mt-1 grid gap-x-6 gap-y-0.5 text-xs md:grid-cols-2">
-            {nearestRows.map((k) => (
-              <li key={k}>
-                {POI_LABEL[k]}: {nearest[k].name ?? "bez nazwy"} —{" "}
-                {fmtDistance(nearest[k].distanceM)}
-              </li>
-            ))}
-          </ul>
+          <div className="mb-1 font-medium">
+            Infrastruktura w promieniu {fmtDistance(result?.locationScore?.radiusM ?? 1500)}{" "}
+            (OpenStreetMap)
+          </div>
+          <BarList
+            max={20}
+            rows={Object.keys(POI_LABEL)
+              .filter((k) => result?.locationScore?.poiCountsAll?.[k] != null || nearest[k])
+              .map((k) => {
+                const cnt = result?.locationScore?.poiCountsAll?.[k] ?? 0;
+                const n = nearest[k];
+                return {
+                  label: POI_LABEL[k],
+                  value: Math.min(20, cnt),
+                  valueLabel: `${cnt >= 20 ? "20+" : cnt}${n ? ` · ${fmtDistance(n.distanceM)}` : ""}`,
+                  title: n
+                    ? `${POI_LABEL[k]}: ${cnt >= 20 ? "20+" : cnt} w promieniu; najbliżej ${n.name ?? "bez nazwy"} — ${fmtDistance(n.distanceM)}`
+                    : undefined,
+                };
+              })}
+          />
         </div>
       )}
     </section>
@@ -286,6 +307,7 @@ function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
                 alt="Obszary chronione w okolicy"
                 className="absolute inset-0 h-full w-full object-cover"
                 loading="lazy"
+                onError={hideBrokenImage}
               />
               {[
                 [EEA_CDDA_WMS, EEA_CDDA_LAYERS],
@@ -302,6 +324,7 @@ function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover opacity-60"
                   loading="lazy"
+                  onError={hideBrokenImage}
                 />
               ))}
               <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-600 shadow" />
@@ -313,17 +336,9 @@ function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
             Uciążliwości w promieniu {nu ? fmtDistance(nu.radiusM) : "2 km"} (OSM)
           </div>
           {nu?.hits.length ? (
-            <ul className="mt-1 list-disc pl-4 text-xs">
-              {nu.hits.map((h, i) => (
-                <li
-                  key={i}
-                  className={h.alert ? "font-medium text-amber-700 dark:text-amber-400" : ""}
-                >
-                  {NUISANCE_LABEL[h.key]}
-                  {h.name ? ` (${h.name})` : ""} — {fmtDistance(h.distanceM)}
-                </li>
-              ))}
-            </ul>
+            <div className="mt-2">
+              <NuisanceDistanceChart info={nu} />
+            </div>
           ) : null}
           <p className="mt-1 text-xs text-muted-foreground">
             {nu?.note ?? "Nie sprawdzono (brak dokładnego adresu)."}
@@ -331,37 +346,8 @@ function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
         </div>
       </div>
       {pw?.status === "checked" && (
-        <div className="rounded-lg border bg-muted/20 p-3 text-xs">
-          <div className="text-sm font-medium">
-            {pw.unitName} — dane GUS ({pw.year})
-          </div>
-          <div className="mt-1 grid gap-x-6 gap-y-0.5 md:grid-cols-2">
-            {pw.population != null && (
-              <div>
-                Ludność: {pw.population.toLocaleString("pl-PL")}
-                {pw.populationChange5yPct != null
-                  ? ` (5 lat: ${pw.populationChange5yPct > 0 ? "+" : ""}${num(pw.populationChange5yPct)}%)`
-                  : ""}
-              </div>
-            )}
-            {pw.migrationPer1000 != null && (
-              <div>
-                Saldo migracji: {pw.migrationPer1000 > 0 ? "+" : ""}
-                {num(pw.migrationPer1000)} / 1000 mieszk.
-              </div>
-            )}
-            {pw.unemploymentPct != null && (
-              <div>
-                Bezrobocie: {num(pw.unemploymentPct)}%
-                {pw.unemploymentPolandPct != null
-                  ? ` (Polska ${num(pw.unemploymentPolandPct)}%)`
-                  : ""}
-              </div>
-            )}
-            {pw.wageIndexPl100 != null && (
-              <div>Wynagrodzenia: {num(pw.wageIndexPl100)}% średniej krajowej</div>
-            )}
-          </div>
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <PowiatPanel pw={pw} />
         </div>
       )}
     </div>

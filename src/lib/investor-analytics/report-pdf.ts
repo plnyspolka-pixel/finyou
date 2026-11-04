@@ -33,7 +33,8 @@ import { REPORT_DISCLAIMER } from "@/lib/kw-analysis/policy";
 import { maskPeselInText } from "@/lib/kw-analysis/pesel-mask";
 import type { DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import { categoryLabel as collateralCategoryLabel } from "@/lib/property-analysis/scoring";
-import { NUISANCE_LABEL } from "@/lib/property-analysis/surroundings";
+import { NUISANCE_ALERT_M, NUISANCE_LABEL } from "@/lib/property-analysis/surroundings";
+import { locationTiles } from "@/lib/property-analysis/location-summary";
 import {
   buildInvestorValuationSummary,
   type InvestorValuationSummary,
@@ -95,6 +96,32 @@ export type ReportBlock =
   | { t: "score"; label: string; value: number; color?: string; caption?: string | null }
   | { t: "gradeScale"; grade: RiskGrade }
   | { t: "note"; text: string; tone?: "info" | "warning" }
+  | { t: "tiles"; items: Array<{ label: string; value: string; accent?: boolean }> }
+  | {
+      t: "compare";
+      barName: string;
+      refName?: string;
+      rows: Array<{
+        label: string;
+        value: number;
+        ref?: number | null;
+        max: number;
+        valueLabel: string;
+      }>;
+    }
+  | {
+      t: "diverging";
+      positiveName: string;
+      negativeName: string;
+      maxAbs?: number;
+      rows: Array<{ label: string; value: number; valueLabel: string; maxAbs?: number }>;
+    }
+  | {
+      t: "distances";
+      maxM: number;
+      rows: Array<{ label: string; distanceM: number; thresholdM: number; alert: boolean }>;
+    }
+  | { t: "bars"; max?: number; rows: Array<{ label: string; value: number; valueLabel: string }> }
   | {
       t: "map";
       lat: number;
@@ -341,13 +368,51 @@ function highlightBlocks(risk: InvestmentRiskAssessment): ReportBlock[] {
   return blocks;
 }
 
-function valuationBlocks(v: InvestorValuationSummary): ReportBlock[] {
+/** Drabina wartości: rynek i licytacje względem kwoty pożyczki (jedna skala PLN). */
+function valueLadder(v: InvestorValuationSummary, loanPln: number | null): ReportBlock | null {
   const pv = v.predictedValue;
   const qs = v.quickSale;
+  const steps: Array<[string, number | null]> = [
+    ["Wartość rynkowa — górna", pv.highPln],
+    ["Wartość rynkowa — środkowa", pv.midPln],
+    ["Wartość rynkowa — dolna", pv.lowPln],
+    ["I licytacja (3/4)", qs.firstAuctionOpeningPln],
+    ["II licytacja (2/3)", qs.secondAuctionOpeningPln],
+    ["Realny odzysk — dolny", qs.expectedLowPln],
+  ];
+  const valid = steps.filter((x): x is [string, number] => x[1] != null && x[1] > 0);
+  if (valid.length < 2) return null;
+  const max = Math.max(...valid.map((x) => x[1]), loanPln ?? 0) * 1.05;
+  return {
+    t: "compare",
+    barName: "wartość / cena",
+    refName: loanPln ? `kwota pożyczki ${formatPLN(loanPln)}` : undefined,
+    rows: valid.map(([label, val]) => ({
+      label,
+      value: val,
+      ref: loanPln,
+      max,
+      valueLabel: formatPLN(val),
+    })),
+  };
+}
+
+function valuationBlocks(
+  v: InvestorValuationSummary,
+  loanPln: number | null = null,
+): ReportBlock[] {
+  const pv = v.predictedValue;
+  const qs = v.quickSale;
+  // Wartość dolna/środkowa/górna jest na drabinie wartości — tu tylko gdy drabiny brak.
+  const ladderShown = valueLadder(v, loanPln) != null;
   const rows: Array<[string, string]> = [
-    ["Wartość — dolna", formatPLN(pv.lowPln)],
-    ["Wartość — środkowa", formatPLN(pv.midPln)],
-    ["Wartość — górna", formatPLN(pv.highPln)],
+    ...(ladderShown
+      ? []
+      : ([
+          ["Wartość — dolna", formatPLN(pv.lowPln)],
+          ["Wartość — środkowa", formatPLN(pv.midPln)],
+          ["Wartość — górna", formatPLN(pv.highPln)],
+        ] as Array<[string, string]>)),
     ["Trend rynku", TREND_LABEL[pv.marketTrend] ?? pv.marketTrend],
   ];
   if (pv.suggestedLtvCapPercent != null) {
@@ -372,8 +437,10 @@ function valuationBlocks(v: InvestorValuationSummary): ReportBlock[] {
     rows.push(["Dane rządowe", `${src}${prices.length ? `: ${prices.join(", ")}` : ""}`]);
   }
 
+  const ladder = valueLadder(v, loanPln);
   const blocks: ReportBlock[] = [
     { t: "heading", text: "Wycena i szybka sprzedaż" },
+    ...(ladder ? [ladder] : []),
     { t: "keyValues", rows },
     { t: "subheading", text: "Wartość szybkiej (wymuszonej) sprzedaży — licytacja" },
     {
@@ -565,6 +632,8 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     ]),
   });
 
+  blocks.push({ t: "tiles", items: locationTiles(c) });
+
   if (lat != null && lng != null) {
     const exact = !p.locationApproximate;
     blocks.push({
@@ -669,29 +738,31 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     const counts = loc.poiCountsAll ?? loc.poiCounts ?? {};
     const keys = Object.keys(POI_LABEL).filter((k) => counts[k] != null || loc.nearest?.[k]);
     if (keys.length) {
+      // Liczba punktów w promieniu (słupki, skala do 20+) z odległością do najbliższego.
       blocks.push({
-        t: "table",
-        columns: [
-          { label: "Kategoria", width: 2.6 },
-          { label: `Liczba (${fmtDistance(loc.radiusM ?? 1500)})`, width: 1.4, align: "right" },
-          { label: "Najbliższy punkt", width: 4 },
-          { label: "Odległość", width: 1.4, align: "right" },
-        ],
+        t: "bars",
+        max: 20,
         rows: keys.map((k) => {
           const n = loc.nearest?.[k];
-          return [
-            POI_LABEL[k],
-            counts[k] != null ? (counts[k] >= 20 ? "20+" : String(counts[k])) : "—",
-            n ? (n.name ?? "(bez nazwy)") : "—",
-            n ? fmtDistance(n.distanceM) : "—",
-          ];
+          const cnt = counts[k] ?? 0;
+          return {
+            label: POI_LABEL[k],
+            value: Math.min(20, cnt),
+            valueLabel: `${cnt >= 20 ? "20+" : cnt}${n ? ` · najbliżej ${fmtDistance(n.distanceM)}` : ""}`,
+          };
         }),
       });
-      blocks.push({
-        t: "paragraph",
-        muted: true,
-        text: "Odległości w linii prostej od punktu adresu; dane OpenStreetMap mogą być niekompletne.",
-      });
+      const named = keys.filter((k) => loc.nearest?.[k]?.name);
+      if (named.length) {
+        blocks.push({
+          t: "paragraph",
+          muted: true,
+          text:
+            "Najbliższe: " +
+            named.map((k) => `${POI_LABEL[k].toLowerCase()} — ${loc.nearest![k].name}`).join("; ") +
+            ". Odległości w linii prostej od punktu adresu; dane OpenStreetMap mogą być niekompletne.",
+        });
+      }
     } else {
       blocks.push({ t: "paragraph", text: loc.summary });
     }
@@ -814,19 +885,14 @@ function surroundingsBlocks(c: PropertyAnalysisResult): ReportBlock[] {
     });
     if (nu.hits.length) {
       blocks.push({
-        t: "table",
-        columns: [
-          { label: "Obiekt", width: 3.4 },
-          { label: "Nazwa", width: 3.4 },
-          { label: "Odległość", width: 1.5, align: "right" },
-          { label: "Uwaga", width: 1.4 },
-        ],
-        rows: nu.hits.map((h) => [
-          NUISANCE_LABEL[h.key],
-          h.name ?? "—",
-          fmtDistance(h.distanceM),
-          h.alert ? "blisko" : "—",
-        ]),
+        t: "distances",
+        maxM: nu.radiusM,
+        rows: nu.hits.map((h) => ({
+          label: `${NUISANCE_LABEL[h.key]}${h.name ? ` (${h.name})` : ""}`,
+          distanceM: h.distanceM,
+          thresholdM: NUISANCE_ALERT_M[h.key],
+          alert: h.alert,
+        })),
       });
     }
     blocks.push({ t: "paragraph", muted: !nu.hits.some((h) => h.alert), text: nu.note });
@@ -842,32 +908,69 @@ function surroundingsBlocks(c: PropertyAnalysisResult): ReportBlock[] {
       text: `${pw.unitName ?? "Powiat"} — dane GUS (${pw.year ?? "—"})`,
     });
     blocks.push({
-      t: "keyValues",
-      rows: rowsWithText([
-        [
-          "Ludność",
-          pw.population != null
-            ? `${fmtNum(pw.population)}${pw.populationChange5yPct != null ? ` (zmiana w 5 lat: ${pct(pw.populationChange5yPct, true)})` : ""}`
-            : null,
-        ],
-        [
-          "Saldo migracji",
-          pw.migrationPer1000 != null
-            ? `${pw.migrationPer1000 > 0 ? "+" : ""}${num(pw.migrationPer1000)} na 1000 mieszkańców`
-            : null,
-        ],
-        [
-          "Stopa bezrobocia",
-          pw.unemploymentPct != null
-            ? `${pct(pw.unemploymentPct)}${pw.unemploymentPolandPct != null ? ` (Polska: ${pct(pw.unemploymentPolandPct)})` : ""}`
-            : null,
-        ],
-        [
-          "Wynagrodzenia",
-          pw.wageIndexPl100 != null ? `${num(pw.wageIndexPl100)}% średniej krajowej` : null,
-        ],
-      ]),
+      t: "tiles",
+      items: [
+        { label: "Ludność powiatu", value: pw.population != null ? fmtNum(pw.population) : "—" },
+        {
+          label: "Bezrobocie",
+          value: pw.unemploymentPct != null ? `${num(pw.unemploymentPct)}%` : "—",
+        },
+        {
+          label: "Wynagrodzenia (PL=100)",
+          value: pw.wageIndexPl100 != null ? num(pw.wageIndexPl100) : "—",
+        },
+      ],
     });
+    const cmp: Array<{
+      label: string;
+      value: number;
+      ref?: number | null;
+      max: number;
+      valueLabel: string;
+    }> = [];
+    if (pw.unemploymentPct != null) {
+      const max = Math.max(pw.unemploymentPct, pw.unemploymentPolandPct ?? 0) * 1.4 || 10;
+      cmp.push({
+        label: "Stopa bezrobocia",
+        value: pw.unemploymentPct,
+        ref: pw.unemploymentPolandPct,
+        max,
+        valueLabel: `${num(pw.unemploymentPct)}% (PL ${pw.unemploymentPolandPct != null ? num(pw.unemploymentPolandPct) : "—"}%)`,
+      });
+    }
+    if (pw.wageIndexPl100 != null) {
+      cmp.push({
+        label: "Wynagrodzenia",
+        value: pw.wageIndexPl100,
+        ref: 100,
+        max: Math.max(150, pw.wageIndexPl100 * 1.1),
+        valueLabel: `${num(pw.wageIndexPl100)}% średniej PL`,
+      });
+    }
+    if (cmp.length) blocks.push({ t: "compare", barName: "powiat", refName: "Polska", rows: cmp });
+    // Różne jednostki (% i ‰) — jeden wykres, ale każdy wiersz z własną skalą i jednostką.
+    const div: Array<{ label: string; value: number; valueLabel: string; maxAbs?: number }> = [];
+    if (pw.populationChange5yPct != null)
+      div.push({
+        label: "Zmiana ludności (5 lat)",
+        value: pw.populationChange5yPct,
+        valueLabel: pct(pw.populationChange5yPct, true) ?? "—",
+        maxAbs: Math.max(10, Math.abs(pw.populationChange5yPct)),
+      });
+    if (pw.migrationPer1000 != null)
+      div.push({
+        label: "Saldo migracji (na 1000 mieszk.)",
+        value: pw.migrationPer1000,
+        valueLabel: `${pw.migrationPer1000 > 0 ? "+" : ""}${num(pw.migrationPer1000)} ‰`,
+        maxAbs: Math.max(10, Math.abs(pw.migrationPer1000)),
+      });
+    if (div.length)
+      blocks.push({
+        t: "diverging",
+        positiveName: "przyrost / napływ",
+        negativeName: "spadek / odpływ",
+        rows: div,
+      });
   }
   return blocks;
 }
@@ -906,22 +1009,17 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
   const comp = cs.components;
   if (comp) {
     blocks.push({ t: "subheading", text: "Składowe oceny zabezpieczenia" });
-    blocks.push({
-      t: "table",
-      columns: [
-        { label: "Składowa", width: 5 },
-        { label: "Wynik", width: 1.2, align: "right" },
-      ],
-      rows: [
-        ["Stan prawny i dokumenty", comp.legalAndDocuments],
-        ["Wartość i LTV", comp.valueAndLtv],
-        ["Płynność rynku", comp.marketLiquidity],
-        ["Ryzyka techniczne i użytkowe", comp.technicalAndUseRisks],
-        ["Jakość danych", comp.dataQuality],
-      ]
-        .filter((r) => r[1] != null && Number.isFinite(r[1] as number))
-        .map(([k, v]) => [String(k), String(Math.round(v as number))]),
-    });
+    const parts: Array<[string, number | null | undefined]> = [
+      ["Stan prawny i dokumenty", comp.legalAndDocuments],
+      ["Wartość i LTV", comp.valueAndLtv],
+      ["Płynność rynku", comp.marketLiquidity],
+      ["Ryzyka techniczne i użytkowe", comp.technicalAndUseRisks],
+      ["Jakość danych", comp.dataQuality],
+    ];
+    for (const [label, v] of parts) {
+      if (v != null && Number.isFinite(v))
+        blocks.push({ t: "score", label, value: Math.round(v), color: NEUTRAL_BAR });
+    }
   }
 
   const pv = c.portalValuation ?? c.perplexityValuation ?? null;
@@ -1183,6 +1281,41 @@ function longevityBlocks(v: InvestorValuationSummary | null): ReportBlock[] {
       `${pct(r.survivalOverTerm)}${r.loanTermYears ? ` (${r.loanTermYears} l.)` : ""}`,
     ]),
   });
+  const exRows = rows.filter((r) => r.remainingYears != null);
+  if (exRows.length) {
+    const maxEx =
+      Math.max(...exRows.map((r) => Math.max(r.remainingYears!, r.nationalRemainingYears ?? 0))) *
+      1.15;
+    blocks.push({
+      t: "compare",
+      barName: "dalsze trwanie życia — region nieruchomości",
+      refName: "średnia Polska",
+      rows: exRows.map((r) => ({
+        label: `${r.role}${r.ageRange ? ` (${r.ageRange})` : ""}`,
+        value: r.remainingYears!,
+        ref: r.nationalRemainingYears,
+        max: maxEx,
+        valueLabel: `${yrs(r.remainingYears)} (PL ${yrs(r.nationalRemainingYears)})`,
+      })),
+    });
+  }
+  const survRows = rows.filter((r) => r.survivalOverTerm != null);
+  if (survRows.length) {
+    blocks.push({
+      t: "paragraph",
+      muted: true,
+      text: "Prawdopodobieństwo przeżycia całego okresu pożyczki:",
+    });
+    blocks.push({
+      t: "bars",
+      max: 100,
+      rows: survRows.map((r) => ({
+        label: r.role,
+        value: Math.round(r.survivalOverTerm! * 100),
+        valueLabel: `${pct(r.survivalOverTerm)}${r.loanTermYears ? ` w ${r.loanTermYears} l.` : ""}`,
+      })),
+    });
+  }
   const notes = [
     ...new Set(rows.map((r) => r.regionalNote).filter((n): n is string => Boolean(n))),
   ];
@@ -1362,7 +1495,11 @@ function resultBlocks(a: {
   const blocks: ReportBlock[] = [];
   if (a.grade) blocks.push(...gradeBlocks(a.grade), ...(a.gradeExtra ?? []));
   blocks.push(...locationBlocks(a.collateral));
-  if (a.valuation) blocks.push(...valuationBlocks(a.valuation), ...saleabilityBlocks(a.valuation));
+  if (a.valuation)
+    blocks.push(
+      ...valuationBlocks(a.valuation, a.collateral?.ltv?.requestedLoanAmountPln ?? null),
+      ...saleabilityBlocks(a.valuation),
+    );
   if (a.collateral) blocks.push(...collateralBlocks(a.collateral));
   blocks.push(...(a.highlights ?? []));
   if (!a.valuation && !a.collateral) {
@@ -1617,6 +1754,21 @@ export function reportModelText(model: InvestorReportModel): string {
       case "map":
         out.push(b.caption);
         break;
+      case "tiles":
+        for (const it of b.items) out.push(it.label, it.value);
+        break;
+      case "compare":
+        out.push(b.barName, b.refName ?? "", ...b.rows.flatMap((r) => [r.label, r.valueLabel]));
+        break;
+      case "diverging":
+        out.push(b.positiveName, b.negativeName, ...b.rows.flatMap((r) => [r.label, r.valueLabel]));
+        break;
+      case "distances":
+        out.push(...b.rows.map((r) => r.label));
+        break;
+      case "bars":
+        out.push(...b.rows.flatMap((r) => [r.label, r.valueLabel]));
+        break;
     }
   }
   return out.join("\n");
@@ -1775,6 +1927,25 @@ export async function renderInvestorReportPdf(
         break;
       case "note":
         w.note(b.text, { tone: b.tone });
+        break;
+      case "tiles":
+        for (let i = 0; i < b.items.length; i += 3) w.highlights(b.items.slice(i, i + 3));
+        break;
+      case "compare":
+        w.compareBars(b.rows, { barName: b.barName, refName: b.refName });
+        break;
+      case "diverging":
+        w.divergingBars(b.rows, {
+          maxAbs: b.maxAbs,
+          positiveName: b.positiveName,
+          negativeName: b.negativeName,
+        });
+        break;
+      case "distances":
+        w.distanceStrip(b.rows, { maxM: b.maxM });
+        break;
+      case "bars":
+        w.barList(b.rows, { max: b.max });
         break;
       case "map": {
         const png = await (opts.mapRenderer ?? defaultMapRenderer)({
