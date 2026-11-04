@@ -26,7 +26,7 @@ import {
 } from "@/lib/storefront/products";
 import { readStoreCart, type StoreCartItem } from "@/lib/storefront/cart-storage";
 import { KwReportOrder } from "@/components/storefront/KwReportForm";
-import { ShopOrderPipeline } from "@/components/storefront/ShopOrderPipeline";
+import { ORDER_PIPELINE } from "@/components/marketing/investor-modules";
 import { ManagementDemo } from "@/components/storefront/ManagementDemo";
 
 /**
@@ -35,10 +35,6 @@ import { ManagementDemo } from "@/components/storefront/ManagementDemo";
  * any access. Cart currently creates a purchase enquiry, not a transaction.
  */
 export const Route = createFileRoute("/sklep")({
-  validateSearch: (search: Record<string, unknown>): { tpay?: string; payment?: string } => ({
-    tpay: typeof search.tpay === "string" ? search.tpay : undefined,
-    payment: typeof search.payment === "string" ? search.payment : undefined,
-  }),
   head: () => ({ meta: [
     { title: "Sklep inwestora — Akademia, zlecenie okazji i Centrum Zarządzania | Finance You" },
     { name: "description", content: "Moduły Akademii Inwestora, zlecenie poszukiwania okazji z całej Polski, Centrum Zarządzania (dokumenty, CRM, e-podpis, compliance) i analiza księgi wieczystej." },
@@ -79,7 +75,6 @@ function CatalogHeader({ eyebrow, title, copy, id }: { eyebrow: string; title: s
 }
 
 function Storefront() {
-  const { tpay, payment } = Route.useSearch();
   const fetchCatalog = useServerFn(getPublicStoreCatalog);
   const fetchLegal = useServerFn(getStoreLegalTexts);
   const startCheckout = useServerFn(createStoreCheckout);
@@ -177,9 +172,9 @@ function Storefront() {
         <div className="fy-store-hero-copy">
           <Eyebrow tone="gold">FINANCE YOU · SKLEP INWESTORA</Eyebrow>
           <h1>Wiedza, okazje i narzędzia.<span> Wszystko dla inwestora.</span></h1>
-          <p>Ucz się modułami Akademii, zleć nam poszukiwanie okazji z całej Polski i prowadź portfel w Centrum Zarządzania. Całe zlecenie — od KYC po umowy — przejdziesz na tej stronie.</p>
+          <p>Ucz się modułami Akademii, zleć nam poszukiwanie okazji z całej Polski i prowadź portfel w Centrum Zarządzania. Zlecenie składasz w panelu inwestora — od abonamentu i KYC po umowy.</p>
           <div className="fy-store-actions">
-            <MktButton variant="gold" href="#siecsprzedazy" size="lg">Złóż zlecenie</MktButton>
+            <MktButton variant="gold" href={ORDER_PIPELINE} size="lg">Złóż zlecenie</MktButton>
             <MktButton variant="outline" href="#akademia" size="lg">Moduły Akademii</MktButton>
           </div>
           <div className="fy-store-trust"><span><Check size={16} /> 7 modułów po {ACADEMY_MODULE_PRICE_PLN} zł</span><span><Check size={16} /> Projekty z całej Polski</span><span><Check size={16} /> Centrum Zarządzania — demo bez logowania</span></div>
@@ -241,12 +236,15 @@ function Storefront() {
           <div><Icon3D name="investors" size={64}/><Eyebrow tone="gold">02 / OGÓLNOPOLSKA SIEĆ SPRZEDAŻY · GŁÓWNY PRODUKT</Eyebrow>
             <h2>Zleć nam poszukiwanie okazji.</h2>
             <p>Nasi specjaliści wybiorą dla Ciebie okazje inwestycyjne dopasowane do wskazanego przedziału finansowego. Otrzymasz do pięciu propozycji finansowania wraz z kompletnymi raportami, które pomogą Ci ocenić zabezpieczenia i ryzyko.</p>
-            <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Cały proces przejdziesz poniżej, na tej stronie: abonament, dane, KYC, screening PEP/sankcji, źródło środków, Umowa ramowa, NDA i RODO, a na końcu formularz Zlecenia.</span></div>
-            <small>Dostęp do danych klientów odblokowują kontrole po stronie serwera. Liczba propozycji zależy od dostępnych spraw spełniających kryteria.</small>
+            <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Cały proces przejdziesz w panelu inwestora: abonament, dane, KYC, screening PEP/sankcji, źródło środków, Umowa ramowa, NDA i RODO, a na końcu formularz Zlecenia.</span></div>
+            <div className="fy-store-actions">
+              <MktButton variant="gold" size="lg" href={ORDER_PIPELINE}>Złóż zlecenie poszukiwania okazji</MktButton>
+              <MktButton variant="outline" href="/abonament-inwestora">Załóż konto inwestora</MktButton>
+            </div>
+            <small>Zlecenie składasz po zalogowaniu w panelu inwestora. Nowe konto powstaje po opłaceniu abonamentu — link do logowania wysyłamy e-mailem. Dostęp do danych klientów odblokowują kontrole po stronie serwera. Liczba propozycji zależy od dostępnych spraw spełniających kryteria.</small>
           </div>
           <img src="/marketing/moduly/siec-sprzedazy-1.webp" alt="Ogólnopolska Sieć Sprzedaży Finance You — projekty z całej Polski" loading="lazy"/>
         </div>
-        <ShopOrderPipeline tpay={tpay} payment={payment} />
       </div>
     </Section>
 
@@ -480,21 +478,6 @@ function Storefront() {
       .fy-store-module-topics{margin:0 0 .6rem;padding-left:1.1rem;color:#c5d0e7;font-size:.8rem;line-height:1.55;}
       .fy-store-main-product{padding:0;overflow:hidden;scroll-margin-top:4rem;border-color:rgba(240,198,103,.45);}
       .fy-store-main-product>.fy-store-split{background:none;border:0;box-shadow:none;}
-      .fy-shop-pipeline-box{margin:0 clamp(.8rem,3vw,2.5rem) clamp(.8rem,3vw,2.5rem);padding:clamp(.9rem,2.5vw,1.6rem);border-radius:1rem;border:1px solid rgba(240,198,103,.25);background:rgba(5,11,32,.55);color:var(--foreground);}
-      .fy-shop-pipeline-live{background:var(--background);}
-      .fy-shop-steps{list-style:none;margin:0 0 1.2rem;padding:0;display:flex;flex-wrap:wrap;gap:.45rem;}
-      .fy-shop-steps li{display:flex;align-items:center;gap:.4rem;font-size:.74rem;padding:.4rem .65rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);color:#c9d4ec;}
-      .fy-shop-steps li span{display:grid;place-items:center;width:1.3rem;height:1.3rem;border-radius:50%;background:rgba(255,255,255,.1);font-weight:800;font-size:.68rem;}
-      .fy-shop-steps li.current{border-color:${GOLD};color:#fff;}
-      .fy-shop-steps li.current span{background:${GOLD};color:#141b2e;}
-      .fy-shop-steps li.done span{background:#2f9e6d;color:#fff;}
-      .fy-shop-pipeline-paths{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-      .fy-shop-pipeline-paths>div{padding:1rem;border-radius:.8rem;border:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:.7rem;align-items:flex-start;}
-      .fy-shop-pipeline-paths h3{display:flex;align-items:center;gap:.5rem;font-weight:850;font-size:1.05rem;color:#fff;}
-      .fy-shop-pipeline-paths p{color:#c5d0e7;font-size:.86rem;line-height:1.6;margin:0;}
-      .fy-shop-link-btn,.fy-shop-link-btn:visited{text-decoration:none;display:inline-flex;align-items:center;color:#141b2e !important;}
-      .fy-shop-checkout{margin-top:1.2rem;padding:1rem;border-radius:.8rem;background:var(--card);border:1px solid var(--border);}
-      .fy-shop-pipeline-note{display:flex;gap:.6rem;align-items:flex-start;font-size:.85rem;line-height:1.55;color:#f0dfb1;border:1px solid rgba(240,198,103,.25);border-radius:.7rem;padding:.85rem;margin:.8rem 0;}
       .fy-store-centrum-list{list-style:none;padding:0;margin:1rem 0;display:grid;gap:.55rem;color:#e3e9f7;font-size:.9rem;}
       .fy-store-centrum-list li{display:flex;gap:.55rem;align-items:center;}
       .fy-store-centrum-list svg{color:${GOLD};flex-shrink:0;}
@@ -575,8 +558,7 @@ function Storefront() {
         .fy-store-plain-feature>img{order:-1;}
         .fy-store-bundle>div:last-child{justify-items:stretch;}
         .fy-store-cart li{gap:.55rem;}
-        .fy-shop-pipeline-paths,.fy-demo-grid,.fy-demo-signers{grid-template-columns:minmax(0,1fr);}
-        .fy-shop-pipeline-box{margin:0 .6rem .6rem;padding:.8rem;}
+        .fy-demo-grid,.fy-demo-signers{grid-template-columns:minmax(0,1fr);}
         .fy-demo-kanban{grid-template-columns:minmax(0,1fr);}
         .fy-store-module>img{aspect-ratio:4/3;object-position:top;}
       }

@@ -16,7 +16,7 @@ import type { Icon3DName } from "./icon-3d";
  *  - Szkolenie        → /inwestor/szkolenia (tabela training_videos); program
  *                       7 modułów = AKADEMIA w routes/dla-inwestora.tsx
  *  - Sieć sprzedaży   → Zlecenia i Projekty (lib/order-cycle-*, lead-source.ts); Zlecenie
- *                       składa się w pipeline'ie sklepu (ORDER_PIPELINE)
+ *                       składa się w pipeline'ie panelu /inwestor/umowy (ORDER_PIPELINE)
  *  - Analityk AI      → /inwestor/analityka (lib/analysis-pipeline, kw-analysis,
  *                       risk-assessment, property-analysis)
  *  - Kancelaria AI    → /inwestor/dokumenty, /inwestor/podpisy (document-generator,
@@ -104,8 +104,14 @@ export type InvestorModule = {
   };
 };
 
-/** Pipeline Zlecenia w sklepie: abonament → dane → KYC → umowy → formularz Zlecenia. */
-export const ORDER_PIPELINE = "/sklep#siecsprzedazy";
+/**
+ * Pipeline Zlecenia w panelu inwestora: abonament → dane → KYC → screening →
+ * źródło środków → umowy → formularz Zlecenia. Jedyne miejsce składania Zlecenia
+ * (decyzja właściciela 04.11.2026: pipeline NIE jest osadzany w sklepie ani na
+ * landingu). Niezalogowanego PanelShell odsyła na /logowanie?role=inwestor z
+ * powrotem tutaj; bez abonamentu panel pokazuje bramkę abonamentu.
+ */
+export const ORDER_PIPELINE = "/inwestor/umowy";
 
 export const INVESTOR_MODULES: InvestorModule[] = [
   {
@@ -118,7 +124,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     image: "/marketing/moduly/siec-sprzedazy-1.webp",
     // Slajd 3 (24 h rezerwacji) usunięty — nie ma rezerwacji Projektów (decyzja właściciela 04.11.2026).
     slides: ["/marketing/moduly/siec-sprzedazy-2.webp"],
-    // Zlecenie składa się w pipeline'ie sklepu (abonament → dane → KYC → umowy → Zlecenie).
+    // Zlecenie składa się w pipeline'ie panelu inwestora (abonament → dane → KYC → umowy → Zlecenie).
     quickLink: { label: "Złóż zlecenie poszukiwania okazji", href: ORDER_PIPELINE },
     primaryCta: { label: "Złóż zlecenie poszukiwania okazji", href: ORDER_PIPELINE },
     imageAlt: "Ogólnopolska sieć sprzedaży — Projekty z całej Polski dopasowane do Zlecenia",

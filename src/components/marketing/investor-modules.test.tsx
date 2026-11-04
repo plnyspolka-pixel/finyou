@@ -97,7 +97,8 @@ describe("szkolenie i moduły partnera — dane podstron", () => {
       "Profesjonalna obsługa na każdym etapie Projektu",
       "Najnowsze okazje inwestycyjne trafiają wprost do Ciebie — bez szukania klienta",
     ]);
-    expect(m.quickLink?.href).toBe("/sklep#siecsprzedazy");
+    expect(m.quickLink?.href).toBe("/inwestor/umowy");
+    expect(m.primaryCta?.href).toBe("/inwestor/umowy");
   });
 
   it("windykację sprzedajemy jako „Windykacja” (stary slug przekierowany), kancelaria ma pieczątkę e-podpis", () => {

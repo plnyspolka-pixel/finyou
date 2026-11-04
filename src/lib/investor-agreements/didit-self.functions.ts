@@ -17,8 +17,6 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
       .object({
         entityType: z.enum(["osoba", "firma"]).default("osoba"),
         callbackBase: z.string().url().optional(),
-        /** Pipeline w panelu albo osadzony w sklepie (/sklep#siecsprzedazy). */
-        returnTo: z.enum(["panel", "sklep"]).default("panel"),
       })
       .parse(input),
   )
@@ -63,10 +61,7 @@ export const startInvestorSelfVerification = createServerFn({ method: "POST" })
     const session = await createDiditSession({
       workflowId,
       vendorData,
-      callback:
-        data.returnTo === "sklep"
-          ? `${base}/sklep?didit=return#siecsprzedazy`
-          : `${base}/inwestor/umowy?didit=return`,
+      callback: `${base}/inwestor/umowy?didit=return`,
       language: "pl",
       metadata: { purpose: "investor_agreements", user_id: userId, app: "finance-you" },
     });
