@@ -12,6 +12,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { compactKwNumber } from "@/lib/kw";
 import { parsePesel } from "@/lib/risk-assessment/pesel";
+import { proceedingStatusLabel } from "./court-proceeding-format";
 import { parseOwners } from "@/lib/risk-assessment/kw-parse-core";
 import { lookupCeidgActivity, emptyCeidg } from "@/lib/risk-assessment/ceidg-lookup.server";
 import { findBusinessInVatWhiteList } from "@/lib/risk-assessment/vat-whitelist.server";
@@ -73,7 +74,9 @@ export function intelligenceWarnings(report: OwnerIntelligenceReport | null | un
     for (const h of s.hits.filter((x) => x.category === "court_notice")) {
       out.push(
         `${who}: ${h.title}${h.caseSignature ? ` (sygn. ${h.caseSignature})` : ""}${h.publicationDate ? `, ${h.publicationDate}` : ""} — ` +
-          (h.match === "identifier" ? "zgodny identyfikator (PESEL/NIP/KRS)." : "zgodność tylko po nazwisku — zweryfikuj tożsamość."),
+          (h.match === "identifier"
+            ? `zgodny identyfikator (PESEL/NIP/KRS).${h.proceeding ? ` Postępowanie: ${proceedingStatusLabel[h.proceeding.status]} — ${h.proceeding.statusNote}` : ""}`
+            : "zgodność tylko po nazwisku — zweryfikuj tożsamość."),
       );
     }
     if (s.role === "client" && s.courtStatus !== "checked")

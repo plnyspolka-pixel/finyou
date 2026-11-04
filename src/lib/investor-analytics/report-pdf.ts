@@ -19,6 +19,7 @@
 //  • zastrzeżenia raz, na końcu (zastrzeżenie analizy KW = REPORT_DISCLAIMER —
 //    tylko gdy raport zawiera analizę KW),
 //  • kroki bez wyniku mają w PDF-ie notkę, jak puste karty kroków na ekranie.
+import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
 import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-projects.functions";
 import type {
   FindingCategory,
@@ -1429,6 +1430,30 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
           t: "bullets",
           items: owner.hits.map((hit) => `Źródło (${hit.source}): ${hit.url}`),
         });
+        for (const hit of owner.hits) {
+          if (!hit.proceeding) continue;
+          const p = hit.proceeding;
+          blocks.push(
+            {
+              t: "subheading",
+              text: `Pogłębiony raport postępowania — ${p.signatures[0] ?? p.kind}`,
+            },
+            { t: "keyValues", rows: proceedingRows(p) },
+            {
+              t: "table",
+              columns: [
+                { label: "Data", width: 1 },
+                { label: "MSiG / poz.", width: 1 },
+                { label: "Ogłoszenie", width: 4 },
+              ],
+              rows: p.timeline.map((n) => [
+                n.publicationDate,
+                `${n.monitorNumber}${n.position ? ` / ${n.position}` : ""}`,
+                `${n.chapter ?? "ogłoszenie"}${n.summary ? ` — ${n.summary.slice(0, 160)}…` : ""}`,
+              ]),
+            },
+          );
+        }
       } else {
         blocks.push({
           t: "paragraph",

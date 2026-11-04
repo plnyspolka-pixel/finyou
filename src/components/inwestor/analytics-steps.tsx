@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/accordion";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { formatDateTime } from "@/lib/labels";
+import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
+import type { CourtProceedingReport } from "@/lib/coowners/owner-intelligence.types";
 import {
   ANALYTICS_STEP_STATUS_LABELS,
   type AnalyticsCoOwners,
@@ -338,7 +340,8 @@ export function CoOwnersStep({
                       {hit.caseSignature ? ` · sygn. ${hit.caseSignature}` : ""}
                       {" · "}
                       {hit.match === "identifier" ? "identyfikator zgodny" : "tylko nazwa — niezweryfikowane"}
-                      {hit.detail ? ` · ${hit.detail}` : ""}
+                      {hit.detail && !hit.proceeding ? ` · ${hit.detail}` : ""}
+                      {hit.proceeding && <ProceedingReportView report={hit.proceeding} />}
                     </li>
                   ))}
                 </ul>
@@ -352,6 +355,37 @@ export function CoOwnersStep({
           <p className="text-xs text-muted-foreground">{co.intelligence.note}</p>
         </section>
       )}
+    </div>
+  );
+}
+
+/** Pogłębiony raport postępowania MSiG (tożsamość potwierdzona identyfikatorem). */
+function ProceedingReportView({ report }: { report: CourtProceedingReport }) {
+  return (
+    <div className="mt-2 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+      <div className="font-semibold">Pogłębiony raport postępowania</div>
+      <dl className="grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-[max-content_1fr]">
+        {proceedingRows(report).map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-muted-foreground">{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="font-medium">Oś czasu ogłoszeń</div>
+      <ol className="space-y-1 border-l pl-3">
+        {report.timeline.map((n, i) => (
+          <li key={i}>
+            <span className="font-medium">{n.publicationDate}</span> · MSiG {n.monitorNumber}
+            {n.position ? `, poz. ${n.position}` : ""}
+            {n.chapter ? ` — ${n.chapter}` : ""}{" "}
+            <a href={n.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">
+              PDF
+            </a>
+            {n.summary && <div className="text-muted-foreground">{n.summary}…</div>}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
