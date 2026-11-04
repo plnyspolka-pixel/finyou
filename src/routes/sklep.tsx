@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { BookOpen, Check, ChevronDown, FileSignature, FileText, GraduationCap, Landmark, LockKeyhole, Search, ShieldCheck, ShoppingBag, Trash2, WandSparkles } from "lucide-react";
+import { Check, FileText, GraduationCap, LockKeyhole, PenLine, ShieldCheck, ShoppingBag, Trash2, Users } from "lucide-react";
 import { MarketingShell } from "@/components/marketing/shell";
 import { Section, SectionHead } from "@/components/marketing/sections";
 import { Eyebrow, MktBadge, MktButton } from "@/components/marketing/primitives";
@@ -10,6 +10,17 @@ import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
 import { createStoreCheckout, getStoreLegalTexts } from "@/lib/storefront/checkout.functions";
 import { validateKwNumber } from "@/lib/kw";
 import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
+import {
+  ACADEMY_COURSE_PRICE_PLN,
+  ACADEMY_MODULES,
+  ACADEMY_MODULE_PRICE_PLN,
+  MANAGEMENT_CART_ID,
+  MANAGEMENT_MODULE_DAYS,
+  MANAGEMENT_MODULE_PRICE_PLN,
+  academyModuleForLesson,
+} from "@/lib/storefront/products";
+import { ShopOrderPipeline } from "@/components/storefront/ShopOrderPipeline";
+import { ManagementDemo } from "@/components/storefront/ManagementDemo";
 
 /**
  * Finance You investor storefront: public metadata, no private source files.
@@ -17,16 +28,19 @@ import { FREE_LESSON_SLUG } from "@/lib/free-lesson";
  * any access. Cart currently creates a purchase enquiry, not a transaction.
  */
 export const Route = createFileRoute("/sklep")({
+  validateSearch: (search: Record<string, unknown>): { tpay?: string; payment?: string } => ({
+    tpay: typeof search.tpay === "string" ? search.tpay : undefined,
+    payment: typeof search.payment === "string" ? search.payment : undefined,
+  }),
   head: () => ({ meta: [
-    { title: "Sklep inwestora — Akademia, dokumenty i analizy | Finance You" },
-    { name: "description", content: "Lekcje Akademii Inwestora, Kancelaria AI, analiza księgi wieczystej i zlecenia poszukiwania okazji w Finance You." },
+    { title: "Sklep inwestora — Akademia, zlecenie okazji i Centrum Zarządzania | Finance You" },
+    { name: "description", content: "Moduły Akademii Inwestora, zlecenie poszukiwania okazji z całej Polski, Centrum Zarządzania (dokumenty, CRM, e-podpis, compliance) i analiza księgi wieczystej." },
   ], links: [{ rel: "canonical", href: "https://financeyou.pl/sklep" }] }),
   component: Storefront,
 });
 
 type Catalog = Awaited<ReturnType<typeof getPublicStoreCatalog>>;
 type Lesson = Catalog["lessons"][number];
-type Document = Catalog["documents"][number];
 type CartItem = { id: string; type: "lesson" | "document" | "course" | "kw"; title: string; price: number };
 const GOLD = "#f0c667";
 const PLN = (n: number) => n.toLocaleString("pl-PL") + " zł";
@@ -58,6 +72,7 @@ function CatalogHeader({ eyebrow, title, copy, id }: { eyebrow: string; title: s
 }
 
 function Storefront() {
+  const { tpay, payment } = Route.useSearch();
   const fetchCatalog = useServerFn(getPublicStoreCatalog);
   const fetchLegal = useServerFn(getStoreLegalTexts);
   const startCheckout = useServerFn(createStoreCheckout);
@@ -78,7 +93,6 @@ function Storefront() {
   const [kwError, setKwError] = useState("");
   const [kwReady, setKwReady] = useState(false);
   const [kwLegitimatePurpose, setKwLegitimatePurpose] = useState(false);
-  const [tab, setTab] = useState<"all" | "law" | "cases">("all");
   const [cartOpen, setCartOpen] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -109,11 +123,22 @@ function Storefront() {
   };
   const remove = (id: string) => setCart((items) => items.filter((item) => item.id !== id));
   const courseInCart = itemIds.has("course:academy");
-  const chosenLessons = useMemo(() => catalog?.lessons.filter((l) => {
-    if (tab === "law") return /prawo|prawn|kredyt|lichwa|kodeks/i.test(l.title + " " + l.category);
-    if (tab === "cases") return /case|stud|windykacj|egzekucj/i.test(l.title + " " + l.category);
-    return true;
-  }) ?? [], [catalog, tab]);
+  const managementInCart = itemIds.has("course:" + MANAGEMENT_CART_ID);
+  // Pełny pakiet zastępuje moduły — nie sprzedajemy obu wariantów naraz.
+  const addCourse = () => setCart((items) => [
+    ...items.filter((i) => !(i.type === "course" && i.id.startsWith("course:module-")) && i.type !== "lesson"),
+    ...(items.some((i) => i.id === "course:academy") ? [] : [{ id: "course:academy", type: "course" as const,
+      title: "Pełna Akademia Inwestora — 7 modułów", price: ACADEMY_COURSE_PRICE_PLN }]),
+  ]);
+  const lessonsByModule = useMemo(() => {
+    const map = new Map<number, Lesson[]>();
+    for (const l of catalog?.lessons ?? []) {
+      const m = academyModuleForLesson(l.number);
+      if (!m) continue;
+      map.set(m.number, [...(map.get(m.number) ?? []), l]);
+    }
+    return map;
+  }, [catalog]);
 
   const needsDpa = cart.some((i) => i.type === "document");
   const checkoutAllowed = Boolean(
@@ -130,7 +155,7 @@ function Storefront() {
       const result = await startCheckout({ data: {
         buyerName: buyerName.trim(),
         cart: cart.map((i) => {
-          if (i.type === "course") return { kind: "course" as const, id: "academy" };
+          if (i.type === "course") return { kind: "course" as const, id: i.id.slice(i.id.indexOf(":") + 1) };
           const pos = i.id.indexOf(":");
           return { kind: i.type as "lesson" | "document" | "kw", id: i.id.slice(pos + 1) };
         }),
@@ -163,13 +188,13 @@ function Storefront() {
       <div className="fy-store-hero-grid">
         <div className="fy-store-hero-copy">
           <Eyebrow tone="gold">FINANCE YOU · SKLEP INWESTORA</Eyebrow>
-          <h1>Wiedza, dokumenty i analizy.<span> Wszystko dla inwestora.</span></h1>
-          <p>Od pierwszej pożyczki po zarządzanie całym portfelem. Wybieraj konkretne narzędzia, które pomagają podejmować świadome decyzje.</p>
+          <h1>Wiedza, okazje i narzędzia.<span> Wszystko dla inwestora.</span></h1>
+          <p>Ucz się modułami Akademii, zleć nam poszukiwanie okazji z całej Polski i prowadź portfel w Centrum Zarządzania. Całe zlecenie — od KYC po umowy — przejdziesz na tej stronie.</p>
           <div className="fy-store-actions">
-            <MktButton variant="gold" href="#akademia" size="lg">Przejrzyj lekcje</MktButton>
-            <MktButton variant="outline" href="#kancelaria" size="lg">Generator dokumentów</MktButton>
+            <MktButton variant="gold" href="#siecsprzedazy" size="lg">Złóż zlecenie</MktButton>
+            <MktButton variant="outline" href="#akademia" size="lg">Moduły Akademii</MktButton>
           </div>
-          <div className="fy-store-trust"><span><Check size={16} /> 28 lekcji</span><span><Check size={16} /> Kancelaria AI</span><span><Check size={16} /> Analizy KW</span></div>
+          <div className="fy-store-trust"><span><Check size={16} /> 7 modułów po {ACADEMY_MODULE_PRICE_PLN} zł</span><span><Check size={16} /> Projekty z całej Polski</span><span><Check size={16} /> Centrum Zarządzania — demo bez logowania</span></div>
         </div>
         <div className="fy-store-hero-film">
           <video controls playsInline preload="metadata" poster="/marketing/prezentacja-poster.webp"
@@ -181,51 +206,41 @@ function Storefront() {
     </section>
 
     <div className="fy-store-jump-nav" aria-label="Produkty sklepu">
-      <a href="#akademia">Akademia</a><a href="#kancelaria">Generator dokumentów</a>
-      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a><a href="#centrum">Zarządzanie</a><a href="#siecsprzedazy">Okazje</a>
+      <a href="#akademia">Akademia</a><a href="#siecsprzedazy">Okazje · zlecenie</a>
+      <a href="#centrum">Centrum Zarządzania</a><a href="#demo">Demo</a>
+      <a href="#analityk">Analityk KW</a><a href="#windykator-ai">Windykator AI</a>
       <button type="button" onClick={() => { setCartOpen((v) => !v); document.getElementById("koszyk")?.scrollIntoView({ behavior: "smooth" }); }}><ShoppingBag size={16} /> Koszyk ({cart.length})</button>
     </div>
 
     <Section>
-      <CatalogHeader id="akademia" eyebrow="01 / AKADEMIA INWESTORA" title="Wybierz lekcje, których potrzebujesz" copy="Pełny program Akademii — wszystkie opublikowane lekcje. Tylko lekcja pierwsza jest bezpłatna. Pozostałe możesz zamawiać pojedynczo lub jako cały pakiet." />
+      <CatalogHeader id="akademia" eyebrow="01 / AKADEMIA INWESTORA" title="Wybierz moduł, którego potrzebujesz" copy={`Akademia podzielona na ${ACADEMY_MODULES.length} wątków — od strategii, przez prawo i analizę, po windykację. Każdy moduł kosztuje ${ACADEMY_MODULE_PRICE_PLN} zł. Pierwsza lekcja jest bezpłatna.`} />
       <div className="fy-store-course-banner" style={panelStyle}>
         <img src="/marketing/moduly/szkolenie-1.webp" alt="" loading="lazy" />
-        <div><MktBadge variant="gold">KOMPLETNY PROGRAM</MktBadge><h3>Cała Akademia Inwestora</h3><p>{catalog?.lessons.length ?? 28} lekcji. Od strategii inwestowania, przez analizę nieruchomości i prawo, po windykację i case studies. {catalog?.lessons.length && catalog.lessons.every(l => l.durationSeconds != null) ? `Łącznie ${lessonDuration(catalog.lessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0))}.` : ""}</p></div>
-        <div className="fy-store-course-price"><strong>1 990 zł</strong>
-          <button className="fy-store-add" type="button" onClick={() => add({ id:"course:academy",type:"course", title:"Pełna Akademia Inwestora — 28 lekcji",price:1990 })}>{courseInCart ? "✓ W koszyku" : "+ Dodaj pakiet"}</button>
+        <div><MktBadge variant="gold">KOMPLETNY PROGRAM</MktBadge><h3>Cała Akademia Inwestora</h3><p>Wszystkie {ACADEMY_MODULES.length} modułów ({catalog?.lessons.length ?? 28} lekcji) w jednym pakiecie zamiast {PLN(ACADEMY_MODULES.length * ACADEMY_MODULE_PRICE_PLN)} za moduły osobno. {catalog?.lessons.length && catalog.lessons.every(l => l.durationSeconds != null) ? `Łącznie ${lessonDuration(catalog.lessons.reduce((sum, l) => sum + (l.durationSeconds ?? 0), 0))}.` : ""}</p></div>
+        <div className="fy-store-course-price"><strong>{PLN(ACADEMY_COURSE_PRICE_PLN)}</strong>
+          <button className="fy-store-add" type="button" onClick={addCourse} disabled={courseInCart}>{courseInCart ? "✓ W koszyku" : "+ Dodaj pakiet"}</button>
         </div>
       </div>
-      <div className="fy-store-filter" role="group" aria-label="Filtr lekcji">
-        <button className={tab === "all" ? "active" : ""} onClick={() => setTab("all")}>Wszystkie lekcje</button>
-        <button className={tab === "law" ? "active" : ""} onClick={() => setTab("law")}>Prawo i regulacje</button>
-        <button className={tab === "cases" ? "active" : ""} onClick={() => setTab("cases")}>Praktyka i case studies</button>
-      </div>
       {loadError && <p role="alert">Nie udało się pobrać katalogu. Spróbuj odświeżyć stronę.</p>}
-      {!catalog && !loadError && <p aria-live="polite" style={desc}>Ładowanie aktualnego katalogu lekcji i dokumentów…</p>}
-      <div className="fy-store-catalog-grid">
-        {chosenLessons.map((lesson: Lesson, index: number) => {
-          const free = lesson.number === 1;
-          const id = "lesson:" + lesson.id;
+      <div className="fy-store-module-grid">
+        {ACADEMY_MODULES.map((m) => {
+          const id = "course:" + m.id;
           const inCart = itemIds.has(id) || courseInCart;
-          return <article className="fy-store-item" key={id}>
-            <div className="fy-store-lesson-art" style={{ background: gradients[(lesson.number - 1) % gradients.length] }}>
-              {lesson.thumbnail && <img src={lesson.thumbnail} alt="" loading="lazy" />}
-              <div className="fy-store-image-dim" />
-              <span className="fy-store-lesson-no">{String(lesson.number).padStart(2,"0")}</span>
-              <GraduationCap className="fy-store-art-icon" size={32} aria-hidden />
-              <span className="fy-store-art-series">AKADEMIA FINANCE YOU</span>
-            </div>
+          const lessons = lessonsByModule.get(m.number) ?? [];
+          return <article className="fy-store-module" key={m.id}>
+            <img src={m.image} alt={`Akademia Inwestora — Moduł ${m.number}: ${m.title}`} loading="lazy" />
             <div className="fy-store-item-body">
-              <div style={badge}>{lesson.category}</div>
-              <h3>{lesson.title.replace(/^\d+\.\s*/, "")}</h3>
-              <p className="text-xs text-muted-foreground" aria-label="Czas trwania lekcji">{lessonDuration(lesson.durationSeconds)}</p>
+              <div style={badge}>MODUŁ {m.number} · {lessons.length || (m.to ? m.to - m.from + 1 : "")} {lessons.length === 1 ? "lekcja" : "lekcji"}</div>
+              <h3>{m.title}</h3>
+              <ul className="fy-store-module-topics">{(lessons.length ? lessons.map((l) => l.title.replace(/^\d+\.\s*/, "")) : m.topics).map((t) => <li key={t}>{t}</li>)}</ul>
               <div className="fy-store-item-footer">
-                {free ? <><span className="fy-store-free">DARMOWA</span><MktButton variant="gold" size="sm" href={"/pobierz/" + FREE_LESSON_SLUG}>Obejrzyj za darmo</MktButton></> :
-                <><strong>{PLN(149)}</strong><button type="button" className="fy-store-add" aria-label={"Dodaj do koszyka: " + lesson.title}
-                  onClick={() => add({ id,type:"lesson",title:lesson.title,price:149 })} disabled={inCart}>
-                  {inCart ? "✓ W koszyku" : "+ Dodaj do koszyka"}
-                </button></>}
+                <strong>{PLN(ACADEMY_MODULE_PRICE_PLN)}</strong>
+                <button type="button" className="fy-store-add" aria-label={"Dodaj do koszyka: moduł " + m.number}
+                  onClick={() => add({ id, type: "course", title: `Akademia — Moduł ${m.number}: ${m.title}`, price: ACADEMY_MODULE_PRICE_PLN })} disabled={inCart}>
+                  {courseInCart ? "✓ W pakiecie" : inCart ? "✓ W koszyku" : "+ Dodaj moduł"}
+                </button>
               </div>
+              {m.number === 1 && <MktButton variant="outline" size="sm" href={"/pobierz/" + FREE_LESSON_SLUG}>Lekcja 1 za darmo</MktButton>}
             </div>
           </article>;
         })}
@@ -233,16 +248,45 @@ function Storefront() {
     </Section>
 
     <Section tint>
-      <CatalogHeader id="kancelaria" eyebrow="02 / KANCELARIA AI" title="Generator dokumentów" copy="Jedno miejsce do przygotowywania pism. Wybierz dokument z biblioteki, uzupełnij dane i wygeneruj gotowy plik DOCX." />
-      <div className="fy-store-free-contract" style={panelStyle}>
-        <div className="fy-store-free-icon"><FileSignature size={44}/></div>
-        <div>
-          <span className="fy-store-free">JEDEN GENERATOR · WIELE WZORÓW</span>
-          <h3>Generator dokumentów Finance You</h3>
-          <p>Wybierz rodzaj pisma spośród dostępnych szablonów, zobacz podgląd, uzupełnij dane i kliknij „Generuj dokument”. Otworzysz rzeczywisty kreator Finance You, z kontrolą uprawnień dla Twojego konta.</p>
-          <small>Dokumenty nie są sprzedawane pojedynczo. Dostęp do kreatora zależy od posiadanych uprawnień.</small>
+      <div id="siecsprzedazy" className="fy-store-main-product" style={panelStyle}>
+        <div className="fy-store-split fy-store-plain-feature">
+          <div><Icon3D name="investors" size={64}/><Eyebrow tone="gold">02 / OGÓLNOPOLSKA SIEĆ SPRZEDAŻY · GŁÓWNY PRODUKT</Eyebrow>
+            <h2>Zleć nam poszukiwanie okazji.</h2>
+            <p>Nasi specjaliści wybiorą dla Ciebie okazje inwestycyjne dopasowane do wskazanego przedziału finansowego. Otrzymasz do pięciu propozycji finansowania wraz z kompletnymi raportami, które pomogą Ci ocenić zabezpieczenia i ryzyko.</p>
+            <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Cały proces przejdziesz poniżej, na tej stronie: abonament, dane, KYC, screening PEP/sankcji, źródło środków, Umowa ramowa, NDA i RODO, a na końcu formularz Zlecenia.</span></div>
+            <small>Dostęp do danych klientów odblokowują kontrole po stronie serwera. Liczba propozycji zależy od dostępnych spraw spełniających kryteria.</small>
+          </div>
+          <img src="/marketing/moduly/siec-sprzedazy-1.webp" alt="Ogólnopolska Sieć Sprzedaży Finance You — projekty z całej Polski" loading="lazy"/>
         </div>
-        <MktButton variant="gold" href="/inwestor/kreator-dokumentow">Wybierz pismo i generuj</MktButton>
+        <ShopOrderPipeline tpay={tpay} payment={payment} />
+      </div>
+    </Section>
+
+    <Section>
+      <div id="centrum" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
+        <div><Icon3D name="crm" size={64}/><Eyebrow tone="gold">03 / CENTRUM ZARZĄDZANIA</Eyebrow>
+          <h2>Dokumenty, CRM, e-podpis i compliance — jeden moduł.</h2>
+          <p>Generator pism do DOCX, kartoteka klientów i umów, podpis elektroniczny z weryfikacją tożsamości oraz rejestr AML z oceną ryzyka i kalkulatorem compliance. Bez abonamentu rocznego.</p>
+          <ul className="fy-store-centrum-list">
+            <li><FileText size={18}/> Dokumenty — biblioteka wzorów i generator DOCX</li>
+            <li><Users size={18}/> CRM — klienci, umowy i etapy sprawy</li>
+            <li><PenLine size={18}/> E-podpis — Didit, kod jednorazowy, Karta podpisów</li>
+            <li><ShieldCheck size={18}/> Compliance — AML, PEP/sankcje, zgłoszenia GIIF</li>
+          </ul>
+          <div className="fy-store-feature-price">{PLN(MANAGEMENT_MODULE_PRICE_PLN)} <small>/ {MANAGEMENT_MODULE_DAYS} dni · bez automatycznego odnawiania</small></div>
+          <div className="fy-store-actions">
+            <button type="button" className="fy-store-add" disabled={managementInCart}
+              onClick={() => add({ id: "course:" + MANAGEMENT_CART_ID, type: "course", title: `Centrum Zarządzania — ${MANAGEMENT_MODULE_DAYS} dni`, price: MANAGEMENT_MODULE_PRICE_PLN })}>
+              {managementInCart ? "✓ W koszyku" : "+ Dodaj do koszyka"}</button>
+            <MktButton variant="outline" href="#demo">Wypróbuj demo</MktButton>
+          </div>
+          <small>Moduł działa w panelu inwestora — do zakupu potrzebne jest konto inwestora. Abonament inwestora obejmuje Centrum Zarządzania bez dopłat.</small>
+        </div>
+        <img src="/marketing/moduly/aml-compliance-1.webp" alt="Centrum Zarządzania Finance You" loading="lazy"/>
+      </div>
+      <div id="demo" className="fy-store-demo-wrap">
+        <CatalogHeader id="demo-head" eyebrow="WERSJA DEMONSTRACYJNA" title="Sprawdź Centrum Zarządzania bez logowania" copy="Wygeneruj pismo, przesuń klienta w CRM, zasymuluj podpis i oceń ryzyko AML. Demo działa w Twojej przeglądarce na fikcyjnych danych." />
+        <ManagementDemo />
       </div>
     </Section>
 
@@ -250,7 +294,7 @@ function Storefront() {
       <div id="analityk" className="fy-store-split" style={panelStyle}>
         <div className="fy-store-feature-intro">
           <Icon3D name="ai" size={64}/>
-          <Eyebrow tone="gold">03 / ANALITYK AI</Eyebrow>
+          <Eyebrow tone="gold">04 / ANALITYK AI</Eyebrow>
           <h2>Co mówi księga wieczysta?</h2>
           <p>Wpisz numer księgi, aby przygotować zamówienie profesjonalnego raportu analitycznego. Sprawdzimy formalną poprawność numeru, łącznie z cyfrą kontrolną.</p>
           <div className="fy-store-feature-price">99 zł <small>/ analiza jednej KW</small></div>
@@ -281,7 +325,7 @@ function Storefront() {
     <Section>
       <div id="windykator-ai" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
         <div>
-          <Eyebrow tone="gold">04 / WINDYKATOR AI</Eyebrow>
+          <Eyebrow tone="gold">05 / WINDYKATOR AI</Eyebrow>
           <h2>Nieopłacona faktura? Zacznij od dokumentów.</h2>
           <p>Pakiet Startowy za 50 zł brutto: automatyczny odczyt faktury lub umowy, raport roszczenia, projekt wezwania do zapłaty i wstępny pakiet dla właściwej ścieżki sądowej (EPU, pozew zwykły, 777 lub egzekucja).</p>
           <div className="fy-store-feature-price">50 zł <small>/ jedna sprawa · jednorazowo</small></div>
@@ -290,30 +334,6 @@ function Storefront() {
           <small>Osobna, bezpłatna 90-dniowa windykacja polubowna wymaga dodatkowej kwalifikacji. Na etapie Pakietu Startowego system nie kontaktuje się automatycznie z dłużnikiem.</small>
         </div>
         <img src="/marketing/windykacja/etap-1.png" alt="Windykator AI — analiza i dokumentacja sprawy" loading="lazy"/>
-      </div>
-    </Section>
-
-    <Section tint>
-      <div id="centrum" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
-        <div><Icon3D name="crm" size={64}/><Eyebrow tone="gold">04 / CENTRUM ZARZĄDZANIA</Eyebrow>
-          <h2>Twój portfel pod kontrolą.</h2><p>Harmonogramy, dokumenty, analityka, AML/compliance i Windykator AI w jednym miejscu. Bez przełączania się między osobnymi systemami.</p>
-          <MktButton variant="gold" href="/dla-inwestora/aml-compliance">Poznaj Centrum Zarządzania</MktButton>
-        </div>
-        <img src="/marketing/moduly/aml-compliance-1.webp" alt="Centrum Zarządzania Finance You" loading="lazy"/>
-      </div>
-    </Section>
-
-    <Section>
-      <div id="siecsprzedazy" className="fy-store-split fy-store-plain-feature" style={panelStyle}>
-        <div><Icon3D name="investors" size={64}/><Eyebrow tone="gold">05 / OGÓLNOPOLSKA SIEĆ SPRZEDAŻY</Eyebrow>
-          <h2>Zleć nam poszukiwanie okazji.</h2>
-          <p>Nasi specjaliści wybiorą dla Ciebie okazje inwestycyjne dopasowane do wskazanego przedziału finansowego. Otrzymasz do pięciu propozycji finansowania wraz z kompletnymi raportami, które pomogą Ci ocenić zabezpieczenia i ryzyko.</p>
-          <div className="fy-store-pipeline"><ShieldCheck size={20}/><span>Przed złożeniem zlecenia przejdziesz istniejącą weryfikację KYC, screening PEP/sankcji, oświadczenie o źródle środków oraz akceptację umowy ramowej, NDA i RODO.</span></div>
-          <div className="fy-store-actions"><MktButton variant="gold" href="/inwestor/umowy">Złóż zlecenie</MktButton>
-            <MktButton variant="outline" href="/rejestracja?role=inwestor">Nie masz konta? Zarejestruj się</MktButton></div>
-          <small>Formularz i dostęp do danych klientów są odblokowywane przez istniejące kontrole po stronie serwera. Liczba propozycji zależy od dostępnych spraw spełniających kryteria.</small>
-        </div>
-        <img src="/marketing/moduly/siec-sprzedazy-1.webp" alt="Ogólnopolska Sieć Sprzedaży Finance You" loading="lazy"/>
       </div>
     </Section>
 
@@ -328,7 +348,7 @@ function Storefront() {
       <div id="koszyk" className="fy-store-cart" style={panelStyle}>
         <p><MktButton variant="outline" size="sm" href="/sklep/moje-zakupy">Moje zakupy i pobrane raporty</MktButton></p>
         <div className="fy-store-cart-title"><ShoppingBag size={28}/><div><Eyebrow tone="gold">TWOJE WYBRANE PRODUKTY</Eyebrow><h2>Koszyk <span>({cart.length})</span></h2></div></div>
-        {cart.length === 0 ? <p style={desc}>Wybierz lekcje lub dokumenty, klikając „Dodaj do koszyka”.</p> :
+        {cart.length === 0 ? <p style={desc}>Wybierz moduły Akademii, Centrum Zarządzania lub raport KW, klikając „Dodaj”.</p> :
           <><ul>{cart.map((i) => <li key={i.id}><span>{i.title}</span><strong>{PLN(i.price)}</strong>
             <button aria-label={"Usuń " + i.title} onClick={() => remove(i.id)}><Trash2 size={18}/></button></li>)}</ul>
             <div className="fy-store-cart-total"><span>Łącznie</span><strong>{PLN(total)}</strong></div>
@@ -472,7 +492,76 @@ function Storefront() {
       .fy-store-consent input{flex-shrink:0;margin-top:.2rem;accent-color:#f0c667;}
       .fy-store-pay{padding:1rem 1.25rem;font-size:.94rem;}
       .fy-store-privacy{color:var(--muted-foreground);font-size:.78rem;line-height:1.6;margin:1rem 0;}
-      @media(max-width:1000px){.fy-store-catalog-grid,.fy-store-document-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.fy-store-course-banner{grid-template-columns:7rem 1fr;}.fy-store-course-banner>img{width:7rem;}.fy-store-course-price{grid-column:2;align-items:flex-start;}}
+      .fy-store-module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr));gap:1rem;}
+      .fy-store-module{display:flex;flex-direction:column;overflow:hidden;border-radius:1rem;background:linear-gradient(155deg,#182650,#0c1734);border:1px solid rgba(164,190,248,.16);min-width:0;}
+      .fy-store-module>img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;}
+      .fy-store-module .fy-store-item-body{gap:.4rem;}
+      .fy-store-module .fy-store-item-body h3{margin:.2rem 0 .3rem;font-size:1.12rem;}
+      .fy-store-module-topics{margin:0 0 .6rem;padding-left:1.1rem;color:#c5d0e7;font-size:.8rem;line-height:1.55;}
+      .fy-store-main-product{padding:0;overflow:hidden;scroll-margin-top:4rem;border-color:rgba(240,198,103,.45);}
+      .fy-store-main-product>.fy-store-split{background:none;border:0;box-shadow:none;}
+      .fy-shop-pipeline-box{margin:0 clamp(.8rem,3vw,2.5rem) clamp(.8rem,3vw,2.5rem);padding:clamp(.9rem,2.5vw,1.6rem);border-radius:1rem;border:1px solid rgba(240,198,103,.25);background:rgba(5,11,32,.55);color:var(--foreground);}
+      .fy-shop-pipeline-live{background:var(--background);}
+      .fy-shop-steps{list-style:none;margin:0 0 1.2rem;padding:0;display:flex;flex-wrap:wrap;gap:.45rem;}
+      .fy-shop-steps li{display:flex;align-items:center;gap:.4rem;font-size:.74rem;padding:.4rem .65rem;border-radius:999px;border:1px solid rgba(255,255,255,.14);color:#c9d4ec;}
+      .fy-shop-steps li span{display:grid;place-items:center;width:1.3rem;height:1.3rem;border-radius:50%;background:rgba(255,255,255,.1);font-weight:800;font-size:.68rem;}
+      .fy-shop-steps li.current{border-color:${GOLD};color:#fff;}
+      .fy-shop-steps li.current span{background:${GOLD};color:#141b2e;}
+      .fy-shop-steps li.done span{background:#2f9e6d;color:#fff;}
+      .fy-shop-pipeline-paths{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+      .fy-shop-pipeline-paths>div{padding:1rem;border-radius:.8rem;border:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:.7rem;align-items:flex-start;}
+      .fy-shop-pipeline-paths h3{display:flex;align-items:center;gap:.5rem;font-weight:850;font-size:1.05rem;color:#fff;}
+      .fy-shop-pipeline-paths p{color:#c5d0e7;font-size:.86rem;line-height:1.6;margin:0;}
+      .fy-shop-link-btn,.fy-shop-link-btn:visited{text-decoration:none;display:inline-flex;align-items:center;color:#141b2e !important;}
+      .fy-shop-checkout{margin-top:1.2rem;padding:1rem;border-radius:.8rem;background:var(--card);border:1px solid var(--border);}
+      .fy-shop-pipeline-note{display:flex;gap:.6rem;align-items:flex-start;font-size:.85rem;line-height:1.55;color:#f0dfb1;border:1px solid rgba(240,198,103,.25);border-radius:.7rem;padding:.85rem;margin:.8rem 0;}
+      .fy-store-centrum-list{list-style:none;padding:0;margin:1rem 0;display:grid;gap:.55rem;color:#e3e9f7;font-size:.9rem;}
+      .fy-store-centrum-list li{display:flex;gap:.55rem;align-items:center;}
+      .fy-store-centrum-list svg{color:${GOLD};flex-shrink:0;}
+      .fy-store-demo-wrap{margin-top:2rem;scroll-margin-top:4rem;}
+      .fy-demo{border-radius:1.1rem;border:1px solid rgba(240,198,103,.3);background:linear-gradient(145deg,rgba(18,30,70,.94),rgba(9,16,42,.96));color:#fff;overflow:hidden;}
+      .fy-demo-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.8rem;padding:.9rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);}
+      .fy-demo-badge{font-size:.68rem;font-weight:850;letter-spacing:.08em;color:#141b2e;background:${GOLD};border-radius:.4rem;padding:.35rem .55rem;}
+      .fy-demo-tabs{display:flex;flex-wrap:wrap;gap:.4rem;}
+      .fy-demo-tabs button{display:flex;align-items:center;gap:.35rem;border-radius:999px;padding:.5rem .85rem;font-size:.8rem;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:#e8eefc;cursor:pointer;}
+      .fy-demo-tabs button.active{background:#dcb665;color:#111a32;border-color:#dcb665;font-weight:800;}
+      .fy-demo-body{padding:clamp(.9rem,2.5vw,1.5rem);}
+      .fy-demo-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:1.2rem;}
+      .fy-demo-form{display:grid;gap:.7rem;align-content:start;}
+      .fy-demo-form label{display:grid;gap:.3rem;font-size:.78rem;color:#c5d0e7;}
+      .fy-demo-form input:not([type=checkbox]),.fy-demo-form select{width:100%;padding:.6rem .7rem;border-radius:.5rem;background:#09142f;color:#fff;border:1px solid rgba(182,202,251,.3);font-size:.88rem;}
+      .fy-demo-check{display:flex !important;grid-template-columns:none;align-items:flex-start;gap:.55rem !important;font-size:.85rem !important;color:#e2e8f6 !important;}
+      .fy-demo-check input{margin-top:.2rem;accent-color:${GOLD};}
+      .fy-demo-paper{white-space:pre-wrap;overflow-wrap:anywhere;font-family:Georgia,serif;font-size:.86rem;line-height:1.7;background:#fbfaf6;color:#1b2033;border-radius:.6rem;padding:1.2rem;margin:0;min-height:16rem;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+      .fy-demo-ok{display:flex;gap:.45rem;align-items:flex-start;color:#b8f4d6;font-size:.82rem;line-height:1.5;margin-top:.6rem;}
+      .fy-demo-lead{color:#c5d0e7;font-size:.86rem;line-height:1.6;margin:0 0 .9rem;}
+      .fy-demo-kanban{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;}
+      .fy-demo-col{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:.8rem;padding:.6rem;display:grid;gap:.5rem;align-content:start;min-height:8rem;}
+      .fy-demo-col h4{font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:${GOLD};font-weight:850;}
+      .fy-demo-col article{background:#0c1838;border:1px solid rgba(164,190,248,.2);border-radius:.6rem;padding:.6rem;display:grid;gap:.3rem;font-size:.8rem;}
+      .fy-demo-col article span{color:#aebbd8;font-size:.72rem;}
+      .fy-demo-col article div{display:flex;gap:.3rem;}
+      .fy-demo-col article button{flex:1;border-radius:.4rem;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;cursor:pointer;padding:.2rem;}
+      .fy-demo-col article button:disabled{opacity:.3;cursor:default;}
+      .fy-demo-signers{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+      .fy-demo-signer{border:1px solid rgba(255,255,255,.12);border-radius:.8rem;padding:1rem;display:grid;gap:.7rem;}
+      .fy-demo-signer ul{list-style:none;margin:0;padding:0;display:grid;gap:.35rem;font-size:.82rem;color:#aebbd8;}
+      .fy-demo-signer li{display:flex;align-items:center;gap:.4rem;}
+      .fy-demo-signer li.done{color:#b8f4d6;}
+      .fy-demo-reset{margin-top:.8rem;background:none;border:0;color:#d1daeb;text-decoration:underline;cursor:pointer;font-size:.8rem;}
+      .fy-demo-risk{border-radius:.8rem;padding:1.1rem;display:grid;gap:.5rem;align-content:start;border:1px solid;}
+      .fy-demo-risk span{font-size:.8rem;color:#c5d0e7;}
+      .fy-demo-risk strong{font-size:1.5rem;font-weight:900;}
+      .fy-demo-risk ul{margin:0;padding-left:1.1rem;font-size:.85rem;line-height:1.6;}
+      .fy-demo-risk small{color:#aebbd8;font-size:.72rem;line-height:1.5;}
+      .fy-demo-risk-low{border-color:rgba(86,235,160,.35);background:rgba(29,152,106,.12);}
+      .fy-demo-risk-low strong{color:#8ff0bf;}
+      .fy-demo-risk-mid{border-color:rgba(240,198,103,.45);background:rgba(240,198,103,.1);}
+      .fy-demo-risk-mid strong{color:${GOLD};}
+      .fy-demo-risk-high{border-color:rgba(255,140,130,.45);background:rgba(200,60,50,.14);}
+      .fy-demo-risk-high strong{color:#ffb3ab;}
+      .fy-demo-foot{padding:.8rem 1rem;border-top:1px solid rgba(255,255,255,.1);font-size:.75rem;color:#aebbd8;line-height:1.55;margin:0;}
+      @media(max-width:1000px){.fy-demo-kanban{grid-template-columns:repeat(2,minmax(0,1fr));}.fy-store-catalog-grid,.fy-store-document-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.fy-store-course-banner{grid-template-columns:7rem 1fr;}.fy-store-course-banner>img{width:7rem;}.fy-store-course-price{grid-column:2;align-items:flex-start;}}
       @media(max-width:760px){
         .fy-store-hero-grid{grid-template-columns:minmax(0,1fr);padding:1rem 1rem 2.6rem;gap:1.25rem;}
         .fy-store-hero-film{grid-row:1;margin-top:.1rem;}
@@ -506,6 +595,10 @@ function Storefront() {
         .fy-store-plain-feature>img{order:-1;}
         .fy-store-bundle>div:last-child{justify-items:stretch;}
         .fy-store-cart li{gap:.55rem;}
+        .fy-shop-pipeline-paths,.fy-demo-grid,.fy-demo-signers{grid-template-columns:minmax(0,1fr);}
+        .fy-shop-pipeline-box{margin:0 .6rem .6rem;padding:.8rem;}
+        .fy-demo-kanban{grid-template-columns:minmax(0,1fr);}
+        .fy-store-module>img{aspect-ratio:4/3;object-position:top;}
       }
     `}</style>
   </MarketingShell>;

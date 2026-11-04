@@ -31,3 +31,31 @@ export const requireInvestorPro = createMiddleware({ type: "function" })
     }
     return next();
   });
+
+/**
+ * Moduły Centrum Zarządzania (AML/compliance; dokumenty, CRM, e-podpis w UI):
+ * przepuszcza to samo co requireInvestorPro ALBO aktywny moduł sklepu
+ * „Centrum Zarządzania" (500 zł / 30 dni, src/lib/storefront/products.ts).
+ */
+export const requireInvestorManagement = createMiddleware({ type: "function" })
+  .middleware([requireSupabaseAuth])
+  .server(async ({ next, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: roles } = await (supabaseAdmin as any)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const ok = ((roles ?? []) as { role: string }[]).some((r) =>
+      ["inwestor", "administrator", "operator"].includes(r.role),
+    );
+    if (!ok) {
+      throw new Error("Ten moduł jest dostępny dla zweryfikowanych inwestorów i personelu.");
+    }
+    const { investorHasFullAccess } = await import("@/lib/access/guards.server");
+    if (await investorHasFullAccess(context.userId)) return next();
+    const { managementModuleActive } = await import("@/lib/storefront/management.server");
+    if (await managementModuleActive(context.userId)) return next();
+    throw new Error(
+      "Ten moduł jest dostępny w abonamencie inwestora albo w module Centrum Zarządzania (500 zł / 30 dni) — kup go w sklepie.",
+    );
+  });

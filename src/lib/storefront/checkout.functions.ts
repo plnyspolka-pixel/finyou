@@ -4,6 +4,16 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { validateKwNumber, compactKwNumber } from "@/lib/kw";
 import { getStoreLegal, storeLegalSha, type StoreLegalCode } from "./legal";
+import {
+  ACADEMY_COURSE_PRICE_PLN,
+  ACADEMY_MODULE_PRICE_PLN,
+  MANAGEMENT_CART_ID,
+  MANAGEMENT_ITEM_PREFIX,
+  MANAGEMENT_MODULE_DAYS,
+  MANAGEMENT_MODULE_PRICE_PLN,
+  academyModuleById,
+  academyModuleForLesson,
+} from "./products";
 
 const db = async () => (await import("@/integrations/supabase/client.server")).supabaseAdmin as any;
 const UUID = z.string().uuid();
@@ -24,9 +34,23 @@ async function priceItems(raw: z.infer<typeof cartSchema>): Promise<Item[]> {
     let title = "";
     let price = 0;
     if (i.kind === "course") {
-      if (id !== "academy") throw new Error("Nieznany pakiet.");
-      price = 199000;
-      title = "Pełna Akademia Inwestora";
+      const mod = academyModuleById(id);
+      if (id === "academy") {
+        price = ACADEMY_COURSE_PRICE_PLN * 100;
+        title = "Pełna Akademia Inwestora";
+      } else if (mod) {
+        price = ACADEMY_MODULE_PRICE_PLN * 100;
+        title = `Akademia Inwestora — Moduł ${mod.number}: ${mod.title}`;
+      } else if (id === MANAGEMENT_CART_ID) {
+        // Każda tura 30 dni to osobne uprawnienie (unikalny item_id) — okres
+        // liczy managementActiveUntil z paid_at opłaconych zamówień.
+        if (items.some((x) => x.id.startsWith(MANAGEMENT_ITEM_PREFIX))) continue;
+        id = MANAGEMENT_ITEM_PREFIX + crypto.randomUUID();
+        price = MANAGEMENT_MODULE_PRICE_PLN * 100;
+        title = `Centrum Zarządzania (dokumenty, CRM, e-podpis, compliance) — ${MANAGEMENT_MODULE_DAYS} dni`;
+      } else {
+        throw new Error("Nieznany pakiet.");
+      }
     } else if (i.kind === "kw") {
       const kw = validateKwNumber(id);
       if (!kw.ok) throw new Error(kw.message);
@@ -53,7 +77,11 @@ async function priceItems(raw: z.infer<typeof cartSchema>): Promise<Item[]> {
     keys.add(key);
     items.push({ kind: i.kind, id, title, amount_grosz: price });
   }
-  if (items.some((i) => i.kind === "course") && items.some((i) => i.kind === "lesson")) {
+  const hasAcademy = items.some((i) => i.kind === "course" && i.id === "academy");
+  if (hasAcademy && items.some((i) => i.kind === "course" && academyModuleById(i.id))) {
+    throw new Error("Wybierz pakiet Akademii albo pojedyncze moduły, nie oba warianty.");
+  }
+  if (hasAcademy && items.some((i) => i.kind === "lesson")) {
     throw new Error("Wybierz pakiet Akademii albo pojedyncze lekcje, nie oba warianty.");
   }
   if (!items.length) throw new Error("Koszyk jest pusty.");
@@ -114,6 +142,13 @@ export const createStoreCheckout = createServerFn({ method: "POST" })
       throw new Error("Do zakupu wymagany jest zweryfikowany adres e-mail konta.");
     }
     const items = await priceItems(data.cart);
+    if (items.some((i) => i.id.startsWith(MANAGEMENT_ITEM_PREFIX))) {
+      const { getUserRoles, isInternalStaff } = await import("@/lib/access/guards.server");
+      const roles = await getUserRoles(context.userId);
+      if (!roles.includes("inwestor") && !(await isInternalStaff(context.userId))) {
+        throw new Error("Centrum Zarządzania działa w panelu inwestora — zaloguj się na konto inwestora albo załóż je przed zakupem.");
+      }
+    }
     const needsDpa = items.some(i => i.kind === "document");
     if (items.some(i => i.kind === "kw") && !data.kwPurpose) {
       throw new Error("Potwierdź uprawniony cel analizy numeru KW.");
@@ -182,7 +217,13 @@ export const getMyStorePurchases = createServerFn({ method: "GET" })
     ]);
     if (o.error || e.error || dpa.error) throw new Error("Nie można odczytać zakupów.");
     const { isInternalStaff } = await import("@/lib/access/guards.server");
-    return { orders: o.data ?? [], entitlements: e.data ?? [], dpaAccepted: Boolean(dpa.data?.length) || await isInternalStaff(context.userId) };
+    const { managementModuleActiveUntilFor } = await import("./management.server");
+    const managementUntil = await managementModuleActiveUntilFor(context.userId);
+    return {
+      orders: o.data ?? [], entitlements: e.data ?? [],
+      dpaAccepted: Boolean(dpa.data?.length) || await isInternalStaff(context.userId),
+      managementActiveUntil: managementUntil ? managementUntil.toISOString() : null,
+    };
   });
 
 async function assertEntitled(admin: any, userId: string, kind: "lesson"|"document"|"kw", itemId: string) {
@@ -193,6 +234,18 @@ async function assertEntitled(admin: any, userId: string, kind: "lesson"|"docume
     const course = await admin.from("store_entitlements").select("id")
       .eq("user_id", userId).eq("item_kind", "course").eq("item_id", "academy").maybeSingle();
     if (course.data) return;
+    // Moduł Akademii obejmuje lekcje z zakresu numerów (ta sama kolejność co katalog).
+    const { data: list } = await admin.from("training_videos").select("id")
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    const index = ((list ?? []) as { id: string }[]).findIndex((l) => l.id === itemId);
+    const mod = index >= 0 ? academyModuleForLesson(index + 1) : null;
+    if (mod) {
+      const owned = await admin.from("store_entitlements").select("id")
+        .eq("user_id", userId).eq("item_kind", "course").eq("item_id", mod.id).maybeSingle();
+      if (owned.data) return;
+    }
   }
   const { isInternalStaff, investorHasFullAccess } = await import("@/lib/access/guards.server");
   if (await isInternalStaff(userId) || (kind !== "kw" && await investorHasFullAccess(userId))) return;

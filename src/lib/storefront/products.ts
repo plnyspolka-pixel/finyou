@@ -1,0 +1,119 @@
+// Produkty sklepu inwestora (/sklep) — jedno źródło prawdy dla strony,
+// koszyka, wyceny po stronie serwera i sprawdzania uprawnień.
+//
+// Decyzja właściciela (04.11.2026):
+//  • Akademia Inwestora sprzedawana MODUŁAMI (wątki z grafik
+//    public/marketing/akademia/modul-N.png), każdy moduł 500 zł. Lekcja 1
+//    pozostaje bezpłatna; pakiet „cała Akademia" zostaje.
+//  • Dokumenty + CRM + podpis elektroniczny + compliance = jeden moduł
+//    „Centrum Zarządzania", 500 zł za 30 dni (płatność jednorazowa za okres,
+//    bez automatycznego odnawiania — tak jak abonament inwestora).
+//
+// Bez zmian w schemacie bazy: oba produkty są zapisywane jako item_kind
+// "course" (dozwolony przez CHECK store_entitlements i fulfill_store_order):
+//  • moduł Akademii: item_id "module-<n>",
+//  • Centrum Zarządzania: item_id "centrum:<unikalny sufiks>" — każda opłacona
+//    30-dniowa tura to osobne uprawnienie, okres liczymy z paid_at zamówień.
+
+export const ACADEMY_MODULE_PRICE_PLN = 500;
+export const ACADEMY_COURSE_PRICE_PLN = 1990;
+export const MANAGEMENT_MODULE_PRICE_PLN = 500;
+export const MANAGEMENT_MODULE_DAYS = 30;
+
+/** Identyfikator koszyka (klient) dla Centrum Zarządzania. */
+export const MANAGEMENT_CART_ID = "centrum-30d";
+/** Prefiks item_id uprawnienia Centrum Zarządzania w store_entitlements. */
+export const MANAGEMENT_ITEM_PREFIX = "centrum:";
+
+export interface AcademyModule {
+  number: number;
+  /** item_id w store_entitlements (item_kind "course"). */
+  id: string;
+  title: string;
+  image: string;
+  /** Zakres numerów lekcji (numeracja katalogu, od 1). `to = null` — do końca. */
+  from: number;
+  to: number | null;
+  topics: string[];
+}
+
+export const ACADEMY_MODULES: AcademyModule[] = [
+  {
+    number: 1, id: "module-1", title: "Wprowadzenie i strategia",
+    image: "/marketing/akademia/modul-1.png", from: 1, to: 5,
+    topics: ["Rynek pożyczek pod hipotekę", "Zarabianie na pożyczkach", "Strategie inwestycyjne", "Pośrednictwo inwestycyjne", "Pozyskiwanie klientów"],
+  },
+  {
+    number: 2, id: "module-2", title: "Prawo",
+    image: "/marketing/akademia/modul-2.png", from: 6, to: 9,
+    topics: ["Aspekty prawne udzielania pożyczek", "Wyłączenia z ustawy o kredycie konsumenckim", "Art. 304 Kodeksu karnego", "Lichwa — przepisy i orzecznictwo"],
+  },
+  {
+    number: 3, id: "module-3", title: "Operacje",
+    image: "/marketing/akademia/modul-3.png", from: 10, to: 10,
+    topics: ["Zarządzanie umowami i klientami w nieruchomościach"],
+  },
+  {
+    number: 4, id: "module-4", title: "Analiza nieruchomości",
+    image: "/marketing/akademia/modul-4.png", from: 11, to: 12,
+    topics: ["Nieruchomość jako zabezpieczenie pożyczki", "Różnice w rodzajach nieruchomości"],
+  },
+  {
+    number: 5, id: "module-5", title: "Analiza klienta",
+    image: "/marketing/akademia/modul-5.png", from: 13, to: 13,
+    topics: ["Analiza klientów i decyzji kredytowych"],
+  },
+  {
+    number: 6, id: "module-6", title: "Case study",
+    image: "/marketing/akademia/modul-6.png", from: 14, to: 19,
+    topics: ["Mieszkanie w Świebodzicach", "Nieruchomość w Siemionce", "Nieruchomość w Lipinach", "Działka w Żelewie", "Działka w Strzyżewicach", "Lubań"],
+  },
+  {
+    number: 7, id: "module-7", title: "Windykacja — miękka i twarda",
+    image: "/marketing/akademia/modul-7.png", from: 20, to: null,
+    topics: ["Kontakt i przypomnienia", "Negocjacje i ugody", "Wezwania i monity", "Egzekucja i zabezpieczenia"],
+  },
+];
+
+export function academyModuleById(id: string): AcademyModule | null {
+  return ACADEMY_MODULES.find((m) => m.id === id) ?? null;
+}
+
+/** Moduł, do którego należy lekcja o danym numerze katalogu (od 1). */
+export function academyModuleForLesson(lessonNumber: number): AcademyModule | null {
+  if (!Number.isInteger(lessonNumber) || lessonNumber < 1) return null;
+  return ACADEMY_MODULES.find((m) => lessonNumber >= m.from && (m.to === null || lessonNumber <= m.to)) ?? null;
+}
+
+/** Ścieżki panelu inwestora otwierane przez Centrum Zarządzania (bez abonamentu). */
+export const MANAGEMENT_MODULE_PATHS = [
+  "/inwestor/kreator-dokumentow",
+  "/inwestor/podpisy",
+  "/inwestor/aml",
+  "/inwestor/kalkulator",
+] as const;
+
+export function isManagementModulePath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  return MANAGEMENT_MODULE_PATHS.some((f) => p === f || p.startsWith(`${f}/`));
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Koniec okresu Centrum Zarządzania z opłaconych tur (każda = 30 dni).
+ * Tury się sumują: opłacenie w trakcie okresu przedłuża go od bieżącego końca
+ * (jak computeGrantWindow abonamentu). Zwraca null, gdy nic nie opłacono.
+ */
+export function managementActiveUntil(paidAt: Array<string | Date>, days = MANAGEMENT_MODULE_DAYS): Date | null {
+  const times = paidAt
+    .map((d) => new Date(d).getTime())
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  let until: number | null = null;
+  for (const t of times) {
+    const base: number = until !== null && until > t ? until : t;
+    until = base + days * DAY_MS;
+  }
+  return until === null ? null : new Date(until);
+}

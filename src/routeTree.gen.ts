@@ -201,7 +201,7 @@ import { Route as PropozycjeIndexRouteImport } from './routes/propozycje.index'
 import { Route as PropozycjeIdRouteImport } from './routes/propozycje.$id'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as SCodeRouteImport } from './routes/s.$code'
-import { Route as SklepMojeZakupyRouteImport } from './routes/sklep.moje-zakupy'
+import { Route as SklepMojeZakupyRouteImport } from './routes/sklep_.moje-zakupy'
 import { Route as WebinarIndexRouteImport } from './routes/webinar.index'
 import { Route as WebinarPokojRouteImport } from './routes/webinar.pokoj'
 import { Route as WeryfikacjaCodeRouteImport } from './routes/weryfikacja.$code'
@@ -1309,9 +1309,9 @@ const SCodeRoute = SCodeRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const SklepMojeZakupyRoute = SklepMojeZakupyRouteImport.update({
-  id: '/moje-zakupy',
-  path: '/moje-zakupy',
-  getParentRoute: () => SklepRoute,
+  id: '/sklep_/moje-zakupy',
+  path: '/sklep/moje-zakupy',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const WebinarIndexRoute = WebinarIndexRouteImport.update({
   id: '/webinar/',
@@ -2103,7 +2103,7 @@ export interface FileRoutesByFullPath {
   '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRouteWithChildren
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2426,7 +2426,7 @@ export interface FileRoutesByTo {
   '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRouteWithChildren
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2751,7 +2751,7 @@ export interface FileRoutesById {
   '/regulamin-windykator-ai': typeof RegulaminWindykatorAiRoute
   '/rejestracja': typeof RejestracjaRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/sklep': typeof SklepRouteWithChildren
+  '/sklep': typeof SklepRoute
   '/start': typeof StartRoute
   '/windykator-ai': typeof WindykatorAiRoute
   '/wybor-panelu': typeof WyborPaneluRoute
@@ -2894,7 +2894,7 @@ export interface FileRoutesById {
   '/propozycje/$id': typeof PropozycjeIdRoute
   '/r/$code': typeof RCodeRoute
   '/s/$code': typeof SCodeRoute
-  '/sklep/moje-zakupy': typeof SklepMojeZakupyRoute
+  '/sklep_/moje-zakupy': typeof SklepMojeZakupyRoute
   '/webinar/pokoj': typeof WebinarPokojRoute
   '/weryfikacja/$code': typeof WeryfikacjaCodeRoute
   '/wniosek/$token': typeof WniosekTokenRoute
@@ -3872,7 +3872,7 @@ export interface FileRouteTypes {
     | '/propozycje/$id'
     | '/r/$code'
     | '/s/$code'
-    | '/sklep/moje-zakupy'
+    | '/sklep_/moje-zakupy'
     | '/webinar/pokoj'
     | '/weryfikacja/$code'
     | '/wniosek/$token'
@@ -4059,7 +4059,7 @@ export interface RootRouteChildren {
   RegulaminWindykatorAiRoute: typeof RegulaminWindykatorAiRoute
   RejestracjaRoute: typeof RejestracjaRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  SklepRoute: typeof SklepRouteWithChildren
+  SklepRoute: typeof SklepRoute
   StartRoute: typeof StartRoute
   WindykatorAiRoute: typeof WindykatorAiRoute
   WyborPaneluRoute: typeof WyborPaneluRoute
@@ -4087,6 +4087,7 @@ export interface RootRouteChildren {
   PropozycjeIdRoute: typeof PropozycjeIdRoute
   RCodeRoute: typeof RCodeRoute
   SCodeRoute: typeof SCodeRoute
+  SklepMojeZakupyRoute: typeof SklepMojeZakupyRoute
   WebinarPokojRoute: typeof WebinarPokojRoute
   WeryfikacjaCodeRoute: typeof WeryfikacjaCodeRoute
   WniosekTokenRoute: typeof WniosekTokenRoute
@@ -5523,12 +5524,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sklep/moje-zakupy': {
-      id: '/sklep/moje-zakupy'
-      path: '/moje-zakupy'
+    '/sklep_/moje-zakupy': {
+      id: '/sklep_/moje-zakupy'
+      path: '/sklep/moje-zakupy'
       fullPath: '/sklep/moje-zakupy'
       preLoaderRoute: typeof SklepMojeZakupyRouteImport
-      parentRoute: typeof SklepRoute
+      parentRoute: typeof rootRouteImport
     }
     '/webinar/': {
       id: '/webinar/'
@@ -6954,16 +6955,6 @@ const PosrednikRouteWithChildren = PosrednikRoute._addFileChildren(
   PosrednikRouteChildren,
 )
 
-interface SklepRouteChildren {
-  SklepMojeZakupyRoute: typeof SklepMojeZakupyRoute
-}
-
-const SklepRouteChildren: SklepRouteChildren = {
-  SklepMojeZakupyRoute: SklepMojeZakupyRoute,
-}
-
-const SklepRouteWithChildren = SklepRoute._addFileChildren(SklepRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AbonamentInwestoraRoute: AbonamentInwestoraRoute,
@@ -7004,7 +6995,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegulaminWindykatorAiRoute: RegulaminWindykatorAiRoute,
   RejestracjaRoute: RejestracjaRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  SklepRoute: SklepRouteWithChildren,
+  SklepRoute: SklepRoute,
   StartRoute: StartRoute,
   WindykatorAiRoute: WindykatorAiRoute,
   WyborPaneluRoute: WyborPaneluRoute,
@@ -7033,6 +7024,7 @@ const rootRouteChildren: RootRouteChildren = {
   PropozycjeIdRoute: PropozycjeIdRoute,
   RCodeRoute: RCodeRoute,
   SCodeRoute: SCodeRoute,
+  SklepMojeZakupyRoute: SklepMojeZakupyRoute,
   WebinarPokojRoute: WebinarPokojRoute,
   WeryfikacjaCodeRoute: WeryfikacjaCodeRoute,
   WniosekTokenRoute: WniosekTokenRoute,

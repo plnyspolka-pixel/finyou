@@ -7,8 +7,9 @@ import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
 import { acceptStoreDpa, getMyStorePurchases, getPurchasedLessonUrl, getPurchasedDocumentTemplate, getStoreLegalTexts } from "@/lib/storefront/checkout.functions";
 import { getPurchasedKwReport } from "@/lib/storefront/kw-report.functions";
 import { generateDocxFromTemplate, getGeneratedDocSignedUrl } from "@/lib/document-generator.functions";
+import { ACADEMY_MODULES, academyModuleForLesson } from "@/lib/storefront/products";
 
-export const Route = createFileRoute("/sklep/moje-zakupy")({
+export const Route = createFileRoute("/sklep_/moje-zakupy")({
   component: StoreLibrary,
   head: () => ({ meta: [{ title: "Moje zakupy — sklep Finance You" }, { name:"robots", content:"noindex,nofollow" }] }),
 });
@@ -52,9 +53,15 @@ function StoreLibrary() {
   const entitlements: Entitlement[] = (purchases?.entitlements ?? []) as Entitlement[];
   const orders: Order[] = (purchases?.orders ?? []) as Order[];
   const hasCourse = entitlements.some((i) => i.item_kind === "course" && i.item_id === "academy");
+  const ownedModules = useMemo(() => new Set(entitlements
+    .filter((e) => e.item_kind === "course" && ACADEMY_MODULES.some((m) => m.id === e.item_id))
+    .map((e) => e.item_id)), [entitlements]);
   const lessons = useMemo(() => (catalog?.lessons ?? []).filter((l) =>
-    l.number !== 1 && (hasCourse || entitlements.some((e) => e.item_kind === "lesson" && e.item_id === l.id))
-  ), [catalog,entitlements,hasCourse]);
+    l.number !== 1 && (hasCourse || entitlements.some((e) => e.item_kind === "lesson" && e.item_id === l.id) ||
+      ownedModules.has(academyModuleForLesson(l.number)?.id ?? ""))
+  ), [catalog,entitlements,hasCourse,ownedModules]);
+  const managementUntil = purchases?.managementActiveUntil ? new Date(purchases.managementActiveUntil) : null;
+  const managementActive = Boolean(managementUntil && managementUntil.getTime() > Date.now());
   const documents = (catalog?.documents ?? []).filter((d) =>
     entitlements.some((e) => e.item_kind === "document" && e.item_id === d.id));
   const kwItems = entitlements.filter((e) => e.item_kind === "kw");
@@ -111,8 +118,17 @@ function StoreLibrary() {
       {purchases && <>
         {orders.some((o)=>o.status === "pending" || o.status === "created") &&
           <div className="fy-store-library-panel">Masz płatność oczekującą na potwierdzenie. Po jej rozliczeniu odśwież tę stronę. Nie udostępniamy treści na podstawie samego powrotu z Tpay.</div>}
+        {managementUntil && <section>
+          <h2>Centrum Zarządzania</h2>
+          <div className="fy-store-library-panel">
+            {managementActive
+              ? <>Moduł aktywny do {managementUntil.toLocaleDateString("pl-PL")}. Dokumenty, CRM, e-podpis i compliance działają w panelu inwestora.{" "}
+                  <a href="/inwestor/kreator-dokumentow">Otwórz Centrum Zarządzania</a></>
+              : <>Okres modułu zakończył się {managementUntil.toLocaleDateString("pl-PL")}. <a href="/sklep#centrum">Przedłuż o 30 dni</a></>}
+          </div>
+        </section>}
         <section>
-          <h2>Zakupione lekcje {hasCourse ? "— cała Akademia" : ""}</h2>
+          <h2>Zakupione lekcje {hasCourse ? "— cała Akademia" : ownedModules.size ? `— moduły: ${ACADEMY_MODULES.filter((m) => ownedModules.has(m.id)).map((m) => m.number).join(", ")}` : ""}</h2>
           {lessons.length === 0 && <p>Nie masz jeszcze kupionych lekcji.</p>}
           <div className="fy-store-library-grid">
             {lessons.map((l) => <article key={l.id}>
