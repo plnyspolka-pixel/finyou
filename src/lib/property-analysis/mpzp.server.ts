@@ -1,4 +1,5 @@
 // MPZP w punkcie nieruchomości — GetFeatureInfo Krajowej Integracji MPZP.
+import { registryGet } from "@/lib/registry-fetch.server";
 import { parseMpzpFeatureInfo, type MpzpInfo } from "./mpzp";
 
 const KIMPZP =
@@ -26,15 +27,10 @@ export async function fetchMpzpAtPoint(lat: number, lng: number): Promise<MpzpIn
     INFO_FORMAT: "text/html",
     FEATURE_COUNT: "5",
   });
-  try {
-    const res = await fetch(`${KIMPZP}?${q}`, {
-      headers: { "User-Agent": "FinanceYou-Analysis/1.0 (+https://financeyou.pl)" },
-      redirect: "follow",
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) return null;
-    return parseMpzpFeatureInfo(await res.text());
-  } catch {
-    return null;
-  }
+  const res = await registryGet(`${KIMPZP}?${q}`, {
+    headers: { "User-Agent": "FinanceYou-Analysis/1.0 (+https://financeyou.pl)" },
+    timeoutMs: 20_000,
+    prefer: "direct",
+  }).catch(() => null);
+  return res?.ok ? parseMpzpFeatureInfo(res.text) : null;
 }

@@ -80,6 +80,13 @@ export function wmsGetMapUrl(
 export const ISOK_FLOOD_WMS = "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS";
 export const ISOK_FLOOD_LAYERS = "NZ.Fluvial,NZ.SeaWater";
 /** Krajowa Integracja MPZP (GUGiK) — granice planów i rysunki tam, gdzie usługa krajowa je renderuje. */
+/** Obszary chronione przyrody (EEA): Natura 2000 oraz krajowe formy ochrony (CDDA). */
+export const EEA_NATURA2000_WMS =
+  "https://bio.discomap.eea.europa.eu/arcgis/services/ProtectedSites/Natura2000Sites/MapServer/WMSServer";
+export const EEA_NATURA2000_LAYERS = "0,1,2";
+export const EEA_CDDA_WMS =
+  "https://bio.discomap.eea.europa.eu/arcgis/services/ProtectedSites/CDDA_Dyna_WM/MapServer/WMSServer";
+export const EEA_CDDA_LAYERS = "1,3,4";
 export const KIMPZP_WMS =
   "https://mapy.geoportal.gov.pl/wss/ext/KrajowaIntegracjaMiejscowychPlanowZagospodarowaniaPrzestrzennego";
 export const KIMPZP_LAYERS = "raster,wektor-str,wektor-pow,wektor-lin,wektor-lzb,plany_granice";

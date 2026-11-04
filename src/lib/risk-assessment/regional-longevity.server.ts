@@ -9,8 +9,9 @@ import {
   type LongevitySex,
   type RegionalLongevity,
 } from "./regional-longevity";
+import { registryGet } from "@/lib/registry-fetch.server";
 
-const BDL = "https://bdl.stat.gov.pl/api/v1";
+export const BDL = "https://bdl.stat.gov.pl/api/v1";
 const cache = new Map<string, Promise<any>>();
 
 function headers(): HeadersInit {
@@ -23,11 +24,15 @@ function headers(): HeadersInit {
   return h;
 }
 
-function getJson(url: string): Promise<any> {
+export function getJson(url: string): Promise<any> {
   let p = cache.get(url);
   if (!p) {
-    p = fetch(url, { headers: headers(), signal: AbortSignal.timeout(15_000) })
-      .then((r) => (r.ok ? r.json() : null))
+    p = registryGet(url, {
+      headers: headers() as Record<string, string>,
+      timeoutMs: 15_000,
+      prefer: "direct",
+    })
+      .then((r) => (r.ok ? JSON.parse(r.text) : null))
       .catch(() => null);
     cache.set(url, p);
     // Błąd nie zostaje w cache na stałe.
@@ -44,7 +49,7 @@ const norm = (s: string) =>
     .trim();
 
 /** Jednostka BDL: podregion powiatu nieruchomości, a gdy go nie ustalono — województwo. */
-async function resolveUnit(
+export async function resolveUnit(
   county: string | null,
   voivodeship: string | null,
 ): Promise<{ id: string; name: string; level: "podregion" | "województwo" } | null> {

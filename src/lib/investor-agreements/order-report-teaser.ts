@@ -169,6 +169,20 @@ export function sanitizeCollateralForTeaser(
       // Działka (ULDK) wskazuje dokładne położenie — dopiero po rezerwacji.
       parcel: null,
     },
+    // Plan miejscowy, budynek i nazwy obiektów w okolicy też wskazują położenie.
+    mpzp: null,
+    surroundings: result.surroundings
+      ? {
+          ...result.surroundings,
+          building: null,
+          nuisances: result.surroundings.nuisances
+            ? {
+                ...result.surroundings.nuisances,
+                hits: result.surroundings.nuisances.hits.map((h) => ({ ...h, name: null })),
+              }
+            : null,
+        }
+      : null,
     locationScore: {
       ...result.locationScore,
       summary: scrub(result.locationScore.summary),

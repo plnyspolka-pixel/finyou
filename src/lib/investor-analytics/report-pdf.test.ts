@@ -785,6 +785,47 @@ describe("podsumowanie wyceny dla inwestora", () => {
 });
 
 describe("lokalizacja i mapa w raporcie", () => {
+  it("otoczenie: obszary chronione, uciążliwości, budynek i powiat trafiają do raportu", async () => {
+    const d = analyticsDetail();
+    d.collateral = {
+      ...d.collateral!,
+      surroundings: {
+        protectedAreas: {
+          status: "checked",
+          areas: [{ kind: "natura2000", code: "PLB120002", name: "Puszcza Niepołomicka", type: "Natura 2000 — OSO" }],
+          note: "Nieruchomość w granicach obszaru chronionego.",
+        },
+        nuisances: {
+          status: "checked",
+          radiusM: 2000,
+          hits: [{ key: "motorway", name: "A4", distanceM: 250, alert: true }],
+          note: "W bliskiej odległości są uciążliwości.",
+        },
+        building: { id: "X_BUD", footprintM2: 140, polygon: [], source: "ULDK GUGiK (EGiB)" },
+        powiat: {
+          status: "checked",
+          unitName: "Powiat wielicki",
+          year: "2025",
+          population: 146697,
+          populationChange5yPct: 5.9,
+          migrationPer1000: 9.5,
+          unemploymentPct: 4.2,
+          unemploymentPolandPct: 5.7,
+          wageIndexPl100: 93.4,
+          note: "",
+        },
+      },
+    };
+    const model = buildInvestorReportModel({ kind: "analityka", detail: d });
+    const text = reportModelText(model);
+    expect(text).toContain("Puszcza Niepołomicka");
+    expect(text).toContain("Autostrada / droga ekspresowa");
+    expect(text).toContain("nie powierzchnia użytkowa");
+    expect(text).toContain("Powiat wielicki");
+    expect(model.blocks.some((b) => b.t === "map" && b.overlay === "protected")).toBe(true);
+    expect(await charsOutsideFont(text)).toEqual([]);
+  });
+
   // Minimalny PNG 1×1 — renderer mapy podmieniony (w testach brak przeglądarki).
   const PNG_1X1 = Uint8Array.from(
     atob(
@@ -796,7 +837,7 @@ describe("lokalizacja i mapa w raporcie", () => {
   it("raport z dokładnym położeniem: okolica, zbliżenie, ortofoto, MPZP i mapa powodziowa", () => {
     const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
     const maps = model.blocks.filter((b) => b.t === "map");
-    expect(maps).toHaveLength(5);
+    expect(maps).toHaveLength(5); // bez danych o otoczeniu (stara analiza) — bez mapy obszarów chronionych
     expect(maps.every((m) => m.t === "map" && m.marker)).toBe(true);
     expect(maps.map((m) => (m.t === "map" ? (m.base ?? "osm") + ":" + (m.overlay ?? "-") : ""))).toEqual([
       "osm:-",

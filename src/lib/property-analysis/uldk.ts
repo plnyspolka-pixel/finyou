@@ -85,3 +85,27 @@ export function parseUldkResponse(text: string): UldkParcel | null {
     note: ULDK_NOTE,
   };
 }
+
+/** Budynek ewidencyjny pod punktem (ULDK GetBuildingByXY). */
+export interface UldkBuilding {
+  /** Identyfikator budynku, np. 126105_9.0001.311.1_BUD. */
+  id: string;
+  /** Powierzchnia zabudowy z obrysu (m²) — NIE powierzchnia użytkowa. */
+  footprintM2: number | null;
+  polygon: Array<[number, number]>;
+  source: "ULDK GUGiK (EGiB)";
+}
+
+export function parseUldkBuilding(text: string): UldkBuilding | null {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2 || lines[0].trim() !== "0") return null;
+  const f = lines[1].split("|");
+  if (f.length < 2 || !f[0]) return null;
+  const polygon = parsePolygon(f.slice(1).join("|"));
+  return {
+    id: f[0].trim(),
+    footprintM2: polygonAreaM2(polygon),
+    polygon,
+    source: "ULDK GUGiK (EGiB)",
+  };
+}

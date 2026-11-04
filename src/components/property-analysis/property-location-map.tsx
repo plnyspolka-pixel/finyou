@@ -2,7 +2,12 @@
 // dodatkowych bibliotek) + działka ewidencyjna z ULDK i najbliższa infrastruktura.
 import { MapPinned } from "lucide-react";
 import type { PropertyAnalysisResult } from "@/lib/property-analysis/types";
+import { NUISANCE_LABEL } from "@/lib/property-analysis/surroundings";
 import {
+  EEA_CDDA_LAYERS,
+  EEA_CDDA_WMS,
+  EEA_NATURA2000_LAYERS,
+  EEA_NATURA2000_WMS,
   ISOK_FLOOD_LAYERS,
   ISOK_FLOOD_WMS,
   KIMPZP_LAYERS,
@@ -218,6 +223,8 @@ export function PropertyLocationMap({ result }: { result: PropertyAnalysisResult
         </div>
       )}
 
+      {result?.surroundings && <SurroundingsPanel result={result} />}
+
       {nearestRows.length > 0 && (
         <div className="text-sm">
           <div className="font-medium">Najbliższa infrastruktura (OpenStreetMap)</div>
@@ -232,5 +239,131 @@ export function PropertyLocationMap({ result }: { result: PropertyAnalysisResult
         </div>
       )}
     </section>
+  );
+}
+
+function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
+  const sr = result.surroundings!;
+  const p = result.property;
+  const pa = sr.protectedAreas;
+  const nu = sr.nuisances;
+  const pw = sr.powiat;
+  const bld = sr.building;
+  const num = (x: number) => String(x).replace(".", ",");
+  return (
+    <div className="space-y-3 text-sm">
+      {bld && (
+        <div className="text-xs">
+          Budynek ewidencyjny (EGiB) {bld.id}
+          {bld.footprintM2 != null
+            ? ` — powierzchnia zabudowy ok. ${bld.footprintM2.toLocaleString("pl-PL")} m² (nie powierzchnia użytkowa)`
+            : ""}
+        </div>
+      )}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="font-medium">Obszary chronione przyrody (EEA)</div>
+          {pa?.areas.length ? (
+            <ul className="mt-1 list-disc pl-4 text-xs">
+              {pa.areas.map((a, i) => (
+                <li key={i}>
+                  {a.name} — {a.type}
+                  {a.code ? ` (${a.code})` : ""}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-1 text-xs text-muted-foreground">{pa?.note ?? "Nie sprawdzono."}</p>
+          {p.latitude != null && p.longitude != null && (
+            <div className="relative mt-2 aspect-[52/30] w-full overflow-hidden rounded border bg-muted">
+              <img
+                src={wmsGetMapUrl(
+                  "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/HighResolution",
+                  "Raster",
+                  { lat: p.latitude, lng: p.longitude, zoom: 12, width: 520, height: 300 },
+                  { format: "image/jpeg", transparent: false, scale: 1 },
+                )}
+                alt="Obszary chronione w okolicy"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
+              {[
+                [EEA_CDDA_WMS, EEA_CDDA_LAYERS],
+                [EEA_NATURA2000_WMS, EEA_NATURA2000_LAYERS],
+              ].map(([base, layers]) => (
+                <img
+                  key={base}
+                  src={wmsGetMapUrl(
+                    base,
+                    layers,
+                    { lat: p.latitude!, lng: p.longitude!, zoom: 12, width: 520, height: 300 },
+                    { scale: 1 },
+                  )}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover opacity-60"
+                  loading="lazy"
+                />
+              ))}
+              <span className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-red-600 shadow" />
+            </div>
+          )}
+        </div>
+        <div className="rounded-lg border bg-muted/20 p-3">
+          <div className="font-medium">
+            Uciążliwości w promieniu {nu ? fmtDistance(nu.radiusM) : "2 km"} (OSM)
+          </div>
+          {nu?.hits.length ? (
+            <ul className="mt-1 list-disc pl-4 text-xs">
+              {nu.hits.map((h, i) => (
+                <li
+                  key={i}
+                  className={h.alert ? "font-medium text-amber-700 dark:text-amber-400" : ""}
+                >
+                  {NUISANCE_LABEL[h.key]}
+                  {h.name ? ` (${h.name})` : ""} — {fmtDistance(h.distanceM)}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-1 text-xs text-muted-foreground">
+            {nu?.note ?? "Nie sprawdzono (brak dokładnego adresu)."}
+          </p>
+        </div>
+      </div>
+      {pw?.status === "checked" && (
+        <div className="rounded-lg border bg-muted/20 p-3 text-xs">
+          <div className="text-sm font-medium">
+            {pw.unitName} — dane GUS ({pw.year})
+          </div>
+          <div className="mt-1 grid gap-x-6 gap-y-0.5 md:grid-cols-2">
+            {pw.population != null && (
+              <div>
+                Ludność: {pw.population.toLocaleString("pl-PL")}
+                {pw.populationChange5yPct != null
+                  ? ` (5 lat: ${pw.populationChange5yPct > 0 ? "+" : ""}${num(pw.populationChange5yPct)}%)`
+                  : ""}
+              </div>
+            )}
+            {pw.migrationPer1000 != null && (
+              <div>
+                Saldo migracji: {pw.migrationPer1000 > 0 ? "+" : ""}
+                {num(pw.migrationPer1000)} / 1000 mieszk.
+              </div>
+            )}
+            {pw.unemploymentPct != null && (
+              <div>
+                Bezrobocie: {num(pw.unemploymentPct)}%
+                {pw.unemploymentPolandPct != null
+                  ? ` (Polska ${num(pw.unemploymentPolandPct)}%)`
+                  : ""}
+              </div>
+            )}
+            {pw.wageIndexPl100 != null && (
+              <div>Wynagrodzenia: {num(pw.wageIndexPl100)}% średniej krajowej</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

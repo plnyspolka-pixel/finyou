@@ -2,6 +2,7 @@
 // Plik bezpieczny do importu zarówno po stronie klienta, jak i serwera.
 import type { UldkParcel } from "./uldk";
 import type { MpzpInfo } from "./mpzp";
+import type { SurroundingsInfo } from "./surroundings";
 
 export type PropertyType =
   | "mieszkanie"
@@ -199,6 +200,8 @@ export interface PropertyAnalysisResult {
   portalValuation?: PortalValuationSummary | null;
   /** Miejscowy plan w punkcie nieruchomości (Krajowa Integracja MPZP). */
   mpzp?: MpzpInfo | null;
+  /** Otoczenie: obszary chronione, uciążliwości, budynek EGiB, statystyki powiatu. */
+  surroundings?: SurroundingsInfo | null;
   /**
    * @deprecated Wycena Perplexity z analiz sprzed migracji na portale — tylko do
    * odczytu starych rekordów. Czytaj przez `readPortalValuation()`.

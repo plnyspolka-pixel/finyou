@@ -33,6 +33,7 @@ import { REPORT_DISCLAIMER } from "@/lib/kw-analysis/policy";
 import { maskPeselInText } from "@/lib/kw-analysis/pesel-mask";
 import type { DataSourceUsage, PropertyAnalysisResult } from "@/lib/property-analysis/types";
 import { categoryLabel as collateralCategoryLabel } from "@/lib/property-analysis/scoring";
+import { NUISANCE_LABEL } from "@/lib/property-analysis/surroundings";
 import {
   buildInvestorValuationSummary,
   type InvestorValuationSummary,
@@ -105,7 +106,7 @@ export type ReportBlock =
       /** Podkład: kafelki OSM (domyślnie) albo ortofotomapa Geoportalu. */
       base?: "osm" | "orto";
       /** Nakładka WMS: strefy zagrożenia powodziowego ISOK albo MPZP (KIMPZP). */
-      overlay?: "flood" | "mpzp" | null;
+      overlay?: "flood" | "mpzp" | "protected" | null;
       caption: string;
     };
 
@@ -635,8 +636,23 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     });
     blocks.push({ t: "paragraph", muted: true, text: parcel.note });
   }
+  const bld = c.surroundings?.building ?? null;
+  if (bld) {
+    blocks.push({
+      t: "keyValues",
+      rows: rowsWithText([
+        ["Budynek ewidencyjny (EGiB)", bld.id],
+        [
+          "Powierzchnia zabudowy",
+          bld.footprintM2 != null
+            ? `ok. ${fmtNum(bld.footprintM2)} m² (obrys budynku — nie powierzchnia użytkowa)`
+            : null,
+        ],
+      ]),
+    });
+  }
 
-  blocks.push(...planningBlocks(c));
+  blocks.push(...planningBlocks(c), ...surroundingsBlocks(c));
 
   const loc = c.locationScore;
   blocks.push({ t: "subheading", text: "Infrastruktura w okolicy (OpenStreetMap)" });
@@ -747,6 +763,110 @@ function planningBlocks(c: PropertyAnalysisResult): ReportBlock[] {
       overlay: "flood",
       caption:
         "Obszary zagrożenia powodzią rzeczną i morską z map zagrożenia powodziowego (ISOK, Wody Polskie) — brak zabarwienia oznacza brak obszaru zagrożenia w zasięgu mapy.",
+    });
+  }
+  return blocks;
+}
+
+/** Otoczenie: obszary chronione, uciążliwości (OSM) i powiat (GUS BDL). */
+function surroundingsBlocks(c: PropertyAnalysisResult): ReportBlock[] {
+  const sr = c.surroundings;
+  const p = c.property;
+  if (!sr) return [];
+  const blocks: ReportBlock[] = [{ t: "subheading", text: "Obszary chronione przyrody" }];
+  const pa = sr.protectedAreas;
+  if (pa?.areas.length) {
+    blocks.push({
+      t: "table",
+      columns: [
+        { label: "Obszar", width: 4 },
+        { label: "Rodzaj", width: 4 },
+        { label: "Kod", width: 1.6 },
+      ],
+      rows: pa.areas.map((a) => [a.name, a.type, a.code ?? "—"]),
+    });
+    blocks.push({ t: "note", tone: "warning", text: pa.note });
+  } else {
+    blocks.push({
+      t: "paragraph",
+      muted: true,
+      text: pa?.note ?? "Obszarów chronionych nie sprawdzono.",
+    });
+  }
+  if (p.latitude != null && p.longitude != null) {
+    blocks.push({
+      t: "map",
+      lat: p.latitude,
+      lng: p.longitude,
+      zoom: 12,
+      marker: !p.locationApproximate,
+      overlay: "protected",
+      caption:
+        "Obszary Natura 2000 i krajowe formy ochrony przyrody (EEA, dane zgłoszone przez Polskę) w okolicy nieruchomości.",
+    });
+  }
+
+  const nu = sr.nuisances;
+  if (nu) {
+    blocks.push({
+      t: "subheading",
+      text: `Uciążliwości w promieniu ${fmtDistance(nu.radiusM)} (OpenStreetMap)`,
+    });
+    if (nu.hits.length) {
+      blocks.push({
+        t: "table",
+        columns: [
+          { label: "Obiekt", width: 3.4 },
+          { label: "Nazwa", width: 3.4 },
+          { label: "Odległość", width: 1.5, align: "right" },
+          { label: "Uwaga", width: 1.4 },
+        ],
+        rows: nu.hits.map((h) => [
+          NUISANCE_LABEL[h.key],
+          h.name ?? "—",
+          fmtDistance(h.distanceM),
+          h.alert ? "blisko" : "—",
+        ]),
+      });
+    }
+    blocks.push({ t: "paragraph", muted: !nu.hits.some((h) => h.alert), text: nu.note });
+  }
+
+  const pw = sr.powiat;
+  if (pw?.status === "checked") {
+    const num = (x: number) => String(x).replace(".", ",");
+    const pct = (x: number | null, sign = false) =>
+      x == null ? null : `${sign && x > 0 ? "+" : ""}${num(x)}%`;
+    blocks.push({
+      t: "subheading",
+      text: `${pw.unitName ?? "Powiat"} — dane GUS (${pw.year ?? "—"})`,
+    });
+    blocks.push({
+      t: "keyValues",
+      rows: rowsWithText([
+        [
+          "Ludność",
+          pw.population != null
+            ? `${fmtNum(pw.population)}${pw.populationChange5yPct != null ? ` (zmiana w 5 lat: ${pct(pw.populationChange5yPct, true)})` : ""}`
+            : null,
+        ],
+        [
+          "Saldo migracji",
+          pw.migrationPer1000 != null
+            ? `${pw.migrationPer1000 > 0 ? "+" : ""}${num(pw.migrationPer1000)} na 1000 mieszkańców`
+            : null,
+        ],
+        [
+          "Stopa bezrobocia",
+          pw.unemploymentPct != null
+            ? `${pct(pw.unemploymentPct)}${pw.unemploymentPolandPct != null ? ` (Polska: ${pct(pw.unemploymentPolandPct)})` : ""}`
+            : null,
+        ],
+        [
+          "Wynagrodzenia",
+          pw.wageIndexPl100 != null ? `${num(pw.wageIndexPl100)}% średniej krajowej` : null,
+        ],
+      ]),
     });
   }
   return blocks;
@@ -1532,7 +1652,7 @@ export type MapRenderer = (spec: {
   marker: boolean;
   polygon?: Array<[number, number]> | null;
   base?: "osm" | "orto";
-  overlay?: "flood" | "mpzp" | null;
+  overlay?: "flood" | "mpzp" | "protected" | null;
 }) => Promise<Uint8Array | null>;
 
 async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uint8Array | null> {
@@ -1572,7 +1692,20 @@ async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uin
               opacity: 0.75,
             },
           ]
-        : [];
+        : spec.overlay === "protected"
+          ? [
+              {
+                url: m.wmsGetMapUrl(m.EEA_CDDA_WMS, m.EEA_CDDA_LAYERS, view, { scale: 1 }),
+                opacity: 0.55,
+              },
+              {
+                url: m.wmsGetMapUrl(m.EEA_NATURA2000_WMS, m.EEA_NATURA2000_LAYERS, view, {
+                  scale: 1,
+                }),
+                opacity: 0.6,
+              },
+            ]
+          : [];
   return m.renderStaticMapPng({
     ...view,
     baseImage,
@@ -1584,7 +1717,9 @@ async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uin
           ? "ISOK / Wody Polskie"
           : spec.overlay === "mpzp"
             ? "KIMPZP © GUGiK"
-            : undefined,
+            : spec.overlay === "protected"
+              ? "Natura 2000 / CDDA © EEA"
+              : undefined,
   });
 }
 
