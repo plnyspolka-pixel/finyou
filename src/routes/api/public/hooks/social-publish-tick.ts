@@ -18,6 +18,7 @@ import { runVideoRenditionTick } from "@/lib/video-rendition.server";
 import { requireCronSecret } from "@/lib/cron-auth.server";
 
 async function runTick(): Promise<Response> {
+  const startedAt = Date.now();
   try {
     // Publikacje NAJPIERW (decyzja 30.10.2026): wcześniej szły po obsłudze
     // Studia (rendery HeyGen, wykończenia) i kompresji, więc długi przebieg
@@ -46,7 +47,7 @@ async function runTick(): Promise<Response> {
       error: e instanceof Error ? e.message : String(e),
     }));
     // Studio na końcu (najdłuższe: HeyGen, TTS, zlecenia wykończenia).
-    const video = await runStudioVideoTick().catch((e) => ({
+    const video = await runStudioVideoTick({ startedAt }).catch((e) => ({
       error: e instanceof Error ? e.message : String(e),
     }));
     const result = { ...social, video, renditions, tiktok, x };
