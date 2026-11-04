@@ -26,24 +26,18 @@ import type {
 import { compactKwNumber, formatKwNumber } from "@/lib/kw";
 import { INTERACTIVE_KW_POLL_MS } from "@/lib/analysis-pipeline/step-timing";
 import {
-  sanitizeCoOwnersForTeaser,
-  sanitizeCollateralForTeaser,
-  sanitizeKwAnalysisForTeaser,
-} from "./order-report-teaser";
-import {
-  ACTIVE_MATCH_STATUSES,
   TEASER_VISIBLE_MATCH_STATUSES,
   amountMatchesOrder,
-  consumerKaraStatement,
   orderLimitsFromSettings,
   projectFreshAt,
   projectWindowStart,
-  reservationDeadline,
   teaserDeadline,
-  TEASER_HOURS,
 } from "./order-cycle-core";
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import { INVESTOR_OFFERS_PAUSED_MESSAGE } from "@/lib/investor-offers-pause";
+import {
+  INVESTOR_OFFERS_PAUSED_MESSAGE,
+  RESERVATIONS_REMOVED_MESSAGE,
+} from "@/lib/investor-offers-pause";
 import { investorOffersPausedFor } from "@/lib/investor-offers-pause.server";
 
 const loose = (c: unknown) => c as any;
@@ -177,18 +171,31 @@ const DISCLOSED_STATUSES = ["rezerwacja", "transakcja"];
  * (Ujawnienie w „Moich zleceniach": rezerwacja albo transakcja).
  */
 export async function disclosedApplicationIds(db: any, userId: string): Promise<Set<string>> {
-  const { data: orders } = await loose(db)
-    .from("investor_orders")
-    .select("id")
-    .eq("user_id", userId);
+  // Bez rezerwacji: dostęp mają Projekty z moich Zleceń — z Dopasowaniem
+  // (dowolny status poza odrzuconym) albo z moją złożoną ofertą.
+  const [{ data: orders }, { data: inv }] = await Promise.all([
+    loose(db).from("investor_orders").select("id").eq("user_id", userId),
+    loose(db).from("investors").select("id").eq("user_id", userId).maybeSingle(),
+  ]);
   const orderIds = (orders ?? []).map((o: any) => o.id as string);
-  if (!orderIds.length) return new Set();
-  const { data: matches } = await loose(db)
-    .from("investor_order_matches")
-    .select("application_id")
-    .in("order_id", orderIds)
-    .in("status", DISCLOSED_STATUSES);
-  return new Set((matches ?? []).map((m: any) => m.application_id as string));
+  const out = new Set<string>();
+  if (orderIds.length) {
+    const { data: matches } = await loose(db)
+      .from("investor_order_matches")
+      .select("application_id, status")
+      .in("order_id", orderIds);
+    for (const m of matches ?? [])
+      if (m.status !== "odrzucone") out.add(m.application_id as string);
+  }
+  if (inv?.id && orderIds.length) {
+    const { data: offers } = await loose(db)
+      .from("investor_offers")
+      .select("loan_application_id")
+      .eq("investor_id", inv.id)
+      .neq("offer_status", "szkic");
+    for (const o of offers ?? []) out.add(o.loan_application_id as string);
+  }
+  return out;
 }
 
 /** „Stwórz umowę": po Ujawnieniu danych kontaktowych albo po akceptacji klienta. */
@@ -409,11 +416,12 @@ async function buildProject(
   const kwRaw = String(p?.land_register_number ?? "").trim();
   const locationScore =
     app.location_potential_score != null ? Number(app.location_potential_score) : null;
-  const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
+  // Bez rezerwacji: Projekt w Zleceniu jest od razu w pełni widoczny, z danymi
+  // kontaktowymi klienta (koncepcja rezerwacji/Ujawnienia usunięta).
   const [{ photos, files }, report, contact] = await Promise.all([
     loadProjectFiles(db, app.id, (p?.photos as string[] | null) ?? null),
     loadProjectReport(db, app),
-    disclosed ? loadContact(db, app.client_id ?? null) : Promise.resolve(null),
+    loadContact(db, app.client_id ?? null),
   ]);
   return {
     applicationId: app.id,
@@ -447,7 +455,7 @@ async function buildProject(
         }
       : null,
     contact,
-    clientId: disclosed ? (app.client_id ?? null) : null,
+    clientId: app.client_id ?? null,
     myOfferId,
   };
 }
@@ -505,22 +513,17 @@ export async function loadMyOrderProjects(
     );
     const orderIds = (orders ?? []).map((o: any) => o.id);
 
-    // Dopasowania moich Zleceń + Projekty zajęte przez innych zleceniodawców.
-    const [{ data: myMatches }, { data: busy }] = await Promise.all([
+    // Dopasowania moich Zleceń (bez wyłączności między inwestorami).
+    const { data: myMatches } =
       orderIds.length > 0
-        ? loose(supabaseAdmin)
+        ? await loose(supabaseAdmin)
             .from("investor_order_matches")
             .select(
               "id, order_id, application_id, project_ref, status, reservation_expires_at, teaser_expires_at, teaser_released_at, teaser_extended, created_at",
             )
             .in("order_id", orderIds)
             .in("status", TEASER_VISIBLE_MATCH_STATUSES)
-        : Promise.resolve({ data: [] }),
-      loose(supabaseAdmin)
-        .from("investor_order_matches")
-        .select("application_id, order_id")
-        .in("status", ACTIVE_MATCH_STATUSES),
-    ]);
+        : { data: [] as any[] };
     // Projekty odrzucone przez inwestora w danym Zleceniu — nie wracają na listę.
     const { data: declinedRows } = orderIds.length
       ? await loose(supabaseAdmin)
@@ -532,13 +535,6 @@ export async function loadMyOrderProjects(
     const declined = new Set(
       (declinedRows ?? []).map((m: any) => `${m.order_id}:${m.application_id}`),
     );
-    const myOrderIdSet = new Set(orderIds);
-    const busyElsewhere = new Set(
-      (busy ?? [])
-        .filter((m: any) => !myOrderIdSet.has(m.order_id))
-        .map((m: any) => m.application_id),
-    );
-
     // Kandydaci: od najwcześniejszego okna wśród przyjętych Zleceń.
     let apps: any[] = [];
     const matchedAppIds = new Set((myMatches ?? []).map((m: any) => m.application_id));
@@ -632,7 +628,8 @@ export async function loadMyOrderProjects(
           if (offersPaused && !(match && DISCLOSED_STATUSES.includes(match.status))) continue;
           if (!match) {
             if (declined.has(`${o.id}:${app.id}`)) continue;
-            if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
+            // Bez rezerwacji nie ma wyłączności — Projekt nie jest „zajęty” przez innych.
+            if (!appFitsOrder(o, app)) continue;
             // Projekt aktywny w innym moim Zleceniu — pokazujemy tylko tam.
             if ((myMatches ?? []).some((m: any) => m.application_id === app.id)) continue;
           }
@@ -782,10 +779,8 @@ export async function assertOrderReportAccess(
 
 /**
  * Pełny raport analityczny Projektu — treść czterech kroków pipeline'u w tych
- * samych kształtach, co w module „Analityka" (te same komponenty). Przed
- * Ujawnieniem serwer usuwa dane identyfikujące (order-report-teaser): numer KW
- * zamaskowany, bez treści księgi i cytatów z niej, nazwiska i adres zastąpione
- * rolą. Po rezerwacji / transakcji — komplet.
+ * samych kształtach, co w module „Analityka" (te same komponenty) — zawsze
+ * komplet: numer i treść KW, właściciele, adres (bez rezerwacji).
  */
 export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -796,8 +791,9 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
-    const { app, match, contact } = await eligibleApp(supabaseAdmin, order, data.applicationId);
-    const disclosed = Boolean(match && DISCLOSED_STATUSES.includes(match.status));
+    const { app } = await eligibleApp(supabaseAdmin, order, data.applicationId);
+    // Bez rezerwacji raport Projektu jest zawsze kompletny (numer i treść KW, właściciele, adres).
+    const disclosed = true;
     const kwRaw = String(propertyOf(app)?.land_register_number ?? "").trim();
     const compact = compactKwNumber(kwRaw);
 
@@ -811,7 +807,7 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
     const [report, kwDocument, { data: kwa }, { data: co }, { data: risk }, { data: coll }] =
       await Promise.all([
         loadProjectReport(supabaseAdmin, app),
-        disclosed ? loadKwDocumentView(loose(supabaseAdmin), compact) : Promise.resolve(null),
+        loadKwDocumentView(loose(supabaseAdmin), compact),
         loose(supabaseAdmin)
           .from("kw_land_register_analyses")
           .select("result_json, created_at")
@@ -853,43 +849,15 @@ export const getOrderProjectReportDetail = createServerFn({ method: "GET" })
       : null;
     const collateral = (coll?.result_json as PropertyAnalysisResult | undefined) ?? null;
 
-    if (disclosed) {
-      return {
-        report,
-        disclosed,
-        kwNumber: formatKwNumber(kwRaw) ?? (kwRaw || null),
-        kwDocument,
-        coowners,
-        kwAnalysis,
-        valuation,
-        collateral,
-      };
-    }
-
-    // Przed Ujawnieniem: nazwiska z działu II i dane klienta do zamaskowania.
-    const { maskKwRaw } = await import("@/lib/location-scoring/masking");
-    const names = [...(coowners?.owners.map((o) => o.fullName ?? "") ?? []), contact?.name ?? ""]
-      .map((n) => n.trim())
-      .filter((n) => n.length > 0);
-    const maskedKw = kwRaw ? maskKwRaw(kwRaw) : null;
     return {
       report,
       disclosed,
-      kwNumber: maskedKw,
-      kwDocument: null,
-      coowners: coowners ? sanitizeCoOwnersForTeaser(coowners, names) : null,
-      kwAnalysis: kwAnalysis
-        ? {
-            result: sanitizeKwAnalysisForTeaser(
-              kwAnalysis.result,
-              maskedKw ?? "(zamaskowany numer KW)",
-              names,
-            ),
-            createdAt: kwAnalysis.createdAt,
-          }
-        : null,
+      kwNumber: formatKwNumber(kwRaw) ?? (kwRaw || null),
+      kwDocument,
+      coowners,
+      kwAnalysis,
       valuation,
-      collateral: collateral ? sanitizeCollateralForTeaser(collateral, names) : null,
+      collateral,
     };
   });
 
@@ -911,128 +879,9 @@ export const reserveOrderProject = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const order = await myAcceptedOrder(supabaseAdmin, userId, data.orderId);
-    // Teaser po terminie wygasa — rezerwacja tworzy wtedy nowe Dopasowanie.
-    await (await srv()).expireStaleMatches(supabaseAdmin);
-    const { app } = await eligibleApp(supabaseAdmin, order, data.applicationId);
-
-    // Bramka: komplet dokumentów pakietu (kroki 1–5).
-    const { data: complete } = await loose(supabaseAdmin).rpc("investor_legal_pack_complete", {
-      _user_id: userId,
-    });
-    if (!complete)
-      throw new Error("Najpierw zaakceptuj komplet dokumentów pakietu (/inwestor/umowy).");
-    const { data: investor } = await loose(supabaseAdmin)
-      .from("investors")
-      .select("is_consumer")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const isConsumer = Boolean(investor?.is_consumer);
-    if (isConsumer && !data.karaConfirmed) {
-      throw new Error(
-        "Jako Konsument musisz odrębnie potwierdzić indywidualne uzgodnienie Kary Obejściowej.",
-      );
-    }
-
-    const matchFor = async () => {
-      const { data: m } = await loose(supabaseAdmin)
-        .from("investor_order_matches")
-        .select("*")
-        .eq("order_id", order.id)
-        .eq("application_id", app.id)
-        .in("status", TEASER_VISIBLE_MATCH_STATUSES)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return m ?? null;
-    };
-    let m = await matchFor();
-    if (!m) {
-      await (
-        await srv()
-      ).insertMatch(supabaseAdmin, {
-        orderId: order.id,
-        applicationId: app.id,
-        releaseTeaser: true,
-        actorId: userId,
-        actorKind: "system",
-      });
-      m = await matchFor();
-      if (!m) throw new Error("Nie udało się utworzyć Dopasowania.");
-    }
-
-    const { ip, userAgent } = (await srv()).requestMeta();
-    if (m.status === "dopasowane") {
-      await (
-        await srv()
-      ).transition(supabaseAdmin, m, "teaser", {
-        teaser_released_at: new Date().toISOString(),
-        teaser_expires_at: new Date(Date.now() + TEASER_HOURS * 3600_000).toISOString(),
-      });
-      m = await matchFor();
-    }
-    if (m.status === "teaser") {
-      const now = new Date().toISOString();
-      const karaStatement = isConsumer
-        ? consumerKaraStatement(Number(m.teaser?.loan_amount ?? app.loan_amount ?? 100_000))
-        : null;
-      await (
-        await srv()
-      ).transition(supabaseAdmin, m, "karta_leada", {
-        karta_leada_accepted_at: now,
-        karta_leada_ip: ip,
-        karta_leada_user_agent: userAgent,
-        kara_consumer_statement: karaStatement,
-        kara_consumer_accepted_at: isConsumer ? now : null,
-      });
-      await (
-        await srv()
-      ).logCycleEvent(supabaseAdmin, {
-        matchId: m.id,
-        orderId: m.order_id,
-        type: "karta_leada_zaakceptowana",
-        payload: { ip, user_agent: userAgent, kara_konsument: karaStatement },
-        actor: userId,
-        actorKind: "inwestor",
-      });
-      m = await matchFor();
-    }
-    await (await srv()).issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
-    if (m.status === "karta_leada") {
-      const limits = orderLimitsFromSettings(await getModuleSettings());
-      const now = new Date();
-      const expires = reservationDeadline(now, limits.assignmentHours);
-      await (
-        await srv()
-      ).transition(supabaseAdmin, m, "rezerwacja", {
-        disclosed_at: now.toISOString(),
-        reservation_expires_at: expires.toISOString(),
-      });
-      await (
-        await srv()
-      ).logCycleEvent(supabaseAdmin, {
-        matchId: m.id,
-        orderId: m.order_id,
-        type: "ujawnienie_identyfikujace",
-        payload: { reservation_expires_at: expires.toISOString(), ip, user_agent: userAgent },
-        actor: userId,
-        actorKind: "inwestor",
-      });
-      m = await matchFor();
-    }
-    if (!DISCLOSED_STATUSES.includes(m.status)) {
-      throw new Error(`Dopasowanie ma status ${m.status} — rezerwacja niemożliwa.`);
-    }
-    return {
-      ok: true,
-      matchId: m.id as string,
-      applicationId: app.id as string,
-      reservationExpiresAt: (m.reservation_expires_at as string | null) ?? null,
-      contact: await loadContact(supabaseAdmin, app.client_id ?? null),
-    };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /**

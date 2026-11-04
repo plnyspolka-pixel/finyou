@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Link2, Loader2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Link2, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import {
   getOrderCycleAdminState,
   createMatch,
-  releaseTeaser,
   approveTransferCard,
   adminDecideMatch,
   confirmZal6,
@@ -64,9 +63,9 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
   const create = useServerFn(createMatch);
   const mut = useMutation({
     mutationFn: (input: { orderId: string; applicationId: string }) =>
-      create({ data: { ...input, releaseTeaser: true } }),
+      create({ data: { ...input, releaseTeaser: false } }),
     onSuccess: (res: any) => {
-      toast.success(`Dopasowanie ${res.projectRef} utworzone, teaser udostępniony.`);
+      toast.success(`Dopasowanie ${res.projectRef} utworzone.`);
       onDone();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -78,7 +77,8 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
         <CardTitle className="text-base">
           Sugestie Dopasowań{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            (przyjęte Zlecenia × kompletne wnioski do kwoty maksymalnej; jeden aktywny obieg Projektu)
+            (przyjęte Zlecenia × kompletne wnioski do kwoty maksymalnej; jeden aktywny obieg
+            Projektu)
           </span>
         </CardTitle>
       </CardHeader>
@@ -107,7 +107,7 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
                     disabled={mut.isPending}
                     onClick={() => mut.mutate({ orderId: s.orderId, applicationId: a.id })}
                   >
-                    <Link2 className="mr-2 h-3.5 w-3.5" /> Dopasuj + teaser
+                    <Link2 className="mr-2 h-3.5 w-3.5" /> Dopasuj
                   </Button>
                 </div>
               ))}
@@ -120,20 +120,11 @@ function SuggestionsCard({ data, onDone }: { data: any; onDone: () => void }) {
 }
 
 function MatchesCard({ data, onDone }: { data: any; onDone: () => void }) {
-  const release = useServerFn(releaseTeaser);
   const approve = useServerFn(approveTransferCard);
   const decide = useServerFn(adminDecideMatch);
   const zal6 = useServerFn(confirmZal6);
   const [payouts, setPayouts] = useState<Record<string, string>>({});
 
-  const releaseMut = useMutation({
-    mutationFn: (matchId: string) => release({ data: { matchId } }),
-    onSuccess: () => {
-      toast.success("Teaser udostępniony");
-      onDone();
-    },
-    onError: (e) => toast.error(errMsg(e)),
-  });
   const approveMut = useMutation({
     mutationFn: (matchId: string) => approve({ data: { matchId } }),
     onSuccess: () => {
@@ -182,24 +173,11 @@ function MatchesCard({ data, onDone }: { data: any; onDone: () => void }) {
                   <span className="text-xs text-muted-foreground">
                     · Zlecenie {m.karta_leada?.nr_zlecenia ?? "—"} · wniosek{" "}
                     {String(m.application_id).slice(0, 8)}…
-                    {m.reservation_expires_at
-                      ? ` · rezerwacja do ${new Date(m.reservation_expires_at).toLocaleString("pl-PL")}`
-                      : ""}
                   </span>
                 </div>
                 <Badge className={STATUS_TONES[m.status] ?? "bg-slate-100"}>{m.status}</Badge>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {m.status === "dopasowane" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={releaseMut.isPending}
-                    onClick={() => releaseMut.mutate(m.id)}
-                  >
-                    Udostępnij teaser
-                  </Button>
-                ) : null}
                 {!m.transfer_card_approved_at && ["teaser", "karta_leada"].includes(m.status) ? (
                   <Button
                     size="sm"

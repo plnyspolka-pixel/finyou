@@ -71,8 +71,15 @@ const ZGODY = [
 
 const KODY = Object.keys(PAKIET_PLIKI) as KodPakietu[];
 
-/** Czy baza ma już dokładnie te dokumenty 1.0 (wtedy nic nie robimy). */
-async function juzZastosowane(db: any, dane: DaneDokumentow): Promise<boolean> {
+/**
+ * Które części bazy różnią się od dokumentów 1.0: zgody klienta (regulamin,
+ * polityka) i pakiet inwestora oceniamy OSOBNO — zmiana samego pakietu nie może
+ * kasować zgód klientów, a zmiana regulaminu — akceptacji pakietu.
+ */
+async function roznice(
+  db: any,
+  dane: DaneDokumentow,
+): Promise<{ zgody: boolean; pakiet: boolean }> {
   const { data: zgody, error: e1 } = await db
     .from("consent_documents")
     .select("kind, version, content, is_active")
@@ -100,17 +107,20 @@ async function juzZastosowane(db: any, dane: DaneDokumentow): Promise<boolean> {
       r.sha256 === sha256Hex(dane.pakiet[code].content_text)
     );
   });
-  return okZgody && okUmowy;
+  return { zgody: !okZgody, pakiet: !okUmowy };
 }
 
 /**
- * Wgrywa dokumenty 1.0: usuwa wcześniejsze wersje regulaminu i polityki
- * oraz wszystkie ich akceptacje, wstawia wersję 1, usuwa akceptacje pakietu
- * inwestora i przenumerowuje pakiet na FY-LEGAL-1.0. `db` — klient z rolą
- * serwisową. Idempotentne.
+ * Wgrywa dokumenty 1.0 — tylko tę część, która się zmieniła:
+ *  - zgody klienta: usuwa wcześniejsze wersje regulaminu i polityki oraz ich
+ *    akceptacje i wstawia wersję 1,
+ *  - pakiet inwestora: usuwa akceptacje pakietu (Inwestorzy akceptują nową
+ *    treść ponownie) i przenumerowuje pakiet na FY-LEGAL-1.0.
+ * `db` — klient z rolą serwisową. Idempotentne.
  */
 export async function zastosujDokumenty(db: any, dane: DaneDokumentow): Promise<WynikZastosowania> {
-  if (await juzZastosowane(db, dane)) {
+  const zmiany = await roznice(db, dane);
+  if (!zmiany.zgody && !zmiany.pakiet) {
     return {
       zastosowano: false,
       usunieteAkceptacjeZgod: 0,
@@ -122,49 +132,57 @@ export async function zastosujDokumenty(db: any, dane: DaneDokumentow): Promise<
     if (error) throw new Error(`${what}: ${error.message}`);
   };
 
-  const { data: delZgody, error: e1 } = await db
-    .from("consent_acceptances")
-    .delete()
-    .in("kind", ["terms", "privacy"])
-    .select("id");
-  must("consent_acceptances", e1);
-  const { error: e2 } = await db
-    .from("consent_documents")
-    .delete()
-    .in("kind", ["terms", "privacy"]);
-  must("consent_documents (usunięcie)", e2);
-  const { error: e3 } = await db.from("consent_documents").insert(
-    ZGODY.map(([kind, title, pole]) => ({
-      kind,
-      title,
-      content: dane[pole],
-      version: KLIENT_DOCS_VERSION,
-      is_active: true,
-    })),
-  );
-  must("consent_documents (wstawienie)", e3);
+  let delZgody: Array<{ id: string }> | null = null;
+  if (zmiany.zgody) {
+    const { data: dz, error: e1 } = await db
+      .from("consent_acceptances")
+      .delete()
+      .in("kind", ["terms", "privacy"])
+      .select("id");
+    must("consent_acceptances", e1);
+    const { error: e2 } = await db
+      .from("consent_documents")
+      .delete()
+      .in("kind", ["terms", "privacy"]);
+    must("consent_documents (usunięcie)", e2);
+    const { error: e3 } = await db.from("consent_documents").insert(
+      ZGODY.map(([kind, title, pole]) => ({
+        kind,
+        title,
+        content: dane[pole],
+        version: KLIENT_DOCS_VERSION,
+        is_active: true,
+      })),
+    );
+    must("consent_documents (wstawienie)", e3);
+    delZgody = dz;
+  }
 
-  const { data: delUmowy, error: e4 } = await db
-    .from("investor_agreement_acceptances")
-    .delete()
-    .not("id", "is", null)
-    .select("id");
-  must("investor_agreement_acceptances", e4);
-  for (const code of KODY) {
-    const d = dane.pakiet[code];
-    const { error } = await db
-      .from("legal_documents")
-      .update({
-        package_id: PAKIET_ID,
-        version: PAKIET_WERSJA,
-        sha256: sha256Hex(d.content_text),
-        content_text: d.content_text,
-        docx_base64: d.docx_base64,
-        docx_filename: `${PAKIET_PLIKI[code]}.docx`,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("code", code);
-    must(`legal_documents ${code}`, error);
+  let delUmowy: Array<{ id: string }> | null = null;
+  if (zmiany.pakiet) {
+    const { data: du, error: e4 } = await db
+      .from("investor_agreement_acceptances")
+      .delete()
+      .not("id", "is", null)
+      .select("id");
+    must("investor_agreement_acceptances", e4);
+    for (const code of KODY) {
+      const d = dane.pakiet[code];
+      const { error } = await db
+        .from("legal_documents")
+        .update({
+          package_id: PAKIET_ID,
+          version: PAKIET_WERSJA,
+          sha256: sha256Hex(d.content_text),
+          content_text: d.content_text,
+          docx_base64: d.docx_base64,
+          docx_filename: `${PAKIET_PLIKI[code]}.docx`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("code", code);
+      must(`legal_documents ${code}`, error);
+    }
+    delUmowy = du;
   }
 
   return {
@@ -172,9 +190,10 @@ export async function zastosujDokumenty(db: any, dane: DaneDokumentow): Promise<
     usunieteAkceptacjeZgod: delZgody?.length ?? 0,
     usunieteAkceptacjeUmow: delUmowy?.length ?? 0,
     dokumenty: [
-      `Regulamin klienta ${WERSJA_DOKUMENTOW}`,
-      `Polityka prywatności ${WERSJA_DOKUMENTOW}`,
-      ...KODY.map((c) => `${PAKIET_PLIKI[c]} (${PAKIET_ID})`),
+      ...(zmiany.zgody
+        ? [`Regulamin klienta ${WERSJA_DOKUMENTOW}`, `Polityka prywatności ${WERSJA_DOKUMENTOW}`]
+        : []),
+      ...(zmiany.pakiet ? KODY.map((c) => `${PAKIET_PLIKI[c]} (${PAKIET_ID})`) : []),
     ],
   };
 }

@@ -157,8 +157,7 @@ export function PropertyLocationMap({ result }: { result: PropertyAnalysisResult
         </>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Mapa niedostępna — brak ustalonego położenia (przed rezerwacją dokładna lokalizacja jest
-          ukryta).
+          Mapa niedostępna — nie ustalono położenia nieruchomości.
         </p>
       )}
 
@@ -270,7 +269,6 @@ function SurroundingsPanel({ result }: { result: PropertyAnalysisResult }) {
   const nu = sr.nuisances;
   const pw = sr.powiat;
   const bld = sr.building;
-  const num = (x: number) => String(x).replace(".", ",");
   return (
     <div className="space-y-3 text-sm">
       {bld && (

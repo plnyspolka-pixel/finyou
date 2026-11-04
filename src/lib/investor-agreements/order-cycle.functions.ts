@@ -14,24 +14,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   clientProvisionPln,
-  consumerKaraStatement,
-  extendedReservationDeadline,
   isWithinWithdrawalWindow,
-  reservationDeadline,
   orderLimitsFromSettings,
   withdrawalDeadline,
   amountMatchesOrder,
-  isMatchStale,
-  teaserDeadline,
-  TEASER_EXTENSION_HOURS,
-  TEASER_HOURS,
 } from "./order-cycle-core";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import {
-  assertInvestorOffersOpenFor,
-  assertOrderOffersOpen,
-} from "@/lib/investor-offers-pause.server";
+import { assertOrderOffersOpen } from "@/lib/investor-offers-pause.server";
+import { RESERVATIONS_REMOVED_MESSAGE } from "@/lib/investor-offers-pause";
 
 const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
@@ -173,61 +164,9 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
-    await assertInvestorOffersOpenFor(context.userId);
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
-    if (m.status !== "teaser") throw new Error("Karta Leada nie jest w tym kroku dostępna.");
-    if (isMatchStale(m, new Date())) {
-      throw new Error("Teaser wygasł (24 h na decyzję) — odśwież listę Projektów.");
-    }
-
-    // Bramka: komplet dokumentów pakietu (kroki 1–5).
-    const { data: complete } = await loose(supabaseAdmin).rpc("investor_legal_pack_complete", {
-      _user_id: userId,
-    });
-    if (!complete)
-      throw new Error("Najpierw zaakceptuj komplet dokumentów pakietu (/inwestor/umowy).");
-
-    const { data: investor } = await loose(supabaseAdmin)
-      .from("investors")
-      .select("is_consumer")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const isConsumer = Boolean(investor?.is_consumer);
-    if (isConsumer && !data.karaConfirmed) {
-      throw new Error(
-        "Jako Konsument musisz odrębnie potwierdzić indywidualne uzgodnienie Kary Obejściowej (checkbox przy Karcie Leada).",
-      );
-    }
-
-    const { ip, userAgent } = (await srv()).requestMeta();
-    const now = new Date().toISOString();
-    const karaStatement = isConsumer
-      ? consumerKaraStatement(Number(m.teaser?.loan_amount ?? 100_000))
-      : null;
-    await (
-      await srv()
-    ).transition(supabaseAdmin, m, "karta_leada", {
-      karta_leada_accepted_at: now,
-      karta_leada_ip: ip,
-      karta_leada_user_agent: userAgent,
-      kara_consumer_statement: karaStatement,
-      kara_consumer_accepted_at: isConsumer ? now : null,
-    });
-    await (
-      await srv()
-    ).logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "karta_leada_zaakceptowana",
-      payload: { ip, user_agent: userAgent, kara_konsument: isConsumer ? karaStatement : null },
-      actor: userId,
-      actorKind: "inwestor",
-    });
-    await (await srv()).issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
-    return { ok: true };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /** Ujawnienie Identyfikujące: start rezerwacji 24 h. Wymaga zatwierdzonej
@@ -235,134 +174,27 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
 export const requestDisclosure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertInvestorOffersOpenFor(context.userId);
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
-    if (m.status !== "karta_leada") throw new Error("Najpierw zaakceptuj Kartę Leada.");
-    // Karta Transferu Danych wystawiana automatycznie (starsze Dopasowania bez karty).
-    await (await srv()).issueTransferCard(supabaseAdmin, m, { actorId: null, actorKind: "system" });
-    // Ujawnienie po akceptacji Karty Leada nie wymaga dodatkowej płatności
-    // (Umowa ramowa § 7: poza abonamentem brak opłat za Projekt).
-    const limits = orderLimitsFromSettings(await getModuleSettings());
-    const now = new Date();
-    const expires = reservationDeadline(now, limits.assignmentHours);
-    await (
-      await srv()
-    ).transition(supabaseAdmin, m, "rezerwacja", {
-      disclosed_at: now.toISOString(),
-      reservation_expires_at: expires.toISOString(),
-    });
-    await (
-      await srv()
-    ).logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "ujawnienie_identyfikujace",
-      payload: { reservation_expires_at: expires.toISOString() },
-      actor: userId,
-      actorKind: "inwestor",
-    });
-    return {
-      ok: true,
-      applicationId: m.application_id,
-      reservationExpiresAt: expires.toISOString(),
-    };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /** Jednorazowe przedłużenie rezerwacji o 12 h. */
 export const extendReservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertInvestorOffersOpenFor(context.userId);
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
-    const limits = orderLimitsFromSettings(await getModuleSettings());
-    if (m.status !== "rezerwacja") throw new Error("Brak aktywnej rezerwacji.");
-    if (m.reservation_extended)
-      throw new Error(`Rezerwację można przedłużyć tylko raz (+${limits.extensionHours} h).`);
-    // Maks. N przedłużonych rezerwacji naraz (project_module_settings).
-    const { count: extendedNow } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .select("id, investor_orders!inner(user_id)", { count: "exact", head: true })
-      .eq("investor_orders.user_id", userId)
-      .eq("status", "rezerwacja")
-      .eq("reservation_extended", true);
-    if ((extendedNow ?? 0) >= limits.maxExtended) {
-      throw new Error(
-        `Masz już ${limits.maxExtended} przedłużone rezerwacje naraz — limit z ustawień modułu (§ 5 Umowy ramowej).`,
-      );
-    }
-    const newDeadline = extendedReservationDeadline(
-      new Date(m.reservation_expires_at),
-      limits.extensionHours,
-    );
-    const { error } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .update({
-        reservation_expires_at: newDeadline.toISOString(),
-        reservation_extended: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", m.id)
-      .eq("status", "rezerwacja")
-      .eq("reservation_extended", false);
-    if (error) throw new Error(error.message);
-    await (
-      await srv()
-    ).logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "rezerwacja_przedluzona",
-      payload: { reservation_expires_at: newDeadline.toISOString() },
-      actor: userId,
-      actorKind: "inwestor",
-    });
-    return { ok: true, reservationExpiresAt: newDeadline.toISOString() };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /** Jednorazowe przedłużenie teasera o 12 h (24 h na decyzję → 36 h). */
 export const extendTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertInvestorOffersOpenFor(context.userId);
-    const { userId } = context;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
-    if (m.status !== "teaser") throw new Error("Ten Projekt nie czeka już na decyzję.");
-    if (m.teaser_extended)
-      throw new Error(`Teaser można przedłużyć tylko raz (+${TEASER_EXTENSION_HOURS} h).`);
-    const current = teaserDeadline(m);
-    if (!current || current.getTime() < Date.now()) throw new Error("Teaser już wygasł.");
-    const newDeadline = new Date(current.getTime() + TEASER_EXTENSION_HOURS * 3600_000);
-    const { data: updated, error } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .update({
-        teaser_expires_at: newDeadline.toISOString(),
-        teaser_extended: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", m.id)
-      .eq("status", "teaser")
-      .eq("teaser_extended", false)
-      .select("id");
-    if (error) throw new Error(error.message);
-    if (!updated?.length) throw new Error("Stan Projektu zmienił się w międzyczasie — odśwież.");
-    await (
-      await srv()
-    ).logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "teaser_przedluzony",
-      payload: { teaser_expires_at: newDeadline.toISOString() },
-      actor: userId,
-      actorKind: "inwestor",
-    });
-    return { ok: true, teaserExpiresAt: newDeadline.toISOString() };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /** Odrzucenie Projektu przez inwestora (zwalnia go dla kolejnego Zlecenia). */
@@ -674,33 +506,9 @@ export const createMatch = createServerFn({ method: "POST" })
 export const releaseTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    await (await srv()).assertAdmin(context.supabase as any, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: m } = await loose(supabaseAdmin)
-      .from("investor_order_matches")
-      .select("*")
-      .eq("id", data.matchId)
-      .maybeSingle();
-    if (!m) throw new Error("Nie znaleziono Dopasowania.");
-    await assertOrderOffersOpen(loose(supabaseAdmin), m.order_id);
-    await (
-      await srv()
-    ).transition(supabaseAdmin, m, "teaser", {
-      teaser_released_at: new Date().toISOString(),
-      teaser_expires_at: new Date(Date.now() + TEASER_HOURS * 3600_000).toISOString(),
-    });
-    await (
-      await srv()
-    ).logCycleEvent(supabaseAdmin, {
-      matchId: m.id,
-      orderId: m.order_id,
-      type: "teaser_udostepniony",
-      payload: { project_ref: m.project_ref },
-      actor: context.userId,
-      actorKind: "admin",
-    });
-    return { ok: true };
+  .handler(async () => {
+    // Koncepcja rezerwacji (Karta Leada, Ujawnienie, wyłączność 24 h) usunięta.
+    throw new Error(RESERVATIONS_REMOVED_MESSAGE);
   });
 
 /** Karta Transferu Danych (Moduł RODO) — zatwierdzana per Projekt przed Ujawnieniem. */
