@@ -258,7 +258,7 @@ const BLOCK_ADVICE: Record<ProductionBlockKind, { subject: string; advice: strin
   ai_credits: {
     subject: "Autopilot — produkcja rolek ZATRZYMANA (kredyty AI)",
     advice:
-      "Dostawca AI odmówił z powodu braku kredytów. Doładuj kredyty Lovable AI (Settings → Plans & credits) i/lub sprawdź saldo konta Anthropic (console.anthropic.com → Billing) — Studio przełącza się na Claude, gdy Lovable odmawia, więc rolki stoją dopiero, gdy brakuje obu.",
+      "Dostawca AI odmówił z powodu braku kredytów. Doładuj kredyty Lovable AI (Settings → Plans & credits) i sprawdź saldo Anthropic (console.anthropic.com → Billing) oraz OpenAI (platform.openai.com → Billing) — Studio przełącza się kolejno na Claude i OpenAI, gdy Lovable odmawia, więc rolki stoją dopiero, gdy brakuje u wszystkich.",
   },
 };
 
