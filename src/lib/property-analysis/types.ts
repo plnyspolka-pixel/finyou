@@ -1,6 +1,7 @@
 // Typy współdzielone modułu Analiza Zabezpieczenia.
 // Plik bezpieczny do importu zarówno po stronie klienta, jak i serwera.
 import type { UldkParcel } from "./uldk";
+import type { MpzpInfo } from "./mpzp";
 
 export type PropertyType =
   | "mieszkanie"
@@ -196,6 +197,8 @@ export interface PropertyAnalysisResult {
   listingsBenchmark?: ListingsBenchmarkSummary | null;
   /** Wycena z bieżących danych portali nieruchomości (+ komentarz Lovable AI). */
   portalValuation?: PortalValuationSummary | null;
+  /** Miejscowy plan w punkcie nieruchomości (Krajowa Integracja MPZP). */
+  mpzp?: MpzpInfo | null;
   /**
    * @deprecated Wycena Perplexity z analiz sprzed migracji na portale — tylko do
    * odczytu starych rekordów. Czytaj przez `readPortalValuation()`.

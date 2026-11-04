@@ -3,7 +3,8 @@
 // (dopiero po kliknięciu „Pobierz PDF”). Kafelki OSM mają CORS `*`, więc
 // canvas nie jest „skażony” i daje się zapisać do PNG. Zgodnie z zasadami OSM
 // mapa ma podpis „© OpenStreetMap contributors”, a liczba kafelków na mapę
-// jest mała (≤ 12).
+// jest mała (≤ 12). Nakładki państwowych WMS (ISOK, KIMPZP) w EPSG:3857
+// trafiają piksel w piksel w ten sam zakres.
 
 export const OSM_TILE_URL = "https://tile.openstreetmap.org";
 export const OSM_ATTRIBUTION = "© OpenStreetMap contributors";
@@ -19,7 +20,69 @@ export interface StaticMapSpec {
   marker?: boolean;
   /** Obrys działki [lng, lat]. */
   polygon?: Array<[number, number]> | null;
+  /**
+   * Podkład zamiast kafelków OSM (np. ortofotomapa pobrana przez serwer) —
+   * obraz dokładnie w zakresie `bbox3857ForMap(spec)`.
+   */
+  baseImage?: { bytes: Uint8Array; mime: string } | null;
+  /** Nakładki WMS (EPSG:3857, ten sam zakres) — np. strefy powodziowe, MPZP. */
+  overlays?: Array<{ url: string; opacity?: number }>;
+  /** Podpis źródeł obok atrybucji OSM. */
+  attribution?: string;
 }
+
+const MERC = 20037508.342789244;
+
+/** Zakres mapy w metrach EPSG:3857 (minX,minY,maxX,maxY) — zgodny z kafelkami OSM. */
+export function bbox3857ForMap(
+  spec: Pick<StaticMapSpec, "lat" | "lng" | "zoom" | "width" | "height">,
+): [number, number, number, number] {
+  const [cx, cy] = lngLatToWorldPx(spec.lng, spec.lat, spec.zoom);
+  const res = (2 * MERC) / (TILE * 2 ** spec.zoom);
+  const toX = (px: number) => px * res - MERC;
+  const toY = (py: number) => MERC - py * res;
+  return [
+    toX(cx - spec.width / 2),
+    toY(cy + spec.height / 2),
+    toX(cx + spec.width / 2),
+    toY(cy - spec.height / 2),
+  ];
+}
+
+/** URL GetMap WMS 1.3.0 w EPSG:3857 dla zakresu mapy (piksele ×2 — ostrość w PDF-ie). */
+export function wmsGetMapUrl(
+  base: string,
+  layers: string,
+  spec: Pick<StaticMapSpec, "lat" | "lng" | "zoom" | "width" | "height">,
+  opts: { format?: string; transparent?: boolean; scale?: number } = {},
+): string {
+  const scale = opts.scale ?? 2;
+  const bbox = bbox3857ForMap(spec)
+    .map((v) => v.toFixed(2))
+    .join(",");
+  const q = new URLSearchParams({
+    SERVICE: "WMS",
+    VERSION: "1.3.0",
+    REQUEST: "GetMap",
+    LAYERS: layers,
+    STYLES: "",
+    CRS: "EPSG:3857",
+    BBOX: bbox,
+    WIDTH: String(spec.width * scale),
+    HEIGHT: String(spec.height * scale),
+    FORMAT: opts.format ?? "image/png",
+    TRANSPARENT: opts.transparent === false ? "FALSE" : "TRUE",
+  });
+  return `${base}?${q.toString()}`;
+}
+
+/** Mapy zagrożenia powodziowego ISOK (Wody Polskie) — obszary zagrożenia powodzią rzeczną i morską. */
+export const ISOK_FLOOD_WMS = "https://wody.isok.gov.pl/wss/INSPIRE/INSPIRE_NZ_HY_MZPMRP_WMS";
+export const ISOK_FLOOD_LAYERS = "NZ.Fluvial,NZ.SeaWater";
+/** Krajowa Integracja MPZP (GUGiK) — granice planów i rysunki tam, gdzie usługa krajowa je renderuje. */
+export const KIMPZP_WMS =
+  "https://mapy.geoportal.gov.pl/wss/ext/KrajowaIntegracjaMiejscowychPlanowZagospodarowaniaPrzestrzennego";
+export const KIMPZP_LAYERS = "raster,wektor-str,wektor-pow,wektor-lin,wektor-lzb,plany_granice";
 
 /** Współrzędne geograficzne → piksele świata (Web Mercator) dla danego zoomu. */
 export function lngLatToWorldPx(lng: number, lat: number, zoom: number): [number, number] {
@@ -106,12 +169,31 @@ export async function renderStaticMapPng(spec: StaticMapSpec): Promise<Uint8Arra
   ctx.fillRect(0, 0, spec.width, spec.height);
 
   const { origin, tiles } = tilesForMap(spec);
-  const imgs = await Promise.all(
-    tiles.map((t) => loadTile(`${OSM_TILE_URL}/${spec.zoom}/${t.x}/${t.y}.png`)),
-  );
-  if (imgs.every((i) => i == null)) return null;
-  imgs.forEach((img, i) => {
-    if (img) ctx.drawImage(img, tiles[i].dx, tiles[i].dy, TILE, TILE);
+  if (spec.baseImage) {
+    const url = URL.createObjectURL(
+      new Blob([spec.baseImage.bytes as BlobPart], { type: spec.baseImage.mime }),
+    );
+    const img = await loadTile(url);
+    URL.revokeObjectURL(url);
+    if (!img) return null;
+    ctx.drawImage(img, 0, 0, spec.width, spec.height);
+  } else {
+    const imgs = await Promise.all(
+      tiles.map((t) => loadTile(`${OSM_TILE_URL}/${spec.zoom}/${t.x}/${t.y}.png`)),
+    );
+    if (imgs.every((i) => i == null)) return null;
+    imgs.forEach((img, i) => {
+      if (img) ctx.drawImage(img, tiles[i].dx, tiles[i].dy, TILE, TILE);
+    });
+  }
+
+  // Nakładki WMS: niedostępna (brak CORS, błąd serwera) jest po prostu pomijana.
+  const overlayImgs = await Promise.all((spec.overlays ?? []).map((o) => loadTile(o.url)));
+  overlayImgs.forEach((img, i) => {
+    if (!img) return;
+    ctx.globalAlpha = spec.overlays![i].opacity ?? 0.7;
+    ctx.drawImage(img, 0, 0, spec.width, spec.height);
+    ctx.globalAlpha = 1;
   });
 
   const toCanvas = (lng: number, lat: number): [number, number] => {
@@ -151,13 +233,16 @@ export async function renderStaticMapPng(spec: StaticMapSpec): Promise<Uint8Arra
     ctx.fill();
   }
 
-  // Podpis atrybucji (wymóg licencji ODbL).
+  // Podpis atrybucji (wymóg licencji ODbL / źródeł państwowych).
+  const attribution = [spec.baseImage ? null : OSM_ATTRIBUTION, spec.attribution]
+    .filter(Boolean)
+    .join(" · ");
   ctx.font = "10px sans-serif";
-  const tw = ctx.measureText(OSM_ATTRIBUTION).width;
+  const tw = ctx.measureText(attribution).width;
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillRect(spec.width - tw - 8, spec.height - 15, tw + 8, 15);
   ctx.fillStyle = "#111827";
-  ctx.fillText(OSM_ATTRIBUTION, spec.width - tw - 4, spec.height - 4);
+  ctx.fillText(attribution, spec.width - tw - 4, spec.height - 4);
 
   const blob: Blob | null = await new Promise((r) => canvas.toBlob(r, "image/png"));
   if (!blob) return null;

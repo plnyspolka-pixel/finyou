@@ -633,6 +633,13 @@ export function RiskAssessmentReport({ result }: { result: InvestmentRiskAssessm
                   dożycia ≈ {result.owner.lifeExpectancy.projectedAgeAtDeath}
                 </span>
               </div>
+              {result.owner.lifeExpectancy.regional && (
+                <div className="text-xs text-muted-foreground">
+                  {result.owner.lifeExpectancy.regional.available
+                    ? `Korekta regionalna (GUS BDL): ×${String(result.owner.lifeExpectancy.regional.factor).replace(".", ",")} — ${result.owner.lifeExpectancy.regional.note} Tablica krajowa: ${result.owner.lifeExpectancy.nationalRemainingYears ?? "—"} lat.`
+                    : result.owner.lifeExpectancy.regional.note}
+                </div>
+              )}
               <div>
                 <Badge variant="outline">
                   {bandLabel(result.owner.lifeExpectancy.longevityRiskBand)}

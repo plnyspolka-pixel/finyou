@@ -2,6 +2,7 @@
 // (deweloperuch, otodom, morizon, gratka, adresowo, olx) + komentarz Lovable AI.
 import { isBuildingPropertyType, resolveBuildingArea } from "@/lib/risk-assessment/building-area";
 import { fetchParcelByPoint } from "./uldk.server";
+import { fetchMpzpAtPoint } from "./mpzp.server";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -305,9 +306,26 @@ export async function analyzePropertyCollateral(
     // 3b) Działka ewidencyjna pod punktem (ULDK GUGiK) — tylko przy dokładnym
     //     adresie; przy centrum miejscowości działka byłaby przypadkowa.
     const exactPoint = input.latitude != null && input.longitude != null && !geo?.approximate;
-    const parcel = exactPoint
-      ? await fetchParcelByPoint(input.latitude!, input.longitude!).catch(() => null)
-      : null;
+    const [parcel, mpzp] = exactPoint
+      ? await Promise.all([
+          fetchParcelByPoint(input.latitude!, input.longitude!).catch(() => null),
+          fetchMpzpAtPoint(input.latitude!, input.longitude!).catch(() => null),
+        ])
+      : [null, null];
+    sourcesUsed.push({
+      source: "Krajowa Integracja MPZP (GUGiK)",
+      used: mpzp != null && mpzp.status !== "unavailable",
+      purpose: "miejscowy plan w punkcie: nazwa planu, symbol i przeznaczenie terenu, uchwała",
+      dataLevel: mpzp?.status === "found"
+        ? `${mpzp.plans[0]?.symbol ?? "plan"} — ${mpzp.plans[0]?.purpose ?? ""}`.slice(0, 120)
+        : mpzp?.status === "none"
+          ? `brak planu (gmina ${mpzp.commune ?? "—"})`
+          : exactPoint
+            ? "—"
+            : "brak dokładnego adresu",
+      period: "",
+      status: mpzp && mpzp.status !== "unavailable" ? "success" : "no_data",
+    });
     sourcesUsed.push({
       source: "ULDK GUGiK (działki ewidencyjne)",
       used: parcel != null,
@@ -523,6 +541,7 @@ export async function analyzePropertyCollateral(
     });
     result.property.locationApproximate = Boolean(geo?.approximate);
     result.property.parcel = parcel;
+    result.mpzp = mpzp;
     result.portalValuation = {
       status: pv.status,
       pricePerM2Median: pv.pricePerM2Median,

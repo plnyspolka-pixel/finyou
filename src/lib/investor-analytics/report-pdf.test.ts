@@ -793,11 +793,19 @@ describe("lokalizacja i mapa w raporcie", () => {
     (c) => c.charCodeAt(0),
   );
 
-  it("raport z dokładnym położeniem ma mapę okolicy i zbliżenie z pinezką", () => {
+  it("raport z dokładnym położeniem: okolica, zbliżenie, ortofoto, MPZP i mapa powodziowa", () => {
     const model = buildInvestorReportModel({ kind: "analityka", detail: analyticsDetail() });
     const maps = model.blocks.filter((b) => b.t === "map");
-    expect(maps).toHaveLength(2);
+    expect(maps).toHaveLength(5);
     expect(maps.every((m) => m.t === "map" && m.marker)).toBe(true);
+    expect(maps.map((m) => (m.t === "map" ? (m.base ?? "osm") + ":" + (m.overlay ?? "-") : ""))).toEqual([
+      "osm:-",
+      "osm:-",
+      "orto:-",
+      "osm:mpzp",
+      "osm:flood",
+    ]);
+    expect(reportModelText(model)).toContain("Plan miejscowy (MPZP) i studium");
     expect(reportModelText(model)).toContain("Lokalizacja i nieruchomość");
   });
 
@@ -821,7 +829,7 @@ describe("lokalizacja i mapa w raporcie", () => {
         return PNG_1X1;
       },
     });
-    expect(calls).toEqual([12, 17]);
+    expect(calls).toEqual([12, 17, 17, 16, 14]);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBeGreaterThanOrEqual(2);
   });
 

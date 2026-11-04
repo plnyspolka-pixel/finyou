@@ -12,7 +12,8 @@
 // ReportWriter. Zasady treści:
 //  • nigdy komunikaty operacyjne do pośrednika i klienta — tylko „co to
 //    oznacza dla inwestora”,
-//  • PESEL maskowany w każdym tekście modelu; bez dat urodzenia i dożycia,
+//  • PESEL maskowany w każdym tekście modelu; bez dat urodzenia — dożycie
+//    właścicieli tylko jako wiek w przedziale 5-letnim i e(x) (bez nazwisk),
 //  • ocena inwestycyjna A–E (klasa ryzyka) i kategoria zbywalności A–E to dwie
 //    różne skale — każda ma własny tytuł,
 //  • zastrzeżenia raz, na końcu (zastrzeżenie analizy KW = REPORT_DISCLAIMER —
@@ -101,6 +102,10 @@ export type ReportBlock =
       /** Pinezka w dokładnym punkcie (false = mapa poglądowa). */
       marker: boolean;
       polygon?: Array<[number, number]> | null;
+      /** Podkład: kafelki OSM (domyślnie) albo ortofotomapa Geoportalu. */
+      base?: "osm" | "orto";
+      /** Nakładka WMS: strefy zagrożenia powodziowego ISOK albo MPZP (KIMPZP). */
+      overlay?: "flood" | "mpzp" | null;
       caption: string;
     };
 
@@ -551,8 +556,7 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
       ],
       [
         "Powierzchnia użytkowa",
-        area(p.usableAreaM2) ??
-          (p.type === "dom" ? "nieznana (brak w KW i we wniosku)" : null),
+        area(p.usableAreaM2) ?? (p.type === "dom" ? "nieznana (brak w KW i we wniosku)" : null),
       ],
       ["Powierzchnia działki (KW)", area(p.landAreaM2)],
       ["Obszar (KW)", p.landAreaHa ? `${String(p.landAreaHa).replace(".", ",")} ha` : null],
@@ -593,6 +597,20 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     });
   }
 
+  if (lat != null && lng != null && !p.locationApproximate) {
+    blocks.push({
+      t: "map",
+      lat,
+      lng,
+      zoom: 17,
+      marker: true,
+      polygon: parcel?.polygon ?? null,
+      base: "orto",
+      caption:
+        "Ortofotomapa (zdjęcie lotnicze, Geoportal GUGiK) z punktem adresu i obrysem działki.",
+    });
+  }
+
   if (parcel) {
     blocks.push({ t: "subheading", text: "Działka ewidencyjna (ULDK GUGiK)" });
     blocks.push({
@@ -617,6 +635,8 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     });
     blocks.push({ t: "paragraph", muted: true, text: parcel.note });
   }
+
+  blocks.push(...planningBlocks(c));
 
   const loc = c.locationScore;
   blocks.push({ t: "subheading", text: "Infrastruktura w okolicy (OpenStreetMap)" });
@@ -659,6 +679,75 @@ export function locationBlocks(c: PropertyAnalysisResult | null): ReportBlock[] 
     } else {
       blocks.push({ t: "paragraph", text: loc.summary });
     }
+  }
+  return blocks;
+}
+
+/** Planowanie przestrzenne (MPZP) i mapa zagrożenia powodziowego. */
+function planningBlocks(c: PropertyAnalysisResult): ReportBlock[] {
+  const p = c.property;
+  const lat = p.latitude;
+  const lng = p.longitude;
+  const blocks: ReportBlock[] = [{ t: "subheading", text: "Plan miejscowy (MPZP) i studium" }];
+  const m = c.mpzp ?? null;
+  if (m?.status === "found") {
+    blocks.push({
+      t: "table",
+      columns: [
+        { label: "Plan", width: 3 },
+        { label: "Teren", width: 1.3 },
+        { label: "Przeznaczenie", width: 3.4 },
+        { label: "Uchwała / obowiązuje", width: 2.4 },
+      ],
+      rows: m.plans.map((pl) => [
+        pl.planName ?? "—",
+        pl.symbol ?? "—",
+        pl.purpose ?? "—",
+        [pl.resolution, pl.validFrom ?? pl.adoptedAt].filter(Boolean).join(" · ") || "—",
+      ]),
+    });
+    const links = [...new Set(m.plans.map((pl) => pl.url).filter((u): u is string => Boolean(u)))];
+    if (links.length) blocks.push({ t: "bullets", items: links.map((u) => `Uchwała (BIP): ${u}`) });
+  }
+  blocks.push({
+    t: "paragraph",
+    muted: !m || m.status !== "found",
+    text: m
+      ? m.note
+      : p.locationApproximate || lat == null
+        ? "MPZP nie sprawdzono — brak dokładnego adresu nieruchomości."
+        : "MPZP nie sprawdzono w tej analizie — uruchom analizę ponownie.",
+  });
+  blocks.push({
+    t: "paragraph",
+    muted: true,
+    text: "Studium uwarunkowań / plan ogólny gminy nie są udostępniane w otwartej usłudze krajowej — sprawdź w urzędzie gminy lub na jej geoportalu.",
+  });
+  if (lat != null && lng != null && !p.locationApproximate) {
+    blocks.push({
+      t: "map",
+      lat,
+      lng,
+      zoom: 16,
+      marker: true,
+      polygon: p.parcel?.polygon ?? null,
+      overlay: "mpzp",
+      caption:
+        "Granice i rysunek planów miejscowych (Krajowa Integracja MPZP, GUGiK) — rysunek widoczny tam, gdzie gmina udostępnia go w usłudze krajowej.",
+    });
+  }
+  if (lat != null && lng != null) {
+    blocks.push({ t: "subheading", text: "Mapa zagrożenia powodziowego (ISOK / Wody Polskie)" });
+    blocks.push({
+      t: "map",
+      lat,
+      lng,
+      zoom: p.locationApproximate ? 13 : 14,
+      marker: !p.locationApproximate,
+      overlay: "flood",
+      caption:
+        "Obszary zagrożenia powodzią rzeczną i morską z map zagrożenia powodziowego (ISOK, Wody Polskie) — brak zabarwienia oznacza brak obszaru zagrożenia w zasięgu mapy.",
+    });
   }
   return blocks;
 }
@@ -725,8 +814,14 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
           "Porównania",
           `${pv.comparablesFound}${pv.transactionsFound ? ` (w tym transakcje: ${pv.transactionsFound})` : ""}`,
         ],
-        ["Mediana zł/m²", pv.pricePerM2Median != null ? `${formatPLN(pv.pricePerM2Median)}/m²` : null],
-        ["Średnia zł/m²", pv.pricePerM2Average != null ? `${formatPLN(pv.pricePerM2Average)}/m²` : null],
+        [
+          "Mediana zł/m²",
+          pv.pricePerM2Median != null ? `${formatPLN(pv.pricePerM2Median)}/m²` : null,
+        ],
+        [
+          "Średnia zł/m²",
+          pv.pricePerM2Average != null ? `${formatPLN(pv.pricePerM2Average)}/m²` : null,
+        ],
         [
           "Rozpiętość zł/m²",
           pv.pricePerM2Min != null && pv.pricePerM2Max != null
@@ -761,13 +856,23 @@ function collateralBlocks(c: PropertyAnalysisResult): ReportBlock[] {
     blocks.push({
       t: "keyValues",
       rows: rowsWithText([
-        ["Poziom", FLOOD_LABEL[fr.riskLevel] ?? (fr.riskLevel === "none" ? "brak w mapach zagrożenia" : fr.riskLevel)],
+        [
+          "Poziom",
+          FLOOD_LABEL[fr.riskLevel] ??
+            (fr.riskLevel === "none" ? "brak w mapach zagrożenia" : fr.riskLevel),
+        ],
         ["Scenariusz 10% (raz na 10 lat)", yes(fr.scenario10Percent)],
         ["Scenariusz 1% (raz na 100 lat)", yes(fr.scenario1Percent)],
         ["Scenariusz 0,2% (raz na 500 lat)", yes(fr.scenario02Percent)],
         ["Obszar szczególnego zagrożenia", yes(fr.specialFloodHazardArea)],
-        ["Głębokość wody", fr.waterDepth != null ? `${String(fr.waterDepth).replace(".", ",")} m` : null],
-        ["Prędkość przepływu", fr.flowVelocity != null ? `${String(fr.flowVelocity).replace(".", ",")} m/s` : null],
+        [
+          "Głębokość wody",
+          fr.waterDepth != null ? `${String(fr.waterDepth).replace(".", ",")} m` : null,
+        ],
+        [
+          "Prędkość przepływu",
+          fr.flowVelocity != null ? `${String(fr.flowVelocity).replace(".", ",")} m/s` : null,
+        ],
         [
           "Podstawa",
           fr.geometryUsed === "parcel_geometry"
@@ -923,6 +1028,56 @@ function kwAnalysisBlocks(kw: { result: KwAnalysisResult; createdAt: string }): 
   return blocks;
 }
 
+function longevityBlocks(v: InvestorValuationSummary | null): ReportBlock[] {
+  const rows = v?.ownerLongevity ?? [];
+  const blocks: ReportBlock[] = [];
+  if (v?.courtRegistry) {
+    blocks.push({ t: "subheading", text: "KRZ / MSiG — wynik w ocenie ryzyka" });
+    blocks.push({
+      t: v.courtRegistry.confirmedHits > 0 ? "note" : "paragraph",
+      ...(v.courtRegistry.confirmedHits > 0 ? { tone: "warning" as const } : {}),
+      text: v.courtRegistry.summary,
+    } as ReportBlock);
+  }
+  if (!rows.length) return blocks;
+  const pct = (x: number | null) => (x != null ? `${Math.round(x * 100)}%` : "—");
+  const yrs = (x: number | null) => (x != null ? `${String(x).replace(".", ",")} lat` : "—");
+  blocks.push({ t: "subheading", text: "Dożycie właścicieli (GUS, z korektą regionalną)" });
+  blocks.push({
+    t: "table",
+    columns: [
+      { label: "Osoba", width: 2.2 },
+      { label: "Wiek / płeć", width: 2 },
+      { label: "e(x) Polska", width: 1.5, align: "right" },
+      { label: "Wsp. regionu", width: 1.5, align: "right" },
+      { label: "e(x) region", width: 1.5, align: "right" },
+      { label: "Przeżycie okresu", width: 1.7, align: "right" },
+    ],
+    rows: rows.map((r) => [
+      r.role,
+      [r.ageRange, r.sex === "M" ? "M" : r.sex === "K" ? "K" : null].filter(Boolean).join(" · ") ||
+        "—",
+      yrs(r.nationalRemainingYears),
+      r.regionalFactor != null ? String(r.regionalFactor).replace(".", ",") : "—",
+      yrs(r.remainingYears),
+      `${pct(r.survivalOverTerm)}${r.loanTermYears ? ` (${r.loanTermYears} l.)` : ""}`,
+    ]),
+  });
+  const notes = [
+    ...new Set(rows.map((r) => r.regionalNote).filter((n): n is string => Boolean(n))),
+  ];
+  blocks.push({
+    t: "bullets",
+    items: [...rows.map((r) => `${r.role}: ${r.band}.`), ...notes],
+  });
+  blocks.push({
+    t: "paragraph",
+    muted: true,
+    text: "Szacunek populacyjny (tablice trwania życia GUS × współczynnik e(x) podregionu nieruchomości do e(x) Polski, GUS BDL) — nie prognoza indywidualna ani ocena stanu zdrowia.",
+  });
+  return blocks;
+}
+
 function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
   const n = co.totalOwnersInKw;
   const blocks: ReportBlock[] = [
@@ -971,19 +1126,35 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
   if (co.intelligence) {
     const intelligence = co.intelligence;
     const statusLabel = (status: "checked" | "unavailable" | "partial") =>
-      status === "checked" ? "Sprawdzono dostępny zakres"
-        : status === "partial" ? "Wynik częściowy" : "Nie sprawdzono / źródło niedostępne";
+      status === "checked"
+        ? "Sprawdzono dostępny zakres"
+        : status === "partial"
+          ? "Wynik częściowy"
+          : "Nie sprawdzono / źródło niedostępne";
     blocks.push(
       { t: "heading", text: "Wywiad gospodarczy właścicieli — KRZ, MSiG i giełdy długów" },
-      { t: "paragraph", muted: true, text: `Sprawdzono ${formatWarsawDateTime(intelligence.checkedAt)}. ${intelligence.note}` },
+      {
+        t: "paragraph",
+        muted: true,
+        text: `Sprawdzono ${formatWarsawDateTime(intelligence.checkedAt)}. ${intelligence.note}`,
+      },
     );
     for (const owner of intelligence.subjects) {
       blocks.push(
-        { t: "subheading", text: `${owner.kind === "company" ? "Podmiot" : "Osoba"}: ${owner.name}` },
-        { t: "keyValues", rows: [
-          ["KRZ / MSiG", `${statusLabel(owner.courtStatus)}. ${owner.courtNote}`],
-          ["Giełdy wierzytelności", `${statusLabel(owner.exchangesStatus)}. ${owner.exchangesNote}`],
-        ] },
+        {
+          t: "subheading",
+          text: `${owner.kind === "company" ? "Podmiot" : "Osoba"}: ${owner.name}`,
+        },
+        {
+          t: "keyValues",
+          rows: [
+            ["KRZ / MSiG", `${statusLabel(owner.courtStatus)}. ${owner.courtNote}`],
+            [
+              "Giełdy wierzytelności",
+              `${statusLabel(owner.exchangesStatus)}. ${owner.exchangesNote}`,
+            ],
+          ],
+        },
       );
       if (owner.hits.length) {
         blocks.push({
@@ -998,9 +1169,7 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
             hit.source,
             `${hit.title}${hit.detail ? ` — ${hit.detail}` : ""}`,
             [hit.publicationDate, hit.caseSignature].filter(Boolean).join(" / ") || "brak",
-            hit.match === "identifier"
-              ? "Identyfikator zgodny"
-              : "Tylko nazwa — do weryfikacji",
+            hit.match === "identifier" ? "Identyfikator zgodny" : "Tylko nazwa — do weryfikacji",
           ]),
         });
         blocks.push({
@@ -1097,6 +1266,7 @@ function resultBlocks(a: {
           "Właściciele i rejestry",
           "Zestawienie właścicieli z działu II KW z CEIDG i KRS pojawi się po zakończeniu kroku 2.",
         )),
+    ...longevityBlocks(a.valuation),
   );
   blocks.push(...sourcesBlocks(a.sources), ...disclaimerBlocks(a.kwAnalysis != null));
   return blocks;
@@ -1361,16 +1531,61 @@ export type MapRenderer = (spec: {
   height: number;
   marker: boolean;
   polygon?: Array<[number, number]> | null;
+  base?: "osm" | "orto";
+  overlay?: "flood" | "mpzp" | null;
 }) => Promise<Uint8Array | null>;
 
 async function defaultMapRenderer(spec: Parameters<MapRenderer>[0]): Promise<Uint8Array | null> {
   if (typeof document === "undefined") return null;
-  const { renderStaticMapPng, zoomToFit } = await import("@/lib/pdf/static-map");
+  const m = await import("@/lib/pdf/static-map");
   const zoom =
     spec.polygon && spec.polygon.length >= 3 && spec.zoom >= 15
-      ? Math.min(spec.zoom, zoomToFit(spec.polygon, spec.width, spec.height))
+      ? Math.min(spec.zoom, m.zoomToFit(spec.polygon, spec.width, spec.height))
       : spec.zoom;
-  return renderStaticMapPng({ ...spec, zoom });
+  const view = { ...spec, zoom };
+  let baseImage: { bytes: Uint8Array; mime: string } | null = null;
+  if (spec.base === "orto") {
+    const { getOrthophotoImage } = await import("@/lib/property-analysis/map-imagery.functions");
+    const img = await getOrthophotoImage({
+      data: { lat: view.lat, lng: view.lng, zoom, width: view.width, height: view.height },
+    }).catch(() => null);
+    if (!img) return null;
+    baseImage = {
+      bytes: Uint8Array.from(atob(img.base64), (c) => c.charCodeAt(0)),
+      mime: img.mime,
+    };
+  }
+  // Serwery WMS stylują warstwy zależnie od skali — nakładkę pobieramy w skali
+  // mapy (bez ×2), inaczej ISOK rysuje same obrysy zamiast wypełnionych stref.
+  const overlays =
+    spec.overlay === "flood"
+      ? [
+          {
+            url: m.wmsGetMapUrl(m.ISOK_FLOOD_WMS, m.ISOK_FLOOD_LAYERS, view, { scale: 1 }),
+            opacity: 0.6,
+          },
+        ]
+      : spec.overlay === "mpzp"
+        ? [
+            {
+              url: m.wmsGetMapUrl(m.KIMPZP_WMS, m.KIMPZP_LAYERS, view, { scale: 1 }),
+              opacity: 0.75,
+            },
+          ]
+        : [];
+  return m.renderStaticMapPng({
+    ...view,
+    baseImage,
+    overlays,
+    attribution:
+      spec.base === "orto"
+        ? "Ortofotomapa © GUGiK"
+        : spec.overlay === "flood"
+          ? "ISOK / Wody Polskie"
+          : spec.overlay === "mpzp"
+            ? "KIMPZP © GUGiK"
+            : undefined,
+  });
 }
 
 export interface RenderReportOptions {
@@ -1435,6 +1650,8 @@ export async function renderInvestorReportPdf(
           height: 300,
           marker: b.marker,
           polygon: b.polygon,
+          base: b.base,
+          overlay: b.overlay,
         }).catch(() => null);
         if (png) {
           await w.image(png, { format: "png", maxHeight: 300, align: "center", after: 4 });
