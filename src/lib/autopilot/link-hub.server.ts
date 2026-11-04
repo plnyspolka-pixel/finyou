@@ -19,7 +19,7 @@ export interface LinkHubTrack {
 const COPY: Record<Track, { heading: string; sub: string }> = {
   pozyczkobiorca: {
     heading: "Potrzebuję finansowania",
-    sub: "Dla firm – finansowanie na cel gospodarczy pod zastaw nieruchomości.",
+    sub: "Finansowanie pod zastaw nieruchomości — także dla firm od pierwszego dnia działalności.",
   },
   inwestor: {
     heading: "Chcę inwestować",
@@ -64,7 +64,9 @@ export async function getLinkHubData(): Promise<{ tracks: LinkHubTrack[] }> {
           .filter((r) => r.audience === TRACK_TO_AUDIENCE[t])
           .slice(0, 4)
           .map((r) => ({ slug: r.slug, title: r.title, headline: r.headline })),
-        tools: STARTER_CALCULATORS.filter((c) => c.track === t && (data ?? []).some((r) => r.slug === c.slug)).map((c) => ({
+        tools: STARTER_CALCULATORS.filter(
+          (c) => c.track === t && (data ?? []).some((r) => r.slug === c.slug),
+        ).map((c) => ({
           slug: c.slug,
           title: c.title,
           keyword: c.keyword,

@@ -76,10 +76,27 @@ describe("compliance – tory", () => {
   it("pożyczkobiorca: konsumenci, BIK, presja, koszt jako hasło", () => {
     const ctx = { kind: "script" as const, track: "pozyczkobiorca" as const };
     expect(codes("Pożyczka na dowolny cel", ctx)).toContain("konsument");
-    expect(codes("Finansowanie bez BIK i bez zdolności", ctx)).toContain("bez_weryfikacji");
+    expect(codes("Finansowanie bez zdolności", ctx)).toContain("bez_weryfikacji");
     expect(codes("Ostatnia szansa – tylko dziś!", ctx)).toContain("presja_czasu");
     expect(codes("Oprocentowanie od 9% rocznie", ctx)).toContain("koszt_jako_haslo");
     expect(codes("Pieniądze dla każdego", ctx)).toContain("dla_kazdego");
+  });
+
+  it("pożyczkobiorca: złagodzone reguły (2026-11-04)", () => {
+    const ctx = { kind: "script" as const, track: "pozyczkobiorca" as const };
+    // informacja z zaprzeczeniem i start-upy nie blokują
+    expect(codes("Finansujemy działalność, nie na cele konsumpcyjne.", ctx)).not.toContain(
+      "konsument",
+    );
+    expect(codes("Także dla firm od pierwszego dnia działalności.", ctx)).toHaveLength(0);
+    expect(codes("Bez zaświadczeń o dochodach — liczy się nieruchomość.", ctx)).not.toContain(
+      "bez_weryfikacji",
+    );
+    // obietnice konsumenckie nadal blokują
+    expect(codes("Oferta dla osób prywatnych", ctx)).toContain("konsument");
+    expect(codes("Pieniądze na wakacje", ctx)).toContain("konsument");
+    expect(codes("Bez formalności i bez BIK", ctx)).not.toContain("bez_weryfikacji");
+    expect(codes("Bez sprawdzania i bez weryfikacji", ctx)).toContain("bez_weryfikacji");
   });
 
   it("reguły pożyczkobiorcy nie dotyczą inwestora i odwrotnie", () => {

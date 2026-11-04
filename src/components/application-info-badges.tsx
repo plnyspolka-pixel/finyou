@@ -13,8 +13,9 @@ import {
 
 export const businessStatusLabels: Record<string, string> = {
   prowadzi: "Prowadzi działalność",
-  zamierza: "Zamierza rozpocząć",
-  nie_zamierza: "Bez działalności",
+  zamierza: "Zakłada działalność",
+  // Formularz pokazuje tę opcję jako „Reprezentuję spółkę / inny podmiot”.
+  nie_zamierza: "Spółka / inny podmiot",
 };
 
 export const legalFormLabels: Record<string, string> = {

@@ -93,7 +93,7 @@ export function defaultProfiles(row: GrowthSettingsRow = {}): Record<Track, Audi
       // (autopilot/track-voice.ts). Reguła „konsument” w compliance zostaje.
       targetGroup:
         row.target_audience?.trim() ||
-        "Osoby, które potrzebują szybkiego finansowania pod zastaw nieruchomości, często po odmowie banku. W rolkach NIE akcentujemy, że oferta jest tylko dla firm – mówimy po prostu o pożyczkach pod nieruchomość; warunki (w tym działalność gospodarcza) klient poznaje na etapie wniosku.",
+        "Właściciele nieruchomości, którzy potrzebują szybkiego finansowania pod jej zastaw, często po odmowie banku — także osoby zakładające firmę (obsługujemy start-upy od pierwszego dnia działalności). W rolkach NIE akcentujemy, że oferta jest tylko dla firm – mówimy po prostu o pożyczkach pod nieruchomość; warunki (w tym działalność gospodarcza) klient poznaje na etapie wniosku.",
       tone: "Konkretnie, po ludzku, bez straszenia. Widz jest bohaterem; pokazujemy, co może zrobić, decyzja zostaje po jego stronie. Nie powtarzamy słów „firma”, „przedsiębiorca”, „działalność” – maksymalnie raz i tylko gdy temat tego wymaga.",
       ctaUrl: row.primary_cta_url?.trim() || BORROWER_DEFAULT_CTA_URL,
       ctaLabel: "Złóż bezpłatny wniosek",
