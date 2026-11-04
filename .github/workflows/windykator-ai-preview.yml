@@ -1,10 +1,15 @@
-name: Finance You — kontrola strony /sklep
+name: Finance You — kontrola Windykatora AI i sklepu panelu
 
 on:
   pull_request:
     paths:
+      - 'src/routes/inwestor.sklep.tsx'
       - 'src/routes/sklep.tsx'
-      - 'src/routes/sklep.moje-zakupy.tsx'
+      - 'src/routes/sklep_.moje-zakupy.tsx'
+      - 'src/components/inwestor/sklep/**'
+      - 'src/components/inwestor/subscription-gate.tsx'
+      - 'src/components/marketing/training-catalog.tsx'
+      - 'src/components/storefront/**'
       - 'src/lib/storefront/**'
       - 'src/lib/access/webhook-core.server.ts'
       - 'src/lib/document-generator.functions.ts'
@@ -14,9 +19,8 @@ on:
       - 'src/routes/windykator-ai.tsx'
       - 'src/routes/regulamin-windykator-ai.tsx'
       - 'src/lib/windykator-startowy/**'
-      - 'src/lib/access/webhook-core.server.ts'
       - 'supabase/migrations/20261102122000_windykator_startowy.sql'
-      - '.github/workflows/sklep-preview.yml'
+      - '.github/workflows/windykator-ai-preview.yml'
 
 permissions:
   contents: read
@@ -34,8 +38,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Windykator Startowy — regression tests
         run: bun run test src/lib/windykator-startowy/core.test.ts src/lib/windykator-startowy/workflow.test.ts src/lib/windykator-startowy/qualification.test.ts src/lib/windykator-startowy/court-routes.test.ts src/lib/windykator-startowy/registry.server.test.ts
-      - name: Storefront unit tests
-        run: bun run test -- src/lib/storefront/legal.test.ts
+      - name: Panel store — unit tests (legal texts, products, cart, gates, nav)
+        run: bun run test -- src/lib/storefront/legal.test.ts src/lib/storefront/products.test.ts src/components/marketing/training-catalog.test.tsx src/components/inwestor/subscription-gate.test.ts src/components/inwestor/investor-nav.test.ts
       - name: Production build (routing and TypeScript transpilation)
         run: bun run build
       - name: Install browser for desktop and mobile reference screenshots
@@ -51,21 +55,26 @@ jobs:
         run: |
           nohup bun run dev -- --host 127.0.0.1 --port 4173 > /tmp/financeyou-dev.log 2>&1 &
           for attempt in {1..60}; do
-            code=$(curl -s -o /tmp/sklep-response.html -w '%{http_code}' http://127.0.0.1:4173/sklep || true)
+            code=$(curl -s -o /tmp/windykator-response.html -w '%{http_code}' http://127.0.0.1:4173/windykator-ai || true)
             if [ "$code" = "200" ]; then break; fi
             sleep 2
           done
           test "$code" = "200" || (cat /tmp/financeyou-dev.log && exit 1)
+      - name: Legacy store URL redirects to the panel store
+        shell: bash
+        run: |
+          # /sklep is a 301 to /inwestor/sklep (owner decision 04.11.2026); the dev server
+          # follows the redirect server-side, so the final URL must be the panel store.
+          final=$(curl -s -o /dev/null -w '%{url_effective}' -L http://127.0.0.1:4173/sklep || true)
+          echo "final URL: $final"
+          case "$final" in *"/inwestor/sklep"*|*"/logowanie"*) ;; *) echo "expected redirect to /inwestor/sklep" && exit 1;; esac
       - name: Capture viewport screenshots (fixed backgrounds stay accurate)
         shell: bash
         continue-on-error: true
         run: |
           mkdir -p preview-shots
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 http://127.0.0.1:4173/sklep preview-shots/sklep-hero-desktop.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#produkty" preview-shots/sklep-produkty-desktop.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#szczegoly" preview-shots/sklep-szczegoly-desktop.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4500 http://127.0.0.1:4173/sklep preview-shots/sklep-hero-mobile.png
-          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4500 "http://127.0.0.1:4173/sklep#produkty" preview-shots/sklep-produkty-mobile.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 http://127.0.0.1:4173/windykator-ai preview-shots/windykator-hero-desktop.png
+          npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "390,844" --wait-for-timeout 4500 http://127.0.0.1:4173/windykator-ai preview-shots/windykator-hero-mobile.png
           npx --yes playwright@1.56.1 screenshot --browser chromium --viewport-size "1440,900" --wait-for-timeout 4500 https://financeyou.pl/ preview-shots/produkcja-referencja.png
       - name: Archive screenshot comparison
         if: always()

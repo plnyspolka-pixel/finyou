@@ -21,12 +21,15 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
 } from "@/lib/investor-plan/plans";
 
-/** Moduły dostępne bez abonamentu: zakup, płatności, profil, odstąpienie. */
+/** Moduły dostępne bez abonamentu: zakup abonamentu, płatności, profil,
+ *  odstąpienie i sklep panelu (pojedyncze lekcje, kalkulator compliance, raport KW
+ *  — decyzja właściciela 04.11.2026). */
 export const FREE_INVESTOR_PATHS = [
   "/inwestor/abonament",
   "/inwestor/platnosci",
   "/inwestor/profil",
   "/inwestor/odstapienie",
+  "/inwestor/sklep",
 ] as const;
 
 /** Moduł ofert: otwiera go akceptacja pakietu umów (po opłaceniu abonamentu). */
@@ -112,7 +115,8 @@ function OffersGate({ children }: { children: ReactNode }) {
   );
 }
 
-/** Centrum Zarządzania (moduł sklepu 500 zł / 30 dni) otwiera dokumenty, e-podpis, AML i kalkulator. */
+/** Dawne Centrum Zarządzania (produkt wycofany 04.11.2026; opłacone tury działają do końca)
+ *  otwiera dokumenty, e-podpis, AML i kalkulator; HIT 9,99 zł — sam kalkulator. */
 function ManagementModuleGate({ children, pathname }: { children: ReactNode; pathname: string }) {
   const fetchState = useServerFn(getMyManagementModuleState);
   const q = useQuery({ queryKey: ["management-module"], queryFn: () => fetchState(), staleTime: 60_000 });
@@ -131,22 +135,11 @@ function ManagementModuleGate({ children, pathname }: { children: ReactNode; pat
               na 30 dni — kosztuje {CALCULATOR_UNLOCK_PRICE_LABEL}.
             </span>
             <Button asChild variant="outline">
-              <a href="/sklep#mapa-szans">Kup za {CALCULATOR_UNLOCK_PRICE_LABEL}</a>
+              <a href="/inwestor/sklep#mapa-szans">Kup za {CALCULATOR_UNLOCK_PRICE_LABEL}</a>
             </Button>
           </CardContent>
         </Card>
       )}
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
-          <span className="text-muted-foreground">
-            Potrzebujesz tylko dokumentów, CRM, e-podpisu i compliance? Moduł Centrum Zarządzania
-            kosztuje 500 zł za 30 dni.
-          </span>
-          <Button asChild variant="outline">
-            <a href="/sklep#centrum">Kup Centrum Zarządzania</a>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

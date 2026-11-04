@@ -27,7 +27,7 @@ export type MarketingPage =
   | "klient"
   | "inwestor"
   | "inwestorModul"
-  | "sklep"
+  | "windykator"
   | "posrednik"
   | "blog"
   | "kalkulator";
@@ -69,7 +69,7 @@ const PAGE_PATH: Record<MarketingPage, string> = {
   klient: "/dla-klienta",
   inwestor: "/",
   inwestorModul: "/",
-  sklep: "/sklep",
+  windykator: "/windykator-ai",
   posrednik: "/dla-posrednika",
   blog: "/blog",
   kalkulator: "/kalkulator-ltv",
@@ -86,7 +86,8 @@ const HEADER_CTA: Record<MarketingPage, { label: string; href: string }> = {
   inwestor: { label: "Zostań partnerem", href: "#cennik" },
   // Podstrony modułów (/dla-inwestora/<moduł>) — ten sam cel, ale pełną ścieżką.
   inwestorModul: { label: "Zostań partnerem", href: "/dla-inwestora#cennik" },
-  sklep: { label: "Złóż zlecenie", href: "/inwestor/umowy" },
+  // Windykator AI (Pakiet Startowy dla wierzycieli) — osobny produkt; nagłówek jak na landingu.
+  windykator: { label: "Zostań partnerem", href: "/#cennik" },
   posrednik: { label: "Załóż konto pośrednika", href: "/posrednicy/rejestracja" },
   blog: { label: "Wybierz ścieżkę", href: "/#sciezki" },
   kalkulator: { label: "Złóż wniosek", href: "/dla-klienta" },
@@ -151,7 +152,6 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
   // (strona główna), Klient, Pośrednik — potem Cennik, O nas, Blog, FAQ.
   const nav = [
     { label: "Inwestor", href: "/" },
-    { label: "Sklep", href: "/sklep" },
     { label: "Klient", href: "/dla-klienta" },
     { label: "Pośrednik", href: "/dla-posrednika" },
     { label: "Cennik", href: "/#cennik" },
@@ -202,12 +202,8 @@ export function SiteHeader({ page = "home" }: { page?: MarketingPage }) {
               ))}
               <a href="/logowanie">Zaloguj</a>
             </nav>
-            <MktButton
-              size="sm"
-              variant="gold"
-              href={page === "sklep" ? "/inwestor/umowy" : "/#cennik"}
-            >
-              {page === "sklep" ? "Złóż zlecenie" : "Zostań partnerem"}
+            <MktButton size="sm" variant="gold" href="/#cennik">
+              Zostań partnerem
             </MktButton>
             <Button
               className="fy-sales-menu-toggle"
@@ -291,7 +287,7 @@ export function SiteFooter() {
       h: "Ścieżki",
       links: [
         { t: "Klient", href: PAGE_PATH.klient },
-        { t: "Sklep — produkty inwestora", href: "/sklep" },
+        { t: "Windykator AI — Pakiet Startowy", href: "/windykator-ai" },
         { t: "Jesteś inwestorem? →", href: PAGE_PATH.inwestor },
         { t: "Pośrednik", href: PAGE_PATH.posrednik },
         { t: "Program partnerski", href: "/program-partnerski" },

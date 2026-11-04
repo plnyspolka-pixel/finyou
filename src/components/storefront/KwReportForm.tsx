@@ -1,44 +1,24 @@
-// Zamówienie raportu księgi wieczystej (99 zł / jedna KW) — ten sam formularz
-// w sklepie (/sklep#analityk, `mode="inline"`: dodaje do koszyka strony) i na
-// podstronie Analityka AI (`mode="redirect"`: zapisuje pozycję do koszyka
-// sessionStorage i prowadzi na /sklep#koszyk). Numer sprawdzamy formalnie
-// (cyfra kontrolna, lib/kw.ts); księgę pobieramy i raport generujemy dopiero
-// po zaksięgowanej płatności (storefront/kw-report.functions.ts).
+// Zamówienie raportu księgi wieczystej (99 zł / jedna KW) na podstronie
+// Analityka AI (/dla-inwestora/analityk-ai#raport-kw): zapisuje pozycję do
+// koszyka sessionStorage i prowadzi do sklepu panelu inwestora
+// (/inwestor/sklep#koszyk — niezalogowanego PanelShell przepuszcza przez
+// /logowanie, koszyk czeka w tej karcie). Numer sprawdzamy formalnie (cyfra
+// kontrolna, lib/kw.ts); księgę pobieramy i raport generujemy dopiero po
+// zaksięgowanej płatności (storefront/kw-report.functions.ts). W samym sklepie
+// panelu jest własny formularz (components/inwestor/sklep/store-products.tsx).
 import { useState, type FormEvent } from "react";
-import { LockKeyhole, ShieldCheck } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import { validateKwNumber } from "@/lib/kw";
-import { addToStoreCart, STORE_CART_PATH, type StoreCartItem } from "@/lib/storefront/cart-storage";
+import { addToStoreCart, kwCartItem, STORE_CART_PATH } from "@/lib/storefront/cart-storage";
 import { KW_REPORT_PRICE_PLN } from "@/lib/storefront/products";
 
-export function kwCartItem(kw: { value: string; compact: string }): StoreCartItem {
-  return {
-    id: "kw:" + kw.compact,
-    type: "kw",
-    title: "Raport księgi wieczystej " + kw.value,
-    price: KW_REPORT_PRICE_PLN,
-  };
-}
-
-type Props =
-  | {
-      mode: "inline";
-      onAdd: (item: StoreCartItem) => void;
-      purpose: boolean;
-      onPurpose: (v: boolean) => void;
-    }
-  | { mode: "redirect" };
-
-export function KwReportOrder(props: Props) {
+export function KwReportOrder() {
   const [kw, setKw] = useState("");
   const [error, setError] = useState("");
-  const [ready, setReady] = useState<string | null>(null);
-  const [ownPurpose, setOwnPurpose] = useState(false);
-  const purpose = props.mode === "inline" ? props.purpose : ownPurpose;
-  const setPurpose = props.mode === "inline" ? props.onPurpose : setOwnPurpose;
+  const [purpose, setPurpose] = useState(false);
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setReady(null);
     const check = validateKwNumber(kw);
     if (!check.ok) {
       setError(check.message);
@@ -50,22 +30,12 @@ export function KwReportOrder(props: Props) {
     }
     setKw(check.value);
     setError("");
-    const item = kwCartItem(check);
-    if (props.mode === "inline") {
-      props.onAdd(item);
-      setReady(check.value);
-      return;
-    }
-    addToStoreCart(item);
+    addToStoreCart(kwCartItem(check));
     window.location.assign(STORE_CART_PATH);
   }
 
-  const inline = props.mode === "inline";
   return (
-    <form
-      className={inline ? "fy-store-kw-form" : "fy-store-kw-form fy-kw-order"}
-      onSubmit={submit}
-    >
+    <form className="fy-store-kw-form fy-kw-order" onSubmit={submit}>
       <label htmlFor="fy-store-kw">Numer księgi wieczystej</label>
       <input
         id="fy-store-kw"
@@ -75,7 +45,6 @@ export function KwReportOrder(props: Props) {
         onChange={(e) => {
           setKw(e.target.value.toUpperCase());
           setError("");
-          setReady(null);
         }}
         onBlur={() => {
           const v = validateKwNumber(kw);
@@ -101,24 +70,12 @@ export function KwReportOrder(props: Props) {
         </p>
       )}
       <button type="submit" className="fy-store-add fy-store-kw-submit">
-        {inline
-          ? `Dodaj raport do koszyka — ${KW_REPORT_PRICE_PLN} zł`
-          : `Generuj raport — ${KW_REPORT_PRICE_PLN} zł`}
+        Generuj raport — {KW_REPORT_PRICE_PLN} zł
       </button>
-      {ready && (
-        <div className="fy-store-kw-ready" role="status">
-          <ShieldCheck size={20} />
-          <div>
-            Numer <strong>{ready}</strong> jest poprawny formalnie. Raport został dodany do koszyka.
-            Pobranie i analiza rozpoczną się dopiero po płatności.
-            <p>Po potwierdzeniu płatności pobierz raport na stronie „Moje zakupy”.</p>
-          </div>
-        </div>
-      )}
       <p className="fy-store-fineprint">
         <LockKeyhole size={15} /> Bez potwierdzonej płatności nie pobieramy księgi ani nie
-        generujemy płatnego raportu.
-        {!inline && " Płatność Tpay po zalogowaniu na konto — koszyk czeka w sklepie."}
+        generujemy płatnego raportu. Płatność Tpay po zalogowaniu do panelu inwestora — raport czeka
+        w koszyku sklepu panelu.
       </p>
     </form>
   );

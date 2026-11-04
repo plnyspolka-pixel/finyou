@@ -31,14 +31,14 @@ import type { Icon3DName } from "./icon-3d";
  * świadczoną przez Finance You — nigdy jako platformę, na której inwestor
  * coś „rezerwuje” albo łączy się z pośrednikiem (decyzja właściciela 04.11.2026).
  * Moduł windykacji nazywamy „Windykacja” (nie „Windykator AI” — to osobny
- * produkt sklepu dla wierzycieli spoza abonamentu, routes/windykator-ai.tsx).
+ * produkt dla wierzycieli spoza abonamentu, routes/windykator-ai.tsx).
  * Nie podawaj tu cen abonamentu (są w plans.ts) ani obietnic, których kod nie
  * realizuje (np. automatycznych wysyłek windykacyjnych bez kliknięcia inwestora,
  * „15 minut przy każdym Projekcie” — zawsze „ok. 15 minut”).
  */
 
 /** Drugi, mniejszy odnośnik pod kartą/przyciskiem modułu — konkretna rzecz
- *  do zrobienia od razu (lead magnet, formularz, produkt sklepu). */
+ *  do zrobienia od razu (lead magnet, formularz, produkt sklepu panelu /inwestor/sklep). */
 export type ModuleQuickLink = {
   label: string;
   href: string;
@@ -480,7 +480,7 @@ export const INVESTOR_MODULES: InvestorModule[] = [
     slides: ["/marketing/moduly/aml-compliance-2.webp", "/marketing/moduly/aml-compliance-3.webp"],
     quickLink: {
       label: "Pełna mapa szans i zagrożeń — analiza finansowa pożyczki za 9,99 zł",
-      href: "/sklep#mapa-szans",
+      href: "/inwestor/sklep#mapa-szans",
       hit: true,
     },
     imageAlt: "Moduł AML — weryfikacja klienta: KYC, listy sankcyjne i PEP",

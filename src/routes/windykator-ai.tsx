@@ -141,7 +141,7 @@ function WindykatorPage(){
     void qualify();
   },[saleEnabled,caseId,kyc?.verified,order?.status]);
 
-  return <MarketingShell page="sklep">
+  return <MarketingShell page="windykator">
     <section className="fy-hero" style={{color:"#fff"}}>
       <div aria-hidden className="fy-hero-fx"/>
       <div className="relative mx-auto max-w-5xl px-5 py-16 md:py-20">

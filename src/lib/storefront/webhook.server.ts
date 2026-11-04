@@ -50,7 +50,7 @@ export async function handleStoreTpayNotification(
           category: "transactional",
           subject: "Finance You — potwierdzenie zakupu produktów cyfrowych",
           text: "Twoja płatność została potwierdzona.\n" +
-            "Zakupione produkty są dostępne na Twoim koncie: https://financeyou.pl/sklep/moje-zakupy\n\n" +
+            "Zakupione produkty są dostępne w panelu inwestora: https://financeyou.pl/inwestor/sklep?tab=zakupy\n\n" +
             "Zamówienie: " + orderId + "\n" +
             "Cena całkowita: " + (Number(full?.amount_grosz || 0)/100).toFixed(2) + " PLN\n" +
             "Produkty:\n" + (full?.items || []).map((i: any) => "- " + i.title).join("\n") +

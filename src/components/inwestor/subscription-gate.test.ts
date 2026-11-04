@@ -1,19 +1,21 @@
 /**
- * Kolejność panelu inwestora: bez abonamentu tylko zakup, płatności, profil
- * i odstąpienie; moduł ofert (Moje oferty, wniosek, umowa z oferty) czeka
+ * Kolejność panelu inwestora: bez abonamentu tylko zakup, płatności, profil,
+ * odstąpienie i sklep panelu (lekcje, kalkulator, raport KW); moduł ofert (Moje oferty, wniosek, umowa z oferty) czeka
  * dodatkowo na akceptację pakietu umów. Pipeline z umowami jest za abonamentem.
  */
 import { describe, expect, it } from "vitest";
 import { isFreeInvestorPath, isInvestorOffersPath } from "./subscription-gate";
 
 describe("bramki panelu inwestora", () => {
-  it("bez abonamentu: zakup, płatności, profil, odstąpienie", () => {
+  it("bez abonamentu: zakup, płatności, profil, odstąpienie, sklep panelu", () => {
     for (const p of [
       "/inwestor/abonament",
       "/inwestor/abonament/",
       "/inwestor/platnosci",
       "/inwestor/profil",
       "/inwestor/odstapienie",
+      "/inwestor/sklep",
+      "/inwestor/sklep/",
     ]) {
       expect(isFreeInvestorPath(p), p).toBe(true);
     }
