@@ -28,7 +28,10 @@ import {
 } from "./order-cycle-core";
 
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import { assertInvestorOffersOpen } from "@/lib/investor-offers-pause";
+import {
+  assertInvestorOffersOpenFor,
+  assertOrderOffersOpen,
+} from "@/lib/investor-offers-pause.server";
 
 const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
@@ -45,7 +48,7 @@ export const getMyOrderCycle = createServerFn({ method: "GET" })
 
     const { data: orders } = await loose(supabaseAdmin)
       .from("investor_orders")
-      .select("id, order_seq, amount_pln, status, expires_at, submitted_at")
+      .select("id, order_seq, user_id, amount_pln, status, expires_at, submitted_at")
       .eq("user_id", userId)
       .order("submitted_at", { ascending: false });
     // Zlecenia nie wymagają decyzji admina — wcześniej złożone przyjmujemy teraz.
@@ -171,7 +174,7 @@ export const acceptKartaLeada = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
+    await assertInvestorOffersOpenFor(context.userId);
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -233,7 +236,7 @@ export const requestDisclosure = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
+    await assertInvestorOffersOpenFor(context.userId);
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -273,7 +276,7 @@ export const extendReservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
+    await assertInvestorOffersOpenFor(context.userId);
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -326,7 +329,7 @@ export const extendTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
+    await assertInvestorOffersOpenFor(context.userId);
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await (await srv()).myMatch(supabaseAdmin, userId, data.matchId);
@@ -655,9 +658,9 @@ export const createMatch = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
     await (await srv()).assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOrderOffersOpen(loose(supabaseAdmin), data.orderId);
     return (await srv()).insertMatch(supabaseAdmin, {
       orderId: data.orderId,
       applicationId: data.applicationId,
@@ -672,7 +675,6 @@ export const releaseTeaser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ matchId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    assertInvestorOffersOpen();
     await (await srv()).assertAdmin(context.supabase as any, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: m } = await loose(supabaseAdmin)
@@ -681,6 +683,7 @@ export const releaseTeaser = createServerFn({ method: "POST" })
       .eq("id", data.matchId)
       .maybeSingle();
     if (!m) throw new Error("Nie znaleziono Dopasowania.");
+    await assertOrderOffersOpen(loose(supabaseAdmin), m.order_id);
     await (
       await srv()
     ).transition(supabaseAdmin, m, "teaser", {

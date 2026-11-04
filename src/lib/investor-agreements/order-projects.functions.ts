@@ -43,7 +43,8 @@ import {
   TEASER_HOURS,
 } from "./order-cycle-core";
 import { getModuleSettings } from "@/lib/projects/guards.server";
-import { INVESTOR_OFFERS_PAUSED, INVESTOR_OFFERS_PAUSED_MESSAGE } from "@/lib/investor-offers-pause";
+import { INVESTOR_OFFERS_PAUSED_MESSAGE } from "@/lib/investor-offers-pause";
+import { investorOffersPausedFor } from "@/lib/investor-offers-pause.server";
 
 const loose = (c: unknown) => c as any;
 const srv = () => import("./order-cycle.server");
@@ -490,6 +491,8 @@ export async function loadMyOrderProjects(
     // pośredniczy sama u siebie, więc kalkulator oferty pomija prowizję FY
     // we wszystkich jego Zleceniach (także złożonych przed tą zmianą).
     const { isFinanceYouInvestorUser } = await import("./finance-you-investor.server");
+    // Wstrzymanie ofert — tylko inwestorzy zewnętrzni (Finance You jak dotąd).
+    const offersPaused = await investorOffersPausedFor(userId);
     if (await isFinanceYouInvestorUser(userId)) {
       for (const o of orders ?? []) (o as any).fy_commission_enabled = false;
     }
@@ -626,8 +629,7 @@ export async function loadMyOrderProjects(
               (m: any) => m.order_id === o.id && m.application_id === app.id,
             ) ?? null;
           // Wstrzymanie: zostają wyłącznie Projekty już ujawnione (rezerwacja/transakcja).
-          if (INVESTOR_OFFERS_PAUSED && !(match && DISCLOSED_STATUSES.includes(match.status)))
-            continue;
+          if (offersPaused && !(match && DISCLOSED_STATUSES.includes(match.status))) continue;
           if (!match) {
             if (declined.has(`${o.id}:${app.id}`)) continue;
             if (!appFitsOrder(o, app) || busyElsewhere.has(app.id)) continue;
@@ -655,7 +657,7 @@ export async function loadMyOrderProjects(
       orders: result,
       isConsumer: Boolean(investor?.is_consumer),
       limits,
-      paused: INVESTOR_OFFERS_PAUSED,
+      paused: offersPaused,
     };
   }
 }
@@ -689,7 +691,10 @@ async function eligibleApp(db: any, order: any, applicationId: string) {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (INVESTOR_OFFERS_PAUSED && !(match && DISCLOSED_STATUSES.includes(match.status))) {
+  if (
+    !(match && DISCLOSED_STATUSES.includes(match.status)) &&
+    (await investorOffersPausedFor(order.user_id ?? null))
+  ) {
     throw new Error(INVESTOR_OFFERS_PAUSED_MESSAGE);
   }
   if (!match && !appFitsOrder(order, app)) {

@@ -222,8 +222,16 @@ export async function latestMergedAt(db: any, sinceIso: string): Promise<Map<str
  *  z pominięciem Projektów już wcześniej obiegowanych w tym Zleceniu i od razu
  *  udostępnia teaser. Wyłączność sekwencyjna pilnowana indeksem w bazie. */
 export async function autoMatchInvestorOrders(db: any, orders: any[]) {
-  // Wstrzymanie ofert dla inwestorów — bez nowych dopasowań.
-  if (INVESTOR_OFFERS_PAUSED) return;
+  // Wstrzymanie ofert — bez nowych dopasowań dla inwestorów zewnętrznych;
+  // Zlecenia Finance You jako inwestora dopasowujemy jak dotąd.
+  if (INVESTOR_OFFERS_PAUSED) {
+    const { investorOffersPausedFor } = await import("@/lib/investor-offers-pause.server");
+    const owners = [...new Set(orders.map((o) => o.user_id).filter(Boolean))] as string[];
+    const open = new Set<string>();
+    for (const u of owners) if (!(await investorOffersPausedFor(u))) open.add(u);
+    orders = orders.filter((o) => o.user_id && open.has(o.user_id));
+    if (orders.length === 0) return;
+  }
   const { CANDIDATE_DB_STATUSES } = await import("@/lib/auto-distribution/engine.server");
   const now = Date.now();
   const eligible = orders.filter(

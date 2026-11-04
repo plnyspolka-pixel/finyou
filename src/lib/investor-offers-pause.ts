@@ -1,5 +1,6 @@
-// Wyłącznik: CHWILOWO wstrzymane pokazywanie ofert inwestorom i rezerwacje
-// (decyzja właściciela, 2026-11-04). Dotyczy wszystkich kanałów, którymi
+// Wyłącznik: CHWILOWO wstrzymane pokazywanie ofert inwestorom ZEWNĘTRZNYM
+// i ich rezerwacje (decyzja właściciela, 2026-11-04). Finance You jako inwestor
+// działa bez zmian (investor-offers-pause.server.ts). Dotyczy wszystkich kanałów, którymi
 // Projekt/oferta trafia do inwestora: Projekty w Zleceniach (lista, raport,
 // rezerwacja, oferta, Ujawnienie, przedłużenia), automatyczne dopasowania,
 // dystrybucja ofert e-mailem (ręczna, automatyczna, pośrednika), publiczna
