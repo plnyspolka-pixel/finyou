@@ -16,7 +16,11 @@
     "src/lib/coowners/business-profile.ts",
     "src/lib/coowners/business-profile.types.ts",
     "src/lib/coowners/business-profile.server.ts",
-    "src/lib/coowners/business-profile.test.ts"
+    "src/lib/coowners/business-profile.test.ts",
+    "src/lib/coowners/knf-warnings.ts",
+    "src/lib/coowners/knf-warnings.server.ts",
+    "src/lib/coowners/knf-warnings.test.ts",
+    "src/lib/coowners/business-profile-format.ts"
   ],
   "compilerOptions": {
     "types": [

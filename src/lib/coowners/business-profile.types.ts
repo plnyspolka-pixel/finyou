@@ -2,6 +2,7 @@
 // (KRS — odpis aktualny i pełny, wykaz podatników VAT, CEIDG, CRBR) oraz
 // z oficjalnej strony firmy wskazanej w rejestrze. Bez pełnych numerów PESEL.
 // Bezpieczne do importu po stronie klienta i serwera.
+import type { KnfWarningHit } from "./knf-warnings";
 
 export type BusinessFlagLevel = "alert" | "warning" | "info";
 
@@ -141,6 +142,13 @@ export interface WebsiteCheck {
   note: string;
 }
 
+export interface KnfCheck {
+  /** Lista została pobrana i przeszukana. */
+  checked: boolean;
+  note: string;
+  hits: KnfWarningHit[];
+}
+
 export interface BusinessProfile {
   subject: string;
   role: "client" | "owner";
@@ -149,6 +157,8 @@ export interface BusinessProfile {
   vat: VatRegistryInfo | null;
   companies: KrsCompanyProfile[];
   websites: WebsiteCheck[];
+  /** Lista ostrzeżeń publicznych KNF (podmiot, jego spółki, NIP/KRS, domeny). */
+  knf?: KnfCheck | null;
   flags: BusinessFlag[];
   notes: string[];
 }

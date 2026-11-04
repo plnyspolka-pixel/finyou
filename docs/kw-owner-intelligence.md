@@ -269,9 +269,12 @@ sui generis — świadomie nie pobieramy z nich danych).
 | Wykaz VAT MF | status VAT, daty i podstawy wykreślenia / przywrócenia / odmowy, liczba rachunków, reprezentanci, prokurenci, wspólnicy | wykreślenie (alarm przy braku kontaktu / art. 96 ust. 9), odmowa rejestracji |
 | CEIDG (token) | status, daty rozpoczęcia / zawieszenia / wznowienia / zakończenia, PKD, wspólność majątkowa, spółki cywilne, ADE, www | zawieszenie, zakończenie, staż < 12 mies., wspólność majątkowa (zgoda małżonka) |
 | CRBR MF | beneficjenci rzeczywiści | potwierdzenie osoby PESEL-em jako beneficjenta (PESEL tylko w pamięci) |
+| Lista ostrzeżeń publicznych KNF | `knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne` (robots.txt: Allow /), jedna strona HTML z 13 tabelami (~670 wpisów), cache 12 h | zgodny KRS/NIP/REGON lub domena strony = alarm; zgodna nazwa spółki (bez formy prawnej) / imię i nazwisko osoby = ostrzeżenie do weryfikacji. Sprawdzane: podmiot, jego spółki z KRS, firma JDG, domeny WWW |
 | Oficjalna strona firmy | adres wyłącznie z KRS/CEIDG; robots.txt (brak / błąd = brak zgody), maks. 4 strony, przerwy 1–1,5 s, jawny User-Agent | NIP/KRS na stronie niezgodny z rejestrem, linki do sprawozdań / raportów rocznych publikowanych przez firmę |
 
-Limity na analizę: 6 profili spółek, 4 strony WWW. Klient spoza działu II KW też dostaje profil
+Limity na analizę: 6 profili spółek, 4 strony WWW. Lista KNF obejmuje każdy podmiot analizy
+(także osoby bez działalności); niedostępna lub pusta lista (< 50 wpisów, np. zmiana układu
+strony) jest raportowana jako „niesprawdzona”, nigdy jako „brak na liście”. Klient spoza działu II KW też dostaje profil
 (CEIDG / wykaz VAT po NIP, KRS po wyszukaniu osoby). Sygnały `alert`/`warning` trafiają do
 ostrzeżeń analizy; całość — do panelu („Profil gospodarczy”) i PDF raportu.
 

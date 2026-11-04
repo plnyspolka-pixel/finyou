@@ -18,6 +18,7 @@ import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
 import {
   ceidgRows,
   companyRows,
+  knfRows,
   profileHeadline,
   vatRows,
   websiteRows,
@@ -420,8 +421,9 @@ function BusinessProfilesView({ profiles }: { profiles: BusinessProfile[] }) {
     <section className="space-y-3 rounded-xl border p-3">
       <h4 className="font-semibold">Profil gospodarczy</h4>
       <p className="text-xs text-muted-foreground">
-        KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR oraz oficjalna strona firmy
-        wskazana w rejestrze (z poszanowaniem robots.txt). Bez danych ze sprawozdań finansowych.
+        KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR, lista ostrzeżeń publicznych
+        KNF oraz oficjalna strona firmy wskazana w rejestrze (z poszanowaniem robots.txt). Bez danych
+        ze sprawozdań finansowych.
       </p>
       {profiles.map((p, i) => (
         <div key={i} className="space-y-2 rounded-lg border bg-muted/20 p-3">
@@ -463,6 +465,12 @@ function BusinessProfilesView({ profiles }: { profiles: BusinessProfile[] }) {
               <KeyValueList rows={companyRows(c)} />
             </div>
           ))}
+          {p.knf && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium">Lista ostrzeżeń publicznych KNF</div>
+              <KeyValueList rows={knfRows(p.knf)} />
+            </div>
+          )}
           {p.websites.map((w) => (
             <div key={w.url} className="space-y-1">
               <div className="text-xs font-medium">Strona WWW</div>

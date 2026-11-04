@@ -23,6 +23,7 @@ import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
 import {
   ceidgRows,
   companyRows,
+  knfRows,
   profileHeadline,
   vatRows,
   websiteRows,
@@ -1482,7 +1483,7 @@ function businessProfileBlocks(profiles: BusinessProfile[]): ReportBlock[] {
     {
       t: "paragraph",
       muted: true,
-      text: "KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR oraz oficjalna strona firmy wskazana w rejestrze. Bez danych ze sprawozdań finansowych.",
+      text: "KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR, lista ostrzeżeń publicznych KNF oraz oficjalna strona firmy wskazana w rejestrze. Bez danych ze sprawozdań finansowych.",
     },
   ];
   for (const p of profiles) {
@@ -1495,6 +1496,7 @@ function businessProfileBlocks(profiles: BusinessProfile[]): ReportBlock[] {
     if (p.ceidg) blocks.push({ t: "keyValues", rows: ceidgRows(p.ceidg) });
     if (p.vat) blocks.push({ t: "keyValues", rows: [["Wykaz VAT", p.vat.name], ...vatRows(p.vat)] });
     for (const c of p.companies) blocks.push({ t: "keyValues", rows: [["KRS", `${c.krs} — ${c.name}`], ...companyRows(c)] });
+    if (p.knf) blocks.push({ t: "keyValues", rows: knfRows(p.knf) });
     for (const w of p.websites) blocks.push({ t: "keyValues", rows: websiteRows(w) });
     if (p.notes.length) blocks.push({ t: "paragraph", muted: true, text: p.notes.join(" ") });
   }

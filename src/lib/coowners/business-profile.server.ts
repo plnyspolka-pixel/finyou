@@ -21,6 +21,8 @@ import {
   robotsAllows,
   vatFlags,
 } from "./business-profile";
+import { matchKnfWarnings, type KnfWarningEntry } from "./knf-warnings";
+import { loadKnfWarnings } from "./knf-warnings.server";
 import type {
   BusinessFlag,
   BusinessProfile,
@@ -305,6 +307,8 @@ export interface BusinessProfileSubject {
   subject: string;
   role: "client" | "owner";
   kind: "person" | "company";
+  firstName?: string | null;
+  lastName?: string | null;
   /** Tylko do porównań z CRBR — nie trafia do wyniku. */
   pesel?: string | null;
   /** NIP działalności / spółki (potwierdzony w CEIDG, wykazie VAT lub dziale II KW). */
@@ -316,6 +320,10 @@ export interface BusinessProfileSubject {
 export async function buildBusinessProfile(
   s: BusinessProfileSubject,
   budget: { companies: number; websites: number },
+  knf: { entries: KnfWarningEntry[] | null; note: string } = {
+    entries: null,
+    note: "Lista KNF nie była sprawdzana.",
+  },
 ): Promise<BusinessProfile> {
   const profile: BusinessProfile = {
     subject: s.subject,
@@ -402,7 +410,82 @@ export async function buildBusinessProfile(
       profile.flags.push(...websiteFlags(w, s.subject));
     }
   }
+  profile.knf = knfCheck(s, profile, knf);
+  profile.flags.push(...knfFlags(profile));
   return profile;
+}
+
+const KNF_ORDER = ["identifier", "domain", "name"];
+
+/** Podmiot, jego spółki z KRS, NIP-y, REGON-y i domeny vs lista ostrzeżeń KNF. */
+function knfCheck(
+  s: BusinessProfileSubject,
+  p: BusinessProfile,
+  knf: { entries: KnfWarningEntry[] | null; note: string },
+): BusinessProfile["knf"] {
+  const entries = knf.entries;
+  if (!entries) return { checked: false, note: knf.note, hits: [] };
+  const domains = [
+    ...p.websites.map((w) => w.url),
+    ...p.companies.map((c) => c.website ?? ""),
+    p.ceidg?.website ?? "",
+  ]
+    .map((u) => normalizeWebsite(u))
+    .filter((u): u is string => Boolean(u))
+    .map((u) => new URL(u).hostname.replace(/^www\./, ""));
+  const nips = [s.nip, p.vat?.nip, p.ceidg?.nip, ...p.companies.map((c) => c.nip)].filter(
+    (x): x is string => Boolean(x),
+  );
+  const regons = [p.vat?.regon, p.ceidg?.regon, ...p.companies.map((c) => c.regon)].filter(
+    (x): x is string => Boolean(x),
+  );
+  const hits = [
+    ...matchKnfWarnings(entries, {
+      name: s.subject,
+      kind: s.kind,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      krs: [...s.krs.map((k) => k.krs), ...p.companies.map((c) => c.krs)],
+      nips,
+      regons,
+      domains,
+    }),
+    // Spółki i firma JDG osoby — także po nazwie (lista KNF często nie podaje identyfikatora).
+    ...p.companies.flatMap((c) =>
+      matchKnfWarnings(entries, { name: c.name, kind: "company" }).filter(
+        (h) => h.match === "name",
+      ),
+    ),
+    ...(p.ceidg?.name
+      ? matchKnfWarnings(entries, { name: p.ceidg.name, kind: "company" }).filter(
+          (h) => h.match === "name",
+        )
+      : []),
+  ];
+  // Najmocniejsze dopasowanie wpisu wygrywa (identyfikator > domena > nazwa).
+  const best = new Map<string, (typeof hits)[number]>();
+  for (const h of [...hits].sort(
+    (a, b) => KNF_ORDER.indexOf(a.match) - KNF_ORDER.indexOf(b.match),
+  )) {
+    const key = `${h.category}|${h.lp}`;
+    if (!best.has(key)) best.set(key, h);
+  }
+  const unique = [...best.values()].slice(0, 8);
+  return {
+    checked: true,
+    note: `${knf.note} ${unique.length ? `Trafienia: ${unique.length}.` : "Podmiot ani jego spółki / domeny nie figurują na liście."}`,
+    hits: unique,
+  };
+}
+
+function knfFlags(p: BusinessProfile): BusinessFlag[] {
+  return (p.knf?.hits ?? []).map((h) => ({
+    level: h.match === "name" ? ("warning" as const) : ("alert" as const),
+    source: "Lista ostrzeżeń KNF",
+    text:
+      `${p.subject}: ${h.match === "name" ? "zgodność nazwy (do weryfikacji) z" : `${h.matchedOn} zgodny z`} wpisem ${h.lp} — ${h.entryName}` +
+      `${h.prosecutor ? ` · ${h.prosecutor}` : ""} · ${h.category.slice(0, 140)}`,
+  }));
 }
 
 /** Profile dla wszystkich podmiotów — sekwencyjnie, ze wspólnym limitem zapytań. */
@@ -415,10 +498,11 @@ export async function buildBusinessProfiles(
   const ordered = [...subjects].sort(
     (a, b) => Number(b.role === "client") - Number(a.role === "client"),
   );
+  // Lista KNF dotyczy każdego podmiotu — także osób bez działalności (po nazwisku).
+  const knf = await loadKnfWarnings();
   for (const s of ordered) {
-    if (!s.nip && s.krs.length === 0) continue;
     out.push(
-      await buildBusinessProfile(s, budget).catch(() => ({
+      await buildBusinessProfile(s, budget, knf).catch(() => ({
         subject: s.subject,
         role: s.role,
         kind: s.kind,

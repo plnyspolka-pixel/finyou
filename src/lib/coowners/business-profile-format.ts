@@ -1,6 +1,7 @@
 // Prezentacja profilu gospodarczego (UI i PDF) — bez zależności serwerowych.
 import type {
   BusinessProfile,
+  KnfCheck,
   CeidgDetails,
   KrsCompanyProfile,
   VatRegistryInfo,
@@ -137,6 +138,30 @@ export function websiteRows(w: WebsiteCheck): Row[] {
       w.financialDocs.length ? w.financialDocs.map((d) => `${d.label}: ${d.url}`).join("; ") : null,
     ],
     ["Uwagi", w.note],
+  ]);
+}
+
+export function knfRows(k: KnfCheck): Row[] {
+  return rows([
+    [
+      "Lista ostrzeżeń publicznych KNF",
+      k.checked ? (k.hits.length ? `${k.hits.length} trafień` : "brak na liście") : "niesprawdzona",
+    ],
+    ...k.hits.map((h): [string, string] => [
+      `Wpis ${h.lp} (${h.match === "identifier" ? "zgodny identyfikator" : h.match === "domain" ? "zgodna domena" : "zgodna nazwa — do weryfikacji"})`,
+      [
+        h.entryName,
+        h.matchedOn !== "nazwa" ? h.matchedOn : null,
+        h.prosecutor,
+        h.rulings,
+        h.info,
+        h.category,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+        .slice(0, 700),
+    ]),
+    ["Uwagi", k.note],
   ]);
 }
 
