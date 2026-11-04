@@ -60,7 +60,7 @@ export function procedureSteps(docsHint: string): LoanProductStep[] {
   ];
 }
 
-const B2B_FAQ: LoanProductFaq[] = [
+export const B2B_FAQ: LoanProductFaq[] = [
   {
     q: "Ile kosztuje złożenie wniosku?",
     a: "Nic. Wniosek jest bezpłatny i niezobowiązujący.",
@@ -75,7 +75,11 @@ const B2B_FAQ: LoanProductFaq[] = [
   },
   {
     q: "Na jaki cel mogę przeznaczyć pożyczkę?",
-    a: "Wyłącznie na cel związany z działalnością gospodarczą (B2B) — np. kapitał obrotowy, inwestycję, zakup maszyn, spłatę zobowiązań firmy. Nie finansujemy celów konsumpcyjnych ani prywatnych potrzeb mieszkaniowych.",
+    a: "Na cel związany z działalnością gospodarczą — np. kapitał obrotowy, inwestycję, zakup maszyn, spłatę zobowiązań firmy albo start nowej działalności. Nie finansujemy celów konsumpcyjnych.",
+  },
+  {
+    q: "Czy firma musi mieć historię albo staż?",
+    a: "Nie. Obsługujemy także firmy od pierwszego dnia działalności — nie wymagamy stażu, sprawozdań ani historii kredytowej firmy. Jeśli dopiero zakładasz działalność, wniosek możesz złożyć już teraz; numer NIP uzupełnisz przed podpisaniem umowy.",
   },
   {
     q: "Czy Finance You gwarantuje udzielenie pożyczki?",

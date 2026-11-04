@@ -48,7 +48,7 @@ export const STARTER_CALCULATORS: CalculatorConfig[] = [
     ],
     assumptions: [
       "Wynik jest orientacyjny – ostateczną kwotę ustalają finansujący po analizie nieruchomości i firmy.",
-      "Finansowanie wyłącznie na cel gospodarczy (przedsiębiorcy).",
+      "Finansowanie na cel gospodarczy — także dla firm od pierwszego dnia działalności.",
       "Limit LTV obejmuje istniejące obciążenia hipoteczne.",
     ],
     testCases: [

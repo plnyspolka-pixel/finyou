@@ -213,3 +213,70 @@ rozpoznanych właścicieli podlegających limitowi całej analizy
 (12), przy dwóch równoczesnych żądaniach; bez masowego crawlowania.
 Pusty wynik oznacza wyłącznie brak wzmianki w pobranym zakresie,
 nie negatywną weryfikację KRZ, niewypłacalności czy zadłużenia.
+
+## Oficjalny MSiG: zawężanie trafień po PESEL i pogłębiony raport — 2026-11-04
+**Problem:** lista `/api/Monitor/Search` zwraca tylko `entityName`, numer
+Monitora, datę i sygnaturę — każde trafienie było `name_only`, także imiennicy.
+
+**Ustalenie (test live):** frontend portalu korzysta z publicznego
+`GET /api/Monitor/Detalis?id=<id>` (bez logowania). Zwraca m.in.
+`chapterName` (dokładny rodzaj ogłoszenia, np. „Postanowienie o ogłoszeniu
+upadłości”), `textInPosition` (sąd, sygnatury) i `textInBody` — pełną treść,
+w której postanowienie o ogłoszeniu upadłości osoby fizycznej zawiera
+**PESEL dłużnika** i miejscowość zamieszkania. Dalsze ogłoszenia tej samej
+sprawy (lista wierzytelności, plan podziału, zakończenie) zwykle PESEL-u nie
+mają. Wyszukiwanie po `signatureOfCase` zwraca ogłoszenia jednej sygnatury
+(także z innych sądów — filtrujemy po nazwie i sądzie).
+`Download?id=<id>&fileId=false` zwraca PDF całego numeru Monitora.
+
+**Implementacja** (`official-msig.server.ts`, `official-msig-detail.ts`):
+1. Kandydaci z listy (dopasowanie nazwiska–imienia) → treść pozycji
+   (maks. 15 zapytań `Detalis` na podmiot, termin 60 s).
+2. PESEL / NIP / KRS z treści porównywane **lokalnie** z identyfikatorem
+   właściciela/klienta (PESEL z KW lub kartoteki). PESEL nie jest wysyłany do MS.
+   - zgodny → `match: "identifier"`,
+   - inny identyfikator → imiennik, cała sprawa odrzucona,
+   - brak identyfikatora w treści / brak PESEL podmiotu → `name_only`.
+3. Ogłoszenia grupowane w sprawy: ten sam sąd + wspólna sygnatura; postanowienie
+   z samą sygnaturą „GU” łączone z ogłoszeniami „GUp” tego samego sądu i osoby
+   (≤ 2 lata). Ogłoszenia spoza niewypłacalności (spadki, zasiedzenie, KPC)
+   są pomijane i liczone w notatce.
+4. **Pogłębiony raport** (`hit.proceeding`) dla spraw potwierdzonych
+   identyfikatorem: rodzaj postępowania, sąd, sygnatury, data postanowienia,
+   organy (syndyk, nadzorca, sędzia komisarz), miejscowość, ostatni etap,
+   status (w toku / plan spłaty / zakończone / umorzone / nieustalony),
+   oś czasu ogłoszeń z linkami do PDF numeru Monitora. Dla maks. 2 spraw
+   dociągane są dalsze ogłoszenia po sygnaturze (maks. 10 zapytań).
+   Ostatnie ogłoszenie przed 2021-12-01 → raport odsyła do KRZ.
+5. Raport widoczny w panelu (wywiad gospodarczy właścicieli), w PDF raportu
+   oraz w ostrzeżeniach oceny ryzyka.
+
+**RODO:** treść ogłoszeń jest przetwarzana w pamięci; w wyniku zapisywane są
+wyłącznie dane sprawy, a każdy 11-cyfrowy numer jest maskowany
+(`[PESEL ukryty]`). Testy używają wyłącznie danych syntetycznych.
+
+## Profil gospodarczy klienta i właścicieli — 2026-11-04
+Moduł `business-profile*.ts` dokłada do analizy właścicieli (`CoOwnersAnalysis.businessProfiles`)
+wszystko, co da się legalnie ustalić z rejestrów publicznych — **bez treści sprawozdań finansowych**
+(RDF jest za ochroną antybotową; serwisy komercyjne blokują automaty, a ich bazy chroni prawo
+sui generis — świadomie nie pobieramy z nich danych).
+
+| Źródło | Dane | Sygnały |
+|---|---|---|
+| KRS — odpis aktualny | forma, NIP/REGON, rejestracja, siedziba, kapitał, PKD, reprezentacja, wspólnicy, strona WWW, e-mail | dział 4 (zaległości, wierzytelności, oddalenie wniosku o upadłość), dział 6 (likwidacja, upadłość, restrukturyzacja), młoda spółka z kapitałem minimalnym |
+| KRS — dział 3 | wzmianki o złożonych sprawozdaniach (okres, data złożenia) | zaległe sprawozdanie (> 7,5 mies. po dniu bilansowym) |
+| KRS — odpis pełny | liczba wpisów, zmiany nazwy / adresu / kapitału, zmiany w organach i wspólników (24 mies.) | rotacja zarządu / wspólników (ostrzeżenie dla małych lub młodych spółek) |
+| Wykaz VAT MF | status VAT, daty i podstawy wykreślenia / przywrócenia / odmowy, liczba rachunków, reprezentanci, prokurenci, wspólnicy | wykreślenie (alarm przy braku kontaktu / art. 96 ust. 9), odmowa rejestracji |
+| CEIDG (token) | status, daty rozpoczęcia / zawieszenia / wznowienia / zakończenia, PKD, wspólność majątkowa, spółki cywilne, ADE, www | zawieszenie, zakończenie, staż < 12 mies., wspólność majątkowa (zgoda małżonka) |
+| CRBR MF | beneficjenci rzeczywiści | potwierdzenie osoby PESEL-em jako beneficjenta (PESEL tylko w pamięci) |
+| Lista ostrzeżeń publicznych KNF | `knf.gov.pl/dla_konsumenta/ostrzezenia_publiczne` (robots.txt: Allow /), jedna strona HTML z 13 tabelami (~670 wpisów), cache 12 h | zgodny KRS/NIP/REGON lub domena strony = alarm; zgodna nazwa spółki (bez formy prawnej) / imię i nazwisko osoby = ostrzeżenie do weryfikacji. Sprawdzane: podmiot, jego spółki z KRS, firma JDG, domeny WWW |
+| Oficjalna strona firmy | adres wyłącznie z KRS/CEIDG; robots.txt (brak / błąd = brak zgody), maks. 4 strony, przerwy 1–1,5 s, jawny User-Agent | NIP/KRS na stronie niezgodny z rejestrem, linki do sprawozdań / raportów rocznych publikowanych przez firmę |
+
+Limity na analizę: 6 profili spółek, 4 strony WWW. Lista KNF obejmuje każdy podmiot analizy
+(także osoby bez działalności); niedostępna lub pusta lista (< 50 wpisów, np. zmiana układu
+strony) jest raportowana jako „niesprawdzona”, nigdy jako „brak na liście”. Klient spoza działu II KW też dostaje profil
+(CEIDG / wykaz VAT po NIP, KRS po wyszukaniu osoby). Sygnały `alert`/`warning` trafiają do
+ostrzeżeń analizy; całość — do panelu („Profil gospodarczy”) i PDF raportu.
+
+**Ograniczenia:** wykaz VAT i CRBR nie były osiągalne z sieci testowej (działają z produkcji przez
+proxy / bezpośrednio); pola CEIDG v3 parsowane odpornie, bez testu live (brak tokenu w sandboxie).

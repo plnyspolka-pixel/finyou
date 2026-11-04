@@ -476,8 +476,8 @@ export function OfferCalculatorPanel({
 
             <p className="text-[11px]" style={{ color: FY.faint }}>
               Wyliczenia poglądowe przy oprocentowaniu {annualRate.toFixed(2)}% rocznie.
-              Finansowanie wyłącznie na cel związany z działalnością gospodarczą. Ostateczne warunki
-              ustalisz indywidualnie z inwestorem.
+              Finansowanie na cel związany z działalnością gospodarczą — także dla firm od
+              pierwszego dnia działalności. Ostateczne warunki ustalisz indywidualnie z inwestorem.
             </p>
           </div>
         </div>

@@ -7,6 +7,8 @@ on:
       - 'src/lib/coowners/owner-intelligence*'
       - 'src/lib/coowners/public-index-search*'
       - 'src/lib/coowners/official-msig*'
+      - 'src/lib/coowners/business-profile*'
+      - 'src/lib/coowners/knf-warnings*'
       - '.github/workflows/owner-intelligence-tests.yml'
       - 'tsconfig.owner-intelligence.json'
   workflow_dispatch:
@@ -23,6 +25,6 @@ jobs:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
       - name: Unit tests (no external service or personal records)
-        run: bunx vitest run src/lib/coowners/owner-intelligence.test.ts src/lib/coowners/public-index-search.test.ts src/lib/coowners/official-msig.test.ts
+        run: bunx vitest run src/lib/coowners/owner-intelligence.test.ts src/lib/coowners/public-index-search.test.ts src/lib/coowners/official-msig.test.ts src/lib/coowners/official-msig-detail.test.ts src/lib/coowners/business-profile.test.ts src/lib/coowners/knf-warnings.test.ts
       - name: TypeScript typecheck (owner intelligence scope)
         run: bunx tsc --project tsconfig.owner-intelligence.json --noEmit

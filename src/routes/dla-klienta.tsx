@@ -142,7 +142,7 @@ const FAQS = [
   },
   {
     q: "Na jaki cel mogę przeznaczyć finansowanie?",
-    a: "Finansowanie wyłącznie na cel związany z działalnością gospodarczą (B2B). We wniosku składasz oświadczenie o celu gospodarczym; nie finansujemy celów konsumpcyjnych ani prywatnych potrzeb mieszkaniowych.",
+    a: "Na cel związany z działalnością gospodarczą — wystarczy jednoosobowa firma, także założona dzisiaj; staż i historia kredytowa firmy nie są wymagane. We wniosku zaznaczasz oświadczenie o celu gospodarczym. Nie finansujemy celów konsumpcyjnych.",
   },
   {
     q: "Do kogo trafia mój wniosek?",

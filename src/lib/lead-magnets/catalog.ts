@@ -1338,7 +1338,7 @@ const bankOdmowil = defineMagnet({
           {
             type: "bullets",
             items: [
-              "Czy muszę prowadzić firmę? Tak – finansowanie jest na cel gospodarczy; wystarczy jednoosobowa działalność.",
+              "Czy muszę mieć firmę z historią? Nie – wystarczy jednoosobowa działalność, nawet założona dzisiaj; finansowanie jest na cel gospodarczy.",
               "Czy nieruchomość musi należeć do firmy? Nie – zabezpieczeniem może być nieruchomość prywatna właściciela (dłużnik rzeczowy), za zgodą małżonka przy wspólności majątkowej.",
               "Jak szybko? Zwykle 2–4 tygodnie od kompletu dokumentów; termin wpisu hipoteki zależy od sądu.",
               "Czy mogę stracić nieruchomość? Przy braku spłaty finansujący może dochodzić należności z nieruchomości – to realne ryzyko, dlatego plan spłaty jest ważniejszy niż kwota.",
@@ -1714,7 +1714,7 @@ const odWnioskuDoWyplaty = defineMagnet({
               ],
               [
                 "Cel nie ma znaczenia.",
-                "Finansowanie jest wyłącznie na cel gospodarczy – i jest to sprawdzane. Dla konsumentów obowiązują inne przepisy.",
+                "Finansowanie jest na cel gospodarczy – wystarczy działalność założona nawet dzisiaj; we wniosku potwierdzasz cel jednym oświadczeniem.",
               ],
             ],
           },

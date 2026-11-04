@@ -1,9 +1,14 @@
-// Codzienny bot blogowy: zbiera świeże newsy finansowe (Google News RSS — darmowe,
-// bez klucza), Lovable AI Gateway układa z nich briefing i pisze artykuł SEO,
-// dobiera okładkę i publikuje z linkami wewnętrznymi (do innych artykułów na blogu)
-// i zewnętrznymi (źródłami z RSS).
+// Bot blogowy. Harmonogram (od 2026-11): co tydzień PORADNIK evergreen pod konkretną
+// frazę z listy EVERGREEN_GUIDES (linkuje do strony produktu), co dwa tygodnie
+// PRZEGLĄD prawno-rynkowy ze świeżych newsów (Google News RSS → briefing AI).
+// Codzienne komentarze rynkowe wyłączone: w Search Console miały po kilka
+// wyświetleń, szybko się starzały i powielały się nawzajem.
+//
+// Cron może wołać tick codziennie albo raz w tygodniu — o tym, co publikować,
+// decyduje data ostatniej publikacji danego rodzaju (isDue), nie dzień tygodnia.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import type { PostKind } from "./seo/blog-schedule";
 import { parseRssItems, type RssItem } from "@/lib/pr/core";
 import { AI_MODEL_PRO, lovableAiJson } from "@/lib/lovable-ai.server";
 import {
@@ -45,34 +50,28 @@ interface NewsBrief {
 }
 
 type Audience = "borrower" | "investor";
-type PostKind = "borrower_news" | "investor_news" | "legal_market_monitor" | "investor_review";
+export type BlogTickKind = PostKind;
 
-async function pickNextKind(): Promise<PostKind> {
-  // Rotacja 4-elementowa: borrower_news → investor_news → legal_market_monitor → investor_review → ...
+async function nextReviewTopic(): Promise<string> {
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
-    .select("audience,raw_ai_output,published_at")
+    .select("review_topic:raw_ai_output->>review_topic,published_at")
     .eq("source", "ai_autopilot")
+    .not("raw_ai_output->>review_topic", "is", null)
     .order("published_at", { ascending: false })
-    .limit(1);
-  const lastRow: any = data?.[0];
-  const last: PostKind | undefined =
-    lastRow?.raw_ai_output?.post_kind ??
-    (lastRow ? (lastRow.audience === "investor" ? "investor_news" : "borrower_news") : undefined);
-  if (last === "borrower_news") return "investor_news";
-  if (last === "investor_news") return "legal_market_monitor";
-  if (last === "legal_market_monitor") return "investor_review";
-  if (last === "investor_review") return "borrower_news";
-  return "legal_market_monitor"; // first run
+    .limit(REVIEW_TOPICS.length * 2);
+  return pickReviewTopic(((data ?? []) as any[]).map((r) => r.review_topic ?? undefined));
 }
 
+type NewsKind = Exclude<PostKind, "evergreen_guide">;
+
 function audienceOf(kind: PostKind): Audience {
-  if (kind === "borrower_news") return "borrower";
+  if (kind === "borrower_news" || kind === "evergreen_guide") return "borrower";
   if (kind === "legal_market_monitor") return "borrower"; // regulacje/sądy/komornicy dotykają głównie właścicieli nieruchomości i pożyczkobiorców
   return "investor";
 }
 
-const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
+const BRIEFS: Record<NewsKind, { sys: string; user: string }> = {
   borrower_news: {
     sys: "Jesteś analitykiem rynku finansowego w Polsce. Po polsku. Zwięźle.",
     user: "Wypisz 5 najważniejszych wiadomości z ostatnich 24h istotnych dla OSOBY POŻYCZAJĄCEJ pod zastaw nieruchomości w PL: stopy procentowe (RPP), WIBOR/inflacja, ceny mieszkań i nieruchomości w PL, sytuacja na rynku kredytów hipotecznych, regulacje konsumenckie (UOKiK, KNF), wyroki istotne dla kredytobiorców. Dla każdej wiadomości: 2-3 zdania z konkretem (liczby/data). Po liście dodaj 'KONTEKST_POŻYCZKOBIORCY:' i jeden akapit (4-6 zdań) co to oznacza dla osoby rozważającej pożyczkę pozabankową pod zastaw mieszkania/domu/działki.",
@@ -83,7 +82,7 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
   },
   investor_review: {
     sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
-    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
+    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. TEMAT PORÓWNANIA: {{REVIEW_TOPIC}}. Dla tego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
   },
   legal_market_monitor: {
     sys: "Jesteś analitykiem prawno-rynkowym monitorującym polski rynek nieruchomości i finansów. Po polsku, konkretnie, bez spekulacji poza to co wynika ze źródeł.",
@@ -93,7 +92,7 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
 
 // Zapytania do Google News (RSS) na każdy rodzaj wpisu. Operator `when:` ogranicza
 // świeżość: 1d dla newsów dnia, 7d dla przeglądu tygodnia, 30d dla przeglądu inwestycyjnego.
-const NEWS_QUERIES: Record<PostKind, { when: string; queries: string[] }> = {
+const NEWS_QUERIES: Record<NewsKind, { when: string; queries: string[] }> = {
   borrower_news: {
     when: "1d",
     queries: [
@@ -138,7 +137,7 @@ const NEWS_QUERIES: Record<PostKind, { when: string; queries: string[] }> = {
   },
 };
 
-async function fetchNewsItems(kind: PostKind): Promise<RssItem[]> {
+async function fetchNewsItems(kind: NewsKind): Promise<RssItem[]> {
   const cfg = NEWS_QUERIES[kind];
   const batches = await Promise.all(
     cfg.queries.map(async (q) => {
@@ -166,8 +165,12 @@ async function fetchNewsItems(kind: PostKind): Promise<RssItem[]> {
   return out.slice(0, 40);
 }
 
-async function fetchFreshNewsBrief(kind: PostKind): Promise<NewsBrief> {
-  const b = BRIEFS[kind];
+async function fetchFreshNewsBrief(kind: NewsKind, reviewTopic?: string): Promise<NewsBrief> {
+  const base = BRIEFS[kind];
+  const b = {
+    ...base,
+    user: base.user.replace("{{REVIEW_TOPIC}}", reviewTopic ?? REVIEW_TOPICS[0]),
+  };
   const items = await fetchNewsItems(kind);
   if (items.length === 0) throw new Error("Google News RSS: brak świeżych wiadomości");
   const list = items
@@ -205,14 +208,36 @@ interface RelatedArticle {
   primary_keyword: string | null;
 }
 
+/** Próg podobieństwa tytułów (Jaccard), od którego nowy wpis uznajemy za duplikat. */
+const DUPLICATE_TITLE_THRESHOLD = 0.6;
+
+async function recentArticleTitles(): Promise<{ slug: string; title: string }[]> {
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("slug,title")
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(80);
+  return (data ?? []) as { slug: string; title: string }[];
+}
+
 async function pickInternalLinks(): Promise<RelatedArticle[]> {
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
-    .select("slug,title,primary_keyword,published_at")
+    .select(
+      "slug,title,primary_keyword,published_at,merged_into:raw_ai_output->>merged_into,noindex:raw_ai_output->noindex",
+    )
     .eq("status", "published")
     .order("published_at", { ascending: false })
-    .limit(40);
-  const list = (data ?? []) as RelatedArticle[];
+    .limit(120);
+  // Linkujemy tylko do artykułów, które mają być w Google.
+  const list = ((data ?? []) as any[])
+    .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }, r.slug))
+    .map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      primary_keyword: r.primary_keyword,
+    })) as RelatedArticle[];
   // pick 3 random
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -231,7 +256,7 @@ async function pickInternalLinks(): Promise<RelatedArticle[]> {
 const STYLE_GUIDE = `ZASADY STYLU, SEO I ZGODNOŚCI Z SERWISEM (obowiązkowe):
 - Ton jak w serwisie financeyou.pl: rzeczowy, ekspercki, konkretny; bez wykrzykników i sensacji; akapity 2-3 zdania; struktura H2/H3; listy tam, gdzie poprawiają skanowalność.
 - SEO: fraza główna (primary_keyword) w tytule, w pierwszym akapicie i w co najmniej jednym H2; meta_title do 60 znaków z frazą główną; meta_description 140-155 znaków z frazą główną i konkretną korzyścią; excerpt 1-2 zdania.
-- LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (program partnerski dla inwestorów: szkolenie i narzędzia), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
+- LINKI WEWNĘTRZNE: wpleć 2-3 linki do podanych artykułów bloga oraz dokładnie 1 CTA do strony ścieżki. Używaj WYŁĄCZNIE tych adresów serwisu: https://financeyou.pl/dla-klienta (finansowanie dla klienta), https://financeyou.pl/dla-inwestora (program partnerski dla inwestorów: szkolenie i narzędzia), https://financeyou.pl/oferty (aktualne oferty pożyczek), https://financeyou.pl/blog/... (artykuły) oraz strona produktu lub narzędzia wskazana w zadaniu (jeśli jest). NIGDY nie linkuj do /klient ani /inwestor — to panele wymagające logowania.
 - ZWROTY Z INWESTYCJI (spójna komunikacja Finance You): NIE podawaj stóp zwrotu, oprocentowania ani łącznej wartości kapitału jako obietnicy lub typowego wyniku. Opisuj mechanizm (odsetki od pożyczki zabezpieczonej hipoteką, decyzja i ryzyko po stronie inwestora). Liczby rynkowe (stopy NBP, inflacja, oprocentowanie lokat, obligacji) przytaczaj wyłącznie ze źródeł briefingu z podanym źródłem. ZAKAZANE: "gwarantowany zysk/zwrot", "pewny zysk", "bez ryzyka", "zarobisz X%". Zawsze zaznacz, że wynik zależy od parametrów konkretnej transakcji.
 - W artykułach inwestorskich zaznacz, że inwestowanie wiąże się z ryzykiem, w tym utraty części lub całości kapitału, a decyzja należy do inwestora. W artykułach pożyczkowych zaznacz, że kalkulacje są orientacyjne, zgłoszenie jest bezpłatne, a decyzja o finansowaniu należy do finansujących.`;
 
@@ -275,6 +300,7 @@ async function writeArticleFromNews(
   brief: NewsBrief,
   internal: RelatedArticle[],
   kind: PostKind,
+  recentTitles: string[] = [],
 ): Promise<ArticleDraft> {
   const audience = audienceOf(kind);
 
@@ -303,7 +329,7 @@ async function writeArticleFromNews(
   } else if (audience === "investor") {
     audienceBrief = `GRUPA DOCELOWA: INWESTOR PRYWATNY rozważający lokowanie kapitału w pożyczki pod zastaw nieruchomości (mechanizm zarabiania na odsetkach jak bank, zabezpieczenie hipoteczne, ryzyko, dywersyfikacja – BEZ podawania stóp zwrotu jako obietnicy). Pisz językiem inwestycyjnym, bez infantylizowania. CTA do "[zostań partnerem Finance You](https://financeyou.pl/dla-inwestora)" wpleć 1 raz.`;
   } else {
-    audienceBrief = `GRUPA DOCELOWA: PRZEDSIĘBIORCA szukający finansowania WYŁĄCZNIE NA CEL GOSPODARCZY pod zastaw nieruchomości (bank odmówił lub trwa to za długo, II hipoteka, płynność firmy, inwestycja w firmie). Platforma jest B2B – nie kieruj treści do konsumentów i nie obiecuj finansowania „bez BIK” ani „bez zdolności”. Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
+    audienceBrief = `GRUPA DOCELOWA: WŁAŚCICIEL NIERUCHOMOŚCI, który potrzebuje finansowania szybciej lub łatwiej niż w banku (odmowa banku, II hipoteka, płynność, inwestycja, start działalności). Piszesz do przedsiębiorców w szerokim sensie — także do osób, które dopiero zakładają firmę: obsługujemy start-upy od pierwszego dnia działalności, staż firmy nie jest wymagany. Nie akcentuj co akapit, że oferta jest „tylko dla firm” — wystarczy jedna naturalna wzmianka o celu związanym z działalnością. Nie pisz o finansowaniu celów konsumpcyjnych (wakacje, samochód, wesele) i nie obiecuj finansowania „bez zdolności” ani „bez weryfikacji” („bez BIK” i „minimum formalności” są w porządku, bo decyduje nieruchomość). Pisz językiem korzyści i jasnych procedur. CTA do "[złóż bezpłatny wniosek o finansowanie](https://financeyou.pl/dla-klienta)" wpleć 1-2 razy.`;
   }
 
   const sys = `${currentDateContextPl()}\nJesteś senior copywriterem finansowym dla Finance You (pożyczki pod zastaw nieruchomości w PL). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów" (rewolucyjny, niesamowity, w erze AI itp.). Konkrety, liczby z briefingu, akapity 2-3 zdania, H2/H3, listy. NIE wymyślaj liczb spoza briefingu.\n${audienceBrief}\n\n${STYLE_GUIDE}\n\nZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
@@ -331,6 +357,9 @@ LINKI WEWNĘTRZNE do wplecenia w treść (2-3 z poniższych, naturalnie w kontek
 ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
 ${taskLabel}
+
+OSTATNIE TYTUŁY NA BLOGU (NIE powtarzaj ich ani ich schematu — tytuł, fraza główna i kąt artykułu muszą być wyraźnie inne):
+${recentTitles.length ? recentTitles.map((t) => `- ${t}`).join("\n") : "(brak)"}
 
 WYMAGANY OPIS POLA content_md: ${structureHint}
 Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords" (array of strings), "content_md", "cover_prompt", "cover_alt" }.`;
@@ -379,6 +408,15 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
 }
 
 import { pickStockPhoto } from "./blog-stock-photos";
+import { isIndexable, isNoDataTitle, mostSimilarTitle } from "./seo/article-index";
+import {
+  EVERGREEN_GUIDES,
+  REVIEW_TOPICS,
+  SCHEDULE,
+  isDue,
+  pickGuide,
+  pickReviewTopic,
+} from "./seo/blog-schedule";
 
 /**
  * Okładka artykułu = darmowe zdjęcie stockowe (Unsplash) + wordmark Finance You
@@ -396,34 +434,152 @@ function pickCover(kind: PostKind): { url: string; alt: string } {
   return { url: photo.url, alt: photo.alt };
 }
 
-export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<{
-  ok: boolean;
-  reason?: string;
-  slug?: string;
-  id?: string;
-}> {
-  if (!process.env.LOVABLE_API_KEY) return { ok: false, reason: "LOVABLE_API_KEY missing" };
+type TickResult = { ok: boolean; reason?: string; slug?: string; id?: string };
 
-  // Nie publikuj 2 razy tego samego dnia (chyba że force=1)
-  if (!opts.force) {
-    const since = new Date(Date.now() - 20 * 3600 * 1000).toISOString();
-    const { data: recent } = await supabaseAdmin
-      .from("ai_seo_articles")
-      .select("id")
-      .eq("source", "ai_autopilot")
-      .gte("published_at", since)
-      .limit(1);
-    if (recent && recent.length > 0) {
-      return { ok: true, reason: "already published today" };
+async function lastPublishedOf(kind: PostKind): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("published_at")
+    .eq("source", "ai_autopilot")
+    .eq("raw_ai_output->>post_kind", kind)
+    .order("published_at", { ascending: false })
+    .limit(1);
+  return (data?.[0]?.published_at as string | undefined) ?? null;
+}
+
+async function usedGuideTopics(): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("guide_topic:raw_ai_output->>guide_topic")
+    .eq("source", "ai_autopilot")
+    .not("raw_ai_output->>guide_topic", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(200);
+  return ((data ?? []) as any[]).map((r) => String(r.guide_topic));
+}
+
+async function writeEvergreenGuide(
+  guide: (typeof EVERGREEN_GUIDES)[number],
+  internal: RelatedArticle[],
+  recentTitles: string[],
+): Promise<ArticleDraft> {
+  const internalList = internal
+    .map(
+      (a) =>
+        `- [${a.title}](/blog/${a.slug})${a.primary_keyword ? ` — kw: ${a.primary_keyword}` : ""}`,
+    )
+    .join("\n");
+  const sys = `${currentDateContextPl()}
+Jesteś senior copywriterem finansowym i ekspertem SEO dla Finance You (pożyczki pod zastaw nieruchomości w PL na cel związany z działalnością — także dla firm od pierwszego dnia). Piszesz po polsku, konkretnie, bez clickbaitu i bez "AI-słów". Poradnik ma być lepszy niż to, co dziś jest w top 10 Google na tę frazę: praktyczny, z przykładami, listami kroków, tabelą tam, gdzie pomaga.
+GRUPA DOCELOWA: właściciel nieruchomości i przedsiębiorca — także osoba, która dopiero zakłada firmę (obsługujemy start-upy od pierwszego dnia działalności, staż nie jest wymagany). O celu związanym z działalnością wspomnij raz, naturalnie — nie powtarzaj „tylko dla firm”. Nie pisz o finansowaniu celów konsumpcyjnych, nie obiecuj finansowania „bez zdolności” ani „bez weryfikacji” („bez BIK” i „minimum formalności” są w porządku).
+NIE podawaj konkretnych statystyk, stóp, prowizji ani dat, których nie znasz na pewno — opisuj mechanizm i przykładowe wyliczenia wyraźnie oznaczone jako orientacyjne.
+
+${STYLE_GUIDE}
+
+ZWRÓĆ WYŁĄCZNIE JEDEN OBIEKT JSON zgodny ze schematem, bez markdown code fence, bez komentarza.`;
+  const user = `Napisz PORADNIK evergreen (ponadczasowy — bez odniesień do „dziś”, bieżących newsów i dat).
+TEMAT: ${guide.topic}
+FRAZA GŁÓWNA (primary_keyword): ${guide.keyword}
+STRONA PRODUKTU do podlinkowania 2 razy (w treści i w podsumowaniu): https://financeyou.pl${guide.target}
+
+LINKI WEWNĘTRZNE do wplecenia (2-3, naturalnie):
+${internalList || "(brak)"}
+
+OSTATNIE TYTUŁY NA BLOGU (nie powtarzaj ich ani ich schematu):
+${recentTitles.map((t) => `- ${t}`).join("\n") || "(brak)"}
+
+WYMAGANY OPIS POLA content_md: Markdown, 1300-1900 słów. Struktura: lead (2-3 zdania: komu i w czym pomoże poradnik), H2 z definicją/odpowiedzią wprost na frazę (pierwsze 2 zdania = odpowiedź do fragmentu wyróżnionego Google), H2 „Jak to działa krok po kroku” (lista numerowana), H2 o warunkach i dokumentach, H2 z przykładem liczbowym (orientacyjnym, oznaczonym jako przykład), H2 „Na co uważać” (ryzyka, koszty, typowe błędy), H2 „Podsumowanie”, na końcu „FAQ” z 5 pytaniami, które ludzie wpisują w Google (H3 pytanie + 2-4 zdania odpowiedzi). Tytuł: zawiera frazę główną, max 65 znaków, bez roku.
+Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords" (array of strings), "content_md", "cover_prompt", "cover_alt" }.`;
+  const parsed = await lovableAiJson<ArticleDraft>({
+    model: AI_MODEL_PRO,
+    system: sys,
+    user,
+    temperature: 0.4,
+    timeoutMs: 180_000,
+  });
+  for (const k of ["title", "meta_title", "meta_description", "excerpt", "content_md"]) {
+    if ((parsed as any)?.[k] == null) throw new Error(`AI writer: brak pola ${k}`);
+  }
+  const draft = parsed as ArticleDraft;
+  draft.primary_keyword = draft.primary_keyword || guide.keyword;
+  draft.keywords = Array.isArray(draft.keywords) ? draft.keywords : [guide.keyword];
+  draft.title = fixStaleYearInTitle(draft.title).text;
+  draft.meta_title = fixStaleYearInTitle(draft.meta_title).text;
+  return draft;
+}
+
+/**
+ * Tick harmonogramu: publikuje każdy rodzaj, któremu minął odstęp (najwyżej
+ * jeden wpis na rodzaj). `force` (prywatny sekret) publikuje poradnik od ręki;
+ * `kind` wymusza konkretny rodzaj.
+ */
+export async function runDailyBlogTick(
+  opts: { force?: boolean; kind?: PostKind } = {},
+): Promise<{ ok: boolean; reason?: string; results: (TickResult & { kind: PostKind })[] }> {
+  if (!process.env.LOVABLE_API_KEY)
+    return { ok: false, reason: "LOVABLE_API_KEY missing", results: [] };
+
+  const kinds: PostKind[] = [];
+  if (opts.kind) kinds.push(opts.kind);
+  else if (opts.force) kinds.push("evergreen_guide");
+  else {
+    for (const item of SCHEDULE) {
+      if (isDue(await lastPublishedOf(item.kind), item.everyDays)) kinds.push(item.kind);
     }
   }
+  if (kinds.length === 0) return { ok: true, reason: "nothing due", results: [] };
 
-  const kind = await pickNextKind();
+  const results: (TickResult & { kind: PostKind })[] = [];
+  for (const kind of kinds) {
+    try {
+      results.push({ kind, ...(await publishOne(kind)) });
+    } catch (err) {
+      // Wcześniej błąd ticka nie zostawiał śladu (500 do crona) — tak przepadły
+      // publikacje z 26.10 i 2.11.2026. Teraz każdy błąd trafia do dziennika.
+      const msg = err instanceof Error ? err.message : String(err);
+      await supabaseAdmin.from("ai_growth_action_log").insert({
+        module: "seo_content_engine",
+        action: "daily_autopost",
+        status: "error",
+        summary: `[${kind}] błąd publikacji: ${msg.slice(0, 300)}`,
+        payload: { kind, error: msg },
+      });
+      results.push({ kind, ok: false, reason: msg });
+    }
+  }
+  return { ok: results.every((r) => r.ok), results };
+}
+
+async function publishOne(kind: PostKind): Promise<TickResult> {
   const audience = audienceOf(kind);
-  const brief = await fetchFreshNewsBrief(kind);
+  const reviewTopic = kind === "investor_review" ? await nextReviewTopic() : undefined;
+  const guide = kind === "evergreen_guide" ? pickGuide(await usedGuideTopics()) : undefined;
+  const brief: NewsBrief = guide
+    ? { summary: "", citations: [] }
+    : await fetchFreshNewsBrief(kind as NewsKind, reviewTopic);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(brief, internal, kind);
+  const recent = await recentArticleTitles();
+  const recentTitles = recent.slice(0, 25).map((r) => r.title);
+  const draft = guide
+    ? await writeEvergreenGuide(guide, internal, recentTitles)
+    : await writeArticleFromNews(brief, internal, kind, recentTitles);
   const cover = pickCover(kind);
+
+  // Strażnik jakości indeksu: wpis „o braku danych” nie jest publikowany,
+  // a wpis niemal identyczny z istniejącym trafia jako noindex — Google
+  // przy wielu duplikatach obniża ocenę całego bloga.
+  if (isNoDataTitle(draft.title)) {
+    await supabaseAdmin.from("ai_growth_action_log").insert({
+      module: "seo_content_engine",
+      action: "daily_autopost",
+      status: "warning",
+      summary: `[${kind}] pominięty — brak świeżych danych: ${draft.title}`,
+      payload: { kind, title: draft.title },
+    });
+    return { ok: true, reason: "skipped: no fresh data" };
+  }
+  const similar = mostSimilarTitle(draft.title, recent);
+  const isDuplicate = !!similar && similar.score >= DUPLICATE_TITLE_THRESHOLD;
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
@@ -454,7 +610,13 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       cta_label: ctaLabel,
 
       source: "ai_autopilot",
-      raw_ai_output: { ...draft, post_kind: kind } as any,
+      raw_ai_output: {
+        ...draft,
+        post_kind: kind,
+        ...(reviewTopic ? { review_topic: reviewTopic } : {}),
+        ...(guide ? { guide_topic: guide.topic, target_page: guide.target } : {}),
+        ...(isDuplicate ? { noindex: true, similar_to: similar!.slug } : {}),
+      } as any,
       published_at: new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover.url,
@@ -477,6 +639,9 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       slug: inserted.slug,
       kind,
       sources: brief.citations.length,
+      ...(isDuplicate
+        ? { noindex: true, similar_to: similar!.slug, similarity: similar!.score }
+        : {}),
     },
   });
 

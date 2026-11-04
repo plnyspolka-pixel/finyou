@@ -19,6 +19,16 @@
 //  • zastrzeżenia raz, na końcu (zastrzeżenie analizy KW = REPORT_DISCLAIMER —
 //    tylko gdy raport zawiera analizę KW),
 //  • kroki bez wyniku mają w PDF-ie notkę, jak puste karty kroków na ekranie.
+import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
+import {
+  ceidgRows,
+  companyRows,
+  knfRows,
+  profileHeadline,
+  vatRows,
+  websiteRows,
+} from "@/lib/coowners/business-profile-format";
+import type { BusinessProfile } from "@/lib/coowners/business-profile.types";
 import type { OrderProjectReportDetail } from "@/lib/investor-agreements/order-projects.functions";
 import type {
   FindingCategory,
@@ -1429,6 +1439,30 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
           t: "bullets",
           items: owner.hits.map((hit) => `Źródło (${hit.source}): ${hit.url}`),
         });
+        for (const hit of owner.hits) {
+          if (!hit.proceeding) continue;
+          const p = hit.proceeding;
+          blocks.push(
+            {
+              t: "subheading",
+              text: `Pogłębiony raport postępowania — ${p.signatures[0] ?? p.kind}`,
+            },
+            { t: "keyValues", rows: proceedingRows(p) },
+            {
+              t: "table",
+              columns: [
+                { label: "Data", width: 1 },
+                { label: "MSiG / poz.", width: 1 },
+                { label: "Ogłoszenie", width: 4 },
+              ],
+              rows: p.timeline.map((n) => [
+                n.publicationDate,
+                `${n.monitorNumber}${n.position ? ` / ${n.position}` : ""}`,
+                `${n.chapter ?? "ogłoszenie"}${n.summary ? ` — ${n.summary.slice(0, 160)}…` : ""}`,
+              ]),
+            },
+          );
+        }
       } else {
         blocks.push({
           t: "paragraph",
@@ -1437,6 +1471,34 @@ function ownersBlocks(co: AnalyticsCoOwners): ReportBlock[] {
         });
       }
     }
+  }
+  blocks.push(...businessProfileBlocks(co.businessProfiles ?? []));
+  return blocks;
+}
+
+function businessProfileBlocks(profiles: BusinessProfile[]): ReportBlock[] {
+  if (!profiles.length) return [];
+  const blocks: ReportBlock[] = [
+    { t: "heading", text: "Profil gospodarczy" },
+    {
+      t: "paragraph",
+      muted: true,
+      text: "KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR, lista ostrzeżeń publicznych KNF oraz oficjalna strona firmy wskazana w rejestrze. Bez danych ze sprawozdań finansowych.",
+    },
+  ];
+  for (const p of profiles) {
+    blocks.push({ t: "subheading", text: profileHeadline(p) });
+    if (p.flags.length)
+      blocks.push({
+        t: "bullets",
+        items: p.flags.map((f) => `${f.level === "alert" ? "[!] " : f.level === "warning" ? "[uwaga] " : ""}${f.source}: ${f.text}`),
+      });
+    if (p.ceidg) blocks.push({ t: "keyValues", rows: ceidgRows(p.ceidg) });
+    if (p.vat) blocks.push({ t: "keyValues", rows: [["Wykaz VAT", p.vat.name], ...vatRows(p.vat)] });
+    for (const c of p.companies) blocks.push({ t: "keyValues", rows: [["KRS", `${c.krs} — ${c.name}`], ...companyRows(c)] });
+    if (p.knf) blocks.push({ t: "keyValues", rows: knfRows(p.knf) });
+    for (const w of p.websites) blocks.push({ t: "keyValues", rows: websiteRows(w) });
+    if (p.notes.length) blocks.push({ t: "paragraph", muted: true, text: p.notes.join(" ") });
   }
   return blocks;
 }

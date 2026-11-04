@@ -12,6 +12,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { compactKwNumber } from "@/lib/kw";
 import { parsePesel } from "@/lib/risk-assessment/pesel";
+import { proceedingStatusLabel } from "./court-proceeding-format";
 import { parseOwners } from "@/lib/risk-assessment/kw-parse-core";
 import { lookupCeidgActivity, emptyCeidg } from "@/lib/risk-assessment/ceidg-lookup.server";
 import { findBusinessInVatWhiteList } from "@/lib/risk-assessment/vat-whitelist.server";
@@ -25,6 +26,8 @@ import {
   type OwnerIntelligenceInput,
 } from "./owner-intelligence.server";
 import type { OwnerIntelligenceReport } from "./owner-intelligence.types";
+import { buildBusinessProfiles, type BusinessProfileSubject } from "./business-profile.server";
+import type { BusinessProfile } from "./business-profile.types";
 
 function emptyAnalysis(kwNumber: string | null, summary: string): CoOwnersAnalysis {
   return {
@@ -73,7 +76,9 @@ export function intelligenceWarnings(report: OwnerIntelligenceReport | null | un
     for (const h of s.hits.filter((x) => x.category === "court_notice")) {
       out.push(
         `${who}: ${h.title}${h.caseSignature ? ` (sygn. ${h.caseSignature})` : ""}${h.publicationDate ? `, ${h.publicationDate}` : ""} — ` +
-          (h.match === "identifier" ? "zgodny identyfikator (PESEL/NIP/KRS)." : "zgodność tylko po nazwisku — zweryfikuj tożsamość."),
+          (h.match === "identifier"
+            ? `zgodny identyfikator (PESEL/NIP/KRS).${h.proceeding ? ` Postępowanie: ${proceedingStatusLabel[h.proceeding.status]} — ${h.proceeding.statusNote}` : ""}`
+            : "zgodność tylko po nazwisku — zweryfikuj tożsamość."),
       );
     }
     if (s.role === "client" && s.courtStatus !== "checked")
@@ -112,6 +117,50 @@ async function lookupBusiness(args: {
   return ceidg;
 }
 
+/** Ostrzeżenia z profilu gospodarczego (sygnały alert/warning). */
+export function businessProfileWarnings(profiles: BusinessProfile[]): string[] {
+  return profiles.flatMap((p) =>
+    p.flags
+      .filter((f) => f.level !== "info")
+      .map((f) => `${p.role === "client" ? "Pożyczkobiorca" : "Profil gospodarczy"} — ${f.source}: ${f.text}`),
+  );
+}
+
+/** Pożyczkobiorca spoza działu II KW — CEIDG/wykaz VAT i KRS do profilu gospodarczego. */
+async function clientBusinessSubject(
+  client: OwnerIntelligenceInput,
+  args: { city?: string | null; voivodeship?: string | null },
+): Promise<BusinessProfileSubject> {
+  const pesel = client.pesel ? parsePesel(client.pesel) : null;
+  const [ceidg, krs] = await Promise.all([
+    lookupBusiness({
+      firstName: client.firstName ?? null,
+      lastName: client.lastName ?? null,
+      nip: client.nip ?? null,
+      city: args.city ?? null,
+      voivodeship: args.voivodeship ?? null,
+    }),
+    searchKrsForPerson({
+      firstName: client.firstName ?? null,
+      lastName: client.lastName ?? null,
+      pesel: pesel?.valid ? client.pesel! : null,
+      birthYear: pesel?.birthDate ? Number(pesel.birthDate.slice(0, 4)) : null,
+      city: args.city ?? null,
+      voivodeship: args.voivodeship ?? null,
+    }).catch(() => emptyKrsCheck("KRS niedostępny.")),
+  ]);
+  return {
+    subject: client.name,
+    role: "client",
+    kind: "person",
+    firstName: client.firstName ?? null,
+    lastName: client.lastName ?? null,
+    pesel: pesel?.valid ? client.pesel : null,
+    nip: client.nip ?? (ceidg.matchConfidence !== "low" ? ceidg.company?.nip : null) ?? null,
+    krs: krs.hits.map((h) => ({ krs: h.krs, role: h.role })),
+  };
+}
+
 export async function analyzeCoOwners(args: {
   kwNumber: string | null;
   /** Imię i nazwisko klienta wniosku — do oznaczenia jego wiersza. */
@@ -134,8 +183,17 @@ export async function analyzeCoOwners(args: {
     ...emptyAnalysis(kwNumber, summary),
     ...(clientInput
       ? await (async () => {
-          const intelligence = await checkOwnerPublicIntelligence([clientInput]).catch(() => null);
-          return { intelligence, warnings: intelligenceWarnings(intelligence) };
+          const [intelligence, businessProfiles] = await Promise.all([
+            checkOwnerPublicIntelligence([clientInput]).catch(() => null),
+            clientBusinessSubject(clientInput, args)
+              .then((s) => buildBusinessProfiles([s]))
+              .catch(() => [] as BusinessProfile[]),
+          ]);
+          return {
+            intelligence,
+            businessProfiles,
+            warnings: [...intelligenceWarnings(intelligence), ...businessProfileWarnings(businessProfiles)],
+          };
         })()
       : {}),
   });
@@ -181,15 +239,31 @@ export async function analyzeCoOwners(args: {
     console.error("[coowners] owner intelligence failed", e instanceof Error ? e.message : "unknown");
     return null;
   });
+  const companySubjects: BusinessProfileSubject[] = companies.map((c) => ({
+    subject: c.name,
+    role: "owner",
+    kind: "company",
+    nip: c.nip ?? null,
+    krs: c.krs ? [{ krs: c.krs, role: "właściciel nieruchomości (dział II KW)" }] : [],
+  }));
+  const clientSubjectPromise: Promise<BusinessProfileSubject | null> =
+    clientInput && !clientAmongOwners
+      ? clientBusinessSubject(clientInput, args).catch(() => null)
+      : Promise.resolve(null);
   if (owners.length === 0) {
-    const intelligence = await intelligencePromise;
+    const clientSubject = await clientSubjectPromise;
+    const [intelligence, businessProfiles] = await Promise.all([
+      intelligencePromise,
+      buildBusinessProfiles([...(clientSubject ? [clientSubject] : []), ...companySubjects]).catch(() => [] as BusinessProfile[]),
+    ]);
     return {
       available: true,
       kwNumber: kw,
       generatedAt: new Date().toISOString(),
       totalOwnersInKw,
       checked: [],
-      warnings: intelligenceWarnings(intelligence),
+      warnings: [...intelligenceWarnings(intelligence), ...businessProfileWarnings(businessProfiles)],
+      businessProfiles,
       summary: companies.length
         ? `Dział II KW: zidentyfikowano ${companies.length} podmiotów prawnych do sprawdzenia w rejestrach.`
         : "W dziale II KW nie rozpoznano właścicieli do sprawdzenia.",
@@ -287,8 +361,29 @@ export async function analyzeCoOwners(args: {
     `Działalność gospodarcza (CEIDG): ${withDg ? `${withDg} os.` : "nie stwierdzono"}. ` +
     `Obecność w KRS: ${inKrs ? `${inKrs} os.` : "nie stwierdzono"}.`;
 
-  const intelligence = await intelligencePromise;
-  warnings.push(...intelligenceWarnings(intelligence));
+  const personSubjects: BusinessProfileSubject[] = checked.map((c, i) => {
+    const o = owners[i];
+    const pesel = parsePesel(o.pesel).valid ? o.pesel : null;
+    const confirmedNip = c.ceidg.isEntrepreneur || c.ceidg.matchConfidence === "high" ? c.ceidg.company?.nip : null;
+    return {
+      subject: c.fullName ?? "Właściciel",
+      role: c.isPrimaryClient ? "client" : "owner",
+      kind: "person",
+      firstName: o.firstName,
+      lastName: o.lastName,
+      pesel: pesel ?? (c.isPrimaryClient ? (clientInput?.pesel ?? null) : null),
+      nip: confirmedNip ?? (c.isPrimaryClient ? (args.primaryClientNip ?? null) : null),
+      krs: c.krs.hits.map((h) => ({ krs: h.krs, role: h.role })),
+    };
+  });
+  const clientSubject = await clientSubjectPromise;
+  const [intelligence, businessProfiles] = await Promise.all([
+    intelligencePromise,
+    buildBusinessProfiles([...(clientSubject ? [clientSubject] : []), ...personSubjects, ...companySubjects]).catch(
+      () => [] as BusinessProfile[],
+    ),
+  ]);
+  warnings.push(...intelligenceWarnings(intelligence), ...businessProfileWarnings(businessProfiles));
 
   return {
     available: true,
@@ -299,5 +394,6 @@ export async function analyzeCoOwners(args: {
     warnings,
     summary,
     intelligence,
+    businessProfiles,
   };
 }

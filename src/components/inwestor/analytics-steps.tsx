@@ -14,6 +14,17 @@ import {
 } from "@/components/ui/accordion";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { formatDateTime } from "@/lib/labels";
+import { proceedingRows } from "@/lib/coowners/court-proceeding-format";
+import {
+  ceidgRows,
+  companyRows,
+  knfRows,
+  profileHeadline,
+  vatRows,
+  websiteRows,
+} from "@/lib/coowners/business-profile-format";
+import type { BusinessProfile } from "@/lib/coowners/business-profile.types";
+import type { CourtProceedingReport } from "@/lib/coowners/owner-intelligence.types";
 import {
   ANALYTICS_STEP_STATUS_LABELS,
   type AnalyticsCoOwners,
@@ -310,6 +321,9 @@ export function CoOwnersStep({
           ))}
         </div>
       )}
+      {co.businessProfiles && co.businessProfiles.length > 0 && (
+        <BusinessProfilesView profiles={co.businessProfiles} />
+      )}
       {co.intelligence && (
         <section className="space-y-3 rounded-xl border p-3">
           <h4 className="font-semibold">Wywiad gospodarczy właścicieli</h4>
@@ -338,7 +352,8 @@ export function CoOwnersStep({
                       {hit.caseSignature ? ` · sygn. ${hit.caseSignature}` : ""}
                       {" · "}
                       {hit.match === "identifier" ? "identyfikator zgodny" : "tylko nazwa — niezweryfikowane"}
-                      {hit.detail ? ` · ${hit.detail}` : ""}
+                      {hit.detail && !hit.proceeding ? ` · ${hit.detail}` : ""}
+                      {hit.proceeding && <ProceedingReportView report={hit.proceeding} />}
                     </li>
                   ))}
                 </ul>
@@ -353,5 +368,122 @@ export function CoOwnersStep({
         </section>
       )}
     </div>
+  );
+}
+
+/** Pogłębiony raport postępowania MSiG (tożsamość potwierdzona identyfikatorem). */
+function ProceedingReportView({ report }: { report: CourtProceedingReport }) {
+  return (
+    <div className="mt-2 space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-2">
+      <div className="font-semibold">Pogłębiony raport postępowania</div>
+      <dl className="grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-[max-content_1fr]">
+        {proceedingRows(report).map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-muted-foreground">{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="font-medium">Oś czasu ogłoszeń</div>
+      <ol className="space-y-1 border-l pl-3">
+        {report.timeline.map((n, i) => (
+          <li key={i}>
+            <span className="font-medium">{n.publicationDate}</span> · MSiG {n.monitorNumber}
+            {n.position ? `, poz. ${n.position}` : ""}
+            {n.chapter ? ` — ${n.chapter}` : ""}{" "}
+            <a href={n.pdfUrl} target="_blank" rel="noopener noreferrer" className="underline">
+              PDF
+            </a>
+            {n.summary && <div className="text-muted-foreground">{n.summary}…</div>}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function KeyValueList({ rows }: { rows: Array<[string, string]> }) {
+  return (
+    <dl className="grid grid-cols-1 gap-x-3 gap-y-1 text-xs sm:grid-cols-[max-content_1fr]">
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt className="text-muted-foreground">{k}</dt>
+          <dd className="break-words">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Profil gospodarczy klienta i właścicieli (rejestry publiczne + strona firmy). */
+function BusinessProfilesView({ profiles }: { profiles: BusinessProfile[] }) {
+  return (
+    <section className="space-y-3 rounded-xl border p-3">
+      <h4 className="font-semibold">Profil gospodarczy</h4>
+      <p className="text-xs text-muted-foreground">
+        KRS (odpis aktualny i pełny), wykaz podatników VAT, CEIDG, CRBR, lista ostrzeżeń publicznych
+        KNF oraz oficjalna strona firmy wskazana w rejestrze (z poszanowaniem robots.txt). Bez danych
+        ze sprawozdań finansowych.
+      </p>
+      {profiles.map((p, i) => (
+        <div key={i} className="space-y-2 rounded-lg border bg-muted/20 p-3">
+          <div className="font-medium">{profileHeadline(p)}</div>
+          {p.flags.length > 0 && (
+            <ul className="space-y-1 text-xs">
+              {p.flags.map((f, j) => (
+                <li
+                  key={j}
+                  className={cn(
+                    "rounded px-2 py-1",
+                    f.level === "alert" && "bg-destructive/10 text-destructive",
+                    f.level === "warning" && "bg-amber-500/10",
+                    f.level === "info" && "text-muted-foreground",
+                  )}
+                >
+                  <span className="font-medium">{f.source}:</span> {f.text}
+                </li>
+              ))}
+            </ul>
+          )}
+          {p.ceidg && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium">CEIDG</div>
+              <KeyValueList rows={ceidgRows(p.ceidg)} />
+            </div>
+          )}
+          {p.vat && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium">Wykaz podatników VAT — {p.vat.name}</div>
+              <KeyValueList rows={vatRows(p.vat)} />
+            </div>
+          )}
+          {p.companies.map((c) => (
+            <div key={c.krs} className="space-y-1">
+              <div className="text-xs font-medium">
+                KRS {c.krs} — {c.name}
+              </div>
+              <KeyValueList rows={companyRows(c)} />
+            </div>
+          ))}
+          {p.knf && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium">Lista ostrzeżeń publicznych KNF</div>
+              <KeyValueList rows={knfRows(p.knf)} />
+            </div>
+          )}
+          {p.websites.map((w) => (
+            <div key={w.url} className="space-y-1">
+              <div className="text-xs font-medium">Strona WWW</div>
+              <KeyValueList rows={websiteRows(w)} />
+            </div>
+          ))}
+          {p.notes.map((n, j) => (
+            <p key={j} className="text-xs text-muted-foreground">
+              {n}
+            </p>
+          ))}
+        </div>
+      ))}
+    </section>
   );
 }
