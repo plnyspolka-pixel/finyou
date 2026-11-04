@@ -5,8 +5,13 @@
 //
 // Karta od góry: nazwa → cena i podpowiedź → chip „bez karty” → raty →
 // przycisk do płatności (od razu pod niebieskim polem) → punkty oferty.
-// Sprzedawca, regulamin, kod rabatowy i warunki rat są na stronie zakupu.
+// Sprzedawca, regulamin i warunki rat są na stronie zakupu; kod rabatowy można
+// wpisać już tutaj (pod przyciskiem) — sprawdzamy go na serwerze i przekazujemy
+// do strony zakupu w parametrze `kod` (decyzja właściciela 04.11.2026).
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import type { AccessProduct } from "@/lib/access/core";
+import { checkDiscountCode } from "@/lib/access/discount.functions";
 import {
   ACCESS_PRESENTATION,
   SUBSCRIPTION_OPTIONS,
@@ -17,6 +22,7 @@ import {
 } from "@/lib/investor-plan/plans";
 import { MktButton } from "./primitives";
 import { BrandIcon } from "./brand-icon";
+import { CheckIcon } from "./check-icon";
 import { INVESTOR_MODULES, investorModulePath } from "./investor-modules";
 
 // Przycisk prowadzi do płatności Tpay; konto inwestora powstaje z danych
@@ -92,7 +98,7 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
   const href = m ? investorModulePath(m.slug) : undefined;
   return (
     <li style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
-      <BrandIcon name="check" size={18} />
+      <CheckIcon size={18} />
       <div style={{ lineHeight: 1.45 }}>
         <div style={{ fontWeight: 700, color: "var(--foreground)" }}>
           {href ? (
@@ -106,6 +112,65 @@ function BenefitItem({ b }: { b: BenefitBullet }) {
         <p style={{ margin: "0.15rem 0 0", color: "var(--muted-foreground)" }}>{b.korzysc}</p>
       </div>
     </li>
+  );
+}
+
+/** Pole kodu rabatowego pod przyciskiem: podgląd rabatu i przejście do zakupu z kodem. */
+function DiscountCodeField({ period }: { period: BillingPeriod }) {
+  const checkFn = useServerFn(checkDiscountCode);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<
+    { ok: true; pct: number; validUntil: string } | { ok: false; error: string } | null
+  >(null);
+  const checkoutHref = `${CHECKOUT}?okres=${period}&kod=${encodeURIComponent(code.trim())}`;
+  const apply = async () => {
+    const value = code.trim();
+    if (!value) return;
+    setBusy(true);
+    try {
+      const res = await checkFn({ data: { code: value } });
+      setResult(res.ok ? { ok: true, pct: res.pct, validUntil: res.validUntil } : res);
+      if (res.ok) window.location.assign(checkoutHref);
+    } catch {
+      setResult({ ok: false, error: "Nie udało się sprawdzić kodu. Spróbuj ponownie." });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <form
+      className="fy-discount"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void apply();
+      }}
+    >
+      <div className="fy-discount-row">
+        <input
+          aria-label="Kod rabatowy"
+          placeholder="Masz kod rabatowy? Wpisz go tutaj"
+          value={code}
+          onChange={(e) => {
+            setCode(e.target.value.toUpperCase());
+            setResult(null);
+          }}
+          maxLength={40}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <button type="submit" disabled={busy || !code.trim()}>
+          {busy ? "Sprawdzam…" : "Zastosuj"}
+        </button>
+      </div>
+      {result?.ok ? (
+        <small className="ok">Kod działa: −{result.pct}% na abonament. Przechodzę do zakupu…</small>
+      ) : result ? (
+        <small className="err">{result.error}</small>
+      ) : (
+        <small>Kody rabatowe wysyłamy w mailingu i po darmowej lekcji.</small>
+      )}
+    </form>
   );
 }
 
@@ -208,6 +273,7 @@ export function InvestorPricing(_props: { products?: AccessProduct[] }) {
           <MktButton variant="gold" href={`${CHECKOUT}?okres=${period}`} style={{ width: "100%" }}>
             Zostań partnerem
           </MktButton>
+          <DiscountCodeField period={period} />
           <ul
             style={{
               marginTop: "1.4rem",

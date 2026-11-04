@@ -257,8 +257,8 @@ export const ACCESS_PRESENTATION: TierPresentation = {
       korzysc: "Obowiązki sprawozdawcze wypełniasz w jednym miejscu, bez osobnego systemu.",
     },
     {
-      cecha: "Windykator AI",
-      moduleSlug: "windykator-ai",
+      cecha: "Windykacja",
+      moduleSlug: "windykacja",
       zaleta:
         "Wszystkie procedury uruchamiasz jednym kliknięciem — od pierwszego upomnienia aż na biurko komornika, z pismami w Twoim imieniu.",
       korzysc: "Gotowy zestaw procedur i dokumentów na każdą okazję.",

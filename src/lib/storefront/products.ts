@@ -15,10 +15,35 @@
 //  • Centrum Zarządzania: item_id "centrum:<unikalny sufiks>" — każda opłacona
 //    30-dniowa tura to osobne uprawnienie, okres liczymy z paid_at zamówień.
 
+//  • „Pełna mapa szans i zagrożeń — analiza finansowa pożyczki" (HIT, 9,99 zł,
+//    decyzja właściciela 04.11.2026): produkt wejściowy, który odblokowuje
+//    pełny kalkulator compliance w panelu (/inwestor/kalkulator) na 30 dni.
+//    Zapis jak Centrum Zarządzania: item_kind "course", item_id
+//    "kalkulator:<unikalny sufiks>", okres liczony z paid_at.
+
 export const ACADEMY_MODULE_PRICE_PLN = 500;
 export const ACADEMY_COURSE_PRICE_PLN = 1990;
+/** Pojedyncza lekcja Akademii (lekcja 1 bezpłatna). */
+export const ACADEMY_LESSON_PRICE_PLN = 149;
 export const MANAGEMENT_MODULE_PRICE_PLN = 500;
 export const MANAGEMENT_MODULE_DAYS = 30;
+/** Raport analityczny jednej księgi wieczystej (/sklep#analityk, /dla-inwestora/analityk-ai). */
+export const KW_REPORT_PRICE_PLN = 99;
+
+/** HIT: pełna mapa szans i zagrożeń — kalkulator compliance na 30 dni. */
+export const CALCULATOR_UNLOCK_PRICE_GROSZ = 999;
+export const CALCULATOR_UNLOCK_PRICE_LABEL = "9,99 zł";
+export const CALCULATOR_UNLOCK_DAYS = 30;
+export const CALCULATOR_CART_ID = "mapa-szans-30d";
+export const CALCULATOR_ITEM_PREFIX = "kalkulator:";
+export const CALCULATOR_UNLOCK_TITLE = "Pełna mapa szans i zagrożeń — analiza finansowa pożyczki";
+/** Ścieżka panelu, którą otwiera sam produkt HIT (bez Centrum Zarządzania i abonamentu). */
+export const CALCULATOR_PATH = "/inwestor/kalkulator";
+
+export function isCalculatorPath(pathname: string): boolean {
+  const p = pathname.replace(/\/+$/, "") || "/";
+  return p === CALCULATOR_PATH || p.startsWith(`${CALCULATOR_PATH}/`);
+}
 
 /** Identyfikator koszyka (klient) dla Centrum Zarządzania. */
 export const MANAGEMENT_CART_ID = "centrum-30d";
@@ -74,6 +99,26 @@ export const ACADEMY_MODULES: AcademyModule[] = [
     topics: ["Kontakt i przypomnienia", "Negocjacje i ugody", "Wezwania i monity", "Egzekucja i zabezpieczenia"],
   },
 ];
+
+/**
+ * Moduł dla lekcji z katalogu (getPublicStoreCatalog). Lekcje Akademii mają
+ * w tytule numer („7. Interpretacja…”) — on rozstrzyga. Lekcja bezpłatna bez
+ * numeru to lekcja 1. Nagrania bez numeru (kategoria „inwestor”: umowy,
+ * oferty, windykacja w praktyce) idą po sort_order: do 199 → Operacje (3),
+ * od 200 → Windykacja (7). Gdy nic nie pasuje — po pozycji w katalogu.
+ */
+export function academyModuleForCatalogLesson(l: {
+  number: number;
+  title: string;
+  free?: boolean;
+  sortOrder?: number | null;
+}): AcademyModule | null {
+  const m = /^\s*(\d{1,2})\s*[.)]/.exec(l.title);
+  if (m) return academyModuleForLesson(Number(m[1]));
+  if (l.free) return academyModuleForLesson(1);
+  if (typeof l.sortOrder === "number") return academyModuleForLesson(l.sortOrder >= 200 ? 20 : 10);
+  return academyModuleForLesson(l.number);
+}
 
 export function academyModuleById(id: string): AcademyModule | null {
   return ACADEMY_MODULES.find((m) => m.id === id) ?? null;

@@ -19,9 +19,9 @@ const GUARANTEES: { n: number; title: string; icon: Icon3DName; text: string }[]
   },
   {
     n: 2,
-    title: "Windykator AI pracuje dalej gratis",
+    title: "Windykacja pracuje dalej gratis",
     icon: "shieldcheck",
-    text: `Potrafimy nie tylko sprzedawać pieniądze, ale przede wszystkim je odzyskiwać — dlatego jeśli klient nie będzie wywiązywał się z warunków umowy i dojdzie do jej wypowiedzenia (${GWARANCJA_WINDYKACJA_RAT}\u00a0niewpłacone raty), Windykator AI dalej pracuje dla Ciebie gratis!`,
+    text: `Potrafimy nie tylko sprzedawać pieniądze, ale przede wszystkim je odzyskiwać — dlatego jeśli klient nie będzie wywiązywał się z warunków umowy i dojdzie do jej wypowiedzenia (${GWARANCJA_WINDYKACJA_RAT}\u00a0niewpłacone raty), moduł windykacji dalej pracuje dla Ciebie gratis!`,
   },
 ];
 

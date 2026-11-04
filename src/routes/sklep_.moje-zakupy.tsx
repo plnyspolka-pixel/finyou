@@ -7,7 +7,7 @@ import { getPublicStoreCatalog } from "@/lib/storefront/catalog.functions";
 import { acceptStoreDpa, getMyStorePurchases, getPurchasedLessonUrl, getPurchasedDocumentTemplate, getStoreLegalTexts } from "@/lib/storefront/checkout.functions";
 import { getPurchasedKwReport } from "@/lib/storefront/kw-report.functions";
 import { generateDocxFromTemplate, getGeneratedDocSignedUrl } from "@/lib/document-generator.functions";
-import { ACADEMY_MODULES, academyModuleForLesson } from "@/lib/storefront/products";
+import { ACADEMY_MODULES, academyModuleForCatalogLesson } from "@/lib/storefront/products";
 
 export const Route = createFileRoute("/sklep_/moje-zakupy")({
   component: StoreLibrary,
@@ -58,10 +58,12 @@ function StoreLibrary() {
     .map((e) => e.item_id)), [entitlements]);
   const lessons = useMemo(() => (catalog?.lessons ?? []).filter((l) =>
     l.number !== 1 && (hasCourse || entitlements.some((e) => e.item_kind === "lesson" && e.item_id === l.id) ||
-      ownedModules.has(academyModuleForLesson(l.number)?.id ?? ""))
+      ownedModules.has(academyModuleForCatalogLesson(l)?.id ?? ""))
   ), [catalog,entitlements,hasCourse,ownedModules]);
   const managementUntil = purchases?.managementActiveUntil ? new Date(purchases.managementActiveUntil) : null;
   const managementActive = Boolean(managementUntil && managementUntil.getTime() > Date.now());
+  const calculatorUntil = purchases?.calculatorActiveUntil ? new Date(purchases.calculatorActiveUntil) : null;
+  const calculatorActive = Boolean(calculatorUntil && calculatorUntil.getTime() > Date.now());
   const documents = (catalog?.documents ?? []).filter((d) =>
     entitlements.some((e) => e.item_kind === "document" && e.item_id === d.id));
   const kwItems = entitlements.filter((e) => e.item_kind === "kw");
@@ -125,6 +127,15 @@ function StoreLibrary() {
               ? <>Moduł aktywny do {managementUntil.toLocaleDateString("pl-PL")}. Dokumenty, CRM, e-podpis i compliance działają w panelu inwestora.{" "}
                   <a href="/inwestor/kreator-dokumentow">Otwórz Centrum Zarządzania</a></>
               : <>Okres modułu zakończył się {managementUntil.toLocaleDateString("pl-PL")}. <a href="/sklep#centrum">Przedłuż o 30 dni</a></>}
+          </div>
+        </section>}
+        {calculatorUntil && <section>
+          <h2>Pełna mapa szans i zagrożeń — kalkulator compliance</h2>
+          <div className="fy-store-library-panel">
+            {calculatorActive
+              ? <>Kalkulator aktywny do {calculatorUntil.toLocaleDateString("pl-PL")}.{" "}
+                  <a href="/inwestor/kalkulator">Otwórz kalkulator compliance</a></>
+              : <>Okres dostępu zakończył się {calculatorUntil.toLocaleDateString("pl-PL")}. <a href="/sklep#mapa-szans">Odnów za 9,99 zł</a></>}
           </div>
         </section>}
         <section>

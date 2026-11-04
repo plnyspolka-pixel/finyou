@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { formatGroszPln, yearlySavingsGrosz, type AccessProduct } from "@/lib/access/core";
 import { MktButton } from "./primitives";
-import { BrandIcon } from "./brand-icon";
+import { CheckIcon } from "./check-icon";
 
 /**
  * Finance You — marketing pricing.
@@ -161,7 +161,7 @@ export function MarketingPricing({
                 >
                   {feats.map((f: string) => (
                     <li key={f} style={{ display: "flex", gap: 10, fontSize: "0.9rem" }}>
-                      <BrandIcon name="check" size={18} />
+                      <CheckIcon size={18} />
                       <span>{f}</span>
                     </li>
                   ))}

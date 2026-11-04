@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { ACADEMY_LESSON_PRICE_PLN } from "./products";
 
 /**
  * Public catalog metadata ONLY. Never return lesson file_path, external_url,
@@ -32,9 +33,10 @@ export const getPublicStoreCatalog = createServerFn({ method: "GET" }).handler(a
     thumbnail: v.thumbnail_url ?? null,
     durationSeconds: typeof v.duration_seconds === "number" && v.duration_seconds > 0 ? v.duration_seconds : null,
     number: index + 1,
+    sortOrder: typeof v.sort_order === "number" ? v.sort_order : null,
     // The user's pricing policy supersedes stale free_lesson flags in DB.
     free: index === 0,
-    price: index === 0 ? 0 : 149,
+    price: index === 0 ? 0 : ACADEMY_LESSON_PRICE_PLN,
   }));
   const documents = (templates.data ?? []).map((d, index) => ({
     id: d.id,

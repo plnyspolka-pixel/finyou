@@ -2,16 +2,28 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { INVESTOR_MODULES, investorModuleBySlug, investorModulePath } from "./investor-modules";
+import {
+  INVESTOR_MODULES,
+  LEGACY_MODULE_SLUGS,
+  investorModuleBySlug,
+  investorModulePath,
+} from "./investor-modules";
 import { WEIGHTS } from "@/lib/risk-assessment/risk-scoring";
 import { SiteHeader } from "./shell";
 
 describe("szkolenie i moduły partnera — dane podstron", () => {
-  it("ma szkolenie i pięć modułów z unikalnymi slugami w formacie URL", () => {
+  it("ma sieć sprzedaży, szkolenie i cztery narzędzia z unikalnymi slugami w formacie URL", () => {
     expect(INVESTOR_MODULES).toHaveLength(6);
-    // Szkolenie to produkt główny (pierwsza karta), sieć sprzedaży — BONUS na końcu.
-    expect(INVESTOR_MODULES[0].slug).toBe("szkolenie");
-    expect(INVESTOR_MODULES.at(-1)).toMatchObject({ slug: "siec-sprzedazy", bonus: true });
+    // Decyzja właściciela 04.11.2026: sieć sprzedaży pierwsza, szkolenie zawsze drugie, bez BONUS.
+    expect(INVESTOR_MODULES.map((m) => m.slug)).toEqual([
+      "siec-sprzedazy",
+      "szkolenie",
+      "analityk-ai",
+      "kancelaria-ai",
+      "aml-compliance",
+      "windykacja",
+    ]);
+    for (const m of INVESTOR_MODULES) expect(m.menuLabel).not.toMatch(/BONUS/);
     const slugs = INVESTOR_MODULES.map((m) => m.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const s of slugs) expect(s).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
@@ -29,7 +41,7 @@ describe("szkolenie i moduły partnera — dane podstron", () => {
         }
       }
       expect(new Set(m.fab.map((r) => r.title)).size).toBe(m.fab.length);
-      expect(m.steps).toHaveLength(4);
+      if (m.steps) expect(m.steps).toHaveLength(4);
       expect(m.note.trim().length).toBeGreaterThan(0);
       expect(m.metaDescription.length).toBeLessThanOrEqual(170);
       expect(existsSync(join(process.cwd(), "public", m.image))).toBe(true);
@@ -47,7 +59,7 @@ describe("szkolenie i moduły partnera — dane podstron", () => {
         ...m.highlights,
         m.featuresTitle,
         ...m.fab.flatMap((r) => [r.title, r.cecha, r.zaleta, r.korzysc]),
-        ...m.steps.flatMap((st) => [st.t, st.d]),
+        ...(m.steps ?? []).flatMap((st) => [st.t, st.d]),
         m.note,
       ];
       for (const t of visible) {
@@ -66,6 +78,39 @@ describe("szkolenie i moduły partnera — dane podstron", () => {
         .map((w) => Math.round(w * 100))
         .sort((a, b) => b - a),
     );
+  });
+
+  // Sieć sprzedaży to usługa pośrednictwa Finance You, nie platforma z rezerwacjami
+  // ani łącznik inwestor–pośrednik (decyzja właściciela 04.11.2026).
+  it("sieć sprzedaży: bez rezerwacji, Karty Leada, pośrednika i opłat; kroki zdjęte", () => {
+    const m = investorModuleBySlug("siec-sprzedazy")!;
+    expect(m.steps).toBeUndefined();
+    const text = [
+      m.tagline,
+      m.lead,
+      ...m.highlights,
+      ...m.fab.flatMap((r) => [r.title, r.cecha, r.zaleta, r.korzysc]),
+    ].join("\n");
+    expect(text).not.toMatch(/rezerw|Kart[aęy] Leada|pośrednik|bez opłat/i);
+    expect(m.highlights).toEqual([
+      "Wnioski z całej Polski i z wielu kanałów",
+      "Profesjonalna obsługa na każdym etapie Projektu",
+      "Najnowsze okazje inwestycyjne trafiają wprost do Ciebie — bez szukania klienta",
+    ]);
+    expect(m.quickLink?.href).toBe("/sklep#siecsprzedazy");
+  });
+
+  it("windykację sprzedajemy jako „Windykacja” (stary slug przekierowany), kancelaria ma pieczątkę e-podpis", () => {
+    const w = investorModuleBySlug("windykacja")!;
+    expect(w.name).toBe("Windykacja");
+    expect([w.name, w.menuLabel, w.lead, w.note].join(" ")).not.toMatch(/Windykator/);
+    expect(w.cardNote).toMatch(/wyłącznie dla naszych partnerów/);
+    expect(investorModuleBySlug("windykator-ai")).toBeUndefined();
+    expect(LEGACY_MODULE_SLUGS["windykator-ai"]).toBe("windykacja");
+    const k = investorModuleBySlug("kancelaria-ai")!;
+    expect(k.stamp?.src).toBe("/marketing/pieczatka-epodpis-gratis.webp");
+    expect(existsSync(join(process.cwd(), "public", k.stamp!.src))).toBe(true);
+    for (const m of INVESTOR_MODULES) expect(m.quickLink?.label).toBeTruthy();
   });
 
   it("wyszukuje moduł po slugu i zwraca undefined dla nieznanego", () => {

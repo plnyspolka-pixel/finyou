@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ACADEMY_MODULES,
+  academyModuleForCatalogLesson,
   academyModuleForLesson,
+  isCalculatorPath,
   isManagementModulePath,
   managementActiveUntil,
 } from "./products";
@@ -21,6 +23,18 @@ describe("academy modules", () => {
     expect(academyModuleForLesson(19)?.number).toBe(6);
     expect(academyModuleForLesson(28)?.number).toBe(7);
     expect(academyModuleForLesson(0)).toBeNull();
+  });
+  it("maps catalog lessons by title number, free flag and sort_order", () => {
+    expect(academyModuleForCatalogLesson({ number: 7, title: "7. Interpretacja wyłączeń" })?.number).toBe(2);
+    expect(academyModuleForCatalogLesson({ number: 1, title: "Dlaczego po 15 latach…", free: true })?.number).toBe(1);
+    expect(academyModuleForCatalogLesson({ number: 11, title: "Możliwości spłaty", sortOrder: 100 })?.number).toBe(3);
+    expect(academyModuleForCatalogLesson({ number: 21, title: "Miękka windykacja", sortOrder: 200 })?.number).toBe(7);
+    expect(academyModuleForCatalogLesson({ number: 19, title: "Case study: Lubań" })?.number).toBe(6);
+  });
+  it("matches the calculator path", () => {
+    expect(isCalculatorPath("/inwestor/kalkulator")).toBe(true);
+    expect(isCalculatorPath("/inwestor/kalkulator/")).toBe(true);
+    expect(isCalculatorPath("/inwestor/aml")).toBe(false);
   });
 });
 

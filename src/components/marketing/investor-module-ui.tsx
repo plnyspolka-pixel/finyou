@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { GRADE_BANDS, gradeRangeLabel } from "@/lib/risk-assessment/grade-bands";
 import { Icon3D } from "./icon-3d";
 import { investorModulePath, type FabRow, type InvestorModule } from "./investor-modules";
+import { StampOverlay } from "./module-image";
 
 /**
  * Bloki podstron modułów inwestora: karty funkcji i karty modułów (landing
@@ -79,7 +80,7 @@ function CardSlides({ m }: { m: InvestorModule }) {
     <div
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      style={{ position: "relative", aspectRatio: "3 / 2", overflow: "hidden" }}
+      style={{ position: "relative", aspectRatio: "3 / 2" }}
     >
       {images.map((src, i) => (
         <img
@@ -100,25 +101,7 @@ function CardSlides({ m }: { m: InvestorModule }) {
           }}
         />
       ))}
-      {m.bonus && (
-        <span
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            borderRadius: 999,
-            padding: "0.3rem 0.75rem",
-            fontSize: "0.75rem",
-            fontWeight: 900,
-            letterSpacing: "0.1em",
-            background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
-            color: "#101430",
-            boxShadow: "0 8px 24px -10px rgba(240,198,103,0.8)",
-          }}
-        >
-          BONUS
-        </span>
-      )}
+      {m.stamp && <StampOverlay stamp={m.stamp} size="30%" />}
       {images.length > 1 && (
         <div
           aria-hidden
@@ -163,7 +146,6 @@ function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
         background: "var(--card)",
         border: "1px solid var(--border)",
         borderRadius: "var(--radius-2xl)",
-        overflow: "hidden",
         boxShadow: "var(--shadow-sm)",
       }}
     >
@@ -171,10 +153,7 @@ function ModuleCard({ m, compact }: { m: InvestorModule; compact?: boolean }) {
       <div
         style={{ display: "flex", flexDirection: "column", flex: 1, padding: "1rem 1.1rem 1.1rem" }}
       >
-        <h3 style={{ fontSize: "1.05rem", fontWeight: 800 }}>
-          {m.bonus && compact && <span style={{ color: "#d4a03a" }}>BONUS · </span>}
-          {m.name}
-        </h3>
+        <h3 style={{ fontSize: "1.05rem", fontWeight: 800 }}>{m.name}</h3>
         <p
           style={{
             marginTop: "0.35rem",

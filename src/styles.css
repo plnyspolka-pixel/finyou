@@ -868,3 +868,101 @@
 .fy-article--light th, .fy-article--light td { border-color: var(--border); }
 .fy-article--light tbody tr:nth-child(even) { background: color-mix(in oklab, var(--muted) 60%, transparent); }
 .fy-article--light h2 { border-top: none; padding-top: 0; }
+
+/* ── Sklep: elementy współdzielone z podstronami modułów (formularz KW, przyciski koszyka) — przeniesione z routes/sklep.tsx 04.11.2026 ── */
+.fy-store-add{background:linear-gradient(105deg,#d8a343,#fff0bd,#d4a046);color:#141b2e;border:0;border-radius:.65rem;font-weight:850;cursor:pointer;padding:.7rem .85rem;min-height:40px;font-size:.78rem;}
+.fy-store-add:disabled{opacity:.68;cursor:default;}
+.fy-store-kw-form{align-self:center;display:grid;gap:.8rem;background:rgba(255,255,255,.045);border:1px solid rgba(240,198,103,.21);border-radius:1rem;padding:1.4rem;}
+.fy-store-kw-form>label:first-child{font-weight:800;}
+.fy-store-kw-form input:not([type=checkbox]){width:100%;font-size:1.05rem;letter-spacing:.07em;font-weight:700;outline:0;border:1px solid rgba(182,202,251,.36);background:#09142f;color:white;border-radius:.6rem;padding:.9rem;}
+.fy-store-kw-form input:focus{border-color:#f0c667;}
+.fy-store-kw-form small{font-size:.75rem;color:#b8c7e5;line-height:1.5;}
+.fy-store-check{display:flex;align-items:flex-start;gap:.55rem;font-size:.75rem;line-height:1.5;color:#d0dcf3;font-weight:450;}
+.fy-store-check input{margin-top:.22rem;accent-color:#e9ba58;}
+.fy-store-check a,.fy-store-privacy a{color:#f0c667;text-decoration:underline;}
+.fy-store-error{color:#ffb8b5;font-size:.85rem;}
+.fy-store-kw-submit{font-size:.94rem;min-height:3.1rem;}
+.fy-store-kw-ready,.fy-store-pipeline{display:flex;align-items:flex-start;gap:.6rem;border:1px solid rgba(113,226,165,.3);padding:.85rem;border-radius:.7rem;color:#d3f8e0;font-size:.8rem;line-height:1.5;}
+.fy-store-kw-ready p{margin-top:.6rem;color:#c5d0e7;}
+.fy-store-fineprint{display:flex;align-items:flex-start;gap:.45rem;color:#afbddb;font-size:.74rem;line-height:1.6;margin-top:.7rem;}
+.fy-kw-order{background:linear-gradient(145deg,rgba(18,30,70,.94),rgba(9,16,42,.96));border:1px solid rgba(240,198,103,.3);color:#fff;box-shadow:var(--shadow-lg)}
+.fy-kw-order>label:first-child{color:#fff}
+
+/* ── Karty modułów: drugi odnośnik („szybki link”), plakietka HIT, nota, pieczątka (04.11.2026) ── */
+.fy-road-card-note{font-size:.84rem;line-height:1.55;padding-left:.75rem;border-left:2px solid var(--sales-gold,#f0c667);color:var(--foreground);font-weight:600}
+.fy-road-card-links{margin-top:auto;display:grid;gap:.35rem}
+.fy-road-card-links .fy-sales-link{margin-top:.6rem}
+.fy-quick-link{display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:650;color:var(--sales-gold,#d4a03a);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(212,160,58,.45);line-height:1.35}
+.fy-quick-link:hover{text-decoration-color:currentColor}
+.fy-quick-link--on-dark{color:#f6dc9c}
+.fy-hit-badge{flex-shrink:0;border-radius:999px;padding:.15rem .5rem;font-size:.66rem;font-weight:900;letter-spacing:.1em;background:linear-gradient(95deg,#ff6a3d,#ffb347);color:#1a0d05;box-shadow:0 6px 16px -8px rgba(255,106,61,.9)}
+.fy-sales-card{overflow:visible}
+.fy-module-stamp{max-width:11rem}
+@media(max-width:640px){.fy-module-stamp{width:30%!important;transform:translate(28%,-36%) rotate(-12deg)!important}}
+
+/* ── Hero strony głównej: większy film, przyciski modułów z linkiem feature pod każdym ── */
+.fy-sales-hero-inner{max-width:80rem}
+@media(min-width:1024px){.fy-sales-hero-inner{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:2.5rem}.fy-sales-hero h1{font-size:2.35rem}}
+@media(min-width:1280px){.fy-sales-hero-inner{grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr)}}
+.fy-sales-hero-video video{aspect-ratio:16/9;object-fit:cover}
+.fy-hero-modules{list-style:none;margin:1.6rem 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem .8rem}
+.fy-hero-modules li{display:grid;gap:.4rem;min-width:0}
+.fy-hero-modules li>a:first-child{min-height:3rem!important;height:auto!important;white-space:normal!important;text-align:center;line-height:1.25!important;font-size:.82rem!important;padding:.55rem .6rem!important;width:100%}
+.fy-hero-modules .fy-quick-link{font-size:.76rem;color:#f6dc9c;text-decoration-color:rgba(246,220,156,.45);align-items:flex-start}
+.fy-hero-modules .fy-quick-link .fy-hit-badge{margin-top:.1rem}
+.fy-hero-pricing-line{margin-top:1.1rem;font-size:.86rem;color:rgba(255,255,255,.78)}
+.fy-hero-pricing-line a{color:var(--sales-gold,#f0c667);font-weight:700}
+@media(max-width:900px){.fy-hero-modules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.fy-hero-modules{grid-template-columns:1fr}}
+
+/* ── Cennik: kod rabatowy pod „Zostań partnerem” ── */
+.fy-discount{margin-top:.9rem;display:grid;gap:.4rem}
+.fy-discount-row{display:flex;gap:.5rem}
+.fy-discount-row input{flex:1;min-width:0;border:1px solid var(--border);border-radius:.6rem;padding:.6rem .75rem;font-size:.9rem;letter-spacing:.06em;text-transform:uppercase;background:var(--background);color:var(--foreground)}
+.fy-discount-row input:focus{outline:2px solid rgba(240,198,103,.55);outline-offset:1px}
+.fy-discount-row button{border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:.6rem;padding:.6rem .9rem;font-weight:700;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.fy-discount-row button:disabled{opacity:.55;cursor:default}
+.fy-discount small{font-size:.76rem;color:var(--muted-foreground);line-height:1.45}
+.fy-discount small.ok{color:#2e9e6b;font-weight:600}
+.fy-discount small.err{color:#c9473b;font-weight:600}
+
+/* ── Program szkolenia: lekcje w modułach, czas, koszyk, odtwarzacz (04.11.2026) ── */
+.fy-tc{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:2rem;margin-top:2rem;align-items:start}
+.fy-tc-player{position:sticky;top:5rem;border-radius:var(--radius-2xl);overflow:hidden;background:var(--sales-ink,#0a1030);color:#fff;border:1px solid rgba(240,198,103,.3);box-shadow:var(--shadow-xl)}
+.fy-tc-player video,.fy-tc-player .fy-tc-poster{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#05081c}
+.fy-tc-poster{position:relative}
+.fy-tc-poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
+.fy-tc-poster-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem;padding:1rem;text-align:center;background:linear-gradient(180deg,rgba(5,8,28,.15),rgba(5,8,28,.75))}
+.fy-tc-poster-overlay strong{font-size:1rem;line-height:1.3}
+.fy-tc-player-body{padding:1rem 1.1rem 1.2rem;display:grid;gap:.6rem}
+.fy-tc-player-body h3{font-size:1.02rem;font-weight:800;line-height:1.3}
+.fy-tc-player-body p{font-size:.84rem;color:rgba(255,255,255,.78);line-height:1.5}
+.fy-tc-player-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.2rem}
+.fy-tc-modules{display:grid;gap:.8rem}
+.fy-tc-module{border:1px solid var(--border);background:var(--card);border-radius:var(--radius-2xl);overflow:hidden}
+.fy-tc-module>summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:3.4rem minmax(0,1fr) auto;gap:.8rem;align-items:center;padding:.8rem .9rem}
+.fy-tc-module>summary::-webkit-details-marker{display:none}
+.fy-tc-module>summary img{width:3.4rem;height:3.4rem;object-fit:cover;border-radius:.6rem}
+.fy-tc-module-title{display:grid;gap:.15rem;min-width:0}
+.fy-tc-module-title small{font-size:.72rem;letter-spacing:.08em;font-weight:800;text-transform:uppercase;color:var(--sales-gold,#d4a03a)}
+.fy-tc-module-title strong{font-size:.98rem;line-height:1.3}
+.fy-tc-module-title span{font-size:.78rem;color:var(--muted-foreground)}
+.fy-tc-module-buy{display:flex;align-items:center;gap:.5rem;font-size:.82rem}
+.fy-tc-module-buy strong{color:var(--sales-gold,#d4a03a)}
+.fy-tc-lessons{list-style:none;margin:0;padding:0 .9rem .6rem;border-top:1px solid var(--border)}
+.fy-tc-lesson{display:grid;grid-template-columns:2rem minmax(0,1fr) auto;gap:.6rem;align-items:center;padding:.55rem 0;border-bottom:1px solid var(--border);font-size:.86rem}
+.fy-tc-lesson:last-child{border-bottom:0}
+.fy-tc-lesson>span:first-child{color:var(--sales-gold,#d4a03a);font-weight:800;font-size:.78rem}
+.fy-tc-lesson button.fy-tc-pick{background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;display:grid;gap:.1rem;min-width:0}
+.fy-tc-lesson button.fy-tc-pick:hover,.fy-tc-lesson.active button.fy-tc-pick{color:var(--sales-gold,#d4a03a)}
+.fy-tc-lesson small{font-size:.74rem;color:var(--muted-foreground)}
+.fy-tc-lesson-cta{display:flex;align-items:center;gap:.4rem;white-space:nowrap}
+.fy-tc-btn{border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:.5rem;padding:.35rem .6rem;font-size:.76rem;font-weight:700;cursor:pointer}
+.fy-tc-btn:hover{border-color:var(--sales-gold,#d4a03a)}
+.fy-tc-btn:disabled{opacity:.6;cursor:default}
+.fy-tc-btn--gold{background:linear-gradient(105deg,#d8a343,#fff0bd,#d4a046);color:#141b2e;border-color:transparent}
+.fy-tc-free{font-size:.72rem;font-weight:800;letter-spacing:.06em;color:#2e9e6b}
+.fy-tc-cartbar{margin-top:1rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;padding:.8rem 1rem;border-radius:var(--radius-2xl);border:1px solid rgba(240,198,103,.45);background:linear-gradient(120deg,rgba(240,198,103,.14),rgba(240,198,103,.04));font-size:.88rem}
+.fy-tc-cartbar strong{color:var(--sales-gold,#d4a03a)}
+@media(max-width:900px){.fy-tc{grid-template-columns:1fr}.fy-tc-player{position:static}}
+@media(max-width:640px){.fy-tc-lesson{grid-template-columns:1.6rem minmax(0,1fr)}.fy-tc-lesson-cta{grid-column:2}.fy-tc-module>summary{grid-template-columns:2.8rem minmax(0,1fr)}.fy-tc-module-buy{grid-column:2}}

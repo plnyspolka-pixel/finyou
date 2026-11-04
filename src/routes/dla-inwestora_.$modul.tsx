@@ -1,11 +1,12 @@
-// Podstrony szkolenia i modułów partnera: /dla-inwestora/<moduł> (szkolenie,
-// Analityk AI, Kancelaria AI, AML/compliance, Windykator AI, sieć sprzedaży). Trasa nie jest
+// Podstrony szkolenia i modułów partnera: /dla-inwestora/<moduł> (sieć sprzedaży,
+// szkolenie, Analityk AI, Kancelaria AI, AML/compliance, Windykacja). Trasa nie jest
 // zagnieżdżona w /dla-inwestora (podkreślnik w nazwie pliku) — landing nie
 // renderuje <Outlet />. Treść i kolejność modułów: components/marketing/
 // investor-modules.ts (ten sam plik zasila sub-menu "Inwestor" i karty na landingu).
-// Układ: hero → „Co zyskujesz” (karty funkcji) → [skala A–E] → kroki z notą
-// prawną → pozostałe moduły (kompaktowo) → CTA do cennika.
-import { createFileRoute, notFound } from "@tanstack/react-router";
+// Układ: hero → [szkolenie: program z lekcjami, koszykiem i odtwarzaczem] →
+// „Co zyskujesz” (karty funkcji) → [skala A–E] → [Analityk: zamówienie raportu KW]
+// → kroki (jeśli moduł je ma) z notą prawną → pozostałe moduły → CTA do cennika.
+import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { MarketingShell } from "@/components/marketing/shell";
 import {
   Section,
@@ -16,10 +17,14 @@ import {
 } from "@/components/marketing/sections";
 import { MktButton } from "@/components/marketing/primitives";
 import { BrandIcon } from "@/components/marketing/brand-icon";
+import { CheckIcon } from "@/components/marketing/check-icon";
 import { FeatureCards, GradeScale } from "@/components/marketing/investor-module-ui";
-import { RoadCards } from "@/components/marketing/road-cards";
-import { TrainingProgram } from "@/components/marketing/training-program";
+import { RoadCards, QuickLink } from "@/components/marketing/road-cards";
+import { StampedFrame } from "@/components/marketing/module-image";
+import { TrainingCatalog } from "@/components/marketing/training-catalog";
+import { KwReportOrder } from "@/components/storefront/KwReportForm";
 import {
+  LEGACY_MODULE_SLUGS,
   investorModuleBySlug,
   investorModulePath,
   type InvestorModule,
@@ -32,6 +37,8 @@ const ALL_MODULES = "/#moduly";
 
 export const Route = createFileRoute("/dla-inwestora_/$modul")({
   loader: ({ params }) => {
+    const target = LEGACY_MODULE_SLUGS[params.modul];
+    if (target) throw redirect({ to: investorModulePath(target), statusCode: 301 });
     if (!investorModuleBySlug(params.modul)) throw notFound();
     return { slug: params.modul };
   },
@@ -86,14 +93,18 @@ function InvestorModulePage() {
   const { slug } = Route.useLoaderData();
   const m = investorModuleBySlug(slug);
   if (!m) return null;
+  const sticky = m.primaryCta ?? { label: "Zostań partnerem", href: PRICING };
   return (
-    <MarketingShell page="inwestorModul" sticky={{ label: "Zostań partnerem", href: PRICING }}>
+    <MarketingShell page="inwestorModul" sticky={sticky}>
       <ModuleHero m={m} />
 
       {m.slug === "szkolenie" && (
         <Section id="program" tint>
-          <SectionHead title="Szkolenie, po którym sam ocenisz zabezpieczenie, umowę i ryzyko" />
-          <TrainingProgram />
+          <SectionHead
+            title="Szkolenie, po którym sam ocenisz zabezpieczenie, umowę i ryzyko"
+            sub="Wszystkie lekcje w siedmiu modułach. Lekcję 1 obejrzysz za darmo, pojedynczą lekcję albo cały moduł kupisz od ręki — a w abonamencie partnera masz całość."
+          />
+          <TrainingCatalog />
         </Section>
       )}
 
@@ -114,12 +125,30 @@ function InvestorModulePage() {
         </Section>
       )}
 
-      <Section id="jak-to-dziala" tint={!m.gradeScale}>
-        <SectionHead center eyebrow="Jak to działa" title="Cztery kroki w panelu inwestora" />
-        <div style={{ marginTop: "2.5rem" }}>
-          <ProcessSteps steps={m.steps} cols={4} />
-        </div>
-        <ComplianceNote style={{ marginTop: "2rem" }}>{m.note}</ComplianceNote>
+      {m.slug === "analityk-ai" && (
+        <Section id="raport-kw">
+          <SectionHead
+            center
+            eyebrow="Bez abonamentu · 99 zł"
+            title="Analizuj księgę wieczystą"
+            sub="Wpisz numer księgi wieczystej dowolnej nieruchomości — po opłaceniu pobieramy księgę i generujemy raport analityczny w PDF."
+          />
+          <div style={{ marginTop: "2rem", maxWidth: "44rem", marginInline: "auto" }}>
+            <KwReportOrder mode="redirect" />
+          </div>
+        </Section>
+      )}
+
+      <Section id="jak-to-dziala" tint={!m.gradeScale && m.slug !== "analityk-ai"}>
+        {m.steps && (
+          <>
+            <SectionHead center eyebrow="Jak to działa" title="Cztery kroki w panelu inwestora" />
+            <div style={{ marginTop: "2.5rem" }}>
+              <ProcessSteps steps={m.steps} cols={4} />
+            </div>
+          </>
+        )}
+        <ComplianceNote style={{ marginTop: m.steps ? "2rem" : 0 }}>{m.note}</ComplianceNote>
       </Section>
 
       <Section id="pozostale-moduly">
@@ -132,7 +161,7 @@ function InvestorModulePage() {
       <CTASection
         single
         title="Szkolenie i wszystkie narzędzia w jednym abonamencie"
-        sub={`${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za 12 miesięcy — bez prowizji od Twojego zysku. abonament kupisz w ratach, także jako firma.`}
+        sub={`${plnLabel(SUBSCRIPTION_YEARLY_PLN)} za 12 miesięcy — bez prowizji od Twojego zysku. Abonament kupisz w ratach, także jako firma.`}
         buttons={[{ label: "Zostań partnerem", href: PRICING }]}
       />
     </MarketingShell>
@@ -140,6 +169,7 @@ function InvestorModulePage() {
 }
 
 function ModuleHero({ m }: { m: InvestorModule }) {
+  const primary = m.primaryCta ?? { label: "Zostań partnerem", href: PRICING };
   return (
     <section className="fy-hero" style={{ color: "#fff", borderBottom: "1px solid var(--border)" }}>
       <div aria-hidden className="fy-hero-fx" />
@@ -182,35 +212,22 @@ function ModuleHero({ m }: { m: InvestorModule }) {
               overflowWrap: "break-word",
             }}
           >
-            {m.bonus && (
-              <span
-                style={{
-                  display: "inline-block",
-                  verticalAlign: "middle",
-                  marginRight: "0.6rem",
-                  borderRadius: 999,
-                  padding: "0.3rem 0.8rem",
-                  fontSize: "0.9rem",
-                  fontWeight: 900,
-                  letterSpacing: "0.1em",
-                  background: "linear-gradient(95deg,#f0c667,#f6dc9c)",
-                  color: "#101430",
-                }}
-              >
-                BONUS
-              </span>
+            {m.nameLead}
+            {m.nameAccent && (
+              <>
+                {" "}
+                <span
+                  style={{
+                    background: "linear-gradient(95deg,#f0c667,#f6dc9c 40%,#d4a03a)",
+                    WebkitBackgroundClip: "text",
+                    backgroundClip: "text",
+                    color: "transparent",
+                  }}
+                >
+                  {m.nameAccent}
+                </span>
+              </>
             )}
-            {m.nameLead}{" "}
-            <span
-              style={{
-                background: "linear-gradient(95deg,#f0c667,#f6dc9c 40%,#d4a03a)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              {m.nameAccent}
-            </span>
           </h1>
           <p
             style={{
@@ -234,6 +251,22 @@ function ModuleHero({ m }: { m: InvestorModule }) {
           >
             {m.lead}
           </p>
+          {m.cardNote && (
+            <p
+              style={{
+                marginTop: "0.9rem",
+                maxWidth: "36rem",
+                paddingLeft: "0.8rem",
+                borderLeft: "2px solid #f0c667",
+                fontSize: "0.95rem",
+                lineHeight: 1.55,
+                fontWeight: 600,
+                color: "rgba(255,255,255,.92)",
+              }}
+            >
+              {m.cardNote}
+            </p>
+          )}
           <ul
             style={{
               marginTop: "1.2rem",
@@ -248,14 +281,14 @@ function ModuleHero({ m }: { m: InvestorModule }) {
                 key={h}
                 style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "0.95rem" }}
               >
-                <BrandIcon name="check" size={18} />
+                <CheckIcon size={20} />
                 <span>{h}</span>
               </li>
             ))}
           </ul>
           <div style={{ marginTop: "1.8rem", display: "flex", gap: "0.7rem", flexWrap: "wrap" }}>
-            <MktButton variant="gold" size="xl" href={PRICING} style={{ maxWidth: "100%" }}>
-              <BrandIcon name="handCoins" size={20} /> Zostań partnerem
+            <MktButton variant="gold" size="xl" href={primary.href} style={{ maxWidth: "100%" }}>
+              <BrandIcon name="handCoins" size={20} /> {primary.label}
             </MktButton>
             <MktButton
               variant="outline"
@@ -271,6 +304,11 @@ function ModuleHero({ m }: { m: InvestorModule }) {
               Co zyskujesz
             </MktButton>
           </div>
+          {m.quickLink && m.quickLink.href !== primary.href && (
+            <div style={{ marginTop: "0.9rem" }}>
+              <QuickLink link={m.quickLink} className="fy-quick-link--on-dark" />
+            </div>
+          )}
         </div>
         <div style={{ position: "relative" }}>
           <div
@@ -284,22 +322,24 @@ function ModuleHero({ m }: { m: InvestorModule }) {
               filter: "blur(34px)",
             }}
           />
-          <img
-            src={m.image}
-            alt={m.imageAlt}
-            width={1536}
-            height={1024}
-            fetchPriority="high"
-            style={{
-              position: "relative",
-              display: "block",
-              width: "100%",
-              height: "auto",
-              borderRadius: "var(--radius-2xl)",
-              border: "1px solid rgba(255,255,255,.15)",
-              boxShadow: "var(--shadow-2xl)",
-            }}
-          />
+          <StampedFrame stamp={m.stamp}>
+            <img
+              src={m.image}
+              alt={m.imageAlt}
+              width={1536}
+              height={1024}
+              fetchPriority="high"
+              style={{
+                position: "relative",
+                display: "block",
+                width: "100%",
+                height: "auto",
+                borderRadius: "var(--radius-2xl)",
+                border: "1px solid rgba(255,255,255,.15)",
+                boxShadow: "var(--shadow-2xl)",
+              }}
+            />
+          </StampedFrame>
         </div>
       </div>
     </section>
