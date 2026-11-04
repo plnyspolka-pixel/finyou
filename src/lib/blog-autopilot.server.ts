@@ -47,6 +47,50 @@ interface NewsBrief {
 type Audience = "borrower" | "investor";
 type PostKind = "borrower_news" | "investor_news" | "legal_market_monitor" | "investor_review";
 
+/**
+ * Tematy przeglądu inwestycyjnego. Wcześniej model sam „wybierał jeden” —
+ * w praktyce prawie zawsze pierwszy, przez co powstało kilkanaście niemal
+ * identycznych wpisów „vs obligacje COI/EDO vs lokaty 12M”, które Google
+ * skleja jako duplikaty. Teraz temat wybiera kod: najdawniej użyty.
+ */
+export const REVIEW_TOPICS: string[] = [
+  "Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M",
+  "Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne",
+  "Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki)",
+  "Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne",
+  "IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw",
+  "Pożyczki pod zastaw nieruchomości vs złoto inwestycyjne vs obligacje indeksowane inflacją",
+  "Pożyczki pod zastaw nieruchomości vs zakup działki pod inwestycję (płynność, ryzyko, podatki)",
+  "Pożyczki pod zastaw nieruchomości vs fundusze private debt i FIZ (koszty, dostępność, kontrola)",
+];
+
+export function pickReviewTopic(usedNewestFirst: (string | undefined)[]): string {
+  // Najpierw tematy jeszcze nieużyte, potem najdawniej użyty.
+  const unused = REVIEW_TOPICS.find((t) => !usedNewestFirst.includes(t));
+  if (unused) return unused;
+  let best = REVIEW_TOPICS[0];
+  let bestIdx = -1;
+  for (const t of REVIEW_TOPICS) {
+    const idx = usedNewestFirst.indexOf(t);
+    if (idx > bestIdx) {
+      bestIdx = idx;
+      best = t;
+    }
+  }
+  return best;
+}
+
+async function nextReviewTopic(): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("review_topic:raw_ai_output->>review_topic,published_at")
+    .eq("source", "ai_autopilot")
+    .not("raw_ai_output->>review_topic", "is", null)
+    .order("published_at", { ascending: false })
+    .limit(REVIEW_TOPICS.length * 2);
+  return pickReviewTopic(((data ?? []) as any[]).map((r) => r.review_topic ?? undefined));
+}
+
 async function pickNextKind(): Promise<PostKind> {
   // Rotacja 4-elementowa: borrower_news → investor_news → legal_market_monitor → investor_review → ...
   const { data } = await supabaseAdmin
@@ -83,7 +127,7 @@ const BRIEFS: Record<PostKind, { sys: string; user: string }> = {
   },
   investor_review: {
     sys: "Jesteś senior analitykiem inwestycyjnym dla polskiego inwestora prywatnego (HNW, 100k–2M PLN kapitału). Po polsku, konkretnie, bez clickbaitu.",
-    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. Wybierz JEDEN temat porównawczy spośród: (1) Pożyczki pod zastaw nieruchomości vs obligacje skarbowe COI/EDO vs lokaty bankowe 12M; (2) Pożyczki pod zastaw vs crowdfunding nieruchomościowy (Shareholder, Social.Estate) vs REIT-y zagraniczne; (3) Mieszkania na wynajem vs pożyczki pod zastaw nieruchomości (yield netto, ROE z lewarem, koszty, podatki); (4) Pożyczki prywatne pod hipotekę vs obligacje korporacyjne (Catalyst) vs fundusze dłużne; (5) IKE/IKZE w ETF vs aktywne inwestowanie w pożyczki pod zastaw. Dla wybranego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
+    user: "Zbierz AKTUALNE (ostatnie 30 dni) dane do PRZEGLĄDU INWESTYCYJNEGO porównującego klasy aktywów dostępne dla polskiego inwestora prywatnego. TEMAT PORÓWNANIA: {{REVIEW_TOPIC}}. Dla tego porównania zwróć KONKRETNE LICZBY z ostatnich 30 dni: oprocentowanie / oczekiwana stopa zwrotu netto (po podatku Belki gdzie dotyczy), minimalny ticket, horyzont, płynność, ryzyko (1-5 + uzasadnienie), zabezpieczenie, opodatkowanie. Podaj źródła (URL) dla KAŻDEJ liczby. Na końcu dodaj 'WNIOSEK_DLA_INWESTORA:' z akapitem rekomendacji dywersyfikacyjnej.",
   },
   legal_market_monitor: {
     sys: "Jesteś analitykiem prawno-rynkowym monitorującym polski rynek nieruchomości i finansów. Po polsku, konkretnie, bez spekulacji poza to co wynika ze źródeł.",
@@ -166,8 +210,12 @@ async function fetchNewsItems(kind: PostKind): Promise<RssItem[]> {
   return out.slice(0, 40);
 }
 
-async function fetchFreshNewsBrief(kind: PostKind): Promise<NewsBrief> {
-  const b = BRIEFS[kind];
+async function fetchFreshNewsBrief(kind: PostKind, reviewTopic?: string): Promise<NewsBrief> {
+  const base = BRIEFS[kind];
+  const b = {
+    ...base,
+    user: base.user.replace("{{REVIEW_TOPIC}}", reviewTopic ?? REVIEW_TOPICS[0]),
+  };
   const items = await fetchNewsItems(kind);
   if (items.length === 0) throw new Error("Google News RSS: brak świeżych wiadomości");
   const list = items
@@ -205,14 +253,36 @@ interface RelatedArticle {
   primary_keyword: string | null;
 }
 
+/** Próg podobieństwa tytułów (Jaccard), od którego nowy wpis uznajemy za duplikat. */
+const DUPLICATE_TITLE_THRESHOLD = 0.6;
+
+async function recentArticleTitles(): Promise<{ slug: string; title: string }[]> {
+  const { data } = await supabaseAdmin
+    .from("ai_seo_articles")
+    .select("slug,title")
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(80);
+  return (data ?? []) as { slug: string; title: string }[];
+}
+
 async function pickInternalLinks(): Promise<RelatedArticle[]> {
   const { data } = await supabaseAdmin
     .from("ai_seo_articles")
-    .select("slug,title,primary_keyword,published_at")
+    .select(
+      "slug,title,primary_keyword,published_at,merged_into:raw_ai_output->>merged_into,noindex:raw_ai_output->noindex",
+    )
     .eq("status", "published")
     .order("published_at", { ascending: false })
-    .limit(40);
-  const list = (data ?? []) as RelatedArticle[];
+    .limit(120);
+  // Linkujemy tylko do artykułów, które mają być w Google.
+  const list = ((data ?? []) as any[])
+    .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+    .map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      primary_keyword: r.primary_keyword,
+    })) as RelatedArticle[];
   // pick 3 random
   for (let i = list.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -275,6 +345,7 @@ async function writeArticleFromNews(
   brief: NewsBrief,
   internal: RelatedArticle[],
   kind: PostKind,
+  recentTitles: string[] = [],
 ): Promise<ArticleDraft> {
   const audience = audienceOf(kind);
 
@@ -332,6 +403,9 @@ ${internalList || "(brak — pomiń linki wewnętrzne)"}
 
 ${taskLabel}
 
+OSTATNIE TYTUŁY NA BLOGU (NIE powtarzaj ich ani ich schematu — tytuł, fraza główna i kąt artykułu muszą być wyraźnie inne):
+${recentTitles.length ? recentTitles.map((t) => `- ${t}`).join("\n") : "(brak)"}
+
 WYMAGANY OPIS POLA content_md: ${structureHint}
 Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt", "primary_keyword", "keywords" (array of strings), "content_md", "cover_prompt", "cover_alt" }.`;
 
@@ -379,6 +453,7 @@ Zwróć pojedynczy JSON: { "title", "meta_title", "meta_description", "excerpt",
 }
 
 import { pickStockPhoto } from "./blog-stock-photos";
+import { isIndexable, isNoDataTitle, mostSimilarTitle } from "./seo/article-index";
 
 /**
  * Okładka artykułu = darmowe zdjęcie stockowe (Unsplash) + wordmark Finance You
@@ -420,10 +495,33 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
 
   const kind = await pickNextKind();
   const audience = audienceOf(kind);
-  const brief = await fetchFreshNewsBrief(kind);
+  const reviewTopic = kind === "investor_review" ? await nextReviewTopic() : undefined;
+  const brief = await fetchFreshNewsBrief(kind, reviewTopic);
   const internal = await pickInternalLinks();
-  const draft = await writeArticleFromNews(brief, internal, kind);
+  const recent = await recentArticleTitles();
+  const draft = await writeArticleFromNews(
+    brief,
+    internal,
+    kind,
+    recent.slice(0, 25).map((r) => r.title),
+  );
   const cover = pickCover(kind);
+
+  // Strażnik jakości indeksu: wpis „o braku danych” nie jest publikowany,
+  // a wpis niemal identyczny z istniejącym trafia jako noindex — Google
+  // przy wielu duplikatach obniża ocenę całego bloga.
+  if (isNoDataTitle(draft.title)) {
+    await supabaseAdmin.from("ai_growth_action_log").insert({
+      module: "seo_content_engine",
+      action: "daily_autopost",
+      status: "warning",
+      summary: `[${kind}] pominięty — brak świeżych danych: ${draft.title}`,
+      payload: { kind, title: draft.title },
+    });
+    return { ok: true, reason: "skipped: no fresh data" };
+  }
+  const similar = mostSimilarTitle(draft.title, recent);
+  const isDuplicate = !!similar && similar.score >= DUPLICATE_TITLE_THRESHOLD;
 
   const slug = await ensureUniqueSlug(slugify(draft.title));
   const wordCount = (draft.content_md.match(/\S+/g) ?? []).length;
@@ -454,7 +552,12 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       cta_label: ctaLabel,
 
       source: "ai_autopilot",
-      raw_ai_output: { ...draft, post_kind: kind } as any,
+      raw_ai_output: {
+        ...draft,
+        post_kind: kind,
+        ...(reviewTopic ? { review_topic: reviewTopic } : {}),
+        ...(isDuplicate ? { noindex: true, similar_to: similar!.slug } : {}),
+      } as any,
       published_at: new Date().toISOString(),
       content_refreshed_at: new Date().toISOString(),
       cover_image_url: cover.url,
@@ -477,6 +580,9 @@ export async function runDailyBlogTick(opts: { force?: boolean } = {}): Promise<
       slug: inserted.slug,
       kind,
       sources: brief.citations.length,
+      ...(isDuplicate
+        ? { noindex: true, similar_to: similar!.slug, similarity: similar!.score }
+        : {}),
     },
   });
 

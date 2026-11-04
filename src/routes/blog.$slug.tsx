@@ -1,4 +1,5 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect, Link } from "@tanstack/react-router";
+import { isIndexable, isNoindex, mergedInto } from "@/lib/seo/article-index";
 import { formatDate } from "@/lib/labels";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -141,18 +142,29 @@ export const Route = createFileRoute("/blog/$slug")({
       .maybeSingle();
     if (!data) throw notFound();
 
+    // Duplikat scalony z innym artykułem → stałe przekierowanie, żeby sygnały
+    // (linki, historia w Google) przeszły na artykuł docelowy.
+    const target = mergedInto((data as any).raw_ai_output);
+    if (target && target !== params.slug) {
+      throw redirect({ to: "/blog/$slug", params: { slug: target }, statusCode: 301 });
+    }
+
     // Powiązane artykuły do linkowania wewnętrznego: najpierw te, do których
     // artykuł linkuje w treści, potem najnowsze dla tej samej grupy odbiorców.
     const { data: relRaw } = await supabase
       .from("ai_seo_articles")
       .select(
-        "slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,audience",
+        "slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,audience,merged_into:raw_ai_output->>merged_into,noindex:raw_ai_output->noindex",
       )
       .eq("status", "published")
       .neq("slug", params.slug)
       .order("published_at", { ascending: false })
-      .limit(12);
-    const pool = (relRaw ?? []) as RelatedRow[];
+      .limit(24);
+    const pool = (
+      (relRaw ?? []) as (RelatedRow & { merged_into?: string | null; noindex?: unknown })[]
+    )
+      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+      .map(({ merged_into: _m, noindex: _n, ...r }) => r as RelatedRow);
     const linked: string[] = Array.isArray((data as any).internal_link_slugs)
       ? (data as any).internal_link_slugs
       : [];
@@ -185,7 +197,9 @@ export const Route = createFileRoute("/blog/$slug")({
         { name: "author", content: "Finance You" },
         {
           name: "robots",
-          content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+          content: isNoindex(a.raw_ai_output)
+            ? "noindex, follow"
+            : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
         },
         { name: "article:section", content: section },
         { name: "article:published_time", content: a.published_at ?? "" },

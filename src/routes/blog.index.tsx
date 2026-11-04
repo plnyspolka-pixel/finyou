@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { isIndexable } from "@/lib/seo/article-index";
 import { formatDate } from "@/lib/labels";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketingShell } from "@/components/marketing/shell";
@@ -29,12 +30,20 @@ export const Route = createFileRoute("/blog/")({
     const { data } = await supabase
       .from("ai_seo_articles")
       .select(
-        "id,slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,primary_keyword,audience",
+        "id,slug,title,excerpt,reading_minutes,published_at,cover_image_url,cover_image_alt,primary_keyword,audience,merged_into:raw_ai_output->>merged_into,noindex:raw_ai_output->noindex",
       )
       .eq("status", "published")
       .order("published_at", { ascending: false })
-      .limit(50);
-    return { articles: (data ?? []) as ArticleRow[] };
+      .limit(300);
+    // Wszystkie indeksowalne artykuły — wcześniej lista kończyła się na 50
+    // najnowszych, więc starsze (często najlepsze, poradnikowe) teksty nie
+    // miały żadnego linku wewnętrznego i Google traktował je jako sieroty.
+    const articles = (
+      (data ?? []) as (ArticleRow & { merged_into?: string | null; noindex?: unknown })[]
+    )
+      .filter((r) => isIndexable({ merged_into: r.merged_into, noindex: r.noindex }))
+      .map(({ merged_into: _m, noindex: _n, ...r }) => r as ArticleRow);
+    return { articles };
   },
 
   head: ({ loaderData }) => {
