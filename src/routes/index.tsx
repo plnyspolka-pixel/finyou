@@ -10,9 +10,8 @@ import {
   SUBSCRIPTION_PRICE_SENTENCE,
   FOUNDATION_SALES_EXPLANATION,
 } from "@/lib/investor-plan/plans";
-import { RoadCards, QuickLink } from "@/components/marketing/road-cards";
+import { RoadCards } from "@/components/marketing/road-cards";
 import { DoubleGuarantee } from "@/components/marketing/double-guarantee";
-import { INVESTOR_MODULES, investorModulePath } from "@/components/marketing/investor-modules";
 export const PHONE_DISPLAY = "+48 732 059 898";
 export const PHONE_HREF = "+48732059898";
 export const EMAIL = "kontakt@financeyou.pl";
@@ -99,6 +98,19 @@ function InvestorHome() {
     <MarketingShell page="home">
       <section className="fy-sales-hero">
         <div className="fy-sales-hero-inner">
+          {/* Film „Kompleksowa prezentacja” na samej górze hero (decyzja właściciela
+              05.11.2026) — przyciski modułów z hero zdjęte; szybkie linki modułów
+              zostają na kartach „Droga inwestora” niżej. */}
+          <div className="fy-sales-hero-video">
+            <video
+              src={encodeURI(HERO_VIDEO_URL)}
+              poster="/marketing/prezentacja-poster.webp"
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={HERO_VIDEO_TITLE}
+            />
+          </div>
           <div className="fy-sales-hero-copy">
             <Eyebrow tone="gold">Dla osób z kapitałem, które chcą zacząć</Eyebrow>
             <h1>Inwestuj w pożyczki pod zastaw nieruchomości</h1>
@@ -115,47 +127,10 @@ function InvestorHome() {
                 </li>
               ))}
             </ul>
-            {/* Przyciski modułów (kolejność z investor-modules.ts) — pod każdym konkretna
-                rzecz do zrobienia od razu: darmowa lekcja, przykładowy raport, wzór umowy,
-                zlecenie, HIT 9,99 zł (decyzja właściciela 04.11.2026). */}
-            <ul className="fy-hero-modules" aria-label="Elementy abonamentu inwestora">
-              {INVESTOR_MODULES.map((m, i) => (
-                <li key={m.slug}>
-                  <MktButton
-                    variant={i === 0 ? "gold" : "outline"}
-                    size="sm"
-                    href={investorModulePath(m.slug)}
-                    style={
-                      i === 0
-                        ? undefined
-                        : {
-                            background: "rgba(255,255,255,.06)",
-                            borderColor: "rgba(255,255,255,.28)",
-                            color: "#fff",
-                          }
-                    }
-                  >
-                    {m.name}
-                  </MktButton>
-                  {m.quickLink && <QuickLink link={m.quickLink} />}
-                </li>
-              ))}
-            </ul>
             <p className="fy-hero-pricing-line">
               {SUBSCRIPTION_PRICE_SENTENCE}, w ratach od ok. 583 zł/mies. —{" "}
               <a href="#cennik">zobacz program i cenę →</a>
             </p>
-          </div>
-          {/* Film „Kompleksowa prezentacja” — ten sam, który był w hero /dla-inwestora. */}
-          <div className="fy-sales-hero-video">
-            <video
-              src={encodeURI(HERO_VIDEO_URL)}
-              poster="/marketing/prezentacja-poster.webp"
-              controls
-              playsInline
-              preload="metadata"
-              aria-label={HERO_VIDEO_TITLE}
-            />
           </div>
         </div>
       </section>
