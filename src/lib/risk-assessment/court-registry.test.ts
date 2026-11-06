@@ -63,6 +63,44 @@ describe("summarizeCourtRegistry", () => {
     expect(r.clientHits).toBe(1);
     expect(r.findings[0]).toMatch(/Pożyczkobiorca Artur Schwarz: Upadłość konsumencka/);
   });
+
+  it("kopia tablicy KRZ: zakres dat w podsumowaniu, trafienie z analizą AI w ustaleniach", () => {
+    const r = summarizeCourtRegistry(
+      report({
+        courtStatus: "partial",
+        courtNote:
+          "Oficjalny MSiG: brak ogłoszeń. | KRZ (kopia lokalna 2026-11-01…2026-11-06, 4000 obw.): 1 obwieszcz. — sprawdź w krz.ms.gov.pl.",
+        hits: [
+          {
+            source: "KRZ — tablica obwieszczeń (kopia lokalna)",
+            category: "court_notice",
+            title: "Obwieszczenie postanowienia o ustanowieniu tymczasowego nadzorcy sądowego",
+            detail:
+              "Upadłość: Zabezpieczenie majątku; AI: zabezpieczenie majątku, ryzyko sredni — Ustanowiono TNS.",
+            publicationDate: "2026-11-06",
+            caseSignature: "WR1F/GU/865/2026",
+            url: "https://krz.ms.gov.pl/",
+            match: "name_only",
+          },
+        ],
+      }),
+    );
+    expect(r.clientFullyChecked).toBe(false);
+    expect(r.summary).toContain("kopii tablicy KRZ (2026-11-01…2026-11-06)");
+    expect(r.unconfirmedHits).toBe(1);
+    expect(r.findings[0]).toMatch(/tymczasowego nadzorcy.*WR1F\/GU\/865\/2026.*tylko po nazwisku/);
+  });
+
+  it("bez kopii KRZ zostaje dotychczasowy komunikat o ręcznym sprawdzeniu", () => {
+    const r = summarizeCourtRegistry(
+      report({
+        courtStatus: "partial",
+        courtNote:
+          "Oficjalny MSiG: brak ogłoszeń. | KRZ (kopia lokalna): brak danych — tablica obwieszczeń nie była jeszcze pobrana.",
+      }),
+    );
+    expect(r.summary).toContain("nie jest automatycznie dostępny");
+  });
 });
 
 describe("scoring", () => {

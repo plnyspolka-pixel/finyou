@@ -107,6 +107,12 @@ W odróżnieniu od tego testu środowisko narzędziowe lokalne blokuje
 cały ruch internetowy, w tym DNS; błąd `ERR_BLOCKED_BY_ADMINISTRATOR`
 lokalnie nie był dowodem działania zabezpieczeń KRZ.
 
+## Aktualizacja 2026-11-06 — dostęp jednak możliwy z lokalnego Chrome
+Z komputera użytkownika (Chrome z oknem) portal odpowiada 200, a SPA pobiera
+anonimowy token gościa, z którym wewnętrzne API JSON/XML działa zwykłym `fetch`.
+Działający PoC pobierania i analizy AI: [krz-tablica-obwieszczen.md](krz-tablica-obwieszczen.md).
+Blokada 403 dotyczy headless/CI — nie lokalnego użycia.
+
 ## Indeksowanie KRZ/MSiG przez wyszukiwarkę — PoC
 **Działa niezależnie od portalu KRZ**, wykrywa publicznie zaindeksowane
 wzmianki o postępowaniach i wyświetla je jako `name_only`.
