@@ -10,7 +10,12 @@
 > Meta (User/Page/Instagram → financeyou.pl) i narzędzia agentów ElevenLabs (financeyou.pl) były już na nowym stosie;
 > ElevenLabs post-call webhook ustawiony na `finyou-worker` (app.financeyou.pl), stary endpoint lovable.app wyłączony;
 > Tpay dostaje URL powiadomień z kodu (bez zmian w panelu).
-> Zostało: Google OAuth, tokeny urzędowe, ewentualne dogranie danych 9.10→pauza z Lovable (jeśli wznowią).
+> Google OAuth (2026-11-06): osobny klient `finyou-supabase-auth` w projekcie GCP alpine-zodiac-497718-f1 (redirect
+> `…supabase.co/auth/v1/callback`), provider Google włączony w Supabase Auth; logowanie dochodzi do wyboru konta Google.
+> Cron `missing-info-follow-up-tick` dostał nagłówek apikey (wcześniej 401). W Workerze brakuje m.in. GUS_BIR_API_KEY,
+> GUS_BDL_API_KEY, CEIDG_JWT_TOKEN, KSEF_TOKEN_*, FAKTUROWO_*, TUBAPAY_*, CMD_KW_* (wartości tylko u właściciela / do
+> wygenerowania na nowo; wgrać `npx wrangler secret bulk plik.json`).
+> Zostało: tokeny urzędowe i powyższe sekrety, ewentualne dogranie danych 9.10→pauza z Lovable (jeśli wznowią).
 
 Checklista do odhaczania w dniu przełączenia. Tło i uzasadnienia: `docs/migracja-z-lovable.md`
 (sekcja „Kolejność przełączenia”), sekrety: `docs/migracja/sekrety-aplikacji.md`, automatyzacja:
