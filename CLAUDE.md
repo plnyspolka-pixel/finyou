@@ -1,3 +1,7 @@
+# Zasady właściciela (nadrzędne)
+
+- **Najpierw zapytaj, potem wysyłaj.** Zanim wyślesz cokolwiek na zewnątrz (mail, SMS, wiadomość Messenger/WhatsApp, propozycja/oferta w systemie, publikacja, komentarz itp.), pokaż właścicielowi adresata i pełną treść (wraz z założeniami/liczbami) i wyślij dopiero po jego wyraźnej akceptacji. Polecenie „wyślij” bez kompletnych danych nie jest zgodą na wysyłkę z zgadywanymi parametrami — najpierw dopytaj. Przygotowanie szkicu (draftu) bez wysyłki jest OK.
+
 <!-- BEGIN AWS Agent Toolkit rules -->
 # AWS Guidance for the new AWS experience
 
