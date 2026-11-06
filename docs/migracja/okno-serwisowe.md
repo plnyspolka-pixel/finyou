@@ -5,8 +5,12 @@
 > Cloudflare, custom domains Workera `finyou` dla app/root/www, Auth site_url + hook Send Email → app.financeyou.pl
 > (uwaga: PATCH `hook_send_email_secrets` wymaga wcześniej `null`), 38/39 cronów włączonych (bez dedup-loan-applications),
 > migracje drizzle 0037–0053 dogonione, stary webhook Resend (lovable.app) wyłączony. Markery: `public._migracja_stan`.
-> Zostało: Google OAuth, DIDIT_WEBHOOK_SECRET i webhooki w panelach dostawców, tokeny urzędowe, ewentualne dogranie
-> danych 9.10→pauza z Lovable (jeśli wznowią).
+> Webhooki dostawców (2026-11-06): Didit → URL na funkcję didit-webhook nowego projektu (sekret podpisu do wpisania:
+> `DIDIT_WEBHOOK_SECRET=… STAGES=3 bash scripts/migracja/po-tokenach.sh`); Twilio (SMS → app.financeyou.pl, głos → ElevenLabs),
+> Meta (User/Page/Instagram → financeyou.pl) i narzędzia agentów ElevenLabs (financeyou.pl) były już na nowym stosie;
+> ElevenLabs post-call webhook ustawiony na `finyou-worker` (app.financeyou.pl), stary endpoint lovable.app wyłączony;
+> Tpay dostaje URL powiadomień z kodu (bez zmian w panelu).
+> Zostało: Google OAuth, sekret Didit, tokeny urzędowe, ewentualne dogranie danych 9.10→pauza z Lovable (jeśli wznowią).
 
 Checklista do odhaczania w dniu przełączenia. Tło i uzasadnienia: `docs/migracja-z-lovable.md`
 (sekcja „Kolejność przełączenia”), sekrety: `docs/migracja/sekrety-aplikacji.md`, automatyzacja:
