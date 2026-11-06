@@ -15,7 +15,12 @@
 > Cron `missing-info-follow-up-tick` dostał nagłówek apikey (wcześniej 401). W Workerze brakuje m.in. GUS_BIR_API_KEY,
 > GUS_BDL_API_KEY, CEIDG_JWT_TOKEN, KSEF_TOKEN_*, FAKTUROWO_*, TUBAPAY_*, CMD_KW_* (wartości tylko u właściciela / do
 > wygenerowania na nowo; wgrać `npx wrangler secret bulk plik.json`).
-> Zostało: tokeny urzędowe i powyższe sekrety, ewentualne dogranie danych 9.10→pauza z Lovable (jeśli wznowią).
+> Z poczty właściciela odzyskane i wgrane (2026-11-06): GUS_BIR_API_KEY (mail GUS z 27.05, test Zaloguj → sesja OK),
+> CEIDG_JWT_TOKEN (mail biznes.gov.pl z 26.05, API odpowiada 204/200). CMD KW: login = plnyspolka@gmail.com, hasło ustawione
+> przez właściciela (easyMKW, sierpień 2026), API https://mkw.monitoringdanych.io/ → CMD_KW_USER/CMD_KW_PASSWORD/CMD_KW_BASE_URL.
+> Zostało: KSEF_TOKEN_FINANCE_YOU i KSEF_TOKEN_FUNDACJA_IM_PIECZAKA (aplikacja KSeF 2.0, środowisko prod, NIP 7010611803 /
+> 9462747637), FAKTUROWO_API_* (panel fakturowo.pl, konto 379753), TUBAPAY_* (Panel Partnera TubaPay), CMD_KW_PASSWORD,
+> Mailgun (konto zdegradowane 10.2026 — prawdopodobnie do porzucenia), ewentualne dogranie danych 9.10→pauza z Lovable.
 
 Checklista do odhaczania w dniu przełączenia. Tło i uzasadnienia: `docs/migracja-z-lovable.md`
 (sekcja „Kolejność przełączenia”), sekrety: `docs/migracja/sekrety-aplikacji.md`, automatyzacja:
