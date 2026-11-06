@@ -46,12 +46,22 @@ export function summarizeCourtRegistry(
     }
   }
   const clientFullyChecked = client?.courtStatus === "checked";
+  // Lokalna kopia tablicy obwieszczeń KRZ (scripts/krz-tablica.ts) — notatka
+  // niesie zakres dat, bo kopia obejmuje tylko pobrane dni.
+  const krzCopy = client
+    ? /KRZ \(kopia lokalna (\d{4}-\d{2}-\d{2})…(\d{4}-\d{2}-\d{2})/.exec(client.courtNote)
+    : null;
+  const krzCopyRange = krzCopy ? `${krzCopy[1]}…${krzCopy[2]}` : null;
   const scope = client
     ? clientFullyChecked
       ? "pożyczkobiorca sprawdzony w KRZ/MSiG (API)"
       : client.courtNote.startsWith("Oficjalny MSiG")
-        ? "pożyczkobiorca sprawdzony w oficjalnym MSiG; KRZ (krz.ms.gov.pl) nie jest automatycznie dostępny — sprawdź ręcznie"
-        : "pożyczkobiorca sprawdzony CZĘŚCIOWO — oficjalny MSiG nie odpowiedział; sprawdź ręcznie w MSiG i KRZ (krz.ms.gov.pl)"
+        ? krzCopyRange
+          ? `pożyczkobiorca sprawdzony w oficjalnym MSiG i w kopii tablicy KRZ (${krzCopyRange}); starsze sprawy KRZ sprawdź ręcznie w krz.ms.gov.pl`
+          : "pożyczkobiorca sprawdzony w oficjalnym MSiG; KRZ (krz.ms.gov.pl) nie jest automatycznie dostępny — sprawdź ręcznie"
+        : krzCopyRange
+          ? `pożyczkobiorca sprawdzony CZĘŚCIOWO — oficjalny MSiG nie odpowiedział; kopia tablicy KRZ (${krzCopyRange}) sprawdzona; resztę sprawdź ręcznie w MSiG i KRZ`
+          : "pożyczkobiorca sprawdzony CZĘŚCIOWO — oficjalny MSiG nie odpowiedział; sprawdź ręcznie w MSiG i KRZ (krz.ms.gov.pl)"
     : "pożyczkobiorca NIE sprawdzony";
   const summary =
     `KRZ/MSiG: ${scope}; podmiotów: ${report.subjects.length}. ` +

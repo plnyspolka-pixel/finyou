@@ -206,10 +206,14 @@ export function combineRiskAssessment(i: CombineInput): CombinedResult {
   if (cr) {
     keyRisks.push(...cr.findings.map((f) => `KRZ/MSiG: ${f}`));
     if (!cr.clientChecked)
-      keyRisks.push("Pożyczkobiorca nie został sprawdzony w KRZ/MSiG — sprawdź ręcznie przed decyzją.");
+      keyRisks.push(
+        "Pożyczkobiorca nie został sprawdzony w KRZ/MSiG — sprawdź ręcznie przed decyzją.",
+      );
     else if (!cr.clientFullyChecked)
       keyRisks.push(
-        "KRZ pożyczkobiorcy nie jest dostępny automatycznie (sprawdzono MSiG) — potwierdź ręcznie w krz.ms.gov.pl.",
+        cr.summary.includes("kopii tablicy KRZ")
+          ? "KRZ pożyczkobiorcy sprawdzony tylko w lokalnej kopii tablicy obwieszczeń (ograniczony zakres dat) — starsze sprawy potwierdź w krz.ms.gov.pl."
+          : "KRZ pożyczkobiorcy nie jest dostępny automatycznie (sprawdzono MSiG) — potwierdź ręcznie w krz.ms.gov.pl.",
       );
   }
   const cat = i.saleability.sellabilityCategory;

@@ -1,0 +1,119 @@
+{
+ "czyPrzekroczono": false,
+ "iloscWBazie": 31,
+ "iloscPozycjiWyswietlanych": 1000,
+ "grupaKategoriiKategorieObweszczeniaResponse": [
+  {
+   "tytul": "Postępowanie upadłościowe",
+   "kolejnosc": 2,
+   "kategorie": [
+    {
+     "tytul": "Zabezpieczenie majątku",
+     "kolejnosc": 2,
+     "obwieszczenia": [
+      {
+       "idZewnetrzny": "c5b32c61-9023-4ebb-b559-509c39ce41aa",
+       "dataObwieszczenia": "2026-11-05",
+       "dataWydaniaPostanowienia": "2026-11-05",
+       "numerObwieszczenia": "20261105/00416",
+       "sygnaturaPostepowania": "PL1P/GU/535/2026",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy w Płocku",
+       "nazwaWydzialu": "V Wydział Gospodarczy ds. Upadłościowych i Restrukturyzacyjnych",
+       "imie": "Jan",
+       "nazwisko": "Testowy1",
+       "nazwaPodmiotu": "",
+       "podkategoriaObwieszczenia": "Obwieszczenie postanowienia o ustanowieniu tymczasowego nadzorcy sądowego",
+       "rodzajSprawy": "U",
+       "dokumentUuidSpr": "4276d37e-f2cf-40ad-bfa5-91764317804c"
+      },
+      {
+       "idZewnetrzny": "8d5f8893-457b-4a20-b1dc-1a8d7f050f1e",
+       "dataObwieszczenia": "2026-11-06",
+       "dataWydaniaPostanowienia": "2026-11-06",
+       "numerObwieszczenia": "20261106/00205",
+       "sygnaturaPostepowania": "WR1F/GU/865/2026",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy dla Wrocławia-Fabrycznej we Wrocławiu",
+       "nazwaWydzialu": "VIII Wydział Gospodarczy",
+       "nazwaPodmiotu": "SKYWOOD SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+       "podkategoriaObwieszczenia": "Obwieszczenie postanowienia o ustanowieniu tymczasowego nadzorcy sądowego",
+       "rodzajSprawy": "U",
+       "dokumentUuidSpr": "613e9667-6fd9-442e-9daf-4ceb3cad70b8"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tytul": "Postępowanie restrukturyzacyjne",
+   "kolejnosc": 1,
+   "kategorie": [
+    {
+     "tytul": "Nadzorca sądowy/Zarządca/Nadzorca wykonania układu",
+     "kolejnosc": 4,
+     "obwieszczenia": [
+      {
+       "idZewnetrzny": "1e62d140-7ddf-4a19-82f1-cddc225f069c",
+       "dataObwieszczenia": "2026-11-06",
+       "dataWydaniaPostanowienia": "2026-11-06",
+       "numerObwieszczenia": "20261106/00750",
+       "sygnaturaPostepowania": "GD1G/GRz/222/2025",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy Gdańsk-Północ w Gdańsku",
+       "nazwaWydzialu": "VI Wydział Gospodarczy",
+       "nazwaPodmiotu": "HEALTH POWER ",
+       "podkategoriaObwieszczenia": "Obwieszczenie informacji o objęciu funkcji nadzorcy wykonania układu",
+       "rodzajSprawy": "R",
+       "dokumentUuidSpr": "8540a939-8af4-4049-bb51-b53a08fa0eca"
+      },
+      {
+       "idZewnetrzny": "f126b918-e900-44a7-8965-98825362e5ed",
+       "dataObwieszczenia": "2026-11-05",
+       "dataWydaniaPostanowienia": "2026-11-05",
+       "numerObwieszczenia": "20261105/00584",
+       "sygnaturaPostepowania": "KR1S/GRz/82/2025",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy dla Krakowa-Śródmieścia w Krakowie",
+       "nazwaWydzialu": "VIII Wydział Gospodarczy dla spraw upadłościowych i restrukturyzacyjnych",
+       "nazwaPodmiotu": "ANDORIA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+       "podkategoriaObwieszczenia": "Obwieszczenie informacji o objęciu funkcji nadzorcy wykonania układu",
+       "rodzajSprawy": "R",
+       "dokumentUuidSpr": "303b36c7-fb67-499c-9958-0f2f49f326a8"
+      }
+     ]
+    },
+    {
+     "tytul": "Wniosek restrukturyzacyjny złożony przez dłużnika",
+     "kolejnosc": 1,
+     "obwieszczenia": [
+      {
+       "idZewnetrzny": "aec60dc3-e31c-4583-ac05-0c64658df619",
+       "dataObwieszczenia": "2026-11-06",
+       "dataWydaniaPostanowienia": "2026-11-06",
+       "numerObwieszczenia": "20261106/00736",
+       "sygnaturaPostepowania": "RA1R/GRz/37/2026",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy w Radomiu",
+       "nazwaWydzialu": "V Wydział Gospodarczy",
+       "nazwaPodmiotu": "LIQENE Sp. z o.o.",
+       "podkategoriaObwieszczenia": "Obwieszczenie zarządzenia o wpisaniu do repertorium wniosku restrukturyzacyjnego",
+       "rodzajSprawy": "R",
+       "dokumentUuidSpr": "9af12d0b-6811-413c-b7fc-de8f98257fae"
+      },
+      {
+       "idZewnetrzny": "0b56243c-25a1-4a53-a81b-08bc9fa6f8a8",
+       "dataObwieszczenia": "2026-11-05",
+       "dataWydaniaPostanowienia": "2026-11-05",
+       "numerObwieszczenia": "20261105/00004",
+       "sygnaturaPostepowania": "WA1M/GR/79/2026",
+       "sadWydajacyPostanowienie": "Sąd Rejonowy dla m.st.Warszawy w Warszawie",
+       "nazwaWydzialu": "XVIII Wydział Gospodarczy",
+       "imie": "Jan",
+       "nazwisko": "Testowy2",
+       "nazwaPodmiotu": "\"EDKAR\" F.H.U. EDWARD KAROLAK",
+       "podkategoriaObwieszczenia": "Obwieszczenie zarządzenia o wpisaniu do repertorium wniosku restrukturyzacyjnego",
+       "rodzajSprawy": "R",
+       "dokumentUuidSpr": "b36a8d53-7cf5-43c9-bd24-629050521e19"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
